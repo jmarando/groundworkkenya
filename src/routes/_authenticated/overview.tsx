@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
@@ -56,6 +56,14 @@ function Overview() {
     );
   }
 
+  const quick = data.quick ?? {
+    people: 0,
+    unread: 0,
+    openIncidents: 0,
+    unstaffed: 0,
+    activePolls: 0,
+  };
+
   const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
   const supporterPct = pct(data.supporters, data.supporterTarget);
   const spendPct = pct(data.spendKes, data.statutoryLimit);
@@ -64,7 +72,17 @@ function Overview() {
       ? Math.round(((data.contactsThisWeek - data.contactsLastWeek) / data.contactsLastWeek) * 100)
       : 0;
 
-  const max = Math.max(data.supporterTarget, ...data.growth.map((g) => g.value), 1);
+  const wardPct = pct(data.wardsOnTrack, data.wardsTotal);
+  const contactPct =
+    data.contactsLastWeek > 0
+      ? (data.contactsThisWeek / Math.max(data.contactsThisWeek, data.contactsLastWeek)) * 100
+      : 100;
+  const gapPct = data.biggestGap
+    ? Math.min(Math.abs(data.biggestGap.gap) / Math.max(data.supporterTarget / data.wardsTotal, 1), 1) * 100
+    : 0;
+
+  // scale to the data, not the win number — the target is stated in words above
+  const max = Math.max(...data.growth.map((g) => g.value), 1) * 1.25;
   const pts = data.growth.map((g, i) => {
     const x = 20 + (i * 520) / Math.max(data.growth.length - 1, 1);
     const y = 122 - (g.value / max) * 100;
@@ -96,52 +114,90 @@ function Overview() {
         <div className="card kpi">
           <span className="kpi-lbl">Consented supporters</span>
           <span className="kpi-val stat">{nf.format(data.supporters)}</span>
-          <div className="minibar" role="img" aria-label={`${supporterPct.toFixed(1)} percent of target`}>
-            <i style={{ width: `${Math.min(supporterPct, 100)}%` }} />
+          <div className="kpi-foot">
+            <div
+              className="minibar"
+              role="img"
+              aria-label={`${supporterPct.toFixed(1)} percent of target`}
+            >
+              <i style={{ width: `${Math.min(supporterPct, 100)}%` }} />
+            </div>
+            <span className="kpi-sub">
+              {supporterPct.toFixed(1)}% of {nf.format(data.supporterTarget)} target
+            </span>
           </div>
-          <span className="kpi-sub">
-            of {nf.format(data.supporterTarget)} target · {supporterPct.toFixed(1)}%
-          </span>
         </div>
+
         <div className="card kpi">
           <span className="kpi-lbl">Wards on track</span>
           <span className="kpi-val stat">
             {data.wardsOnTrack}
             <span className="dim">/{data.wardsTotal}</span>
           </span>
-          <span className="pill pill--amber">
-            <span className="g" aria-hidden="true">
-              ◐
-            </span>{" "}
-            {data.wardsTotal - data.wardsOnTrack} behind pace
-          </span>
+          <div className="kpi-foot">
+            <div
+              className="minibar"
+              role="img"
+              aria-label={`${wardPct.toFixed(0)} percent of wards on track`}
+            >
+              <i style={{ width: `${Math.min(wardPct, 100)}%` }} />
+            </div>
+            <span className="note note--flag">
+              {nf.format(data.wardsTotal - data.wardsOnTrack)} behind pace
+            </span>
+          </div>
         </div>
+
         <div className="card kpi">
           <span className="kpi-lbl">Contacts this week</span>
           <span className="kpi-val stat">{nf.format(data.contactsThisWeek)}</span>
-          <span className="delta">
-            {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}% on last week
-          </span>
+          <div className="kpi-foot">
+            <div
+              className="minibar"
+              role="img"
+              aria-label={`${contactPct.toFixed(0)} percent of last week`}
+            >
+              <i style={{ width: `${Math.min(contactPct, 100)}%` }} />
+            </div>
+            <span className="kpi-sub">
+              {data.contactsLastWeek > 0
+                ? `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% on ${nf.format(data.contactsLastWeek)} last week`
+                : "first week of sends on record"}
+            </span>
+          </div>
         </div>
+
         <div className="card kpi">
           <span className="kpi-lbl">Spend vs limit</span>
           <span className="kpi-val stat">{spendPct.toFixed(1)}%</span>
-          <div className="minibar" role="img" aria-label={`${spendPct.toFixed(1)} percent of statutory limit`}>
-            <i style={{ width: `${Math.min(spendPct, 100)}%` }} />
+          <div className="kpi-foot">
+            <div
+              className="minibar"
+              role="img"
+              aria-label={`${spendPct.toFixed(1)} percent of statutory limit`}
+            >
+              <i style={{ width: `${Math.min(spendPct, 100)}%` }} />
+            </div>
+            <span className="kpi-sub">
+              KES {(data.spendKes / 1_000_000).toFixed(1)}M of{" "}
+              {(data.statutoryLimit / 1_000_000).toFixed(1)}M statutory
+            </span>
           </div>
-          <span className="kpi-sub">
-            KES {(data.spendKes / 1_000_000).toFixed(1)}M of{" "}
-            {(data.statutoryLimit / 1_000_000).toFixed(1)}M statutory
-          </span>
         </div>
+
         <div className="card kpi">
-          <span className="kpi-lbl">
-            Biggest gap · {data.biggestGap?.name ?? "—"}
-          </span>
+          <span className="kpi-lbl">Biggest gap</span>
           <span className="kpi-val stat">
             {data.biggestGap ? nf.format(data.biggestGap.gap) : "—"}
           </span>
-          <span className="kpi-sub">votes vs ward target · canvass surge queued</span>
+          <div className="kpi-foot">
+            <div className="minibar minibar--flag" role="img" aria-label="Gap against ward target">
+              <i style={{ width: `${Math.min(gapPct, 100)}%` }} />
+            </div>
+            <span className="kpi-sub">
+              {data.biggestGap?.name ?? "—"} · votes vs ward target
+            </span>
+          </div>
         </div>
       </div>
 
@@ -160,30 +216,22 @@ function Overview() {
             <svg
               id="spark"
               viewBox="0 0 560 128"
+              preserveAspectRatio="none"
               width="100%"
-              height="128"
+              height="170"
               role="img"
               aria-label="Consented supporters over the last eight months"
             >
-              <line
-                x1="20"
-                y1="12"
-                x2="540"
-                y2="12"
-                stroke="var(--gw-border)"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-              />
               <text
                 x="540"
-                y="8"
+                y="14"
                 textAnchor="end"
                 fontFamily="JetBrains Mono, monospace"
                 fontSize="9"
                 letterSpacing="1"
                 fill="hsl(150 6% 40%)"
               >
-                TARGET {nf.format(data.supporterTarget)}
+                WIN NUMBER {nf.format(data.supporterTarget)}
               </text>
               <polyline
                 points={pts.join(" ")}
@@ -229,6 +277,42 @@ function Overview() {
           </div>
           <p className="f-note">Gap = consented supporters vs ward win-number pace.</p>
         </div>
+      </div>
+
+      <div className="card-head fx4" style={{ marginTop: 22 }}>
+        <div>
+          <h2>Where to go next</h2>
+          <p className="meta">The four jobs that move numbers today.</p>
+        </div>
+      </div>
+      <div className="quick fx4">
+        <Link to="/people" className="qcard">
+          <span className="qcard-k">CRM</span>
+          <span className="qcard-t">Work the list</span>
+          <span className="qcard-s">Search, filter and open any record.</span>
+          <span className="qcard-n">{nf.format(quick.people)} people on file</span>
+        </Link>
+        <Link to="/inbox" className="qcard">
+          <span className="qcard-k">Comms</span>
+          <span className="qcard-t">Clear the inbox</span>
+          <span className="qcard-s">Replies from SMS, USSD and email.</span>
+          <span className="qcard-n">{nf.format(quick.unread)} unread</span>
+        </Link>
+        <Link to="/broadcast" className="qcard">
+          <span className="qcard-k">Send</span>
+          <span className="qcard-t">Build a broadcast</span>
+          <span className="qcard-s">Consent-checked audience, costed before it goes.</span>
+          <span className="qcard-n">{nf.format(quick.activePolls)} {quick.activePolls === 1 ? "poll" : "polls"} live</span>
+        </Link>
+        <Link to="/warroom" className="qcard">
+          <span className="qcard-k">Election day</span>
+          <span className="qcard-t">Cover the stations</span>
+          <span className="qcard-s">Agents, streams and incidents.</span>
+          <span className="qcard-n">
+            {nf.format(quick.unstaffed)} unstaffed · {nf.format(quick.openIncidents)} open
+            incidents
+          </span>
+        </Link>
       </div>
 
       <p className="x-caption eyebrow fx4">

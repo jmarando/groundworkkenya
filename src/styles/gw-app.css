@@ -171,3 +171,98 @@ a.sb-item {
 .auth-brand .sb-brand-sub {
   color: var(--gw-muted, hsl(150 6% 40%));
 }
+
+/* ---------------------------------------------- overview KPI strip (v2) ---
+   One structure for every card: label block, number, footer pinned to the
+   bottom edge so the five cards read as one line. Ink and murram only. */
+.g5 { gap: 12px; align-items: stretch; }
+.kpi {
+  gap: 0;
+  padding: 18px;
+  min-height: 164px;
+}
+.kpi .kpi-lbl {
+  display: block;
+  min-height: 2.4em;
+  letter-spacing: .18em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.kpi .kpi-val {
+  display: block;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-foot {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.kpi-foot .kpi-sub {
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+/* neutral note: ink text, no status colour — status colour is for status only */
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.note--flag { color: var(--gw-murram, #D9481C); }
+.note .g { font-size: 10px; line-height: 1; }
+
+/* ------------------------------------------------------------ quick links */
+.quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+.qcard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: inherit;
+  transition-property: transform, box-shadow, border-color;
+  transition-duration: .18s;
+  transition-timing-function: cubic-bezier(.2, 0, 0, 1);
+}
+.qcard:hover { border-color: hsl(150 6% 70%); box-shadow: 0 6px 18px -12px hsl(158 15% 10% / .45); }
+.qcard:active { transform: scale(.985); }
+.qcard-k {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.qcard-t { font-size: 15px; font-weight: 600; }
+.qcard-s { font-size: 12px; color: var(--muted-foreground); line-height: 1.4; }
+.qcard-n {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gw-ink);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1100px) { .quick { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .quick { grid-template-columns: 1fr; } }
+
+.minibar--flag i { background: var(--gw-murram, #D9481C); }
+.spark-wrap svg { display: block; }
+
+.x-row { align-items: start; }
+.spark-wrap { margin-top: 6px; }
