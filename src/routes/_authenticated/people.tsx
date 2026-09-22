@@ -237,6 +237,49 @@ function People() {
               <option value="support">Support score, high first</option>
               <option value="name">Name A–Z</option>
             </select>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                downloadCSV(
+                  stampName("groundwork-people"),
+                  [
+                    "Name",
+                    "Phone",
+                    "Ward",
+                    "Constituency",
+                    "Segment",
+                    "Source",
+                    "Support score",
+                    "Language",
+                    "Consented channels",
+                    "Tags",
+                    "Opted out",
+                    "Last contacted",
+                    "Added",
+                    "Notes",
+                  ],
+                  rows.map((r) => [
+                    r.name,
+                    r.phone,
+                    r.ward ?? "",
+                    r.constituency ?? "",
+                    r.segment ?? "",
+                    r.source,
+                    r.support,
+                    r.language,
+                    r.channels.join(" "),
+                    r.tags.join(" "),
+                    r.optedOut ? "yes" : "no",
+                    r.lastTouch ? r.lastTouch.slice(0, 10) : "",
+                    r.createdAt.slice(0, 10),
+                    r.notes ?? "",
+                  ]),
+                )
+              }
+            >
+              Download {nf.format(rows.length)} rows · CSV
+            </button>
           </div>
 
           <div className="tblwrap">
