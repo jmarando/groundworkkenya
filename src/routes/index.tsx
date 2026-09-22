@@ -19,13 +19,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system, built in Nairobi for Kenya's 2027 general election.",
+          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system, from an MCA seat to State House.",
       },
       { property: "og:title", content: "Groundwork · the campaign OS" },
       {
         property: "og:description",
         content:
-          "Supporters, field agents, messaging, polling, money and election night in one system. Built in Nairobi for 2027.",
+          "Supporters, field agents, messaging, polling, money and election night in one system. Know every voter, reach them on the channel they answer.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
