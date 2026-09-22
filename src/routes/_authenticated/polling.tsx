@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { getPolling } from "@/lib/console.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/polling")({
   component: Polling,
