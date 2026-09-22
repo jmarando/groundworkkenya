@@ -40,11 +40,77 @@ const STATUS: { key: string; label: string }[] = [
   { key: "paid", label: "Paid" },
 ];
 
+const STATION_VIEWS: { key: string; label: string }[] = [
+  { key: "", label: "All stations" },
+  { key: "confirmed", label: "Staffed" },
+  { key: "open", label: "No agent" },
+  { key: "reported", label: "Reported" },
+];
+
 function Agents() {
   const fetchAgents = useServerFn(getAgents);
   const { data } = useQuery({ queryKey: ["agents"], queryFn: () => fetchAgents() });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
+  const [stationView, setStationView] = useState("");
+  const [sq, setSq] = useState("");
+
+  const stations = useMemo(() => {
+    const list = data?.board ?? [];
+    const needle = sq.trim().toLowerCase();
+    return list.filter((b) => {
+      const viewOk =
+        stationView === ""
+          ? true
+          : stationView === "confirmed"
+            ? b.status === "confirmed"
+            : stationView === "open"
+              ? b.status !== "confirmed"
+              : b.turnout != null || b.reportedAt != null;
+      return (
+        viewOk &&
+        (!needle ||
+          b.name.toLowerCase().includes(needle) ||
+          b.code.toLowerCase().includes(needle) ||
+          (b.ward ?? "").toLowerCase().includes(needle) ||
+          (b.agent ?? "").toLowerCase().includes(needle))
+      );
+    });
+  }, [data, stationView, sq]);
+
+  function exportBoard() {
+    downloadCSV(
+      stampName("groundwork-polling-stations"),
+      [
+        "Code",
+        "Station",
+        "Ward",
+        "Constituency",
+        "Registered voters",
+        "Streams",
+        "Agent",
+        "Phone",
+        "Status",
+        "Turnout reported",
+        "Reported at",
+        "Owed KES",
+      ],
+      stations.map((b) => [
+        b.code,
+        b.name,
+        b.ward ?? "",
+        b.constituency ?? "",
+        b.registered,
+        b.streams,
+        b.agent ?? "",
+        b.phone ?? "",
+        b.status,
+        b.turnout ?? "",
+        b.reportedAt ? b.reportedAt.slice(0, 16).replace("T", " ") : "",
+        b.owed,
+      ]),
+    );
+  }
 
   const rows = useMemo(() => {
     const list = data?.roster ?? [];
@@ -302,6 +368,87 @@ function Agents() {
         </div>
         <p className="f-note" style={{ marginTop: 10 }}>
           Showing the first 60 of {nf.format(rows.length)} lines · {money(filteredTotal)} in view.
+        </p>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <h2>Station board</h2>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {STATION_VIEWS.map((x) => (
+              <button
+                key={x.key || "all"}
+                type="button"
+                className="fchip"
+                aria-pressed={stationView === x.key}
+                onClick={() => setStationView(x.key)}
+              >
+                {x.label}
+              </button>
+            ))}
+            <span className="pbar">
+              <label className="sr" htmlFor="stationQ">
+                Search stations
+              </label>
+              <input
+                id="stationQ"
+                type="search"
+                placeholder="Search station, code or ward"
+                value={sq}
+                onChange={(e) => setSq(e.target.value)}
+              />
+            </span>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={exportBoard}>
+              Download {nf.format(stations.length)} stations · CSV
+            </button>
+          </div>
+        </div>
+        <div className="tblwrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Station</th>
+                <th>Ward</th>
+                <th style={{ textAlign: "right" }}>Voters</th>
+                <th style={{ textAlign: "right" }}>Streams</th>
+                <th>Agent</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Turnout</th>
+                <th style={{ textAlign: "right" }}>Owed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stations.slice(0, 100).map((b) => (
+                <tr key={b.id}>
+                  <td className="mono">{b.code}</td>
+                  <td>
+                    <b>{b.name}</b>
+                  </td>
+                  <td className="meta">{b.ward ?? "—"}</td>
+                  <td className="num">{nf.format(b.registered)}</td>
+                  <td className="num">{b.streams}</td>
+                  <td>{b.agent ?? <span className="meta">nobody yet</span>}</td>
+                  <td className="mono">{b.phone ?? "—"}</td>
+                  <td className="meta">{b.status}</td>
+                  <td className="num">{b.turnout != null ? nf.format(b.turnout) : "—"}</td>
+                  <td className="num">{b.owed ? nf.format(b.owed) : "—"}</td>
+                </tr>
+              ))}
+              {stations.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="meta">
+                    No stations match that view.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="f-note" style={{ marginTop: 10 }}>
+          {nf.format(stations.length)} stations in view ·{" "}
+          {nf.format(stations.reduce((a, b) => a + b.registered, 0))} registered voters behind them.
         </p>
       </div>
     </section>
