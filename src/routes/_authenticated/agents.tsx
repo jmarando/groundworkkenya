@@ -168,7 +168,6 @@ function Agents() {
               <thead>
                 <tr>
                   <th>Ward</th>
-                  <th>Constituency</th>
                   <th style={{ textAlign: "right" }}>Stations</th>
                   <th style={{ textAlign: "right" }}>Staffed</th>
                   <th style={{ textAlign: "right" }}>Owed</th>
@@ -180,7 +179,6 @@ function Agents() {
                     <td>
                       <b>{w.name}</b>
                     </td>
-                    <td className="meta">{w.constituency}</td>
                     <td className="num">{nf.format(w.stations)}</td>
                     <td className="num">{nf.format(w.staffed)}</td>
                     <td className="num">{w.owed ? money(w.owed) : "—"}</td>
@@ -188,7 +186,7 @@ function Agents() {
                 ))}
                 {(data?.wards ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={5} className="meta">
+                    <td colSpan={4} className="meta">
                       Loading cover…
                     </td>
                   </tr>
