@@ -810,7 +810,8 @@ Nini kirekebishwe kwanza mtaani kwako?
               <b>groundwork</b>
             </a>
             <p style={{ marginTop: 14, maxWidth: "34ch" }}>
-              The campaign OS. Built in Nairobi for Kenya's 2027 general election.
+              The campaign OS. Every voter known, every shilling accounted for, every vote
+              counted.
             </p>
           </div>
           <div>
