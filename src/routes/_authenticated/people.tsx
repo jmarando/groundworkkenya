@@ -8,7 +8,8 @@ import { getPeople, type PersonRow } from "@/lib/console.functions";
 export const Route = createFileRoute("/_authenticated/people")({
   component: People,
   validateSearch: (search: Record<string, unknown>) => ({
-    person: typeof search['person'] === "string" ? (search['person'] as string) : undefined,
+    person:
+      typeof search['person'] === "string" ? (search['person'] as string) : (undefined as string | undefined),
   }),
   head: () => ({
     meta: [
@@ -89,11 +90,8 @@ function People() {
   const maxSource = Math.max(...data.bySource.map((s) => s.count), 1);
   const pages = Math.max(Math.ceil(rows.length / PAGE), 1);
   const pageRows = rows.slice(page * PAGE, page * PAGE + PAGE);
-  const person =
-    selected ??
-    (linkedId ? ((data?.rows ?? []).find((r) => r.id === linkedId) ?? null) : null) ??
-    pageRows[0] ??
-    null;
+  const linked = linkedId ? ((data?.rows ?? []).find((r) => r.id === linkedId) ?? null) : null;
+  const person = selected ?? linked ?? pageRows[0] ?? null;
   const contactablePct = data.total ? (data.contactable / data.total) * 100 : 0;
 
   return (
