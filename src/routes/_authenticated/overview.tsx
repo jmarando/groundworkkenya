@@ -56,6 +56,14 @@ function Overview() {
     );
   }
 
+  const quick = data.quick ?? {
+    people: 0,
+    unread: 0,
+    openIncidents: 0,
+    unstaffed: 0,
+    activePolls: 0,
+  };
+
   const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
   const supporterPct = pct(data.supporters, data.supporterTarget);
   const spendPct = pct(data.spendKes, data.statutoryLimit);
