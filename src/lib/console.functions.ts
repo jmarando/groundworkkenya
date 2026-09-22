@@ -62,6 +62,12 @@ export const getFinance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FinanceData> => {
     const sb = context.supabase;
+    const { data: roles } = await sb
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
+    if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
     const [{ data: expenses }, { data: contributions }] = await Promise.all([
       sb.from("expenses").select("*").order("incurred_at", { ascending: false }),
       sb.from("contributions").select("*").order("received_at", { ascending: false }),
