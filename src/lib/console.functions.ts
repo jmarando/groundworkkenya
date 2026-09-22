@@ -3,6 +3,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const STATUTORY_LIMIT = 433_800_000;
 
+const PAGE = 1000;
+/** PostgREST caps a response at 1000 rows, so walk pages until the table is exhausted. */
+async function pageAll<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; from < 20000; from += PAGE) {
+    const { data } = await build(from, from + PAGE - 1);
+    const rows = data ?? [];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------------ finance */
 
 export type FinanceData = {
@@ -146,20 +161,22 @@ export const getPeople = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PeopleData> => {
     const sb = context.supabase;
-    const [{ data: people }, { data: wards }, { data: segments }] = await Promise.all([
-      sb
-        .from("people")
-        .select(
-          "id, full_name, phone, ward_id, segment, source, support_score, tags, language, consent_sms, consent_whatsapp, consent_call, opted_out, last_contacted_at, created_at, notes",
-        )
-        .order("last_contacted_at", { ascending: false, nullsFirst: false })
-        .limit(600),
+    const [people, { data: wards }, { data: segments }] = await Promise.all([
+      pageAll((from, to) =>
+        sb
+          .from("people")
+          .select(
+            "id, full_name, phone, ward_id, segment, source, support_score, tags, language, consent_sms, consent_whatsapp, consent_call, opted_out, last_contacted_at, created_at, notes",
+          )
+          .order("last_contacted_at", { ascending: false, nullsFirst: false })
+          .range(from, to),
+      ),
       sb.from("wards").select("id, name, constituency").order("name"),
       sb.from("segments").select("slug, name, colour"),
     ]);
 
     const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
-    const all = people ?? [];
+    const all = people;
 
     const rows: PersonRow[] = all.map((p) => {
       const w = p.ward_id ? wardById.get(p.ward_id) : undefined;
@@ -200,7 +217,7 @@ export const getPeople = createServerFn({ method: "GET" })
       srcMap.set(r.source, (srcMap.get(r.source) ?? 0) + 1);
       if (r.segment) segMap.set(r.segment, (segMap.get(r.segment) ?? 0) + 1);
       if (!r.optedOut && r.channels.length) contactable += 1;
-      if (r.support >= 4) supporters45 += 1;
+      if (r.support >= 70) supporters45 += 1;
       if (r.support > 0) scored += 1;
       if (new Date(r.createdAt).getTime() >= startOfDay.getTime()) addedToday += 1;
       const list = phoneMap.get(r.phone) ?? [];
@@ -261,16 +278,18 @@ export const getVoters = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<VotersData> => {
     const sb = context.supabase;
-    const [{ data: wards }, { data: people }] = await Promise.all([
+    const [{ data: wards }, people] = await Promise.all([
       sb.from("wards").select("*").order("constituency"),
-      sb
-        .from("people")
-        .select("id, full_name, ward_id, support_score, last_contacted_at")
-        .limit(2000),
+      pageAll((from, to) =>
+        sb
+          .from("people")
+          .select("id, full_name, ward_id, support_score, last_contacted_at")
+          .range(from, to),
+      ),
     ]);
 
     const w = wards ?? [];
-    const p = people ?? [];
+    const p = people;
     const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     const perWard = new Map<string, { people: number; contacted: number }>();
@@ -350,22 +369,25 @@ export const getInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InboxData> => {
     const sb = context.supabase;
-    const [{ data: convos }, { data: people }, { data: wards }, { data: messages }] =
-      await Promise.all([
-        sb.from("conversations").select("*").order("last_message_at", { ascending: false }),
-        sb.from("people").select("id, full_name, phone, ward_id").limit(2000),
-        sb.from("wards").select("id, name"),
+    const [{ data: convos }, people, { data: wards }, messages] = await Promise.all([
+      sb.from("conversations").select("*").order("last_message_at", { ascending: false }),
+      pageAll((from, to) =>
+        sb.from("people").select("id, full_name, phone, ward_id").range(from, to),
+      ),
+      sb.from("wards").select("id, name"),
+      pageAll((from, to) =>
         sb
           .from("messages")
           .select("id, person_id, body, direction, status, created_at, sent_at")
           .order("created_at", { ascending: true })
-          .limit(1000),
-      ]);
+          .range(from, to),
+      ),
+    ]);
 
-    const personById = new Map((people ?? []).map((p) => [p.id, p]));
+    const personById = new Map(people.map((p) => [p.id, p]));
     const wardById = new Map((wards ?? []).map((w) => [w.id, w.name]));
     const byPerson = new Map<string, InboxData["conversations"][number]["thread"]>();
-    for (const m of messages ?? []) {
+    for (const m of messages) {
       if (!m.person_id) continue;
       const list = byPerson.get(m.person_id) ?? [];
       list.push({
@@ -443,16 +465,23 @@ export const getBroadcast = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BroadcastData> => {
     const sb = context.supabase;
-    const [{ data: people }, { data: wards }, { data: messages }] = await Promise.all([
-      sb
-        .from("people")
-        .select("ward_id, consent_sms, consent_whatsapp, consent_call, opted_out, support_score")
-        .limit(2000),
+    const [people, { data: wards }, messages] = await Promise.all([
+      pageAll((from, to) =>
+        sb
+          .from("people")
+          .select("ward_id, consent_sms, consent_whatsapp, consent_call, opted_out, support_score")
+          .range(from, to),
+      ),
       sb.from("wards").select("id, name, constituency"),
-      sb.from("messages").select("body, channel, direction, status, cost_kes, created_at").limit(1000),
+      pageAll((from, to) =>
+        sb
+          .from("messages")
+          .select("body, channel, direction, status, cost_kes, created_at")
+          .range(from, to),
+      ),
     ]);
 
-    const p = people ?? [];
+    const p = people;
     const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
     const consentedByWard = new Map<string, number>();
     for (const person of p) {
@@ -461,8 +490,8 @@ export const getBroadcast = createServerFn({ method: "GET" })
       }
     }
 
-    const outs = (messages ?? []).filter((m) => m.direction === "out");
-    const ins = (messages ?? []).filter((m) => m.direction === "in");
+    const outs = messages.filter((m) => m.direction === "out");
+    const ins = messages.filter((m) => m.direction === "in");
     const camp = new Map<string, BroadcastData["campaigns"][number]>();
     for (const m of outs) {
       const key = m.body.slice(0, 48);
@@ -497,8 +526,11 @@ export const getBroadcast = createServerFn({ method: "GET" })
         whatsapp: p.filter((x) => x.consent_whatsapp && !x.opted_out).length,
         call: p.filter((x) => x.consent_call && !x.opted_out).length,
         optedOut: p.filter((x) => x.opted_out).length,
-        support45: p.filter((x) => (x.support_score ?? 0) >= 4).length,
-        undecided: p.filter((x) => (x.support_score ?? 0) === 3).length,
+        support45: p.filter((x) => (x.support_score ?? 0) >= 70).length,
+        undecided: p.filter((x) => {
+          const s = x.support_score ?? 0;
+          return s >= 40 && s < 70;
+        }).length,
       },
       wards: [...consentedByWard.entries()]
         .map(([id, consented]) => ({
@@ -540,13 +572,15 @@ export const getPolling = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PollingData> => {
     const sb = context.supabase;
-    const [{ data: polls }, { data: responses }, { data: wards }] = await Promise.all([
+    const [{ data: polls }, responses, { data: wards }] = await Promise.all([
       sb.from("polls").select("*").order("created_at", { ascending: false }),
-      sb.from("poll_responses").select("poll_id, option_key, channel, ward_id").limit(5000),
+      pageAll((from, to) =>
+        sb.from("poll_responses").select("poll_id, option_key, channel, ward_id").range(from, to),
+      ),
       sb.from("wards").select("id, constituency"),
     ]);
 
-    const res = responses ?? [];
+    const res = responses;
     const wardConst = new Map((wards ?? []).map((w) => [w.id, w.constituency]));
 
     const out = (polls ?? []).map((p) => {

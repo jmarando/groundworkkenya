@@ -110,7 +110,7 @@ function Broadcast() {
                   aria-pressed={support45}
                   onClick={() => setSupport45((v) => !v)}
                 >
-                  Support 4–5 · {nf.format(a.support45)}
+                  Strong support 70+ · {nf.format(a.support45)}
                 </button>
                 <button
                   type="button"
@@ -118,7 +118,7 @@ function Broadcast() {
                   aria-pressed={undecided}
                   onClick={() => setUndecided((v) => !v)}
                 >
-                  Undecided (3) · {nf.format(a.undecided)}
+                  Persuadable 40–69 · {nf.format(a.undecided)}
                 </button>
               </div>
             </div>
