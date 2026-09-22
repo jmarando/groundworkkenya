@@ -95,7 +95,7 @@ function AuthPage() {
           {mode === "in" ? "Welcome " : "Join the "}
           <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
         </h1>
-        <p className="meta">Nairobi County · 2027 cycle</p>
+        <p className="meta">2027 cycle</p>
 
         <form onSubmit={submit} className="auth-form">
           {mode === "up" ? (

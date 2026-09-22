@@ -71,8 +71,8 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="sb-tenant">
-          <div className="sb-tenant-name">Nairobi 2027</div>
-          <div className="sb-tenant-sub">Governor · Nairobi County · 2027</div>
+          <div className="sb-tenant-name">Campaign 2027</div>
+          <div className="sb-tenant-sub">Governor · 2027 cycle</div>
         </div>
 
         <nav aria-label="Product">
@@ -108,7 +108,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
 
         <div className="sb-foot">
           <span className="sb-tag">
-            <span className="dot-live" aria-hidden="true" /> Workspace · Nairobi
+            <span className="dot-live" aria-hidden="true" /> Workspace · live
           </span>
           <div className="sb-foot-line">
             <button className="sb-signout" type="button" onClick={signOut}>
