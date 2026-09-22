@@ -477,6 +477,26 @@ export type BroadcastData = {
     undecided: number;
   };
   wards: { name: string; constituency: string; consented: number }[];
+  /** every ward, for rally targeting */
+  wardList: { id: string; name: string; constituency: string; consented: number }[];
+  segments: { slug: string; name: string; colour: string | null }[];
+  /** one row per person, so targeting and CSV export happen without a round trip */
+  contacts: {
+    id: string;
+    name: string;
+    phone: string;
+    wardId: string | null;
+    ward: string | null;
+    constituency: string | null;
+    segment: string | null;
+    support: number;
+    language: string;
+    sms: boolean;
+    whatsapp: boolean;
+    call: boolean;
+    optedOut: boolean;
+    lastTouch: string | null;
+  }[];
   campaigns: {
     key: string;
     body: string;
