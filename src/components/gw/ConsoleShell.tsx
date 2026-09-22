@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 
 import { GwMark } from "./GwMark";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccess } from "@/hooks/useAccess";
 
-type NavItem = { to: string; label: string; faint?: string };
+type NavItem = { to: string; label: string; faint?: string; principalOnly?: boolean };
 
 const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   {
@@ -31,7 +32,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   },
   {
     title: "Money",
-    items: [{ to: "/finance", label: "Finance" }],
+    items: [{ to: "/finance", label: "Finance", principalOnly: true }],
     inert: [{ to: "#", label: "Disclosure", faint: "§9.4" }],
   },
   {
@@ -47,10 +48,16 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   },
 ];
 
-const TOPBAR: NavItem[] = GROUPS.flatMap((g) => g.items);
+
 
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const { isPrincipal } = useAccess();
+  const visible = (items: NavItem[]) => items.filter((i) => !i.principalOnly || isPrincipal);
+  const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
+    (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
+  );
+  const topbar = groups.flatMap((g) => g.items);
   const queryClient = useQueryClient();
 
   async function signOut() {
@@ -76,7 +83,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Product">
-          {GROUPS.map((group) => (
+          {groups.map((group) => (
             <div key={group.title}>
               <div className="sb-group">
                 <span className="eyebrow">{group.title}</span>
@@ -123,7 +130,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           <GwMark />
           <span className="sb-brand-name">groundwork</span>
           <nav className="topbar-nav" aria-label="Views">
-            {TOPBAR.map((item) => (
+            {topbar.map((item) => (
               <Link key={item.to} to={item.to} activeProps={{ "aria-current": "page" }}>
                 {item.label}
               </Link>
