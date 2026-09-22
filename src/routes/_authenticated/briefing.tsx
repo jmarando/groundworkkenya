@@ -155,9 +155,11 @@ function Briefing() {
         </div>
         <div className="f-rows">
           {(data?.headlines ?? []).map((h, i) => (
-            <div className="f-row" key={i}>
-              <span className="mono">{String(i + 1).padStart(2, "0")}</span>
-              <b style={{ fontWeight: 500, textAlign: "left" }}>{h}</b>
+            <div className="f-row" key={i} style={{ justifyContent: "flex-start" }}>
+              <span className="mono" style={{ opacity: 0.55 }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span style={{ fontSize: 13.5, lineHeight: 1.5 }}>{h}</span>
             </div>
           ))}
           {!data && <p className="meta">Reading the campaign…</p>}
