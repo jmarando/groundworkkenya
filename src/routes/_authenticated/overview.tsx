@@ -286,7 +286,7 @@ function Overview() {
         </div>
       </div>
       <div className="quick fx4">
-        <Link to="/people" className="qcard">
+        <Link to="/people" search={{ person: undefined }} className="qcard">
           <span className="qcard-k">CRM</span>
           <span className="qcard-t">Work the list</span>
           <span className="qcard-s">Search, filter and open any record.</span>

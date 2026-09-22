@@ -266,3 +266,19 @@ a.sb-item {
 
 .x-row { align-items: start; }
 .spark-wrap { margin-top: 6px; }
+
+/* clickable rows in the voters feed */
+.t-row--link {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition-property: background-color;
+  transition-duration: .15s;
+}
+.t-row--link:hover { background: color-mix(in oklab, var(--muted) 55%, transparent); }
+.t-row--link:active { transform: scale(.996); }
