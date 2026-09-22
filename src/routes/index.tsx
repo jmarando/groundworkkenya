@@ -19,13 +19,13 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system, built in Nairobi for Kenya's 2027 general election.",
+          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system, from an MCA seat to State House.",
       },
       { property: "og:title", content: "Groundwork · the campaign OS" },
       {
         property: "og:description",
         content:
-          "Supporters, field agents, messaging, polling, money and election night in one system. Built in Nairobi for 2027.",
+          "Supporters, field agents, messaging, polling, money and election night in one system. Know every voter, reach them on the channel they answer.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -185,15 +185,15 @@ function Landing() {
         <div className="hero">
           <div className="wrap">
             <span className="eyebrow">
-              <i /> The campaign OS · built in Nairobi for 2027
+              <i /> The campaign OS · from an MCA seat to State House
             </span>
             <h1>
               Win it on the <span className="m">ground.</span>
             </h1>
             <p className="hero-sub">
-              Groundwork is one system for your supporters, field agents, messages, polls, money and
-              election night. From an MCA seat to State House, every door is known and every vote is
-              counted.
+              Know every voter by name, ward and promise made. Reach them in their language on the
+              channel they actually answer — and watch every reply, door knock and shilling turn
+              into votes.
             </p>
             <div className="hero-cta">
               <a className="btn btn-m" href="#demo">
@@ -202,14 +202,6 @@ function Landing() {
               <Link to="/auth" className="btn btn-o">
                 Sign in to your campaign
               </Link>
-            </div>
-            <div className="chan">
-              <span>SMS</span>
-              <span>USSD *384*27#</span>
-              <span>WhatsApp</span>
-              <span>M-Pesa</span>
-              <span>Kiswahili · English · Sheng</span>
-              <span>Works offline</span>
             </div>
             <div className="shot">
               <div className="frame">
@@ -818,7 +810,8 @@ Nini kirekebishwe kwanza mtaani kwako?
               <b>groundwork</b>
             </a>
             <p style={{ marginTop: 14, maxWidth: "34ch" }}>
-              The campaign OS. Built in Nairobi for Kenya's 2027 general election.
+              The campaign OS. Every voter known, every shilling accounted for, every vote
+              counted.
             </p>
           </div>
           <div>
