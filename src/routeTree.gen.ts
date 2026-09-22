@@ -26,6 +26,7 @@ import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
+import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
 import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
 import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
 
@@ -114,6 +115,11 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
   path: '/warroom',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
+  id: '/api/public/listening/scan',
+  path: '/api/public/listening/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSocialMetaRoute = ApiPublicSocialMetaRouteImport.update({
   id: '/api/public/social/meta',
   path: '/api/public/social/meta',
@@ -142,6 +148,7 @@ export interface FileRoutesByFullPath {
   '/social': typeof AuthenticatedSocialRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/social': typeof AuthenticatedSocialRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -184,6 +192,7 @@ export interface FileRoutesById {
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/voters'
     | '/warroom'
+    | '/api/public/listening/scan'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   fileRoutesByTo: FileRoutesByTo
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/voters'
     | '/warroom'
+    | '/api/public/listening/scan'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   id:
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social'
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
+    | '/api/public/listening/scan'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   fileRoutesById: FileRoutesById
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
   ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
   ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
 }
@@ -380,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWarroomRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/listening/scan': {
+      id: '/api/public/listening/scan'
+      path: '/api/public/listening/scan'
+      fullPath: '/api/public/listening/scan'
+      preLoaderRoute: typeof ApiPublicListeningScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/social/meta': {
       id: '/api/public/social/meta'
       path: '/api/public/social/meta'
@@ -438,6 +458,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
   ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
   ApiPublicSocialXRoute: ApiPublicSocialXRoute,
 }
