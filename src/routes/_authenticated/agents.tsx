@@ -40,11 +40,77 @@ const STATUS: { key: string; label: string }[] = [
   { key: "paid", label: "Paid" },
 ];
 
+const STATION_VIEWS: { key: string; label: string }[] = [
+  { key: "", label: "All stations" },
+  { key: "confirmed", label: "Staffed" },
+  { key: "open", label: "No agent" },
+  { key: "reported", label: "Reported" },
+];
+
 function Agents() {
   const fetchAgents = useServerFn(getAgents);
   const { data } = useQuery({ queryKey: ["agents"], queryFn: () => fetchAgents() });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
+  const [stationView, setStationView] = useState("");
+  const [sq, setSq] = useState("");
+
+  const stations = useMemo(() => {
+    const list = data?.board ?? [];
+    const needle = sq.trim().toLowerCase();
+    return list.filter((b) => {
+      const viewOk =
+        stationView === ""
+          ? true
+          : stationView === "confirmed"
+            ? b.status === "confirmed"
+            : stationView === "open"
+              ? b.status !== "confirmed"
+              : b.turnout != null || b.reportedAt != null;
+      return (
+        viewOk &&
+        (!needle ||
+          b.name.toLowerCase().includes(needle) ||
+          b.code.toLowerCase().includes(needle) ||
+          (b.ward ?? "").toLowerCase().includes(needle) ||
+          (b.agent ?? "").toLowerCase().includes(needle))
+      );
+    });
+  }, [data, stationView, sq]);
+
+  function exportBoard() {
+    downloadCSV(
+      stampName("groundwork-polling-stations"),
+      [
+        "Code",
+        "Station",
+        "Ward",
+        "Constituency",
+        "Registered voters",
+        "Streams",
+        "Agent",
+        "Phone",
+        "Status",
+        "Turnout reported",
+        "Reported at",
+        "Owed KES",
+      ],
+      stations.map((b) => [
+        b.code,
+        b.name,
+        b.ward ?? "",
+        b.constituency ?? "",
+        b.registered,
+        b.streams,
+        b.agent ?? "",
+        b.phone ?? "",
+        b.status,
+        b.turnout ?? "",
+        b.reportedAt ? b.reportedAt.slice(0, 16).replace("T", " ") : "",
+        b.owed,
+      ]),
+    );
+  }
 
   const rows = useMemo(() => {
     const list = data?.roster ?? [];
