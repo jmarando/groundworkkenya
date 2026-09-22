@@ -62,6 +62,12 @@ export const getFinance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FinanceData> => {
     const sb = context.supabase;
+    const { data: roles } = await sb
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
+    if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
     const [{ data: expenses }, { data: contributions }] = await Promise.all([
       sb.from("expenses").select("*").order("incurred_at", { ascending: false }),
       sb.from("contributions").select("*").order("received_at", { ascending: false }),
@@ -735,13 +741,37 @@ export const getPolling = createServerFn({ method: "GET" })
 /* ----------------------------------------------------------------- war room */
 
 export type WarRoomData = {
-  stations: { total: number; confirmed: number; unstaffed: number; registered: number };
+  stations: {
+    total: number;
+    confirmed: number;
+    unstaffed: number;
+    registered: number;
+    reporting: number;
+    onStation: number;
+    missed: number;
+    noAgent: number;
+    registeredCovered: number;
+  };
   streams: number;
+  tally: {
+    candidates: { name: string; votes: number; share: number }[];
+    otherVotes: number;
+    otherShare: number;
+    otherCount: number;
+    validVotes: number;
+    lead: number;
+    turnoutReported: number;
+  };
+  projection: { share: number; margin: number } | null;
   constituencies: {
     name: string;
     stations: number;
     confirmed: number;
+    reported: number;
+    reportingPct: number;
     registered: number;
+    leader: string | null;
+    margin: number;
   }[];
   incidents: {
     id: string;
@@ -753,8 +783,24 @@ export type WarRoomData = {
     reportedBy: string | null;
     occurredAt: string;
   }[];
+  flags: { id: string; title: string; detail: string; at: string }[];
   unstaffedList: { code: string; name: string; ward: string | null; registered: number }[];
 };
+
+type StationResults = Record<string, unknown> | null;
+
+function candidateVotes(results: StationResults): Record<string, number> {
+  if (!results || typeof results !== "object") return {};
+  const source = (results as Record<string, unknown>)["candidates"] ?? results;
+  if (!source || typeof source !== "object") return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(source as Record<string, unknown>)) {
+    if (k.startsWith("_") || k === "turnout" || k === "rejected") continue;
+    const n = Number(v);
+    if (Number.isFinite(n)) out[k] = n;
+  }
+  return out;
+}
 
 export const getWarRoom = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -768,27 +814,132 @@ export const getWarRoom = createServerFn({ method: "GET" })
 
     const st = stations ?? [];
     const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
-    const byConst = new Map<string, { stations: number; confirmed: number; registered: number }>();
+
+    const totals = new Map<string, number>();
+    const byConst = new Map<
+      string,
+      {
+        stations: number;
+        confirmed: number;
+        reported: number;
+        registered: number;
+        votes: Map<string, number>;
+      }
+    >();
+    const flags: WarRoomData["flags"] = [];
+    let reporting = 0;
+    let registeredCovered = 0;
+    let turnoutReported = 0;
+
     for (const s of st) {
+      const votes = candidateVotes(s.results as StationResults);
+      const hasResults = Object.keys(votes).length > 0;
+      const reg = s.registered_voters ?? 0;
+      if (hasResults) {
+        reporting += 1;
+        registeredCovered += reg;
+      }
+      turnoutReported += s.turnout_reported ?? 0;
+
       const c = s.ward_id ? (wardById.get(s.ward_id)?.constituency ?? "—") : "—";
-      const cur = byConst.get(c) ?? { stations: 0, confirmed: 0, registered: 0 };
+      const cur = byConst.get(c) ?? {
+        stations: 0,
+        confirmed: 0,
+        reported: 0,
+        registered: 0,
+        votes: new Map<string, number>(),
+      };
       cur.stations += 1;
       if (s.status === "confirmed") cur.confirmed += 1;
-      cur.registered += s.registered_voters ?? 0;
+      if (hasResults) cur.reported += 1;
+      cur.registered += reg;
+      for (const [name, n] of Object.entries(votes)) {
+        cur.votes.set(name, (cur.votes.get(name) ?? 0) + n);
+        totals.set(name, (totals.get(name) ?? 0) + n);
+      }
       byConst.set(c, cur);
+
+      const cast = Object.values(votes).reduce((a, b) => a + b, 0);
+      if (reg > 0 && s.turnout_reported && s.turnout_reported > reg) {
+        flags.push({
+          id: `${s.id}-turnout`,
+          title: `Turnout above the register · ${Math.round((s.turnout_reported / reg) * 100)}%`,
+          detail: `${s.name} · ${s.code} — needs a human to look at the form`,
+          at: (s.reported_at as string | null) ?? (s.created_at as string),
+        });
+      }
+      if (hasResults && s.turnout_reported && Math.abs(cast - s.turnout_reported) > 0) {
+        flags.push({
+          id: `${s.id}-sum`,
+          title: "Arithmetic mismatch on form",
+          detail: `${s.name} · ${s.code} — candidate votes (${cast}) ≠ stated turnout (${s.turnout_reported})`,
+          at: (s.reported_at as string | null) ?? (s.created_at as string),
+        });
+      }
     }
+
+    const ranked = [...totals.entries()]
+      .map(([name, votes]) => ({ name, votes }))
+      .sort((a, b) => b.votes - a.votes);
+    const validVotes = ranked.reduce((s, c) => s + c.votes, 0);
+    const top = ranked.slice(0, 2);
+    const rest = ranked.slice(2);
+    const otherVotes = rest.reduce((s, c) => s + c.votes, 0);
+    const share = (v: number) => (validVotes ? (v / validVotes) * 100 : 0);
+
+    const confirmed = st.filter((s) => s.status === "confirmed").length;
+    const noAgent = st.filter((s) => s.status !== "confirmed").length;
+    const onStation = Math.max(confirmed - reporting, 0);
+    const registeredTotal = st.reduce((s, x) => s + (x.registered_voters ?? 0), 0);
+    const coverageShare = registeredTotal ? registeredCovered / registeredTotal : 0;
+
+    const leaderShare = top[0] ? share(top[0].votes) : 0;
+    const projection =
+      validVotes > 0
+        ? {
+            share: leaderShare,
+            margin: Math.max(0.4, Math.round((1 - coverageShare) * 6 * 10) / 10),
+          }
+        : null;
 
     return {
       stations: {
         total: st.length,
-        confirmed: st.filter((s) => s.status === "confirmed").length,
-        unstaffed: st.filter((s) => s.status !== "confirmed").length,
-        registered: st.reduce((s, x) => s + (x.registered_voters ?? 0), 0),
+        confirmed,
+        unstaffed: noAgent,
+        registered: registeredTotal,
+        reporting,
+        onStation,
+        missed: 0,
+        noAgent,
+        registeredCovered,
       },
       streams: st.reduce((s, x) => s + (x.streams ?? 1), 0),
+      tally: {
+        candidates: top.map((c) => ({ name: c.name, votes: c.votes, share: share(c.votes) })),
+        otherVotes,
+        otherShare: share(otherVotes),
+        otherCount: rest.length,
+        validVotes,
+        lead: top.length === 2 ? top[0]!.votes - top[1]!.votes : (top[0]?.votes ?? 0),
+        turnoutReported,
+      },
+      projection,
       constituencies: [...byConst.entries()]
-        .map(([name, v]) => ({ name, ...v }))
-        .sort((a, b) => b.registered - a.registered),
+        .map(([name, v]) => {
+          const r = [...v.votes.entries()].sort((a, b) => b[1] - a[1]);
+          return {
+            name,
+            stations: v.stations,
+            confirmed: v.confirmed,
+            reported: v.reported,
+            reportingPct: v.stations ? (v.reported / v.stations) * 100 : 0,
+            registered: v.registered,
+            leader: r[0]?.[0] ?? null,
+            margin: r.length > 1 ? r[0]![1] - r[1]![1] : (r[0]?.[1] ?? 0),
+          };
+        })
+        .sort((a, b) => b.margin - a.margin || b.registered - a.registered),
       incidents: (incidents ?? []).map((i) => ({
         id: i.id,
         title: i.title,
@@ -799,9 +950,11 @@ export const getWarRoom = createServerFn({ method: "GET" })
         reportedBy: i.reported_by,
         occurredAt: i.occurred_at as string,
       })),
+      flags: flags.slice(0, 8),
       unstaffedList: st
         .filter((s) => s.status !== "confirmed")
-        .slice(0, 10)
+        .sort((a, b) => (b.registered_voters ?? 0) - (a.registered_voters ?? 0))
+        .slice(0, 12)
         .map((s) => ({
           code: s.code,
           name: s.name,
