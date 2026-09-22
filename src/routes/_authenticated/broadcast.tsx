@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { getBroadcast } from "@/lib/console.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/broadcast")({
   component: Broadcast,
@@ -42,7 +43,32 @@ function Broadcast() {
 
   const [support45, setSupport45] = useState(true);
   const [undecided, setUndecided] = useState(true);
+  const [segs, setSegs] = useState<string[]>([]);
+  const [ward, setWard] = useState<string>("");
   const [lang, setLang] = useState<"sw" | "en">("sw");
+
+  const contacts = data?.contacts ?? [];
+  const matched = useMemo(
+    () =>
+      contacts.filter((c) => {
+        if (ward && c.wardId !== ward) return false;
+        if (segs.length && !(c.segment && segs.includes(c.segment))) return false;
+        if (support45 || undecided) {
+          const strong = c.support >= 70;
+          const mid = c.support >= 40 && c.support < 70;
+          if (!((support45 && strong) || (undecided && mid))) return false;
+        }
+        return true;
+      }),
+    [contacts, ward, segs, support45, undecided],
+  );
+  const reachable = useMemo(
+    () => matched.filter((c) => c.sms && !c.optedOut),
+    [matched],
+  );
+  const toggleSeg = (slug: string) =>
+    setSegs((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
+
 
   if (!data) {
     return (
@@ -61,15 +87,52 @@ function Broadcast() {
   }
 
   const a = data.audience;
-  const reach =
-    (support45 ? a.support45 : 0) + (undecided ? a.undecided : 0) || a.sms;
-  const sendable = Math.min(reach, a.sms);
+  const reach = matched.length;
+  const sendable = reachable.length;
   const cost = sendable * data.smsRate;
+  const wardName = data.wardList.find((w) => w.id === ward)?.name ?? null;
+  const segNames = data.segments.filter((s) => segs.includes(s.slug)).map((s) => s.name);
 
-  const body =
-    lang === "sw"
+  const body = wardName
+    ? lang === "sw"
+      ? `Habari. Tuko ${wardName} Jumamosi saa kumi jioni kwa mkutano wa mtaa. Karibu tuongee kuhusu mipango yetu. Jibu NDIYO kuthibitisha. Bure. STOP kujiondoa.`
+      : `Hello. We are in ${wardName} this Saturday at 4pm for a ward rally. Come and hear the plan. Reply YES to confirm. Free. STOP to opt out.`
+    : lang === "sw"
       ? "Habari. Tunakuletea ratiba mpya ya kuchukua taka mtaani kwako wiki hii. Jibu NDIYO kupokea ukumbusho. Bure. STOP kujiondoa."
       : "Hello. Here is this week's rubbish collection schedule for your estate. Reply YES for reminders. Free. STOP to opt out.";
+
+  const exportAudience = () =>
+    downloadCSV(
+      stampName(`groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`),
+      [
+        "Name",
+        "Phone",
+        "Ward",
+        "Constituency",
+        "Segment",
+        "Support score",
+        "Language",
+        "SMS consent",
+        "WhatsApp consent",
+        "Call consent",
+        "Opted out",
+        "Last contacted",
+      ],
+      matched.map((c) => [
+        c.name,
+        c.phone,
+        c.ward ?? "",
+        c.constituency ?? "",
+        c.segment ?? "",
+        c.support,
+        c.language,
+        c.sms ? "yes" : "no",
+        c.whatsapp ? "yes" : "no",
+        c.call ? "yes" : "no",
+        c.optedOut ? "yes" : "no",
+        c.lastTouch ? c.lastTouch.slice(0, 10) : "",
+      ]),
+    );
 
   return (
     <section className="view active" aria-label="Broadcast">
@@ -98,11 +161,11 @@ function Broadcast() {
         <div className="card">
           <div className="card-head">
             <h2>Audience</h2>
-            <span className="mono">{nf.format(sendable)} people</span>
+            <span className="mono">{nf.format(sendable)} reachable</span>
           </div>
           <div className="stack" style={{ gap: 12 }}>
             <div>
-              <span className="kpi-lbl">Who</span>
+              <span className="kpi-lbl">Who · support</span>
               <div className="fchips" style={{ marginTop: 6 }}>
                 <button
                   type="button"
@@ -123,14 +186,57 @@ function Broadcast() {
               </div>
             </div>
             <div>
-              <span className="kpi-lbl">Where · top consented wards</span>
+              <span className="kpi-lbl">Groups · boda, matatu, market and the rest</span>
               <div className="fchips" style={{ marginTop: 6 }}>
-                {data.wards.map((w) => (
-                  <span className="fchip" key={w.name}>
-                    {w.name} · {nf.format(w.consented)}
-                  </span>
-                ))}
+                {data.segments.map((s) => {
+                  const count = contacts.filter((c) => c.segment === s.slug).length;
+                  return (
+                    <button
+                      type="button"
+                      className="fchip"
+                      key={s.slug}
+                      aria-pressed={segs.includes(s.slug)}
+                      onClick={() => toggleSeg(s.slug)}
+                    >
+                      {s.name} · {nf.format(count)}
+                    </button>
+                  );
+                })}
+                {segs.length ? (
+                  <button type="button" className="fchip" onClick={() => setSegs([])}>
+                    Clear groups
+                  </button>
+                ) : null}
               </div>
+            </div>
+            <div>
+              <span className="kpi-lbl">Where · pick a ward for a rally</span>
+              <div className="pbar" style={{ marginTop: 6 }}>
+                <select
+                  value={ward}
+                  onChange={(e) => setWard(e.target.value)}
+                  aria-label="Ward"
+                  style={{ minWidth: 220 }}
+                >
+                  <option value="">Everywhere · all wards</option>
+                  {data.wardList.map((w) => (
+                    <option value={w.id} key={w.id}>
+                      {w.name} · {w.constituency} · {nf.format(w.consented)} consented
+                    </option>
+                  ))}
+                </select>
+                {ward ? (
+                  <button type="button" className="fchip" onClick={() => setWard("")}>
+                    Clear ward
+                  </button>
+                ) : null}
+              </div>
+              {wardName ? (
+                <p className="f-note" style={{ marginTop: 6 }}>
+                  Rally mode · the message below is addressed to {wardName}
+                  {segNames.length ? ` and limited to ${segNames.join(", ")}` : ""}.
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -144,13 +250,18 @@ function Broadcast() {
               <b className="stat">{nf.format(reach)}</b>
             </div>
             <div className="funnel-row">
-              <span>Consented for SMS</span>
+              <span>Consented for SMS · will receive</span>
               <b className="stat">{nf.format(sendable)}</b>
             </div>
             <div className="funnel-row">
               <span>Opted out · excluded</span>
-              <b className="stat">{nf.format(a.optedOut)}</b>
+              <b className="stat">{nf.format(matched.filter((c) => c.optedOut).length)}</b>
             </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={exportAudience} disabled={!reach}>
+              Download this list · CSV
+            </button>
           </div>
           <p className="f-note">
             Consent is checked per person, per channel, per purpose. Anyone outside it drops out of

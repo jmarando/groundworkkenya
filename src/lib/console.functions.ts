@@ -477,6 +477,26 @@ export type BroadcastData = {
     undecided: number;
   };
   wards: { name: string; constituency: string; consented: number }[];
+  /** every ward, for rally targeting */
+  wardList: { id: string; name: string; constituency: string; consented: number }[];
+  segments: { slug: string; name: string; colour: string | null }[];
+  /** one row per person, so targeting and CSV export happen without a round trip */
+  contacts: {
+    id: string;
+    name: string;
+    phone: string;
+    wardId: string | null;
+    ward: string | null;
+    constituency: string | null;
+    segment: string | null;
+    support: number;
+    language: string;
+    sms: boolean;
+    whatsapp: boolean;
+    call: boolean;
+    optedOut: boolean;
+    lastTouch: string | null;
+  }[];
   campaigns: {
     key: string;
     body: string;
@@ -495,14 +515,17 @@ export const getBroadcast = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BroadcastData> => {
     const sb = context.supabase;
-    const [people, { data: wards }, messages] = await Promise.all([
+    const [people, { data: wards }, { data: segmentRows }, messages] = await Promise.all([
       pageAll((from, to) =>
         sb
           .from("people")
-          .select("ward_id, consent_sms, consent_whatsapp, consent_call, opted_out, support_score")
+          .select(
+            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at",
+          )
           .range(from, to),
       ),
-      sb.from("wards").select("id, name, constituency"),
+      sb.from("wards").select("id, name, constituency").order("name"),
+      sb.from("segments").select("slug, name, colour").order("name"),
       pageAll((from, to) =>
         sb
           .from("messages")
@@ -570,6 +593,36 @@ export const getBroadcast = createServerFn({ method: "GET" })
         }))
         .sort((a, b) => b.consented - a.consented)
         .slice(0, 8),
+      wardList: (wards ?? []).map((w) => ({
+        id: w.id,
+        name: w.name,
+        constituency: w.constituency,
+        consented: consentedByWard.get(w.id) ?? 0,
+      })),
+      segments: (segmentRows ?? []).map((s) => ({
+        slug: s.slug,
+        name: s.name,
+        colour: s.colour,
+      })),
+      contacts: p.map((x) => {
+        const w = x.ward_id ? wardById.get(x.ward_id) : undefined;
+        return {
+          id: x.id,
+          name: x.full_name ?? "Unnamed",
+          phone: x.phone,
+          wardId: x.ward_id,
+          ward: w?.name ?? null,
+          constituency: w?.constituency ?? null,
+          segment: x.segment,
+          language: x.language,
+          support: x.support_score ?? 0,
+          sms: x.consent_sms,
+          whatsapp: x.consent_whatsapp,
+          call: x.consent_call,
+          optedOut: x.opted_out,
+          lastTouch: (x.last_contacted_at as string | null) ?? null,
+        };
+      }),
       campaigns,
       smsRate: 0.8,
     };

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { getVoters } from "@/lib/console.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/voters")({
   component: Voters,
@@ -272,13 +273,38 @@ function Voters() {
                 : "The most recent doorstep, call and reply, newest first."}
             </p>
           </div>
-          <div className="seg" role="group" aria-label="Bottom list">
-            <button type="button" aria-pressed={tab === "ward"} onClick={() => setTab("ward")}>
-              Ward roster
-            </button>
-            <button type="button" aria-pressed={tab === "feed"} onClick={() => setTab("feed")}>
-              Latest contact
-            </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="seg" role="group" aria-label="Bottom list">
+              <button type="button" aria-pressed={tab === "ward"} onClick={() => setTab("ward")}>
+                Ward roster
+              </button>
+              <button type="button" aria-pressed={tab === "feed"} onClick={() => setTab("feed")}>
+                Latest contact
+              </button>
+            </div>
+            {tab === "ward" && wardPeople.length ? (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() =>
+                  downloadCSV(
+                    stampName(
+                      `groundwork-${(selected?.name ?? "ward").toLowerCase().replace(/\s+/g, "-")}-roster`,
+                    ),
+                    ["Name", "Phone", "Support score", "Last contact", "Status"],
+                    wardPeople.map((r) => [
+                      r.name,
+                      r.phone ?? "",
+                      r.support,
+                      r.lastTouch ? r.lastTouch.slice(0, 10) : "",
+                      r.optedOut ? "opted out" : "contactable",
+                    ]),
+                  )
+                }
+              >
+                Download roster · CSV
+              </button>
+            ) : null}
           </div>
         </div>
 
