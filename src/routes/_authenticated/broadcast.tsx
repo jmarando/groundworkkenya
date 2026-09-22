@@ -211,11 +211,8 @@ function Broadcast() {
             </div>
             <div>
               <span className="kpi-lbl">Where · pick a ward for a rally</span>
-              <div
-                style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap", alignItems: "center" }}
-              >
+              <div className="pbar" style={{ marginTop: 6 }}>
                 <select
-                  className="inp"
                   value={ward}
                   onChange={(e) => setWard(e.target.value)}
                   aria-label="Ward"
