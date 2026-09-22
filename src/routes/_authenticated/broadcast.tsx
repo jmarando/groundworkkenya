@@ -42,7 +42,32 @@ function Broadcast() {
 
   const [support45, setSupport45] = useState(true);
   const [undecided, setUndecided] = useState(true);
+  const [segs, setSegs] = useState<string[]>([]);
+  const [ward, setWard] = useState<string>("");
   const [lang, setLang] = useState<"sw" | "en">("sw");
+
+  const contacts = data?.contacts ?? [];
+  const matched = useMemo(
+    () =>
+      contacts.filter((c) => {
+        if (ward && c.wardId !== ward) return false;
+        if (segs.length && !(c.segment && segs.includes(c.segment))) return false;
+        if (support45 || undecided) {
+          const strong = c.support >= 70;
+          const mid = c.support >= 40 && c.support < 70;
+          if (!((support45 && strong) || (undecided && mid))) return false;
+        }
+        return true;
+      }),
+    [contacts, ward, segs, support45, undecided],
+  );
+  const reachable = useMemo(
+    () => matched.filter((c) => c.sms && !c.optedOut),
+    [matched],
+  );
+  const toggleSeg = (slug: string) =>
+    setSegs((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
+
 
   if (!data) {
     return (
