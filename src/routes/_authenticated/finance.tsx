@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { getFinance } from "@/lib/console.functions";
+import { useAccess } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/finance")({
   component: Finance,
