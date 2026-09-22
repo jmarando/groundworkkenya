@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { getPeople, type PersonRow } from "@/lib/console.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
 
 export const Route = createFileRoute("/_authenticated/people")({
   component: People,
