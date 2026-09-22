@@ -89,7 +89,12 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                   activeProps={{ "aria-current": "page" }}
                 >
                   {item.label}
-                  {item.faint ? <span className="faint">{item.faint}</span> : null}
+                  {item.faint ? (
+                    <>
+                      {" "}
+                      <span className="faint">{item.faint}</span>
+                    </>
+                  ) : null}
                 </Link>
               ))}
               {group.inert?.map((item) => (
