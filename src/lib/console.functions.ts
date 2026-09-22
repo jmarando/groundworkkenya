@@ -497,8 +497,11 @@ export const getBroadcast = createServerFn({ method: "GET" })
         whatsapp: p.filter((x) => x.consent_whatsapp && !x.opted_out).length,
         call: p.filter((x) => x.consent_call && !x.opted_out).length,
         optedOut: p.filter((x) => x.opted_out).length,
-        support45: p.filter((x) => (x.support_score ?? 0) >= 4).length,
-        undecided: p.filter((x) => (x.support_score ?? 0) === 3).length,
+        support45: p.filter((x) => (x.support_score ?? 0) >= 70).length,
+        undecided: p.filter((x) => {
+          const s = x.support_score ?? 0;
+          return s >= 40 && s < 70;
+        }).length,
       },
       wards: [...consentedByWard.entries()]
         .map(([id, consented]) => ({
