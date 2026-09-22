@@ -24,6 +24,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     items: [
       { to: "/inbox", label: "Inbox" },
       { to: "/broadcast", label: "Broadcast & ads" },
+      { to: "/social", label: "Social & sentiment", faint: "AI" },
       { to: "/listening", label: "Listening", faint: "LIVE DATA" },
     ],
   },

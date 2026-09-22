@@ -23,8 +23,11 @@ import { Route as AuthenticatedListeningRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
+import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
+import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
+import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -96,6 +99,11 @@ const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
   path: '/polling',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedVotersRoute = AuthenticatedVotersRouteImport.update({
   id: '/voters',
   path: '/voters',
@@ -105,6 +113,16 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
   id: '/warroom',
   path: '/warroom',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiPublicSocialMetaRoute = ApiPublicSocialMetaRouteImport.update({
+  id: '/api/public/social/meta',
+  path: '/api/public/social/meta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSocialXRoute = ApiPublicSocialXRouteImport.update({
+  id: '/api/public/social/x',
+  path: '/api/public/social/x',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -121,8 +139,11 @@ export interface FileRoutesByFullPath {
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/social': typeof AuthenticatedSocialRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
+  '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -138,8 +159,11 @@ export interface FileRoutesByTo {
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/social': typeof AuthenticatedSocialRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
+  '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -157,8 +181,11 @@ export interface FileRoutesById {
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
+  '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
+  '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
+  '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -176,8 +203,11 @@ export interface FileRouteTypes {
     | '/overview'
     | '/people'
     | '/polling'
+    | '/social'
     | '/voters'
     | '/warroom'
+    | '/api/public/social/meta'
+    | '/api/public/social/x'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -193,8 +223,11 @@ export interface FileRouteTypes {
     | '/overview'
     | '/people'
     | '/polling'
+    | '/social'
     | '/voters'
     | '/warroom'
+    | '/api/public/social/meta'
+    | '/api/public/social/x'
   id:
     | '__root__'
     | '/'
@@ -211,14 +244,19 @@ export interface FileRouteTypes {
     | '/_authenticated/overview'
     | '/_authenticated/people'
     | '/_authenticated/polling'
+    | '/_authenticated/social'
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
+    | '/api/public/social/meta'
+    | '/api/public/social/x'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
+  ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -321,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPollingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/social': {
+      id: '/_authenticated/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof AuthenticatedSocialRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/voters': {
       id: '/_authenticated/voters'
       path: '/voters'
@@ -334,6 +379,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/warroom'
       preLoaderRoute: typeof AuthenticatedWarroomRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/social/meta': {
+      id: '/api/public/social/meta'
+      path: '/api/public/social/meta'
+      fullPath: '/api/public/social/meta'
+      preLoaderRoute: typeof ApiPublicSocialMetaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/social/x': {
+      id: '/api/public/social/x'
+      path: '/api/public/social/x'
+      fullPath: '/api/public/social/x'
+      preLoaderRoute: typeof ApiPublicSocialXRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -350,6 +409,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
+  AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedVotersRoute: typeof AuthenticatedVotersRoute
   AuthenticatedWarroomRoute: typeof AuthenticatedWarroomRoute
 }
@@ -366,6 +426,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
+  AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedVotersRoute: AuthenticatedVotersRoute,
   AuthenticatedWarroomRoute: AuthenticatedWarroomRoute,
 }
@@ -377,6 +438,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
+  ApiPublicSocialXRoute: ApiPublicSocialXRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
