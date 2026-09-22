@@ -317,7 +317,7 @@ export async function runListeningScan(
 
     if (batch.length) {
       const verdicts = await readMoods(batch);
-      const known = new Set(batch.map((b) => b.id));
+      const known = new Set(batch.map((b: { id: string }) => b.id));
       for (const v of verdicts) {
         if (!known.has(v.id)) continue;
         const score = Math.max(-1, Math.min(1, Number(v.score) || 0));
