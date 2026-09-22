@@ -185,15 +185,15 @@ function Landing() {
         <div className="hero">
           <div className="wrap">
             <span className="eyebrow">
-              <i /> The campaign OS · built in Nairobi for 2027
+              <i /> The campaign OS · from an MCA seat to State House
             </span>
             <h1>
               Win it on the <span className="m">ground.</span>
             </h1>
             <p className="hero-sub">
-              Groundwork is one system for your supporters, field agents, messages, polls, money and
-              election night. From an MCA seat to State House, every door is known and every vote is
-              counted.
+              Know every voter by name, ward and promise made. Reach them in their language on the
+              channel they actually answer — and watch every reply, door knock and shilling turn
+              into votes.
             </p>
             <div className="hero-cta">
               <a className="btn btn-m" href="#demo">
