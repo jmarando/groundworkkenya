@@ -87,15 +87,52 @@ function Broadcast() {
   }
 
   const a = data.audience;
-  const reach =
-    (support45 ? a.support45 : 0) + (undecided ? a.undecided : 0) || a.sms;
-  const sendable = Math.min(reach, a.sms);
+  const reach = matched.length;
+  const sendable = reachable.length;
   const cost = sendable * data.smsRate;
+  const wardName = data.wardList.find((w) => w.id === ward)?.name ?? null;
+  const segNames = data.segments.filter((s) => segs.includes(s.slug)).map((s) => s.name);
 
-  const body =
-    lang === "sw"
+  const body = wardName
+    ? lang === "sw"
+      ? `Habari. Tuko ${wardName} Jumamosi saa kumi jioni kwa mkutano wa mtaa. Karibu tuongee kuhusu mipango yetu. Jibu NDIYO kuthibitisha. Bure. STOP kujiondoa.`
+      : `Hello. We are in ${wardName} this Saturday at 4pm for a ward rally. Come and hear the plan. Reply YES to confirm. Free. STOP to opt out.`
+    : lang === "sw"
       ? "Habari. Tunakuletea ratiba mpya ya kuchukua taka mtaani kwako wiki hii. Jibu NDIYO kupokea ukumbusho. Bure. STOP kujiondoa."
       : "Hello. Here is this week's rubbish collection schedule for your estate. Reply YES for reminders. Free. STOP to opt out.";
+
+  const exportAudience = () =>
+    downloadCSV(
+      stampName(`groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`),
+      [
+        "Name",
+        "Phone",
+        "Ward",
+        "Constituency",
+        "Segment",
+        "Support score",
+        "Language",
+        "SMS consent",
+        "WhatsApp consent",
+        "Call consent",
+        "Opted out",
+        "Last contacted",
+      ],
+      matched.map((c) => [
+        c.name,
+        c.phone,
+        c.ward ?? "",
+        c.constituency ?? "",
+        c.segment ?? "",
+        c.support,
+        c.language,
+        c.sms ? "yes" : "no",
+        c.whatsapp ? "yes" : "no",
+        c.call ? "yes" : "no",
+        c.optedOut ? "yes" : "no",
+        c.lastTouch ? c.lastTouch.slice(0, 10) : "",
+      ]),
+    );
 
   return (
     <section className="view active" aria-label="Broadcast">
