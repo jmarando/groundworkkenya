@@ -269,7 +269,9 @@ function Inbox() {
                 </span>
               </div>
               <div className="th-body">
-                {open.snippet && <div className="msg msg--in">{open.snippet}</div>}
+                {open.thread.length === 0 && open.snippet && (
+                  <div className="msg msg--in">{open.snippet}</div>
+                )}
                 {open.thread.map((m) => (
                   <div key={m.id} className={`msg ${m.direction === "out" ? "msg--out" : "msg--in"}`}>
                     {m.body}
