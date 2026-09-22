@@ -130,19 +130,20 @@ function Listening() {
   const exportMentions = () =>
     downloadCSV(
       stampName("listening-mentions"),
-      mentions.map((m) => ({
-        found: m.foundAt,
-        published: m.publishedAt ?? "",
-        topic: m.topic ?? "",
-        source: m.source,
-        domain: m.domain ?? "",
-        title: m.title ?? "",
-        mood: m.sentiment ?? "unrated",
-        score: m.sentimentScore ?? "",
-        issue: m.issue ?? "",
-        status: m.status,
-        url: m.url,
-      })),
+      ["found", "published", "topic", "source", "domain", "title", "mood", "score", "issue", "status", "url"],
+      mentions.map((m) => [
+        m.foundAt,
+        m.publishedAt ?? "",
+        m.topic ?? "",
+        m.source,
+        m.domain ?? "",
+        m.title ?? "",
+        m.sentiment ?? "unrated",
+        m.sentimentScore ?? "",
+        m.issue ?? "",
+        m.status,
+        m.url,
+      ]),
     );
 
   return (
