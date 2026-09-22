@@ -151,8 +151,9 @@ function Overview() {
               <i style={{ width: `${Math.min(contactPct, 100)}%` }} />
             </div>
             <span className="kpi-sub">
-              {delta >= 0 ? "+" : "−"}
-              {Math.abs(delta)}% on last week · {nf.format(data.contactsLastWeek)} then
+              {data.contactsLastWeek > 0
+                ? `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% on ${nf.format(data.contactsLastWeek)} last week`
+                : "first week of sends on record"}
             </span>
           </div>
         </div>
@@ -181,7 +182,7 @@ function Overview() {
             {data.biggestGap ? nf.format(data.biggestGap.gap) : "—"}
           </span>
           <div className="kpi-foot">
-            <div className="minibar" role="img" aria-label="Gap against ward target">
+            <div className="minibar minibar--flag" role="img" aria-label="Gap against ward target">
               <i style={{ width: `${Math.min(gapPct, 100)}%` }} />
             </div>
             <span className="kpi-sub">
@@ -206,8 +207,9 @@ function Overview() {
             <svg
               id="spark"
               viewBox="0 0 560 128"
+              preserveAspectRatio="none"
               width="100%"
-              height="128"
+              height="220"
               role="img"
               aria-label="Consented supporters over the last eight months"
             >
@@ -300,7 +302,7 @@ function Overview() {
           <span className="qcard-k">Send</span>
           <span className="qcard-t">Build a broadcast</span>
           <span className="qcard-s">Consent-checked audience, costed before it goes.</span>
-          <span className="qcard-n">{nf.format(data.quick.activePolls)} polls live</span>
+          <span className="qcard-n">{nf.format(data.quick.activePolls)} {data.quick.activePolls === 1 ? "poll" : "polls"} live</span>
         </Link>
         <Link to="/warroom" className="qcard">
           <span className="qcard-k">Election day</span>

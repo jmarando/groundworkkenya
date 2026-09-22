@@ -260,3 +260,6 @@ a.sb-item {
 }
 @media (max-width: 1100px) { .quick { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .quick { grid-template-columns: 1fr; } }
+
+.minibar--flag i { background: var(--gw-murram, #D9481C); }
+.spark-wrap svg { display: block; }
