@@ -122,9 +122,9 @@ function People() {
           <span className="kpi-sub">{contactablePct.toFixed(1)}% opted in to a channel</span>
         </div>
         <div className="card kpi">
-          <span className="kpi-lbl">Supporters 4–5</span>
+          <span className="kpi-lbl">Strong supporters</span>
           <span className="kpi-val stat">{nf.format(data.supporters45)}</span>
-          <span className="kpi-sub">of {nf.format(data.scored)} with a score</span>
+          <span className="kpi-sub">scoring 70+ of {nf.format(data.scored)} scored</span>
         </div>
         <div className="card kpi">
           <span className="kpi-lbl">Segments</span>
@@ -228,7 +228,7 @@ function People() {
             />
             <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort">
               <option value="recent">Most recent touch</option>
-              <option value="support">Support, high first</option>
+              <option value="support">Support score, high first</option>
               <option value="name">Name A–Z</option>
             </select>
           </div>
