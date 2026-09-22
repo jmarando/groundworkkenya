@@ -271,7 +271,24 @@ export type VotersData = {
     people: number;
     contactedWeek: number;
   };
-  feed: { name: string; ward: string | null; support: number; when: string }[];
+  feed: {
+    id: string;
+    name: string;
+    phone: string | null;
+    ward: string | null;
+    support: number;
+    when: string;
+  }[];
+  /** every person on file, so a ward can show its own roster */
+  people: {
+    id: string;
+    name: string;
+    phone: string | null;
+    wardId: string | null;
+    support: number;
+    lastTouch: string | null;
+    optedOut: boolean;
+  }[];
 };
 
 export const getVoters = createServerFn({ method: "GET" })
@@ -283,7 +300,9 @@ export const getVoters = createServerFn({ method: "GET" })
       pageAll((from, to) =>
         sb
           .from("people")
-          .select("id, full_name, ward_id, support_score, last_contacted_at")
+          .select(
+            "id, full_name, phone, ward_id, support_score, last_contacted_at, opted_out",
+          )
           .range(from, to),
       ),
     ]);
@@ -336,11 +355,22 @@ export const getVoters = createServerFn({ method: "GET" })
         )
         .slice(0, 12)
         .map((x) => ({
+          id: x.id,
           name: x.full_name ?? "Unnamed",
+          phone: x.phone ?? null,
           ward: x.ward_id ? (wardById.get(x.ward_id) ?? null) : null,
           support: x.support_score ?? 0,
           when: x.last_contacted_at as string,
         })),
+      people: p.map((x) => ({
+        id: x.id,
+        name: x.full_name ?? "Unnamed",
+        phone: x.phone ?? null,
+        wardId: x.ward_id ?? null,
+        support: x.support_score ?? 0,
+        lastTouch: (x.last_contacted_at as string | null) ?? null,
+        optedOut: Boolean(x.opted_out),
+      })),
     };
   });
 
