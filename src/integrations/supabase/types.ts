@@ -100,6 +100,36 @@ export type Database = {
           },
         ]
       }
+      demo_leads: {
+        Row: {
+          county: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          seat: string | null
+        }
+        Insert: {
+          county?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          seat?: string | null
+        }
+        Update: {
+          county?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          seat?: string | null
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount_kes: number
