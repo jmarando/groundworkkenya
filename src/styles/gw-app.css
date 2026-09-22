@@ -177,9 +177,10 @@ a.sb-item {
    bottom edge so the five cards read as one line. Ink and murram only. */
 .g5 { gap: 12px; align-items: stretch; }
 .kpi {
-  gap: 0;
-  padding: 18px;
-  min-height: 164px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 22px;
+  min-height: 168px;
 }
 .kpi .kpi-lbl {
   display: block;
@@ -190,18 +191,21 @@ a.sb-item {
 }
 .kpi .kpi-val {
   display: block;
-  margin-top: 2px;
+  margin-top: 12px;
   font-variant-numeric: tabular-nums;
+}
+.kpi .minibar {
+  margin-top: 10px;
 }
 .kpi-foot {
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 .kpi-foot .kpi-sub {
-  line-height: 1.35;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
 /* neutral note: ink text, no status colour — status colour is for status only */
