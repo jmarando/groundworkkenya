@@ -73,7 +73,8 @@ function Overview() {
     ? Math.min(Math.abs(data.biggestGap.gap) / Math.max(data.supporterTarget / data.wardsTotal, 1), 1) * 100
     : 0;
 
-  const max = Math.max(data.supporterTarget, ...data.growth.map((g) => g.value), 1);
+  // scale to the data, not the win number — the target is stated in words above
+  const max = Math.max(...data.growth.map((g) => g.value), 1) * 1.25;
   const pts = data.growth.map((g, i) => {
     const x = 20 + (i * 520) / Math.max(data.growth.length - 1, 1);
     const y = 122 - (g.value / max) * 100;
@@ -209,29 +210,20 @@ function Overview() {
               viewBox="0 0 560 128"
               preserveAspectRatio="none"
               width="100%"
-              height="220"
+              height="170"
               role="img"
               aria-label="Consented supporters over the last eight months"
             >
-              <line
-                x1="20"
-                y1="12"
-                x2="540"
-                y2="12"
-                stroke="var(--gw-border)"
-                strokeWidth="1.5"
-                strokeDasharray="4 4"
-              />
               <text
                 x="540"
-                y="8"
+                y="14"
                 textAnchor="end"
                 fontFamily="JetBrains Mono, monospace"
                 fontSize="9"
                 letterSpacing="1"
                 fill="hsl(150 6% 40%)"
               >
-                TARGET {nf.format(data.supporterTarget)}
+                WIN NUMBER {nf.format(data.supporterTarget)}
               </text>
               <polyline
                 points={pts.join(" ")}
