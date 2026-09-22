@@ -92,7 +92,8 @@ function AuthPage() {
           </div>
         </div>
         <h1 className="auth-title">
-          {mode === "in" ? "Sign in" : "Create your"} <span className="serif">workspace account.</span>
+          {mode === "in" ? "Welcome " : "Join the "}
+          <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
         </h1>
         <p className="meta">Nairobi County · 2027 cycle</p>
 

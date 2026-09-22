@@ -161,3 +161,12 @@ a.sb-item {
   padding: 18px 28px;
   border-top: 1px solid var(--gw-border);
 }
+
+/* the brand lockup is designed for the dark sidebar; re-ink it on light surfaces */
+.landing-brand .sb-brand-name,
+.auth-brand .sb-brand-name {
+  color: var(--gw-ink);
+}
+.auth-brand .sb-brand-sub {
+  color: var(--gw-muted, hsl(150 6% 40%));
+}
