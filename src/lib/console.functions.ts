@@ -1042,6 +1042,21 @@ export type AgentsData = {
     paidAt: string | null;
   }[];
   gaps: { code: string; name: string; ward: string | null; registered: number }[];
+  board: {
+    id: string;
+    code: string;
+    name: string;
+    ward: string | null;
+    constituency: string | null;
+    registered: number;
+    streams: number;
+    agent: string | null;
+    phone: string | null;
+    status: string;
+    turnout: number | null;
+    reportedAt: string | null;
+    owed: number;
+  }[];
 };
 
 export const getAgents = createServerFn({ method: "GET" })
