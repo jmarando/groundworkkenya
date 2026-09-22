@@ -172,7 +172,6 @@ function Agents() {
                   <th style={{ textAlign: "right" }}>Stations</th>
                   <th style={{ textAlign: "right" }}>Staffed</th>
                   <th style={{ textAlign: "right" }}>Owed</th>
-                  <th>Cover</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,20 +184,11 @@ function Agents() {
                     <td className="num">{nf.format(w.stations)}</td>
                     <td className="num">{nf.format(w.staffed)}</td>
                     <td className="num">{w.owed ? money(w.owed) : "—"}</td>
-                    <td style={{ minWidth: 110 }}>
-                      <span className="cov-bar">
-                        <i
-                          style={{
-                            width: `${w.stations ? (w.staffed / w.stations) * 100 : 0}%`,
-                          }}
-                        />
-                      </span>
-                    </td>
                   </tr>
                 ))}
                 {(data?.wards ?? []).length === 0 && (
                   <tr>
-                    <td colSpan={6} className="meta">
+                    <td colSpan={5} className="meta">
                       Loading cover…
                     </td>
                   </tr>
