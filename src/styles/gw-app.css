@@ -1,0 +1,163 @@
+/* App-shell additions on top of the ported Groundwork design system. */
+
+.sb-signout {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.8;
+}
+.sb-signout:hover {
+  opacity: 1;
+}
+
+/* sidebar/topbar items are anchors in the app, not buttons */
+a.sb-item {
+  display: block;
+  text-decoration: none;
+}
+.topbar-nav a {
+  text-decoration: none;
+}
+
+/* ---------------------------------------------------------------- auth */
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--gw-paper);
+}
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--gw-card);
+  border: 1px solid var(--gw-border);
+  border-radius: 4px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.auth-brand .gw-mark {
+  width: 28px;
+  height: 28px;
+  color: var(--gw-ink);
+}
+.auth-title {
+  font-size: 26px;
+  line-height: 1.15;
+  margin: 6px 0 0;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.auth-field input {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--gw-border);
+  border-radius: 3px;
+  background: var(--gw-paper);
+  color: var(--gw-ink);
+}
+.auth-field input:focus-visible {
+  outline: 2px solid var(--gw-accent);
+  outline-offset: 1px;
+}
+.auth-err {
+  color: var(--gw-danger, #b3261e);
+  font-size: 13px;
+  margin: 0;
+}
+.auth-msg {
+  font-size: 13px;
+  margin: 0;
+}
+.auth-switch {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--gw-muted, inherit);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------- landing */
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--gw-paper);
+  color: var(--gw-ink);
+}
+.landing-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  border-bottom: 1px solid var(--gw-border);
+}
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.landing-brand .gw-mark {
+  width: 24px;
+  height: 24px;
+  color: var(--gw-ink);
+}
+.landing-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 72px 28px 56px;
+}
+.landing-main h1 {
+  font-size: clamp(38px, 7vw, 66px);
+  line-height: 1.02;
+  margin: 10px 0 0;
+}
+.landing-lede {
+  max-width: 60ch;
+  margin: 18px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+}
+.landing-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 56px;
+}
+.landing-foot {
+  padding: 18px 28px;
+  border-top: 1px solid var(--gw-border);
+}

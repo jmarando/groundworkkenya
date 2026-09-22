@@ -12,7 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
+import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
+import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
+import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedListeningRouteImport } from './routes/_authenticated/listening'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
+import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
+import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
+import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
+import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,36 +38,157 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedBroadcastRoute = AuthenticatedBroadcastRouteImport.update({
+  id: '/broadcast',
+  path: '/broadcast',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
+  id: '/field',
+  path: '/field',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFoundationsRoute =
+  AuthenticatedFoundationsRouteImport.update({
+    id: '/foundations',
+    path: '/foundations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedListeningRoute = AuthenticatedListeningRouteImport.update({
+  id: '/listening',
+  path: '/listening',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPeopleRoute = AuthenticatedPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
+  id: '/polling',
+  path: '/polling',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedVotersRoute = AuthenticatedVotersRouteImport.update({
+  id: '/voters',
+  path: '/voters',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
+  id: '/warroom',
+  path: '/warroom',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/field': typeof AuthenticatedFieldRoute
+  '/finance': typeof AuthenticatedFinanceRoute
+  '/foundations': typeof AuthenticatedFoundationsRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/people': typeof AuthenticatedPeopleRoute
+  '/polling': typeof AuthenticatedPollingRoute
+  '/voters': typeof AuthenticatedVotersRoute
+  '/warroom': typeof AuthenticatedWarroomRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/field': typeof AuthenticatedFieldRoute
+  '/finance': typeof AuthenticatedFinanceRoute
+  '/foundations': typeof AuthenticatedFoundationsRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/people': typeof AuthenticatedPeopleRoute
+  '/polling': typeof AuthenticatedPollingRoute
+  '/voters': typeof AuthenticatedVotersRoute
+  '/warroom': typeof AuthenticatedWarroomRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
+  '/_authenticated/field': typeof AuthenticatedFieldRoute
+  '/_authenticated/finance': typeof AuthenticatedFinanceRoute
+  '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/listening': typeof AuthenticatedListeningRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/people': typeof AuthenticatedPeopleRoute
+  '/_authenticated/polling': typeof AuthenticatedPollingRoute
+  '/_authenticated/voters': typeof AuthenticatedVotersRoute
+  '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/overview'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/broadcast'
+    | '/field'
+    | '/finance'
+    | '/foundations'
+    | '/inbox'
+    | '/listening'
+    | '/overview'
+    | '/people'
+    | '/polling'
+    | '/voters'
+    | '/warroom'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/overview'
+  to:
+    | '/'
+    | '/auth'
+    | '/broadcast'
+    | '/field'
+    | '/finance'
+    | '/foundations'
+    | '/inbox'
+    | '/listening'
+    | '/overview'
+    | '/people'
+    | '/polling'
+    | '/voters'
+    | '/warroom'
   id:
-    '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/overview'
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/broadcast'
+    | '/_authenticated/field'
+    | '/_authenticated/finance'
+    | '/_authenticated/foundations'
+    | '/_authenticated/inbox'
+    | '/_authenticated/listening'
+    | '/_authenticated/overview'
+    | '/_authenticated/people'
+    | '/_authenticated/polling'
+    | '/_authenticated/voters'
+    | '/_authenticated/warroom'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -89,6 +220,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/broadcast': {
+      id: '/_authenticated/broadcast'
+      path: '/broadcast'
+      fullPath: '/broadcast'
+      preLoaderRoute: typeof AuthenticatedBroadcastRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/field': {
+      id: '/_authenticated/field'
+      path: '/field'
+      fullPath: '/field'
+      preLoaderRoute: typeof AuthenticatedFieldRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance': {
+      id: '/_authenticated/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AuthenticatedFinanceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/foundations': {
+      id: '/_authenticated/foundations'
+      path: '/foundations'
+      fullPath: '/foundations'
+      preLoaderRoute: typeof AuthenticatedFoundationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/listening': {
+      id: '/_authenticated/listening'
+      path: '/listening'
+      fullPath: '/listening'
+      preLoaderRoute: typeof AuthenticatedListeningRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/overview': {
       id: '/_authenticated/overview'
       path: '/overview'
@@ -96,15 +269,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/people': {
+      id: '/_authenticated/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof AuthenticatedPeopleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/polling': {
+      id: '/_authenticated/polling'
+      path: '/polling'
+      fullPath: '/polling'
+      preLoaderRoute: typeof AuthenticatedPollingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/voters': {
+      id: '/_authenticated/voters'
+      path: '/voters'
+      fullPath: '/voters'
+      preLoaderRoute: typeof AuthenticatedVotersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/warroom': {
+      id: '/_authenticated/warroom'
+      path: '/warroom'
+      fullPath: '/warroom'
+      preLoaderRoute: typeof AuthenticatedWarroomRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedBroadcastRoute: typeof AuthenticatedBroadcastRoute
+  AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
+  AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
+  AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedListeningRoute: typeof AuthenticatedListeningRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
+  AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
+  AuthenticatedVotersRoute: typeof AuthenticatedVotersRoute
+  AuthenticatedWarroomRoute: typeof AuthenticatedWarroomRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedBroadcastRoute: AuthenticatedBroadcastRoute,
+  AuthenticatedFieldRoute: AuthenticatedFieldRoute,
+  AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
+  AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedListeningRoute: AuthenticatedListeningRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
+  AuthenticatedPollingRoute: AuthenticatedPollingRoute,
+  AuthenticatedVotersRoute: AuthenticatedVotersRoute,
+  AuthenticatedWarroomRoute: AuthenticatedWarroomRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
