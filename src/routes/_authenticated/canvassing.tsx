@@ -99,32 +99,42 @@ function Canvassing() {
         <div className="card kpi">
           <span className="kpi-lbl">Doors logged · 30 days</span>
           <span className="kpi-val stat">{nf.format(t?.doors30 ?? 0)}</span>
-          <span className="kpi-sub">{nf.format(doors)} on record in total</span>
+          <div className="kpi-foot">
+            <span className="kpi-sub">{nf.format(doors)} on record in total</span>
+          </div>
         </div>
         <div className="card kpi">
           <span className="kpi-lbl">Spoke to someone</span>
           <span className="kpi-val stat">{nf.format(t?.spoke ?? 0)}</span>
-          <div className="minibar">
-            <i style={{ width: `${contactRate}%` }} />
+          <div className="kpi-foot">
+            <div className="minibar">
+              <i style={{ width: `${contactRate}%` }} />
+            </div>
+            <span className="kpi-sub">{contactRate.toFixed(0)}% of doors knocked</span>
           </div>
-          <span className="kpi-sub">{contactRate.toFixed(0)}% of doors knocked</span>
         </div>
         <div className="card kpi">
           <span className="kpi-lbl">Not home</span>
           <span className="kpi-val stat">{nf.format(t?.notHome ?? 0)}</span>
-          <span className="kpi-sub">go back at a different hour</span>
+          <div className="kpi-foot">
+            <span className="kpi-sub">go back at a different hour</span>
+          </div>
         </div>
         <div className="card kpi">
           <span className="kpi-lbl">Refused</span>
           <span className="kpi-val stat">{nf.format(t?.refused ?? 0)}</span>
-          <span className="kpi-sub">kept off the walk list</span>
+          <div className="kpi-foot">
+            <span className="kpi-sub">kept off the walk list</span>
+          </div>
         </div>
         <div className="card kpi">
           <span className="kpi-lbl">Still to knock</span>
           <span className="kpi-val stat">{nf.format(walk.length)}</span>
-          <span className="kpi-sub">
+          <div className="kpi-foot">
+            <span className="kpi-sub">
 {nf.format(t?.neverKnocked ?? 0)} never visited · the rest overdue by 30 days
-          </span>
+            </span>
+          </div>
         </div>
       </div>
 
