@@ -117,40 +117,42 @@ function Agents() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <span className="kpi-label">Stations staffed</span>
-          <b className="kpi-val">
+      <div className="g5 fx2">
+        <div className="card kpi">
+          <span className="kpi-lbl">Stations staffed</span>
+          <span className="kpi-val stat">
             {nf.format(s?.confirmed ?? 0)}/{nf.format(s?.total ?? 0)}
-          </b>
-          <span className="cov-bar" style={{ marginTop: 8 }}>
+          </span>
+          <div className="minibar">
             <i style={{ width: `${cover}%` }} />
-          </span>
-          <span className="kpi-note">{cover.toFixed(0)}% cover confirmed</span>
+          </div>
+          <span className="kpi-sub">{cover.toFixed(0)}% cover confirmed</span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Stations with nobody</span>
-          <b className="kpi-val">{nf.format(s?.unstaffed ?? 0)}</b>
-          <span className="kpi-note flag">
-            {nf.format(
-              (data?.gaps ?? []).reduce((a, g) => a + g.registered, 0),
-            )}{" "}
-            registered voters unwatched
+        <div className="card kpi">
+          <span className="kpi-lbl">Stations with nobody</span>
+          <span className="kpi-val stat">{nf.format(s?.unstaffed ?? 0)}</span>
+          <span className="kpi-sub">
+            {nf.format((data?.gaps ?? []).reduce((a, g) => a + g.registered, 0))} registered voters
+            unwatched
           </span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Owed · pending and approved</span>
-          <b className="kpi-val">{money(owed)}</b>
-          <span className="kpi-note">
+        <div className="card kpi">
+          <span className="kpi-lbl">Owed · pending and approved</span>
+          <span className="kpi-val stat">{money(owed)}</span>
+          <span className="kpi-sub">
             {money(m?.pending ?? 0)} pending · {money(m?.approved ?? 0)} approved
           </span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Paid to date</span>
-          <b className="kpi-val">{money(m?.paid ?? 0)}</b>
-          <span className="kpi-note">
-            {nf.format(data?.counts.agents ?? 0)} agents · {nf.format(data?.counts.coordinators ?? 0)}{" "}
-            coordinators
+        <div className="card kpi">
+          <span className="kpi-lbl">Paid to date</span>
+          <span className="kpi-val stat">{money(m?.paid ?? 0)}</span>
+          <span className="kpi-sub">{nf.format(data?.counts.lines ?? 0)} stipend lines raised</span>
+        </div>
+        <div className="card kpi">
+          <span className="kpi-lbl">On the payroll</span>
+          <span className="kpi-val stat">{nf.format(data?.counts.agents ?? 0)}</span>
+          <span className="kpi-sub">
+            plus {nf.format(data?.counts.coordinators ?? 0)} ward coordinators
           </span>
         </div>
       </div>
@@ -241,18 +243,25 @@ function Agents() {
               <button
                 key={x.key || "all"}
                 type="button"
-                className={`fchip${status === x.key ? " is-on" : ""}`}
+                className="fchip"
+                aria-pressed={status === x.key}
                 onClick={() => setStatus(x.key)}
               >
                 {x.label}
               </button>
             ))}
-            <input
-              className="inp"
-              placeholder="Search name, ward or station"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
+            <span className="pbar">
+              <label className="sr" htmlFor="agentQ">
+                Search agents
+              </label>
+              <input
+                id="agentQ"
+                type="search"
+                placeholder="Search name, ward or station"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </span>
             <button type="button" className="btn btn--ghost btn--sm" onClick={exportRun}>
               Download {nf.format(rows.length)} lines · CSV
             </button>

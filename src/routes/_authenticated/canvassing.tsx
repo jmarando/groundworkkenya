@@ -96,28 +96,34 @@ function Canvassing() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <span className="kpi-label">Doors logged · 30 days</span>
-          <b className="kpi-val">{nf.format(t?.doors30 ?? 0)}</b>
-          <span className="kpi-note">{nf.format(doors)} on record in total</span>
+      <div className="g5 fx2">
+        <div className="card kpi">
+          <span className="kpi-lbl">Doors logged · 30 days</span>
+          <span className="kpi-val stat">{nf.format(t?.doors30 ?? 0)}</span>
+          <span className="kpi-sub">{nf.format(doors)} on record in total</span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Spoke to someone</span>
-          <b className="kpi-val">{nf.format(t?.spoke ?? 0)}</b>
-          <span className="kpi-note">{contactRate.toFixed(0)}% of doors knocked</span>
+        <div className="card kpi">
+          <span className="kpi-lbl">Spoke to someone</span>
+          <span className="kpi-val stat">{nf.format(t?.spoke ?? 0)}</span>
+          <div className="minibar">
+            <i style={{ width: `${contactRate}%` }} />
+          </div>
+          <span className="kpi-sub">{contactRate.toFixed(0)}% of doors knocked</span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Not home · refused</span>
-          <b className="kpi-val">
-            {nf.format(t?.notHome ?? 0)} · {nf.format(t?.refused ?? 0)}
-          </b>
-          <span className="kpi-note">Refusals stay off the walk list</span>
+        <div className="card kpi">
+          <span className="kpi-lbl">Not home</span>
+          <span className="kpi-val stat">{nf.format(t?.notHome ?? 0)}</span>
+          <span className="kpi-sub">go back at a different hour</span>
         </div>
-        <div className="kpi">
-          <span className="kpi-label">Still to knock</span>
-          <b className="kpi-val">{nf.format(walk.length)}</b>
-          <span className="kpi-note">
+        <div className="card kpi">
+          <span className="kpi-lbl">Refused</span>
+          <span className="kpi-val stat">{nf.format(t?.refused ?? 0)}</span>
+          <span className="kpi-sub">kept off the walk list</span>
+        </div>
+        <div className="card kpi">
+          <span className="kpi-lbl">Still to knock</span>
+          <span className="kpi-val stat">{nf.format(walk.length)}</span>
+          <span className="kpi-sub">
             {nf.format(t?.neverKnocked ?? 0)} never visited, the rest overdue
           </span>
         </div>
@@ -145,7 +151,8 @@ function Canvassing() {
                 {wards.slice(0, 14).map((w) => (
                   <tr
                     key={w.id}
-                    className={`t-row--link${ward === w.id ? " is-on" : ""}`}
+                    className="t-row--link"
+                    aria-selected={ward === w.id}
                     onClick={() => setWard(ward === w.id ? "" : w.id)}
                   >
                     <td>
