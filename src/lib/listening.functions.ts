@@ -200,16 +200,25 @@ export const getListening = createServerFn({ method: "GET" })
         active: a.active,
         lastFiredAt: a.last_fired_at,
       })),
-      events: (events ?? []).map((e: any) => ({
-        id: e.id,
-        alert: (alerts ?? []).find((a: any) => a.id === e.alert_id)?.name ?? null,
-        channel: e.channel,
-        destination: e.destination,
-        subject: e.subject,
-        status: e.status,
-        detail: e.detail,
-        at: e.created_at,
-      })),
+      events: (() => {
+        // one alert fires across several mentions at once — show it as a single line
+        const seen = new Map<string, any>();
+        for (const e of (events ?? []) as any[]) {
+          const key = `${e.alert_id}:${e.subject}:${String(e.created_at).slice(0, 16)}`;
+          if (seen.has(key)) continue;
+          seen.set(key, {
+            id: e.id,
+            alert: (alerts ?? []).find((a: any) => a.id === e.alert_id)?.name ?? null,
+            channel: e.channel,
+            destination: e.destination,
+            subject: e.subject,
+            status: e.status,
+            detail: e.detail,
+            at: e.created_at,
+          });
+        }
+        return [...seen.values()];
+      })(),
       totals: {
         mentions: rows.length,
         last24h: (rows as any[]).filter((m) => now - new Date(m.found_at).getTime() <= H24).length,
