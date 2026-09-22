@@ -17,7 +17,8 @@
 
 /* sidebar/topbar items are anchors in the app, not buttons */
 a.sb-item {
-  display: block;
+  display: flex;
+  align-items: center;
   text-decoration: none;
 }
 .topbar-nav a {
