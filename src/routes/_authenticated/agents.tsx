@@ -304,6 +304,87 @@ function Agents() {
           Showing the first 60 of {nf.format(rows.length)} lines · {money(filteredTotal)} in view.
         </p>
       </div>
+
+      <div className="card">
+        <div className="card-head">
+          <h2>Station board</h2>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            {STATION_VIEWS.map((x) => (
+              <button
+                key={x.key || "all"}
+                type="button"
+                className="fchip"
+                aria-pressed={stationView === x.key}
+                onClick={() => setStationView(x.key)}
+              >
+                {x.label}
+              </button>
+            ))}
+            <span className="pbar">
+              <label className="sr" htmlFor="stationQ">
+                Search stations
+              </label>
+              <input
+                id="stationQ"
+                type="search"
+                placeholder="Search station, code or ward"
+                value={sq}
+                onChange={(e) => setSq(e.target.value)}
+              />
+            </span>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={exportBoard}>
+              Download {nf.format(stations.length)} stations · CSV
+            </button>
+          </div>
+        </div>
+        <div className="tblwrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Station</th>
+                <th>Ward</th>
+                <th style={{ textAlign: "right" }}>Voters</th>
+                <th style={{ textAlign: "right" }}>Streams</th>
+                <th>Agent</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Turnout</th>
+                <th style={{ textAlign: "right" }}>Owed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stations.slice(0, 100).map((b) => (
+                <tr key={b.id}>
+                  <td className="mono">{b.code}</td>
+                  <td>
+                    <b>{b.name}</b>
+                  </td>
+                  <td className="meta">{b.ward ?? "—"}</td>
+                  <td className="num">{nf.format(b.registered)}</td>
+                  <td className="num">{b.streams}</td>
+                  <td>{b.agent ?? <span className="meta">nobody yet</span>}</td>
+                  <td className="mono">{b.phone ?? "—"}</td>
+                  <td className="meta">{b.status}</td>
+                  <td className="num">{b.turnout != null ? nf.format(b.turnout) : "—"}</td>
+                  <td className="num">{b.owed ? nf.format(b.owed) : "—"}</td>
+                </tr>
+              ))}
+              {stations.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="meta">
+                    No stations match that view.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <p className="f-note" style={{ marginTop: 10 }}>
+          {nf.format(stations.length)} stations in view ·{" "}
+          {nf.format(stations.reduce((a, b) => a + b.registered, 0))} registered voters behind them.
+        </p>
+      </div>
     </section>
   );
 }
