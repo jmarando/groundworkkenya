@@ -1132,5 +1132,25 @@ export const getAgents = createServerFn({ method: "GET" })
           ward: s.ward_id ? (wardById.get(s.ward_id)?.name ?? null) : null,
           registered: s.registered_voters ?? 0,
         })),
+      board: st.map((s) => {
+        const w = s.ward_id ? wardById.get(s.ward_id) : undefined;
+        return {
+          id: s.id,
+          code: s.code,
+          name: s.name,
+          ward: w?.name ?? null,
+          constituency: w?.constituency ?? null,
+          registered: s.registered_voters ?? 0,
+          streams: s.streams ?? 1,
+          agent: s.agent_name ?? null,
+          phone: s.agent_phone ?? null,
+          status: s.status,
+          turnout: s.turnout_reported ?? null,
+          reportedAt: (s.reported_at as string | null) ?? null,
+          owed: sp
+            .filter((x) => x.station_id === s.id && x.status !== "paid")
+            .reduce((a, x) => a + Number(x.amount_kes ?? 0), 0),
+        };
+      }),
     };
   });
