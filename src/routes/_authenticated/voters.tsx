@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -39,6 +39,8 @@ function Voters() {
   const { data } = useQuery({ queryKey: ["voters"], queryFn: () => fetchVoters() });
   const [constituency, setConstituency] = useState<string | null>(null);
   const [activeWard, setActiveWard] = useState<string | null>(null);
+  const [tab, setTab] = useState<"ward" | "feed">("ward");
+  const navigate = useNavigate();
 
   const consts = useMemo(
     () => [...new Set((data?.wards ?? []).map((w) => w.constituency))].sort(),
@@ -71,6 +73,15 @@ function Voters() {
   const t = data.totals;
   const selected = wards.find((w) => w.id === activeWard) ?? wards[0] ?? null;
   const maxReg = Math.max(...wards.map((w) => w.registered), 1);
+  const wardPeople = selected
+    ? data.people
+        .filter((r) => r.wardId === selected.id)
+        .sort(
+          (a, b) =>
+            new Date(b.lastTouch ?? 0).getTime() - new Date(a.lastTouch ?? 0).getTime() ||
+            b.support - a.support,
+        )
+    : [];
 
   return (
     <section className="view active" aria-label="Know your voters">
@@ -165,7 +176,10 @@ function Voters() {
                   <tr
                     key={w.id}
                     style={{ cursor: "pointer" }}
-                    onClick={() => setActiveWard(w.id)}
+                    onClick={() => {
+                      setActiveWard(w.id);
+                      setTab("ward");
+                    }}
                     aria-selected={selected?.id === w.id}
                   >
                     <td>
