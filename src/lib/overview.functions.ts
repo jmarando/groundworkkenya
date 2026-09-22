@@ -15,6 +15,13 @@ export type OverviewData = {
   biggestGap: { name: string; constituency: string; gap: number } | null;
   offPace: { name: string; constituency: string; gap: number }[];
   growth: { label: string; value: number }[];
+  quick: {
+    people: number;
+    unread: number;
+    openIncidents: number;
+    unstaffed: number;
+    activePolls: number;
+  };
 };
 
 export const getOverview = createServerFn({ method: "GET" })
@@ -22,8 +29,17 @@ export const getOverview = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<OverviewData> => {
     const sb = context.supabase;
 
-    const [{ data: wards }, { count: supporters }, { data: expenses }, { data: recent }] =
-      await Promise.all([
+    const [
+      { data: wards },
+      { count: supporters },
+      { data: expenses },
+      { data: recent },
+      { count: peopleCount },
+      { count: unread },
+      { count: openIncidents },
+      { count: unstaffed },
+      { count: activePolls },
+    ] = await Promise.all([
         sb.from("wards").select("name, constituency, supporters, target_votes"),
         sb
           .from("people")
@@ -32,6 +48,14 @@ export const getOverview = createServerFn({ method: "GET" })
           .eq("consent_sms", true),
         sb.from("expenses").select("amount_kes").eq("statutory", true),
         sb.from("messages").select("created_at").eq("direction", "out"),
+        sb.from("people").select("id", { count: "exact", head: true }),
+        sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
+        sb.from("incidents").select("id", { count: "exact", head: true }).eq("status", "open"),
+        sb
+          .from("polling_stations")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "unstaffed"),
+        sb.from("polls").select("id", { count: "exact", head: true }).eq("status", "live"),
       ]);
 
     const wardRows = wards ?? [];
@@ -89,5 +113,12 @@ export const getOverview = createServerFn({ method: "GET" })
       biggestGap: gaps[0] ?? null,
       offPace: gaps.filter((g) => g.gap < 0).slice(0, 5),
       growth: months,
+      quick: {
+        people: peopleCount ?? 0,
+        unread: unread ?? 0,
+        openIncidents: openIncidents ?? 0,
+        unstaffed: unstaffed ?? 0,
+        activePolls: activePolls ?? 0,
+      },
     };
   });
