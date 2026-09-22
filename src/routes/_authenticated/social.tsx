@@ -127,7 +127,7 @@ function Social() {
           </p>
         </div>
         <div className="vh-side">
-          <button className="btn btn--sm" onClick={() => void analyse()} disabled={busy}>
+          <button className="btn btn--primary btn--sm" onClick={() => void analyse()} disabled={busy}>
             {busy ? "Reading…" : "Read the mood"}
           </button>
           <button
@@ -297,7 +297,10 @@ function Social() {
             {platform === "all" ? "every platform" : (LABEL[platform]?.name ?? platform)}
           </span>
         </div>
-        <div className="ibx-rail" style={{ marginBottom: 12 }}>
+        <div
+          className="ibx-rail"
+          style={{ marginBottom: 12, display: "flex", flexWrap: "wrap", gap: 8 }}
+        >
           <button
             type="button"
             className={`ibx-f${platform === "all" ? " on" : ""}`}
