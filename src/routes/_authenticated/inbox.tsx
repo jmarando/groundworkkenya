@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { getInbox } from "@/lib/console.functions";
+import { replyToConversation } from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: Inbox,
@@ -33,6 +35,27 @@ const stamp = (iso: string) =>
     minute: "2-digit",
   });
 
+const PLATFORM_BADGE: Record<string, { code: string; cls: string }> = {
+  sms: { code: "SMS", cls: "ch--sms" },
+  ussd: { code: "US", cls: "ch--us" },
+  email: { code: "EM", cls: "ch--em" },
+  facebook: { code: "FB", cls: "ch--fb" },
+  messenger: { code: "FB", cls: "ch--fb" },
+  instagram: { code: "IG", cls: "ch--ig" },
+  x: { code: "X", cls: "ch--x" },
+  tiktok: { code: "TT", cls: "ch--tt" },
+  whatsapp: { code: "WA", cls: "ch--wa" },
+};
+
+const badge = (platform: string) =>
+  PLATFORM_BADGE[platform] ?? { code: platform.slice(0, 3).toUpperCase(), cls: "ch--us" };
+
+const MOOD: Record<string, string> = {
+  positive: "warm",
+  neutral: "neutral",
+  negative: "angry",
+};
+
 const CONNECTIONS = [
   { code: "SMS", cls: "ch--sms", name: "SMS · sender ID", note: "Two-way on a shortcode. The workhorse.", state: "ok" },
   { code: "US", cls: "ch--us", name: "USSD *xyz#", note: "Feature phones. Polls, sign-ups and call-me-back requests.", state: "ok" },
@@ -44,9 +67,16 @@ const CONNECTIONS = [
   { code: "WA", cls: "ch--wa", name: "WhatsApp", note: "Meta bars political campaigns from the API. Handsets run by people.", state: "red" },
 ];
 
+const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
+
 function Inbox() {
   const fetchInbox = useServerFn(getInbox);
+  const sendReply = useServerFn(replyToConversation);
+  const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendNote, setSendNote] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -57,7 +87,16 @@ function Inbox() {
     return convos.filter((c) => {
       if (filter === "unread" && !c.unread) return false;
       if (filter === "open" && c.status !== "open") return false;
-      if (filter !== "all" && filter !== "unread" && filter !== "open" && !c.tags.includes(filter))
+      if (filter === "social" && !SOCIAL.includes(c.platform)) return false;
+      if (filter === "angry" && c.sentiment !== "negative") return false;
+      if (
+        filter !== "all" &&
+        filter !== "unread" &&
+        filter !== "open" &&
+        filter !== "social" &&
+        filter !== "angry" &&
+        !c.tags.includes(filter)
+      )
         return false;
       if (!q.trim()) return true;
       const n = q.toLowerCase();
@@ -87,6 +126,22 @@ function Inbox() {
   }
 
   const open = list.find((c) => c.id === openId) ?? list[0] ?? null;
+
+  async function send(conversationId: string) {
+    if (!draft.trim() || sending) return;
+    setSending(true);
+    setSendNote(null);
+    try {
+      const res = await sendReply({ data: { conversationId, body: draft.trim() } });
+      setDraft("");
+      setSendNote(res.note);
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+    } catch (err) {
+      setSendNote(err instanceof Error ? err.message : "The reply could not be sent.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <section className="view active" aria-label="Inbox">
@@ -124,6 +179,20 @@ function Inbox() {
             onClick={() => setFilter("open")}
           >
             Open <b>{data.counts.open}</b>
+          </button>
+          <button
+            type="button"
+            className={`ibx-f${filter === "social" ? " on" : ""}`}
+            onClick={() => setFilter("social")}
+          >
+            Social <b>{data.conversations.filter((c) => SOCIAL.includes(c.platform)).length}</b>
+          </button>
+          <button
+            type="button"
+            className={`ibx-f${filter === "angry" ? " on" : ""}`}
+            onClick={() => setFilter("angry")}
+          >
+            Angry <b>{data.conversations.filter((c) => c.sentiment === "negative").length}</b>
           </button>
           {data.counts.byTag.map((t) => (
             <button
@@ -164,9 +233,9 @@ function Inbox() {
               <span className="cv-when">{stamp(c.lastMessageAt)}</span>
               <span className="cv-snip">{c.subject ?? c.snippet}</span>
               <span className="cv-tags">
-                <span className={`ch ch--${c.channel === "sms" ? "sms" : "us"}`}>
-                  {c.channel.toUpperCase()}
-                </span>
+                <span className={`ch ${badge(c.platform).cls}`}>{badge(c.platform).code}</span>
+                {c.sentiment && <span className="tag">{MOOD[c.sentiment] ?? c.sentiment}</span>}
+                {c.issue && <span className="tag">{c.issue}</span>}
                 {c.ward && <span className="tag">{c.ward}</span>}
                 {c.tags.map((t) => (
                   <span className="tag" key={t}>
@@ -187,7 +256,9 @@ function Inbox() {
                   <span className="th-name">{open.name}</span>
                   <span className="th-meta">
                     {open.phone ?? "no number"} · {open.ward ?? "ward unknown"} ·{" "}
-                    {open.channel.toUpperCase()}
+                    {badge(open.platform).code}
+                    {open.sentiment ? ` · ${MOOD[open.sentiment] ?? open.sentiment}` : ""}
+                    {open.issue ? ` · ${open.issue}` : ""}
                   </span>
                 </div>
                 <span className="pill pill--ok">
@@ -214,9 +285,23 @@ function Inbox() {
                 )}
               </div>
               <div className="th-compose">
-                <input placeholder={`Reply to ${open.name} by ${open.channel.toUpperCase()}`} />
-                <button className="btn btn--primary btn--sm">Send</button>
+                <input
+                  placeholder={`Reply to ${open.name} by ${badge(open.platform).code}`}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void send(open.id);
+                  }}
+                />
+                <button
+                  className="btn btn--primary btn--sm"
+                  disabled={sending || !draft.trim()}
+                  onClick={() => void send(open.id)}
+                >
+                  {sending ? "Sending…" : "Send"}
+                </button>
               </div>
+              {sendNote && <p className="f-note">{sendNote}</p>}
             </>
           ) : (
             <p className="f-note">Pick a conversation.</p>

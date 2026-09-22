@@ -384,6 +384,9 @@ export type InboxData = {
     phone: string | null;
     ward: string | null;
     channel: string;
+    platform: string;
+    sentiment: string | null;
+    issue: string | null;
     subject: string | null;
     snippet: string | null;
     status: string;
@@ -408,7 +411,7 @@ export const getInbox = createServerFn({ method: "GET" })
       pageAll((from, to) =>
         sb
           .from("messages")
-          .select("id, person_id, body, direction, status, created_at, sent_at")
+          .select("id, person_id, conversation_id, body, direction, status, created_at, sent_at")
           .order("created_at", { ascending: true })
           .range(from, to),
       ),
@@ -416,18 +419,26 @@ export const getInbox = createServerFn({ method: "GET" })
 
     const personById = new Map(people.map((p) => [p.id, p]));
     const wardById = new Map((wards ?? []).map((w) => [w.id, w.name]));
-    const byPerson = new Map<string, InboxData["conversations"][number]["thread"]>();
+    type Thread = InboxData["conversations"][number]["thread"];
+    const byPerson = new Map<string, Thread>();
+    const byConversation = new Map<string, Thread>();
     for (const m of messages) {
-      if (!m.person_id) continue;
-      const list = byPerson.get(m.person_id) ?? [];
-      list.push({
+      const item = {
         id: m.id,
         direction: m.direction,
         body: m.body,
         at: (m.sent_at as string) ?? (m.created_at as string),
         status: m.status,
-      });
-      byPerson.set(m.person_id, list);
+      };
+      if (m.conversation_id) {
+        const list = byConversation.get(m.conversation_id) ?? [];
+        list.push(item);
+        byConversation.set(m.conversation_id, list);
+      } else if (m.person_id) {
+        const list = byPerson.get(m.person_id) ?? [];
+        list.push(item);
+        byPerson.set(m.person_id, list);
+      }
     }
 
     const tagMap = new Map<string, number>();
@@ -437,17 +448,22 @@ export const getInbox = createServerFn({ method: "GET" })
       return {
         id: c.id,
         personId: c.person_id,
-        name: p?.full_name ?? "Unknown number",
+        name: p?.full_name ?? c.author_name ?? c.author_handle ?? "Unknown number",
         phone: p?.phone ?? null,
         ward: p?.ward_id ? (wardById.get(p.ward_id) ?? null) : null,
         channel: c.channel,
+        platform: c.platform ?? c.channel,
+        sentiment: c.sentiment ?? null,
+        issue: c.issue ?? null,
         subject: c.subject,
         snippet: c.snippet,
         status: c.status,
         tags: (c.tags as string[]) ?? [],
         unread: c.unread,
         lastMessageAt: c.last_message_at as string,
-        thread: c.person_id ? (byPerson.get(c.person_id) ?? []) : [],
+        thread:
+          byConversation.get(c.id) ??
+          (c.person_id ? (byPerson.get(c.person_id) ?? []) : []),
       };
     });
 

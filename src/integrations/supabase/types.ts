@@ -122,11 +122,18 @@ export type Database = {
       conversations: {
         Row: {
           assigned_to: string | null
+          author_handle: string | null
+          author_name: string | null
           channel: string
           created_at: string
+          external_thread_id: string | null
           id: string
+          issue: string | null
           last_message_at: string
           person_id: string | null
+          platform: string
+          sentiment: string | null
+          sentiment_score: number | null
           snippet: string | null
           status: string
           subject: string | null
@@ -135,11 +142,18 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          author_handle?: string | null
+          author_name?: string | null
           channel?: string
           created_at?: string
+          external_thread_id?: string | null
           id?: string
+          issue?: string | null
           last_message_at?: string
           person_id?: string | null
+          platform?: string
+          sentiment?: string | null
+          sentiment_score?: number | null
           snippet?: string | null
           status?: string
           subject?: string | null
@@ -148,11 +162,18 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          author_handle?: string | null
+          author_name?: string | null
           channel?: string
           created_at?: string
+          external_thread_id?: string | null
           id?: string
+          issue?: string | null
           last_message_at?: string
           person_id?: string | null
+          platform?: string
+          sentiment?: string | null
+          sentiment_score?: number | null
           snippet?: string | null
           status?: string
           subject?: string | null
@@ -294,51 +315,85 @@ export type Database = {
       }
       messages: {
         Row: {
+          author_handle: string | null
           body: string
           channel: string
+          conversation_id: string | null
           cost_kes: number
           created_at: string
           direction: string
           error: string | null
+          external_id: string | null
           id: string
+          issue: string | null
+          kind: string
+          permalink: string | null
           person_id: string | null
           phone: string | null
+          platform: string
           poll_id: string | null
           provider_ref: string | null
           sent_at: string | null
+          sentiment: string | null
+          sentiment_score: number | null
           status: string
         }
         Insert: {
+          author_handle?: string | null
           body: string
           channel?: string
+          conversation_id?: string | null
           cost_kes?: number
           created_at?: string
           direction?: string
           error?: string | null
+          external_id?: string | null
           id?: string
+          issue?: string | null
+          kind?: string
+          permalink?: string | null
           person_id?: string | null
           phone?: string | null
+          platform?: string
           poll_id?: string | null
           provider_ref?: string | null
           sent_at?: string | null
+          sentiment?: string | null
+          sentiment_score?: number | null
           status?: string
         }
         Update: {
+          author_handle?: string | null
           body?: string
           channel?: string
+          conversation_id?: string | null
           cost_kes?: number
           created_at?: string
           direction?: string
           error?: string | null
+          external_id?: string | null
           id?: string
+          issue?: string | null
+          kind?: string
+          permalink?: string | null
           person_id?: string | null
           phone?: string | null
+          platform?: string
           poll_id?: string | null
           provider_ref?: string | null
           sent_at?: string | null
+          sentiment?: string | null
+          sentiment_score?: number | null
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_person_id_fkey"
             columns: ["person_id"]
@@ -686,6 +741,48 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+        }
+        Relationships: []
+      }
+      social_accounts: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          external_id: string | null
+          handle: string
+          id: string
+          last_event_at: string | null
+          live: boolean
+          note: string | null
+          platform: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          external_id?: string | null
+          handle: string
+          id?: string
+          last_event_at?: string | null
+          live?: boolean
+          note?: string | null
+          platform: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          external_id?: string | null
+          handle?: string
+          id?: string
+          last_event_at?: string | null
+          live?: boolean
+          note?: string | null
+          platform?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
