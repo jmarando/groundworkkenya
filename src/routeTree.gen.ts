@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
+import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authenticated/canvassing'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
@@ -38,9 +40,19 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBroadcastRoute = AuthenticatedBroadcastRouteImport.update({
   id: '/broadcast',
   path: '/broadcast',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCanvassingRoute = AuthenticatedCanvassingRouteImport.update({
+  id: '/canvassing',
+  path: '/canvassing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
@@ -98,7 +110,9 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -113,7 +127,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -130,7 +146,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
+  '/_authenticated/canvassing': typeof AuthenticatedCanvassingRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
@@ -147,7 +165,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/agents'
     | '/broadcast'
+    | '/canvassing'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -162,7 +182,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/agents'
     | '/broadcast'
+    | '/canvassing'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -178,7 +200,9 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/agents'
     | '/_authenticated/broadcast'
+    | '/_authenticated/canvassing'
     | '/_authenticated/field'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
@@ -220,11 +244,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/agents': {
+      id: '/_authenticated/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AuthenticatedAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/broadcast': {
       id: '/_authenticated/broadcast'
       path: '/broadcast'
       fullPath: '/broadcast'
       preLoaderRoute: typeof AuthenticatedBroadcastRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/canvassing': {
+      id: '/_authenticated/canvassing'
+      path: '/canvassing'
+      fullPath: '/canvassing'
+      preLoaderRoute: typeof AuthenticatedCanvassingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/field': {
@@ -301,7 +339,9 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedBroadcastRoute: typeof AuthenticatedBroadcastRoute
+  AuthenticatedCanvassingRoute: typeof AuthenticatedCanvassingRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
@@ -315,7 +355,9 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedBroadcastRoute: AuthenticatedBroadcastRoute,
+  AuthenticatedCanvassingRoute: AuthenticatedCanvassingRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,

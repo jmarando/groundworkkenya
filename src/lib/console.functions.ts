@@ -794,3 +794,312 @@ export const getWarRoom = createServerFn({ method: "GET" })
         })),
     };
   });
+
+/* --------------------------------------------------------------- canvassing */
+
+export type CanvassData = {
+  totals: {
+    people: number;
+    doors30: number;
+    doors7: number;
+    spoke: number;
+    notHome: number;
+    refused: number;
+    neverKnocked: number;
+  };
+  wards: {
+    id: string;
+    name: string;
+    constituency: string;
+    people: number;
+    knocked: number;
+    spoke: number;
+    stale: number;
+    never: number;
+  }[];
+  issues: { name: string; count: number }[];
+  walkList: {
+    id: string;
+    name: string;
+    phone: string;
+    ward: string | null;
+    segment: string | null;
+    support: number;
+    lastTouch: string | null;
+    reason: string;
+  }[];
+  recent: {
+    id: string;
+    person: string;
+    ward: string | null;
+    outcome: string;
+    issue: string | null;
+    at: string;
+  }[];
+};
+
+const DOOR_KINDS = ["door_spoke", "door_not_home", "door_refused"];
+
+export const getCanvassing = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<CanvassData> => {
+    const sb = context.supabase;
+    const [people, events, { data: wards }] = await Promise.all([
+      pageAll<{
+        id: string;
+        full_name: string | null;
+        phone: string;
+        ward_id: string | null;
+        segment: string | null;
+        support_score: number;
+        opted_out: boolean;
+        last_contacted_at: string | null;
+      }>((from, to) =>
+        sb
+          .from("people")
+          .select("id, full_name, phone, ward_id, segment, support_score, opted_out, last_contacted_at")
+          .range(from, to),
+      ),
+      pageAll<{
+        id: string;
+        person_id: string;
+        kind: string;
+        detail: string | null;
+        created_at: string;
+      }>((from, to) =>
+        sb
+          .from("person_events")
+          .select("id, person_id, kind, detail, created_at")
+          .in("kind", DOOR_KINDS)
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      ),
+      sb.from("wards").select("id, name, constituency").order("name"),
+    ]);
+
+    const now = Date.now();
+    const days = (iso: string | null) =>
+      iso ? (now - new Date(iso).getTime()) / 86_400_000 : Infinity;
+
+    const personById = new Map(people.map((p) => [p.id, p]));
+    const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
+
+    const wardStats = new Map<
+      string,
+      { people: number; knocked: number; spoke: number; stale: number; never: number }
+    >();
+    for (const p of people) {
+      const key = p.ward_id ?? "none";
+      const cur =
+        wardStats.get(key) ?? { people: 0, knocked: 0, spoke: 0, stale: 0, never: 0 };
+      cur.people += 1;
+      const d = days(p.last_contacted_at);
+      if (d === Infinity) cur.never += 1;
+      else if (d <= 30) cur.knocked += 1;
+      else cur.stale += 1;
+      wardStats.set(key, cur);
+    }
+
+    const issueMap = new Map<string, number>();
+    let doors30 = 0;
+    let doors7 = 0;
+    let spoke = 0;
+    let notHome = 0;
+    let refused = 0;
+    for (const e of events) {
+      const d = days(e.created_at);
+      if (d <= 30) doors30 += 1;
+      if (d <= 7) doors7 += 1;
+      if (e.kind === "door_spoke") spoke += 1;
+      else if (e.kind === "door_not_home") notHome += 1;
+      else refused += 1;
+      if (e.kind === "door_spoke" && e.detail) {
+        issueMap.set(e.detail, (issueMap.get(e.detail) ?? 0) + 1);
+      }
+      const p = personById.get(e.person_id);
+      if (p?.ward_id && e.kind === "door_spoke") {
+        const cur = wardStats.get(p.ward_id);
+        if (cur) cur.spoke += 1;
+      }
+    }
+
+    const walkList = people
+      .filter((p) => !p.opted_out)
+      .map((p) => {
+        const d = days(p.last_contacted_at);
+        const reason =
+          d === Infinity
+            ? "Never knocked"
+            : d > 30
+              ? "Not seen in 30 days"
+              : p.support_score >= 40 && p.support_score < 70
+                ? "Persuadable · worth a second door"
+                : "";
+        return { p, d, reason };
+      })
+      .filter((r) => r.reason)
+      .sort((a, b) => {
+        const rank = (x: string) =>
+          x === "Never knocked" ? 0 : x === "Not seen in 30 days" ? 1 : 2;
+        return rank(a.reason) - rank(b.reason) || b.p.support_score - a.p.support_score;
+      })
+      .slice(0, 2000)
+      .map(({ p, reason }) => ({
+        id: p.id,
+        name: p.full_name ?? "Unnamed",
+        phone: p.phone,
+        ward: p.ward_id ? (wardById.get(p.ward_id)?.name ?? null) : null,
+        segment: p.segment,
+        support: p.support_score,
+        lastTouch: p.last_contacted_at,
+        reason,
+      }));
+
+    return {
+      totals: {
+        people: people.length,
+        doors30,
+        doors7,
+        spoke,
+        notHome,
+        refused,
+        neverKnocked: people.filter((p) => !p.last_contacted_at).length,
+      },
+      wards: (wards ?? [])
+        .map((w) => ({
+          id: w.id,
+          name: w.name,
+          constituency: w.constituency,
+          ...(wardStats.get(w.id) ?? { people: 0, knocked: 0, spoke: 0, stale: 0, never: 0 }),
+        }))
+        .sort((a, b) => b.people - a.people),
+      issues: [...issueMap.entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8),
+      walkList,
+      recent: events.slice(0, 25).map((e) => {
+        const p = personById.get(e.person_id);
+        return {
+          id: e.id,
+          person: p?.full_name ?? "Unnamed",
+          ward: p?.ward_id ? (wardById.get(p.ward_id)?.name ?? null) : null,
+          outcome:
+            e.kind === "door_spoke"
+              ? "Spoke to them"
+              : e.kind === "door_not_home"
+                ? "Not home"
+                : "Refused",
+          issue: e.detail,
+          at: e.created_at,
+        };
+      }),
+    };
+  });
+
+/* ------------------------------------------------------- agents & stipends */
+
+export type AgentsData = {
+  stations: { total: number; confirmed: number; unstaffed: number; registered: number };
+  money: { pending: number; approved: number; paid: number; total: number };
+  counts: { agents: number; coordinators: number; lines: number };
+  wards: {
+    id: string;
+    name: string;
+    constituency: string;
+    stations: number;
+    staffed: number;
+    owed: number;
+  }[];
+  roster: {
+    id: string;
+    name: string;
+    phone: string | null;
+    role: string;
+    ward: string | null;
+    station: string | null;
+    rate: number;
+    days: number;
+    amount: number;
+    status: string;
+    reference: string | null;
+    paidAt: string | null;
+  }[];
+  gaps: { code: string; name: string; ward: string | null; registered: number }[];
+};
+
+export const getAgents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AgentsData> => {
+    const sb = context.supabase;
+    const [{ data: stipends }, { data: stations }, { data: wards }] = await Promise.all([
+      sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
+      sb.from("polling_stations").select("*").order("code"),
+      sb.from("wards").select("id, name, constituency").order("name"),
+    ]);
+
+    const sp = stipends ?? [];
+    const st = stations ?? [];
+    const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
+    const stationById = new Map(st.map((s) => [s.id, s]));
+
+    const sum = (status: string) =>
+      sp.filter((s) => s.status === status).reduce((a, s) => a + Number(s.amount_kes ?? 0), 0);
+
+    const wardRows = (wards ?? []).map((w) => {
+      const ws = st.filter((s) => s.ward_id === w.id);
+      return {
+        id: w.id,
+        name: w.name,
+        constituency: w.constituency,
+        stations: ws.length,
+        staffed: ws.filter((s) => s.status === "confirmed").length,
+        owed: sp
+          .filter((s) => s.ward_id === w.id && s.status !== "paid")
+          .reduce((a, s) => a + Number(s.amount_kes ?? 0), 0),
+      };
+    });
+
+    return {
+      stations: {
+        total: st.length,
+        confirmed: st.filter((s) => s.status === "confirmed").length,
+        unstaffed: st.filter((s) => s.status !== "confirmed").length,
+        registered: st.reduce((a, s) => a + (s.registered_voters ?? 0), 0),
+      },
+      money: {
+        pending: sum("pending"),
+        approved: sum("approved"),
+        paid: sum("paid"),
+        total: sp.reduce((a, s) => a + Number(s.amount_kes ?? 0), 0),
+      },
+      counts: {
+        agents: sp.filter((s) => s.role === "agent").length,
+        coordinators: sp.filter((s) => s.role === "coordinator").length,
+        lines: sp.length,
+      },
+      wards: wardRows.filter((w) => w.stations > 0).sort((a, b) => b.stations - a.stations),
+      roster: sp.map((s) => ({
+        id: s.id,
+        name: s.agent_name,
+        phone: s.phone,
+        role: s.role,
+        ward: s.ward_id ? (wardById.get(s.ward_id)?.name ?? null) : null,
+        station: s.station_id ? (stationById.get(s.station_id)?.name ?? null) : null,
+        rate: Number(s.rate_kes ?? 0),
+        days: s.days ?? 1,
+        amount: Number(s.amount_kes ?? 0),
+        status: s.status,
+        reference: s.reference,
+        paidAt: s.paid_at as string | null,
+      })),
+      gaps: st
+        .filter((s) => s.status !== "confirmed")
+        .map((s) => ({
+          code: s.code,
+          name: s.name,
+          ward: s.ward_id ? (wardById.get(s.ward_id)?.name ?? null) : null,
+          registered: s.registered_voters ?? 0,
+        })),
+    };
+  });
