@@ -285,7 +285,7 @@ function Voters() {
             {tab === "ward" && wardPeople.length ? (
               <button
                 type="button"
-                className="btn"
+                className="btn btn--ghost btn--sm"
                 onClick={() =>
                   downloadCSV(
                     stampName(

@@ -240,7 +240,7 @@ function People() {
             </select>
             <button
               type="button"
-              className="btn"
+              className="btn btn--ghost btn--sm"
               onClick={() =>
                 downloadCSV(
                   stampName("groundwork-people"),

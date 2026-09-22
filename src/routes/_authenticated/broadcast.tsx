@@ -259,7 +259,7 @@ function Broadcast() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-            <button type="button" className="btn" onClick={exportAudience} disabled={!reach}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={exportAudience} disabled={!reach}>
               Download this list · CSV
             </button>
           </div>
