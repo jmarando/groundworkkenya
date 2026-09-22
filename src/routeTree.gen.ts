@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
 import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authenticated/canvassing'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
@@ -38,6 +39,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBroadcastRoute = AuthenticatedBroadcastRouteImport.update({
   id: '/broadcast',
@@ -104,6 +110,7 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
   '/_authenticated/canvassing': typeof AuthenticatedCanvassingRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/agents'
     | '/broadcast'
     | '/canvassing'
     | '/field'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/agents'
     | '/broadcast'
     | '/canvassing'
     | '/field'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/agents'
     | '/_authenticated/broadcast'
     | '/_authenticated/canvassing'
     | '/_authenticated/field'
@@ -231,6 +243,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/agents': {
+      id: '/_authenticated/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AuthenticatedAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/broadcast': {
       id: '/_authenticated/broadcast'
@@ -320,6 +339,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedBroadcastRoute: typeof AuthenticatedBroadcastRoute
   AuthenticatedCanvassingRoute: typeof AuthenticatedCanvassingRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
@@ -335,6 +355,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedBroadcastRoute: AuthenticatedBroadcastRoute,
   AuthenticatedCanvassingRoute: AuthenticatedCanvassingRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
