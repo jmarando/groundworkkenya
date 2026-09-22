@@ -263,3 +263,6 @@ a.sb-item {
 
 .minibar--flag i { background: var(--gw-murram, #D9481C); }
 .spark-wrap svg { display: block; }
+
+.x-row { align-items: start; }
+.spark-wrap { margin-top: 6px; }
