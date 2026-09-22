@@ -490,8 +490,8 @@ export const getBroadcast = createServerFn({ method: "GET" })
       }
     }
 
-    const outs = (messages ?? []).filter((m) => m.direction === "out");
-    const ins = (messages ?? []).filter((m) => m.direction === "in");
+    const outs = messages.filter((m) => m.direction === "out");
+    const ins = messages.filter((m) => m.direction === "in");
     const camp = new Map<string, BroadcastData["campaigns"][number]>();
     for (const m of outs) {
       const key = m.body.slice(0, 48);
