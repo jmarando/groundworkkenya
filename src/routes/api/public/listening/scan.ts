@@ -12,9 +12,11 @@ export const Route = createFileRoute("/api/public/listening/scan")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["LOVABLE_CRON_SECRET"];
+        const allowed = [process.env["LISTENING_CRON_TOKEN"], process.env["LOVABLE_CRON_SECRET"]].filter(
+          (v): v is string => typeof v === "string" && v.length > 0,
+        );
         const sent = request.headers.get("x-cron-secret");
-        if (!secret || sent !== secret) {
+        if (!sent || !allowed.includes(sent)) {
           return new Response(JSON.stringify({ error: "unauthorized" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
