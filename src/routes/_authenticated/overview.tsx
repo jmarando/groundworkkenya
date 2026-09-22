@@ -41,7 +41,15 @@ function Overview() {
   });
 
   if (isLoading || !data) {
-    return (
+    const quick = data.quick ?? {
+    people: 0,
+    unread: 0,
+    openIncidents: 0,
+    unstaffed: 0,
+    activePolls: 0,
+  };
+
+  return (
       <section className="view active" aria-label="Overview">
         <div className="vh">
           <div>
@@ -282,26 +290,26 @@ function Overview() {
           <span className="qcard-k">CRM</span>
           <span className="qcard-t">Work the list</span>
           <span className="qcard-s">Search, filter and open any record.</span>
-          <span className="qcard-n">{nf.format(data.quick.people)} people on file</span>
+          <span className="qcard-n">{nf.format(quick.people)} people on file</span>
         </Link>
         <Link to="/inbox" className="qcard">
           <span className="qcard-k">Comms</span>
           <span className="qcard-t">Clear the inbox</span>
           <span className="qcard-s">Replies from SMS, USSD and email.</span>
-          <span className="qcard-n">{nf.format(data.quick.unread)} unread</span>
+          <span className="qcard-n">{nf.format(quick.unread)} unread</span>
         </Link>
         <Link to="/broadcast" className="qcard">
           <span className="qcard-k">Send</span>
           <span className="qcard-t">Build a broadcast</span>
           <span className="qcard-s">Consent-checked audience, costed before it goes.</span>
-          <span className="qcard-n">{nf.format(data.quick.activePolls)} {data.quick.activePolls === 1 ? "poll" : "polls"} live</span>
+          <span className="qcard-n">{nf.format(quick.activePolls)} {quick.activePolls === 1 ? "poll" : "polls"} live</span>
         </Link>
         <Link to="/warroom" className="qcard">
           <span className="qcard-k">Election day</span>
           <span className="qcard-t">Cover the stations</span>
           <span className="qcard-s">Agents, streams and incidents.</span>
           <span className="qcard-n">
-            {nf.format(data.quick.unstaffed)} unstaffed · {nf.format(data.quick.openIncidents)} open
+            {nf.format(quick.unstaffed)} unstaffed · {nf.format(quick.openIncidents)} open
             incidents
           </span>
         </Link>
