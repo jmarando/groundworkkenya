@@ -153,7 +153,7 @@ export const getPeople = createServerFn({ method: "GET" })
           "id, full_name, phone, ward_id, segment, source, support_score, tags, language, consent_sms, consent_whatsapp, consent_call, opted_out, last_contacted_at, created_at, notes",
         )
         .order("last_contacted_at", { ascending: false, nullsFirst: false })
-        .limit(600),
+        .limit(2000),
       sb.from("wards").select("id, name, constituency").order("name"),
       sb.from("segments").select("slug, name, colour"),
     ]);
