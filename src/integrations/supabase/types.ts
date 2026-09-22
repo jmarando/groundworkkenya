@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_stipends: {
+        Row: {
+          agent_name: string
+          amount_kes: number
+          created_at: string
+          days: number
+          id: string
+          method: string
+          paid_at: string | null
+          phone: string | null
+          rate_kes: number
+          reference: string | null
+          role: string
+          station_id: string | null
+          status: string
+          updated_at: string
+          ward_id: string | null
+        }
+        Insert: {
+          agent_name: string
+          amount_kes?: number
+          created_at?: string
+          days?: number
+          id?: string
+          method?: string
+          paid_at?: string | null
+          phone?: string | null
+          rate_kes?: number
+          reference?: string | null
+          role?: string
+          station_id?: string | null
+          status?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Update: {
+          agent_name?: string
+          amount_kes?: number
+          created_at?: string
+          days?: number
+          id?: string
+          method?: string
+          paid_at?: string | null
+          phone?: string | null
+          rate_kes?: number
+          reference?: string | null
+          role?: string
+          station_id?: string | null
+          status?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_stipends_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "polling_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_stipends_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contributions: {
         Row: {
           amount_kes: number
