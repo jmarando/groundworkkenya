@@ -58,7 +58,6 @@ function Canvassing() {
 
   const doors = (t?.spoke ?? 0) + (t?.notHome ?? 0) + (t?.refused ?? 0);
   const contactRate = doors ? ((t?.spoke ?? 0) / doors) * 100 : 0;
-  const maxIssue = Math.max(...(data?.issues ?? [{ count: 1 }]).map((i) => i.count), 1);
 
   function exportWalk() {
     downloadCSV(
@@ -143,7 +142,6 @@ function Canvassing() {
                   <th>Constituency</th>
                   <th style={{ textAlign: "right" }}>On file</th>
                   <th style={{ textAlign: "right" }}>Seen 30d</th>
-                  <th style={{ textAlign: "right" }}>Never</th>
                   <th>Coverage</th>
                 </tr>
               </thead>
@@ -161,7 +159,6 @@ function Canvassing() {
                     <td className="meta">{w.constituency}</td>
                     <td className="num">{nf.format(w.people)}</td>
                     <td className="num">{nf.format(w.knocked)}</td>
-                    <td className="num">{nf.format(w.never)}</td>
                     <td style={{ minWidth: 120 }}>
                       <span className="cov-bar">
                         <i
@@ -175,7 +172,7 @@ function Canvassing() {
                 ))}
                 {wards.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="meta">
+                    <td colSpan={5} className="meta">
                       Loading turf…
                     </td>
                   </tr>
@@ -194,12 +191,7 @@ function Canvassing() {
             {(data?.issues ?? []).map((i) => (
               <div className="f-row" key={i.name}>
                 <span>{i.name}</span>
-                <b>
-                  <span className="cov-bar" style={{ width: 90, display: "inline-block" }}>
-                    <i style={{ width: `${(i.count / maxIssue) * 100}%` }} />
-                  </span>{" "}
-                  {nf.format(i.count)}
-                </b>
+                <b>{nf.format(i.count)}</b>
               </div>
             ))}
             {(data?.issues ?? []).length === 0 && <p className="meta">No issues logged yet.</p>}

@@ -943,7 +943,7 @@ export const getCanvassing = createServerFn({ method: "GET" })
           x === "Never knocked" ? 0 : x === "Not seen in 30 days" ? 1 : 2;
         return rank(a.reason) - rank(b.reason) || b.p.support_score - a.p.support_score;
       })
-      .slice(0, 400)
+      .slice(0, 2000)
       .map(({ p, reason }) => ({
         id: p.id,
         name: p.full_name ?? "Unnamed",
