@@ -215,8 +215,12 @@ function Foundations() {
               <span className="limit-tick" style={{ left: "80%" }} />
             </div>
             <div className="limit-labels">
-              <span className="mono">KES 164.8M spent</span>
-              <span className="mono">limit KES 433.8M</span>
+              <span className="mono" style={{ left: "38%" }}>
+                164.8M
+              </span>
+              <span className="mono" style={{ left: "80%" }}>
+                limit 433.8M
+              </span>
             </div>
           </div>
         </div>
