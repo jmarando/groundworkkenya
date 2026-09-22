@@ -32,8 +32,32 @@ const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 
 function Finance() {
+  const { isPrincipal, loading } = useAccess();
   const fetchFinance = useServerFn(getFinance);
-  const { data } = useQuery({ queryKey: ["finance"], queryFn: () => fetchFinance() });
+  const { data } = useQuery({
+    queryKey: ["finance"],
+    queryFn: () => fetchFinance(),
+    enabled: isPrincipal,
+  });
+
+  if (!loading && !isPrincipal) {
+    return (
+      <section className="view active" aria-label="Finance">
+        <div className="vh">
+          <div>
+            <span className="eyebrow">Campaign finance · restricted</span>
+            <h1>
+              Money stays <span className="serif">closed.</span>
+            </h1>
+            <p className="meta">
+              Contributions, spend and the ledger are visible to the candidate and the campaign
+              manager only. Ask them to open it for you if you need access.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   if (!data) {
     return (
