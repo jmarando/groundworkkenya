@@ -203,14 +203,6 @@ function Landing() {
                 Sign in to your campaign
               </Link>
             </div>
-            <div className="chan">
-              <span>SMS</span>
-              <span>USSD *384*27#</span>
-              <span>WhatsApp</span>
-              <span>M-Pesa</span>
-              <span>Kiswahili · English · Sheng</span>
-              <span>Works offline</span>
-            </div>
             <div className="shot">
               <div className="frame">
                 <div className="bar">
