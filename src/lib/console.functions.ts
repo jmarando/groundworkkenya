@@ -515,14 +515,17 @@ export const getBroadcast = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BroadcastData> => {
     const sb = context.supabase;
-    const [people, { data: wards }, messages] = await Promise.all([
+    const [people, { data: wards }, { data: segmentRows }, messages] = await Promise.all([
       pageAll((from, to) =>
         sb
           .from("people")
-          .select("ward_id, consent_sms, consent_whatsapp, consent_call, opted_out, support_score")
+          .select(
+            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at",
+          )
           .range(from, to),
       ),
-      sb.from("wards").select("id, name, constituency"),
+      sb.from("wards").select("id, name, constituency").order("name"),
+      sb.from("segments").select("slug, name, colour").order("name"),
       pageAll((from, to) =>
         sb
           .from("messages")
