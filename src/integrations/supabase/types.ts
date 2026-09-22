@@ -313,6 +313,253 @@ export type Database = {
           },
         ]
       }
+      listening_alert_events: {
+        Row: {
+          alert_id: string | null
+          body: string | null
+          channel: string
+          created_at: string
+          destination: string
+          detail: string | null
+          id: string
+          mention_id: string | null
+          status: string
+          subject: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          body?: string | null
+          channel: string
+          created_at?: string
+          destination: string
+          detail?: string | null
+          id?: string
+          mention_id?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          body?: string | null
+          channel?: string
+          created_at?: string
+          destination?: string
+          detail?: string | null
+          id?: string
+          mention_id?: string | null
+          status?: string
+          subject?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_alert_events_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "listening_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listening_alert_events_mention_id_fkey"
+            columns: ["mention_id"]
+            isOneToOne: false
+            referencedRelation: "listening_mentions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_alerts: {
+        Row: {
+          active: boolean
+          channel: string
+          created_at: string
+          destination: string
+          frequency: string
+          id: string
+          keywords: string[]
+          last_fired_at: string | null
+          min_matches: number
+          name: string
+          sentiments: string[]
+          topic_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          channel?: string
+          created_at?: string
+          destination: string
+          frequency?: string
+          id?: string
+          keywords?: string[]
+          last_fired_at?: string | null
+          min_matches?: number
+          name: string
+          sentiments?: string[]
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          channel?: string
+          created_at?: string
+          destination?: string
+          frequency?: string
+          id?: string
+          keywords?: string[]
+          last_fired_at?: string | null
+          min_matches?: number
+          name?: string
+          sentiments?: string[]
+          topic_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_alerts_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "listening_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_jobs: {
+        Row: {
+          detail: string | null
+          key: string
+          last_run_at: string | null
+          locked_until: string | null
+          paused_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          detail?: string | null
+          key: string
+          last_run_at?: string | null
+          locked_until?: string | null
+          paused_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          detail?: string | null
+          key?: string
+          last_run_at?: string | null
+          locked_until?: string | null
+          paused_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      listening_mentions: {
+        Row: {
+          author: string | null
+          created_at: string
+          domain: string | null
+          found_at: string
+          id: string
+          issue: string | null
+          published_at: string | null
+          reach: number | null
+          sentiment: string | null
+          sentiment_score: number | null
+          snippet: string | null
+          source: string
+          status: string
+          title: string | null
+          topic_id: string | null
+          url: string
+          ward: string | null
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          domain?: string | null
+          found_at?: string
+          id?: string
+          issue?: string | null
+          published_at?: string | null
+          reach?: number | null
+          sentiment?: string | null
+          sentiment_score?: number | null
+          snippet?: string | null
+          source?: string
+          status?: string
+          title?: string | null
+          topic_id?: string | null
+          url: string
+          ward?: string | null
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          domain?: string | null
+          found_at?: string
+          id?: string
+          issue?: string | null
+          published_at?: string | null
+          reach?: number | null
+          sentiment?: string | null
+          sentiment_score?: number | null
+          snippet?: string | null
+          source?: string
+          status?: string
+          title?: string | null
+          topic_id?: string | null
+          url?: string
+          ward?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_mentions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "listening_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_topics: {
+        Row: {
+          active: boolean
+          created_at: string
+          exclude_terms: string[]
+          id: string
+          keywords: string[]
+          kind: string
+          label: string
+          last_scanned_at: string | null
+          query: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          exclude_terms?: string[]
+          id?: string
+          keywords?: string[]
+          kind?: string
+          label: string
+          last_scanned_at?: string | null
+          query: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          exclude_terms?: string[]
+          id?: string
+          keywords?: string[]
+          kind?: string
+          label?: string
+          last_scanned_at?: string | null
+          query?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           author_handle: string | null
