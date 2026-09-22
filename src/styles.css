@@ -2,6 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./styles/groundwork.css";
+@import "./styles/gw-app.css";
 
 @custom-variant dark (&:is(.dark *));
 
