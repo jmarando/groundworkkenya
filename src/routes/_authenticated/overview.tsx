@@ -45,7 +45,7 @@ function Overview() {
       <section className="view active" aria-label="Overview">
         <div className="vh">
           <div>
-            <span className="eyebrow">Command centre · Nairobi County</span>
+            <span className="eyebrow">Command centre</span>
             <h1>
               The morning, <span className="serif">briefed.</span>
             </h1>
@@ -76,7 +76,7 @@ function Overview() {
     <section className="view active" aria-label="Overview">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Command centre · Nairobi County</span>
+          <span className="eyebrow">Command centre</span>
           <h1>
             The morning, <span className="serif">briefed.</span>
           </h1>

@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system, from an MCA seat to State House.",
+          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system.",
       },
       { property: "og:title", content: "Groundwork · the campaign OS" },
       {
@@ -57,7 +57,7 @@ function DemoForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [seat, setSeat] = useState("Governor");
-  const [county, setCounty] = useState("Nairobi");
+  const [county, setCounty] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
 
@@ -82,7 +82,7 @@ function DemoForm() {
     setBusy(false);
     if (error) {
       setMsg({
-        text: "We couldn't send that just now. Email hello@groundwork.co.ke and we'll set up your demo.",
+        text: "We couldn't send that just now. Email justin@glab.africa and we'll set up your demo.",
         err: true,
       });
       return;
@@ -95,7 +95,7 @@ function DemoForm() {
     setPhone("");
     setEmail("");
     setSeat("Governor");
-    setCounty("Nairobi");
+    setCounty("");
   }
 
   return (
@@ -129,6 +129,7 @@ function DemoForm() {
       <label>
         County
         <select value={county} onChange={(e) => setCounty(e.target.value)}>
+          <option value="">Select county</option>
           {COUNTIES.map((c) => (
             <option key={c}>{c}</option>
           ))}
@@ -185,7 +186,7 @@ function Landing() {
         <div className="hero">
           <div className="wrap">
             <span className="eyebrow">
-              <i /> The campaign OS · from an MCA seat to State House
+              <i /> The campaign OS
             </span>
             <h1>
               Win it on the <span className="m">ground.</span>
@@ -213,7 +214,7 @@ function Landing() {
                 </div>
                 <img
                   src={shot1}
-                  alt="Groundwork console: satellite map of a Nairobi ward with every building coloured by canvass status and agents' walking routes"
+                  alt="Groundwork console: satellite map of a ward with every building coloured by canvass status and agents' walking routes"
                 />
               </div>
               <div className="float f1">
@@ -341,7 +342,7 @@ function Landing() {
               <ul className="ticks">
                 <li>
                   <span>
-                    <b>County to doorstep.</b> Drill from Nairobi to a ward to a single apartment
+                    <b>County to doorstep.</b> Drill from a county to a ward to a single apartment
                     block.
                   </span>
                 </li>
@@ -362,7 +363,7 @@ function Landing() {
             <div className="pic">
               <img
                 src={shot2}
-                alt="Map of a Nairobi ward with buildings coloured by support, an agent's numbered route, and the household list for one building"
+                alt="Map of a ward with buildings coloured by support, an agent's numbered route, and the household list for one building"
               />
             </div>
           </div>
@@ -830,7 +831,7 @@ Nini kirekebishwe kwanza mtaani kwako?
           <div>
             <h4>Account</h4>
             <Link to="/auth">Sign in</Link>
-            <a href="mailto:hello@groundwork.co.ke">hello@groundwork.co.ke</a>
+            <a href="mailto:justin@glab.africa">justin@glab.africa</a>
           </div>
           <div className="base">
             <span>© 2026 Groundwork · groundwork.co.ke</span>
