@@ -593,6 +593,36 @@ export const getBroadcast = createServerFn({ method: "GET" })
         }))
         .sort((a, b) => b.consented - a.consented)
         .slice(0, 8),
+      wardList: (wards ?? []).map((w) => ({
+        id: w.id,
+        name: w.name,
+        constituency: w.constituency,
+        consented: consentedByWard.get(w.id) ?? 0,
+      })),
+      segments: (segmentRows ?? []).map((s) => ({
+        slug: s.slug,
+        name: s.name,
+        colour: s.colour,
+      })),
+      contacts: p.map((x) => {
+        const w = x.ward_id ? wardById.get(x.ward_id) : undefined;
+        return {
+          id: x.id,
+          name: x.full_name ?? "Unnamed",
+          phone: x.phone,
+          wardId: x.ward_id,
+          ward: w?.name ?? null,
+          constituency: w?.constituency ?? null,
+          segment: x.segment,
+          language: x.language,
+          support: x.support_score ?? 0,
+          sms: x.consent_sms,
+          whatsapp: x.consent_whatsapp,
+          call: x.consent_call,
+          optedOut: x.opted_out,
+          lastTouch: (x.last_contacted_at as string | null) ?? null,
+        };
+      }),
       campaigns,
       smsRate: 0.8,
     };
