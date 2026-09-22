@@ -41,15 +41,7 @@ function Overview() {
   });
 
   if (isLoading || !data) {
-    const quick = data.quick ?? {
-    people: 0,
-    unread: 0,
-    openIncidents: 0,
-    unstaffed: 0,
-    activePolls: 0,
-  };
-
-  return (
+    return (
       <section className="view active" aria-label="Overview">
         <div className="vh">
           <div>
