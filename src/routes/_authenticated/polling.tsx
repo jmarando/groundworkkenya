@@ -66,6 +66,45 @@ function Polling() {
           <button className="btn btn--primary" type="button">
             New poll
           </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() =>
+              downloadCSV(
+                stampName("groundwork-poll-results"),
+                [
+                  "Poll code",
+                  "Question",
+                  "Status",
+                  "Channels",
+                  "Answer",
+                  "Responses",
+                  "Share %",
+                  "Total responses",
+                  "Sample target",
+                  "Opens",
+                  "Closes",
+                ],
+                data.polls.flatMap((p) =>
+                  p.options.map((o) => [
+                    p.code,
+                    p.question,
+                    p.status,
+                    p.channels.join(" "),
+                    o.label,
+                    o.count,
+                    p.responses ? Math.round((o.count / p.responses) * 1000) / 10 : 0,
+                    p.responses,
+                    p.sampleTarget,
+                    p.opensAt ? p.opensAt.slice(0, 10) : "",
+                    p.closesAt ? p.closesAt.slice(0, 10) : "",
+                  ]),
+                ),
+              )
+            }
+          >
+            Download results · CSV
+          </button>
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> {nf.format(totalResponses)} responses
             counted
