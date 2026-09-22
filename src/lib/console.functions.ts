@@ -200,7 +200,7 @@ export const getPeople = createServerFn({ method: "GET" })
       srcMap.set(r.source, (srcMap.get(r.source) ?? 0) + 1);
       if (r.segment) segMap.set(r.segment, (segMap.get(r.segment) ?? 0) + 1);
       if (!r.optedOut && r.channels.length) contactable += 1;
-      if (r.support >= 4) supporters45 += 1;
+      if (r.support >= 70) supporters45 += 1;
       if (r.support > 0) scored += 1;
       if (new Date(r.createdAt).getTime() >= startOfDay.getTime()) addedToday += 1;
       const list = phoneMap.get(r.phone) ?? [];
