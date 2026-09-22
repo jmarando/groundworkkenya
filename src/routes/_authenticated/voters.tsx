@@ -250,21 +250,78 @@ function Voters() {
 
       <div className="card fx5" style={{ marginTop: 14 }}>
         <div className="card-head">
-          <h2>Latest contact</h2>
-          <span className="mono">live from the field</span>
+          <div>
+            <h2>{tab === "ward" ? `People in ${selected?.name ?? "this ward"}` : "Latest contact"}</h2>
+            <p className="meta">
+              {tab === "ward"
+                ? "Everyone on file here — open a record to see the full timeline."
+                : "The most recent doorstep, call and reply, newest first."}
+            </p>
+          </div>
+          <div className="seg" role="group" aria-label="Bottom list">
+            <button type="button" aria-pressed={tab === "ward"} onClick={() => setTab("ward")}>
+              Ward roster
+            </button>
+            <button type="button" aria-pressed={tab === "feed"} onClick={() => setTab("feed")}>
+              Latest contact
+            </button>
+          </div>
         </div>
-        <div className="t-list">
-          {data.feed.map((f, i) => (
-            <div className="t-row" key={`${f.name}-${i}`}>
-              <span className="t-when mono">{stamp(f.when)}</span>
-              <span className="t-what">
-                <b>{f.name}</b> · {f.ward ?? "ward unknown"}
-              </span>
-              <span className="t-who">support {f.support || "—"}</span>
-            </div>
-          ))}
-          {data.feed.length === 0 && <p className="f-note">No contact recorded yet.</p>}
-        </div>
+
+        {tab === "ward" ? (
+          <div className="tblwrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th style={{ textAlign: "right" }}>Support</th>
+                  <th style={{ textAlign: "right" }}>Last contact</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {wardPeople.map((r) => (
+                  <tr
+                    key={r.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => navigate({ to: "/people", search: { person: r.id } })}
+                  >
+                    <td>
+                      <b>{r.name}</b>
+                    </td>
+                    <td className="mono">{r.phone ?? "—"}</td>
+                    <td className="num">{r.support || "—"}</td>
+                    <td className="num mono">{r.lastTouch ? stamp(r.lastTouch) : "never"}</td>
+                    <td className="meta">{r.optedOut ? "Opted out" : "Contactable"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {wardPeople.length === 0 && (
+              <p className="f-note">No one on file in this ward yet.</p>
+            )}
+          </div>
+        ) : (
+          <div className="t-list">
+            {data.feed.map((f) => (
+              <button
+                type="button"
+                className="t-row t-row--link"
+                key={f.id}
+                onClick={() => navigate({ to: "/people", search: { person: f.id } })}
+              >
+                <span className="t-when mono">{stamp(f.when)}</span>
+                <span className="t-what">
+                  <b>{f.name}</b> · {f.ward ?? "ward unknown"}
+                  {f.phone ? <span className="mono"> · {f.phone}</span> : null}
+                </span>
+                <span className="t-who">support {f.support || "—"}</span>
+              </button>
+            ))}
+            {data.feed.length === 0 && <p className="f-note">No contact recorded yet.</p>}
+          </div>
+        )}
       </div>
     </section>
   );
