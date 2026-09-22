@@ -487,7 +487,8 @@ export const getBroadcast = createServerFn({ method: "GET" })
       camp.set(key, cur);
     }
     const campaigns = [...camp.values()].sort((a, b) => b.sent - a.sent);
-    if (campaigns.length) campaigns[0].replies = ins.length;
+    const first = campaigns[0];
+    if (first) first.replies = ins.length;
 
     return {
       audience: {
