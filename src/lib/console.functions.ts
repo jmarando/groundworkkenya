@@ -1154,3 +1154,303 @@ export const getAgents = createServerFn({ method: "GET" })
       }),
     };
   });
+
+/* ----------------------------------------------------------------- briefing */
+
+export type BriefingData = {
+  totals: {
+    registered: number;
+    target: number;
+    supporters: number;
+    people: number;
+    contactedWeek: number;
+    wards: number;
+    constituencies: number;
+    stations: number;
+    staffed: number;
+    openIncidents: number;
+  };
+  constituencies: {
+    name: string;
+    wards: number;
+    registered: number;
+    target: number;
+    supporters: number;
+    people: number;
+    contacted: number;
+    strong: number;
+    persuadable: number;
+    cold: number;
+    stations: number;
+    staffed: number;
+    incidents: number;
+  }[];
+  wards: {
+    id: string;
+    name: string;
+    constituency: string;
+    registered: number;
+    target: number;
+    supporters: number;
+    people: number;
+    contacted: number;
+    strong: number;
+    persuadable: number;
+    gap: number;
+    stations: number;
+    staffed: number;
+    topIssue: string | null;
+  }[];
+  issues: { label: string; total: number; inbox: number; web: number; angry: number; topWard: string | null }[];
+  segments: { label: string; people: number; strong: number; reachable: number }[];
+  languages: { label: string; people: number }[];
+  consent: { sms: number; whatsapp: number; call: number; optedOut: number };
+  support: { label: string; people: number }[];
+  headlines: string[];
+};
+
+const ISSUE_LABEL = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replace(/[-_]/g, " ");
+
+export const getBriefing = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BriefingData> => {
+    const sb = context.supabase;
+    const [{ data: wards }, people, { data: stations }, { data: convos }, { data: mentions }, { data: incidents }] =
+      await Promise.all([
+        sb.from("wards").select("*").order("constituency"),
+        pageAll((from, to) =>
+          sb
+            .from("people")
+            .select(
+              "id, ward_id, segment, language, support_score, last_contacted_at, opted_out, consent_sms, consent_whatsapp, consent_call",
+            )
+            .range(from, to),
+        ),
+        sb.from("polling_stations").select("id, ward_id, status"),
+        sb.from("conversations").select("id, issue, sentiment, person_id"),
+        sb.from("listening_mentions").select("id, issue, sentiment, ward"),
+        sb.from("incidents").select("id, status, ward_id"),
+      ]);
+
+    const w = wards ?? [];
+    const st = stations ?? [];
+    const cv = convos ?? [];
+    const mn = mentions ?? [];
+    const inc = incidents ?? [];
+    const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    type Agg = {
+      people: number;
+      contacted: number;
+      strong: number;
+      persuadable: number;
+      cold: number;
+      issues: Map<string, number>;
+    };
+    const blank = (): Agg => ({
+      people: 0,
+      contacted: 0,
+      strong: 0,
+      persuadable: 0,
+      cold: 0,
+      issues: new Map(),
+    });
+    const byWard = new Map<string, Agg>();
+    for (const p of people) {
+      if (!p.ward_id) continue;
+      const a = byWard.get(p.ward_id) ?? blank();
+      a.people += 1;
+      if (p.last_contacted_at && new Date(p.last_contacted_at).getTime() > week) a.contacted += 1;
+      const s = p.support_score ?? 0;
+      if (s >= 70) a.strong += 1;
+      else if (s >= 40) a.persuadable += 1;
+      else a.cold += 1;
+      byWard.set(p.ward_id, a);
+    }
+
+    // issues raised, from the inbox and from the web
+    const issueTotals = new Map<string, { inbox: number; web: number; angry: number; wards: Map<string, number> }>();
+    const bump = (raw: string | null, kind: "inbox" | "web", angry: boolean, ward: string | null) => {
+      if (!raw) return;
+      const key = raw.toLowerCase().trim();
+      if (!key) return;
+      const cur = issueTotals.get(key) ?? { inbox: 0, web: 0, angry: 0, wards: new Map<string, number>() };
+      cur[kind] += 1;
+      if (angry) cur.angry += 1;
+      if (ward) cur.wards.set(ward, (cur.wards.get(ward) ?? 0) + 1);
+      issueTotals.set(key, cur);
+    };
+    for (const c of cv) bump(c.issue, "inbox", c.sentiment === "angry" || c.sentiment === "negative", null);
+    for (const m of mn) bump(m.issue, "web", m.sentiment === "angry" || m.sentiment === "negative", m.ward ?? null);
+
+    const wardRows = w.map((x) => {
+      const a = byWard.get(x.id) ?? blank();
+      const ws = st.filter((s) => s.ward_id === x.id);
+      return {
+        id: x.id,
+        name: x.name,
+        constituency: x.constituency,
+        registered: x.registered_voters ?? 0,
+        target: x.target_votes ?? 0,
+        supporters: x.supporters ?? 0,
+        people: a.people,
+        contacted: a.contacted,
+        strong: a.strong,
+        persuadable: a.persuadable,
+        gap: Math.max(0, (x.target_votes ?? 0) - (x.supporters ?? 0)),
+        stations: ws.length,
+        staffed: ws.filter((s) => s.status === "confirmed").length,
+        topIssue: null as string | null,
+      };
+    });
+
+    // attach the loudest web issue per ward name
+    for (const row of wardRows) {
+      let best: { label: string; n: number } | null = null;
+      for (const [label, v] of issueTotals) {
+        const n = v.wards.get(row.name) ?? 0;
+        if (n > 0 && (!best || n > best.n)) best = { label: ISSUE_LABEL(label), n };
+      }
+      row.topIssue = best?.label ?? null;
+    }
+
+    const consts = new Map<string, BriefingData["constituencies"][number]>();
+    for (const row of wardRows) {
+      const c =
+        consts.get(row.constituency) ??
+        ({
+          name: row.constituency,
+          wards: 0,
+          registered: 0,
+          target: 0,
+          supporters: 0,
+          people: 0,
+          contacted: 0,
+          strong: 0,
+          persuadable: 0,
+          cold: 0,
+          stations: 0,
+          staffed: 0,
+          incidents: 0,
+        } as BriefingData["constituencies"][number]);
+      c.wards += 1;
+      c.registered += row.registered;
+      c.target += row.target;
+      c.supporters += row.supporters;
+      c.people += row.people;
+      c.contacted += row.contacted;
+      c.strong += row.strong;
+      c.persuadable += row.persuadable;
+      c.cold += (byWard.get(row.id)?.cold ?? 0);
+      c.stations += row.stations;
+      c.staffed += row.staffed;
+      c.incidents += inc.filter((i) => i.ward_id === row.id && i.status !== "resolved").length;
+      consts.set(row.constituency, c);
+    }
+
+    const counter = (pick: (p: (typeof people)[number]) => string | null) => {
+      const m = new Map<string, { people: number; strong: number; reachable: number }>();
+      for (const p of people) {
+        const k = pick(p);
+        if (!k) continue;
+        const cur = m.get(k) ?? { people: 0, strong: 0, reachable: 0 };
+        cur.people += 1;
+        if ((p.support_score ?? 0) >= 70) cur.strong += 1;
+        if (!p.opted_out && (p.consent_sms || p.consent_whatsapp)) cur.reachable += 1;
+        m.set(k, cur);
+      }
+      return m;
+    };
+
+    const segMap = counter((p) => p.segment ?? null);
+    const langMap = counter((p) => p.language ?? null);
+
+    const totals = {
+      registered: w.reduce((s, x) => s + (x.registered_voters ?? 0), 0),
+      target: w.reduce((s, x) => s + (x.target_votes ?? 0), 0),
+      supporters: w.reduce((s, x) => s + (x.supporters ?? 0), 0),
+      people: people.length,
+      contactedWeek: people.filter(
+        (p) => p.last_contacted_at && new Date(p.last_contacted_at).getTime() > week,
+      ).length,
+      wards: w.length,
+      constituencies: consts.size,
+      stations: st.length,
+      staffed: st.filter((s) => s.status === "confirmed").length,
+      openIncidents: inc.filter((i) => i.status !== "resolved").length,
+    };
+
+    const issues = [...issueTotals.entries()]
+      .map(([label, v]) => {
+        let topWard: string | null = null;
+        let best = 0;
+        for (const [ward, n] of v.wards) if (n > best) ((best = n), (topWard = ward));
+        return {
+          label: ISSUE_LABEL(label),
+          total: v.inbox + v.web,
+          inbox: v.inbox,
+          web: v.web,
+          angry: v.angry,
+          topWard,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    const sortedWards = [...wardRows].sort((a, b) => b.gap - a.gap);
+    const thinnest = [...wardRows]
+      .filter((x) => x.people > 0)
+      .sort((a, b) => a.people / Math.max(1, a.registered) - b.people / Math.max(1, b.registered))[0];
+
+    const headlines: string[] = [];
+    const shortfall = Math.max(0, totals.target - totals.supporters);
+    headlines.push(
+      `${nfmt(totals.supporters)} confirmed supporters against a ${nfmt(totals.target)} win number — ${nfmt(shortfall)} still to find across ${totals.wards} wards.`,
+    );
+    if (sortedWards[0])
+      headlines.push(
+        `${sortedWards[0].name} carries the biggest single gap at ${nfmt(sortedWards[0].gap)} votes, with ${nfmt(sortedWards[0].persuadable)} persuadable people already on file.`,
+      );
+    if (issues[0])
+      headlines.push(
+        `${issues[0].label} is the loudest issue — ${nfmt(issues[0].total)} conversations and mentions, ${nfmt(issues[0].angry)} of them angry${issues[0].topWard ? `, loudest in ${issues[0].topWard}` : ""}.`,
+      );
+    if (thinnest)
+      headlines.push(
+        `${thinnest.name} is our thinnest list: ${nfmt(thinnest.people)} people on file for ${nfmt(thinnest.registered)} registered voters.`,
+      );
+    headlines.push(
+      `${nfmt(totals.staffed)} of ${nfmt(totals.stations)} polling stations have a confirmed agent; ${nfmt(totals.openIncidents)} incidents are still open.`,
+    );
+
+    return {
+      totals,
+      constituencies: [...consts.values()].sort((a, b) => b.registered - a.registered),
+      wards: sortedWards,
+      issues,
+      segments: [...segMap.entries()]
+        .map(([label, v]) => ({ label: ISSUE_LABEL(label), ...v }))
+        .sort((a, b) => b.people - a.people),
+      languages: [...langMap.entries()]
+        .map(([label, v]) => ({ label: ISSUE_LABEL(label), people: v.people }))
+        .sort((a, b) => b.people - a.people),
+      consent: {
+        sms: people.filter((p) => p.consent_sms && !p.opted_out).length,
+        whatsapp: people.filter((p) => p.consent_whatsapp && !p.opted_out).length,
+        call: people.filter((p) => p.consent_call && !p.opted_out).length,
+        optedOut: people.filter((p) => p.opted_out).length,
+      },
+      support: [
+        { label: "Strong · 70+", people: people.filter((p) => (p.support_score ?? 0) >= 70).length },
+        {
+          label: "Persuadable · 40-69",
+          people: people.filter((p) => (p.support_score ?? 0) >= 40 && (p.support_score ?? 0) < 70).length,
+        },
+        { label: "Cold · under 40", people: people.filter((p) => (p.support_score ?? 0) < 40).length },
+      ],
+      headlines,
+    };
+  });
+
+function nfmt(n: number) {
+  return new Intl.NumberFormat("en-KE").format(Math.round(n));
+}
