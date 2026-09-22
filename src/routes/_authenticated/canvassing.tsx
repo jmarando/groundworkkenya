@@ -123,7 +123,7 @@ function Canvassing() {
           <span className="kpi-lbl">Still to knock</span>
           <span className="kpi-val stat">{nf.format(walk.length)}</span>
           <span className="kpi-sub">
-            {nf.format(t?.neverKnocked ?? 0)} never visited, the rest overdue
+{nf.format(t?.neverKnocked ?? 0)} never visited · the rest overdue by 30 days
           </span>
         </div>
       </div>
@@ -142,7 +142,7 @@ function Canvassing() {
                   <th>Constituency</th>
                   <th style={{ textAlign: "right" }}>On file</th>
                   <th style={{ textAlign: "right" }}>Seen 30d</th>
-                  <th>Coverage</th>
+                  <th style={{ textAlign: "right" }}>Covered</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,14 +159,8 @@ function Canvassing() {
                     <td className="meta">{w.constituency}</td>
                     <td className="num">{nf.format(w.people)}</td>
                     <td className="num">{nf.format(w.knocked)}</td>
-                    <td style={{ minWidth: 120 }}>
-                      <span className="cov-bar">
-                        <i
-                          style={{
-                            width: `${w.people ? Math.min((w.knocked / w.people) * 100, 100) : 0}%`,
-                          }}
-                        />
-                      </span>
+                    <td className="num meta">
+                      {w.people ? Math.round((w.knocked / w.people) * 100) : 0}%
                     </td>
                   </tr>
                 ))}
