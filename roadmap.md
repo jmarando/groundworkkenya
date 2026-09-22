@@ -7,14 +7,14 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [x] Enable Lovable Cloud
 - [x] Brand assets into public/brand + favicon
 - [x] Port Groundwork CSS design system (src/styles/groundwork.css)
-- [ ] Fonts (Archivo / Geist / JetBrains Mono) in root head
-- [ ] Database schema + seed (wards, people, segments, polls, responses,
+- [x] Fonts (Archivo / Geist / JetBrains Mono) in root head
+- [x] Database schema + seed (wards, people, segments, polls, responses,
       messages, conversations, contributions, expenses, incidents, agents)
-- [ ] Accounts: email/password + Google, profiles, user_roles (admin/manager/agent)
-- [ ] Console shell: sidebar, mobile topbar, routing per view
+- [x] Accounts: email/password + Google, profiles, user_roles (admin/manager/agent)
+- [x] Console shell: sidebar, mobile topbar, routing per view
 
 ## Screens (port from the original console)
-- [ ] Overview (exec)
+- [x] Overview (exec)
 - [ ] People (CRM)
 - [ ] Know your voters (map)
 - [ ] Polling + poll builder
