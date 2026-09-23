@@ -259,6 +259,8 @@ export type Database = {
       expenses: {
         Row: {
           amount_kes: number
+          approved_at: string | null
+          approved_by: string | null
           category: string
           created_at: string
           description: string
@@ -271,6 +273,8 @@ export type Database = {
         }
         Insert: {
           amount_kes: number
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           description: string
@@ -283,6 +287,8 @@ export type Database = {
         }
         Update: {
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           description?: string
@@ -1209,6 +1215,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_expense: { Args: { _expense_id: string }; Returns: Json }
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
