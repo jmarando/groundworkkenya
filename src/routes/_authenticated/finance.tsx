@@ -218,7 +218,9 @@ function Finance() {
           </div>
           <span className="mono">{data.pending.length} pending</span>
         </div>
-        {data.pending.length === 0 && <p className="f-note">Nothing waiting. The queue is clear.</p>}
+        {data.pending.length === 0 && (
+          <p className="f-note">Nothing waiting. The queue is clear.</p>
+        )}
         {data.pending.map((q) => (
           <div className="q-row" key={q.id}>
             <span className="q-desc">
@@ -250,7 +252,8 @@ function Finance() {
                 type="button"
                 disabled={!q.reference || approvingId === q.id}
                 onClick={() => {
-                  if (!window.confirm(`Approve KES ${money(q.amount)} for ${q.description}?`)) return;
+                  if (!window.confirm(`Approve KES ${money(q.amount)} for ${q.description}?`))
+                    return;
                   setApprovingId(q.id);
                   approval.mutate(q.id);
                 }}

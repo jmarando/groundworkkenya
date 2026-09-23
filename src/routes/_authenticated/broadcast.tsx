@@ -34,10 +34,30 @@ const stamp = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 
 const PAID = [
-  { code: "M", cls: "ch--fb", name: "Meta · FB + IG", note: "Election ads need page authorisation and a \"Paid for by\" disclaimer." },
-  { code: "G", cls: "ch--gg", name: "Google Search + Display", note: "Election ads need advertiser verification for Kenya." },
-  { code: "YT", cls: "ch--yt", name: "YouTube", note: "Same verification as Google. Cut long video to 15s bumpers." },
-  { code: "TT", cls: "ch--tt", name: "TikTok", note: "Bans paid political ads. Contracted, disclosed creators instead." },
+  {
+    code: "M",
+    cls: "ch--fb",
+    name: "Meta · FB + IG",
+    note: 'Election ads need page authorisation and a "Paid for by" disclaimer.',
+  },
+  {
+    code: "G",
+    cls: "ch--gg",
+    name: "Google Search + Display",
+    note: "Election ads need advertiser verification for Kenya.",
+  },
+  {
+    code: "YT",
+    cls: "ch--yt",
+    name: "YouTube",
+    note: "Same verification as Google. Cut long video to 15s bumpers.",
+  },
+  {
+    code: "TT",
+    cls: "ch--tt",
+    name: "TikTok",
+    note: "Bans paid political ads. Contracted, disclosed creators instead.",
+  },
 ];
 
 function Broadcast() {
@@ -67,13 +87,9 @@ function Broadcast() {
       }),
     [contacts, ward, segs, support45, undecided],
   );
-  const reachable = useMemo(
-    () => matched.filter((c) => c.sms && !c.optedOut),
-    [matched],
-  );
+  const reachable = useMemo(() => matched.filter((c) => c.sms && !c.optedOut), [matched]);
   const toggleSeg = (slug: string) =>
     setSegs((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
-
 
   if (!data) {
     return (
@@ -108,7 +124,9 @@ function Broadcast() {
 
   const exportAudience = () =>
     downloadCSV(
-      stampName(`groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`),
+      stampName(
+        `groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`,
+      ),
       [
         "Name",
         "Phone",
@@ -151,21 +169,19 @@ function Broadcast() {
               ...(undecided ? (["undecided"] as SupportBand[]) : []),
             ],
           }}
-          describe={
-            [
-              segNames.length ? segNames.join(", ") : "Everyone",
-              wardName ? `in ${wardName}` : "in every ward",
-              support45 && undecided
-                ? "· strong and undecided supporters"
-                : support45
-                  ? "· strong supporters"
-                  : undecided
-                    ? "· undecided"
-                    : "",
-            ]
-              .filter(Boolean)
-              .join(" ")
-          }
+          describe={[
+            segNames.length ? segNames.join(", ") : "Everyone",
+            wardName ? `in ${wardName}` : "in every ward",
+            support45 && undecided
+              ? "· strong and undecided supporters"
+              : support45
+                ? "· strong supporters"
+                : undecided
+                  ? "· undecided"
+                  : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           initialBody={body}
           smsRate={data.smsRate}
           onClose={() => setComposing(false)}
@@ -302,7 +318,12 @@ function Broadcast() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={exportAudience} disabled={!reach}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={exportAudience}
+              disabled={!reach}
+            >
               Download this list · CSV
             </button>
           </div>
