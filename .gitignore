@@ -30,9 +30,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local env — secrets belong in Lovable Cloud env vars, never in the repo.
-# This repo is public: a service-role key or app secret committed here is a live breach.
-.env
-.env.*
-!.env.example
+# .env is tracked on purpose: Lovable's build reads the VITE_ Supabase URL and
+# publishable key from it, and the published site cannot reach the database
+# without it. It must hold nothing else. This repo is public: anything secret
+# (service-role key, app secrets, provider keys) goes in Lovable Cloud env vars,
+# or in a local-only file below.
+.env.local
+.env.*.local
 .dev.vars
