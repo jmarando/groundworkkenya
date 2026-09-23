@@ -6,7 +6,13 @@ import { GwMark } from "./GwMark";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
 
-type NavItem = { to: string; label: string; faint?: string; principalOnly?: boolean };
+type NavItem = {
+  to: string;
+  label: string;
+  faint?: string;
+  principalOnly?: boolean;
+  adminOnly?: boolean;
+};
 
 const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   {
@@ -44,16 +50,18 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   },
   {
     title: "System",
-    items: [{ to: "/foundations", label: "Brand & design" }],
+    items: [
+      { to: "/team", label: "Team", faint: "ACCESS", adminOnly: true },
+      { to: "/foundations", label: "Brand & design" },
+    ],
   },
 ];
 
-
-
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { isPrincipal } = useAccess();
-  const visible = (items: NavItem[]) => items.filter((i) => !i.principalOnly || isPrincipal);
+  const { isPrincipal, isAdmin } = useAccess();
+  const visible = (items: NavItem[]) =>
+    items.filter((i) => (!i.principalOnly || isPrincipal) && (!i.adminOnly || isAdmin));
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
     (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
   );

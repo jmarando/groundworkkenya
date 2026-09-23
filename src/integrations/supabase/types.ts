@@ -562,9 +562,11 @@ export type Database = {
       }
       messages: {
         Row: {
+          attempts: number
           author_handle: string | null
           body: string
           channel: string
+          claimed_at: string | null
           conversation_id: string | null
           cost_kes: number
           created_at: string
@@ -574,6 +576,7 @@ export type Database = {
           id: string
           issue: string | null
           kind: string
+          outbox_kind: string
           permalink: string | null
           person_id: string | null
           phone: string | null
@@ -586,9 +589,11 @@ export type Database = {
           status: string
         }
         Insert: {
+          attempts?: number
           author_handle?: string | null
           body: string
           channel?: string
+          claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
@@ -598,6 +603,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
           phone?: string | null
@@ -610,9 +616,11 @@ export type Database = {
           status?: string
         }
         Update: {
+          attempts?: number
           author_handle?: string | null
           body?: string
           channel?: string
+          claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
@@ -622,6 +630,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
           phone?: string | null
@@ -667,8 +676,10 @@ export type Database = {
           id: string
           language: string
           last_contacted_at: string | null
+          last_inbound_at: string | null
           notes: string | null
           opted_out: boolean
+          opted_out_at: string | null
           phone: string
           segment: string | null
           source: string
@@ -686,8 +697,10 @@ export type Database = {
           id?: string
           language?: string
           last_contacted_at?: string | null
+          last_inbound_at?: string | null
           notes?: string | null
           opted_out?: boolean
+          opted_out_at?: string | null
           phone: string
           segment?: string | null
           source?: string
@@ -705,8 +718,10 @@ export type Database = {
           id?: string
           language?: string
           last_contacted_at?: string | null
+          last_inbound_at?: string | null
           notes?: string | null
           opted_out?: boolean
+          opted_out_at?: string | null
           phone?: string
           segment?: string | null
           source?: string
@@ -759,6 +774,45 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poll_invites: {
+        Row: {
+          channel: string
+          id: string
+          person_id: string
+          poll_id: string
+          sent_at: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          person_id: string
+          poll_id: string
+          sent_at?: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          person_id?: string
+          poll_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_invites_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_invites_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
             referencedColumns: ["id"]
           },
         ]
@@ -887,13 +941,19 @@ export type Database = {
           created_by: string | null
           id: string
           kind: string
+          lang: string
+          launched_at: string | null
           opens_at: string | null
           options: Json
           question: string
+          question_sw: string | null
           reward: string | null
+          reward_amount: number
+          reward_method: string
           sample_target: number
           status: string
           updated_at: string
+          weighting: boolean
         }
         Insert: {
           audience?: Json
@@ -904,13 +964,19 @@ export type Database = {
           created_by?: string | null
           id?: string
           kind?: string
+          lang?: string
+          launched_at?: string | null
           opens_at?: string | null
           options?: Json
           question: string
+          question_sw?: string | null
           reward?: string | null
+          reward_amount?: number
+          reward_method?: string
           sample_target?: number
           status?: string
           updated_at?: string
+          weighting?: boolean
         }
         Update: {
           audience?: Json
@@ -921,13 +987,19 @@ export type Database = {
           created_by?: string | null
           id?: string
           kind?: string
+          lang?: string
+          launched_at?: string | null
           opens_at?: string | null
           options?: Json
           question?: string
+          question_sw?: string | null
           reward?: string | null
+          reward_amount?: number
+          reward_method?: string
           sample_target?: number
           status?: string
           updated_at?: string
+          weighting?: boolean
         }
         Relationships: []
       }
@@ -1098,6 +1170,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      audience_counts: { Args: never; Returns: Json }
+      audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1105,8 +1180,32 @@ export type Database = {
         }
         Returns: boolean
       }
+      in_poll_audience: {
+        Args: { _audience: Json; _segment: string; _ward_id: string }
+        Returns: boolean
+      }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      launch_poll: { Args: { _poll_id: string; _sms_body: string }; Returns: Json }
+      outbox_block_reason: {
+        Args: {
+          _channel: string
+          _consent_sms: boolean
+          _consent_whatsapp: boolean
+          _kind: string
+          _opted_out: boolean
+        }
+        Returns: string
+      }
+      poll_tallies: { Args: { _poll_id: string }; Returns: Json }
+      process_outbox: { Args: { _limit?: number; _live?: boolean }; Returns: Json }
+      set_member_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "organiser" | "agent" | "viewer"
