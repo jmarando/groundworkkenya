@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
+import { AddPerson } from "@/components/gw/AddPerson";
+import { ImportPeople } from "@/components/gw/ImportPeople";
+import { useAccess } from "@/hooks/useAccess";
 import { getPeople, type PersonRow } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 
@@ -10,7 +13,9 @@ export const Route = createFileRoute("/_authenticated/people")({
   component: People,
   validateSearch: (search: Record<string, unknown>) => ({
     person:
-      typeof search['person'] === "string" ? (search['person'] as string) : (undefined as string | undefined),
+      typeof search["person"] === "string"
+        ? (search["person"] as string)
+        : (undefined as string | undefined),
   }),
   head: () => ({
     meta: [
@@ -32,15 +37,16 @@ export const Route = createFileRoute("/_authenticated/people")({
 
 const nf = new Intl.NumberFormat("en-KE");
 const when = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-    : "never";
+  iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "never";
 
 const PAGE = 12;
 
 function People() {
   const fetchPeople = useServerFn(getPeople);
   const { data } = useQuery({ queryKey: ["people"], queryFn: () => fetchPeople() });
+  const { isPrincipal } = useAccess();
+  const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("recent");
@@ -97,6 +103,16 @@ function People() {
 
   return (
     <section className="view active" aria-label="People">
+      {adding && (
+        <AddPerson wards={data.wards} segments={data.segments} onClose={() => setAdding(false)} />
+      )}
+      {importing && (
+        <ImportPeople
+          wards={data.wards}
+          segments={data.segments}
+          onClose={() => setImporting(false)}
+        />
+      )}
       <div className="vh fx">
         <div>
           <span className="eyebrow">People · one record per person</span>
@@ -108,6 +124,18 @@ function People() {
           </p>
         </div>
         <div className="vh-side">
+          <button className="btn btn--primary" type="button" onClick={() => setAdding(true)}>
+            Add person
+          </button>
+          {isPrincipal && (
+            <button
+              className="btn btn--ghost btn--sm"
+              type="button"
+              onClick={() => setImporting(true)}
+            >
+              Import CSV
+            </button>
+          )}
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> {nf.format(data.total)} records loaded
           </span>
@@ -442,13 +470,17 @@ function People() {
             <div className="f-row">
               <span>SMS consented</span>
               <b className="stat">
-                {nf.format(data.rows.filter((r) => r.channels.includes("SMS") && !r.optedOut).length)}
+                {nf.format(
+                  data.rows.filter((r) => r.channels.includes("SMS") && !r.optedOut).length,
+                )}
               </b>
             </div>
             <div className="f-row">
               <span>WhatsApp consented</span>
               <b className="stat">
-                {nf.format(data.rows.filter((r) => r.channels.includes("WA") && !r.optedOut).length)}
+                {nf.format(
+                  data.rows.filter((r) => r.channels.includes("WA") && !r.optedOut).length,
+                )}
               </b>
             </div>
             <div className="f-row">

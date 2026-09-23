@@ -1266,3 +1266,36 @@ figure { margin: 0; }
   .bc-actions { width: 100%; }
   .bc-actions .btn { flex: 1; }
 }
+
+/* ------------------------------------------------------ add / import people */
+
+.ap-consent { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 15px; }
+.ap-consent label { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; }
+.ap-consent input { width: 18px; height: 18px; accent-color: var(--gw-ink); }
+.ip-map { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+.ip-consent input[type="text"],
+.ip-consent > input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 15px;
+  border: 1.5px solid var(--gw-border);
+  border-radius: var(--radius-btn);
+}
+.ip-attest { display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; font-size: 14px; }
+.ip-attest input { width: 18px; height: 18px; margin-top: 2px; flex: none; accent-color: var(--gw-ink); }
+.ip-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--gw-paper-2);
+  border-radius: 10px;
+}
+.ip-preview p { margin: 0; }
+.ip-done p { margin: 0 0 8px; font-size: 16px; }
+
+@media (max-width: 720px) {
+  .ip-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

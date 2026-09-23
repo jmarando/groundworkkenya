@@ -823,6 +823,48 @@ export type Database = {
           },
         ]
       }
+      person_imports: {
+        Row: {
+          consent_count: number
+          consent_source: string | null
+          created_at: string
+          created_by: string | null
+          created_count: number
+          filename: string
+          id: string
+          rows_total: number
+          skipped_count: number
+          source: string
+          updated_count: number
+        }
+        Insert: {
+          consent_count?: number
+          consent_source?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          filename: string
+          id?: string
+          rows_total?: number
+          skipped_count?: number
+          source: string
+          updated_count?: number
+        }
+        Update: {
+          consent_count?: number
+          consent_source?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          filename?: string
+          id?: string
+          rows_total?: number
+          skipped_count?: number
+          source?: string
+          updated_count?: number
+        }
+        Relationships: []
+      }
       poll_invites: {
         Row: {
           channel: string
@@ -1215,9 +1257,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_person: {
+        Args: {
+          _consent: Json
+          _consent_source: string
+          _full_name: string
+          _language: string
+          _notes: string
+          _phone: string
+          _segment: string | null
+          _support_score: number | null
+          _ward_id: string | null
+        }
+        Returns: Json
+      }
       approve_expense: { Args: { _expense_id: string }; Returns: Json }
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      begin_person_import: {
+        Args: { _consent_source: string; _filename: string; _rows_total: number; _source: string }
+        Returns: string
+      }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
       groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
@@ -1227,6 +1287,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_people_chunk: { Args: { _import_id: string; _rows: Json }; Returns: Json }
       in_broadcast_audience: {
         Args: { _audience: Json; _segment: string; _support: number; _ward_id: string }
         Returns: boolean
