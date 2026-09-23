@@ -83,6 +83,42 @@ export type Database = {
           },
         ]
       }
+      broadcasts: {
+        Row: {
+          audience: Json
+          body: string
+          channel: string
+          client_key: string
+          created_at: string
+          created_by: string | null
+          id: string
+          matched: number
+          recipients: number
+        }
+        Insert: {
+          audience?: Json
+          body: string
+          channel?: string
+          client_key: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matched?: number
+          recipients?: number
+        }
+        Update: {
+          audience?: Json
+          body?: string
+          channel?: string
+          client_key?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matched?: number
+          recipients?: number
+        }
+        Relationships: []
+      }
       contributions: {
         Row: {
           amount_kes: number
@@ -565,6 +601,7 @@ export type Database = {
           attempts: number
           author_handle: string | null
           body: string
+          broadcast_id: string | null
           channel: string
           claimed_at: string | null
           conversation_id: string | null
@@ -592,6 +629,7 @@ export type Database = {
           attempts?: number
           author_handle?: string | null
           body: string
+          broadcast_id?: string | null
           channel?: string
           claimed_at?: string | null
           conversation_id?: string | null
@@ -619,6 +657,7 @@ export type Database = {
           attempts?: number
           author_handle?: string | null
           body?: string
+          broadcast_id?: string | null
           channel?: string
           claimed_at?: string | null
           conversation_id?: string | null
@@ -1172,12 +1211,17 @@ export type Database = {
     Functions: {
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
       groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      in_broadcast_audience: {
+        Args: { _audience: Json; _segment: string; _support: number; _ward_id: string }
         Returns: boolean
       }
       in_poll_audience: {
@@ -1199,6 +1243,10 @@ export type Database = {
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
       process_outbox: { Args: { _limit?: number; _live?: boolean }; Returns: Json }
+      queue_broadcast: {
+        Args: { _audience: Json; _body: string; _client_key: string }
+        Returns: Json
+      }
       set_member_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -3,6 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
+import { BroadcastComposer } from "@/components/gw/BroadcastComposer";
+import { useAccess } from "@/hooks/useAccess";
+import type { SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 
@@ -46,6 +49,8 @@ function Broadcast() {
   const [segs, setSegs] = useState<string[]>([]);
   const [ward, setWard] = useState<string>("");
   const [lang, setLang] = useState<"sw" | "en">("sw");
+  const [composing, setComposing] = useState(false);
+  const { isPrincipal } = useAccess();
 
   const contacts = data?.contacts ?? [];
   const matched = useMemo(
@@ -136,6 +141,36 @@ function Broadcast() {
 
   return (
     <section className="view active" aria-label="Broadcast">
+      {composing && (
+        <BroadcastComposer
+          audience={{
+            wardIds: ward ? [ward] : [],
+            segments: segs,
+            support: [
+              ...(support45 ? (["strong"] as SupportBand[]) : []),
+              ...(undecided ? (["undecided"] as SupportBand[]) : []),
+            ],
+          }}
+          describe={
+            [
+              segNames.length ? segNames.join(", ") : "Everyone",
+              wardName ? `in ${wardName}` : "in every ward",
+              support45 && undecided
+                ? "· strong and undecided supporters"
+                : support45
+                  ? "· strong supporters"
+                  : undecided
+                    ? "· undecided"
+                    : "",
+            ]
+              .filter(Boolean)
+              .join(" ")
+          }
+          initialBody={body}
+          smsRate={data.smsRate}
+          onClose={() => setComposing(false)}
+        />
+      )}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Comms · broadcast &amp; paid media</span>
@@ -148,9 +183,17 @@ function Broadcast() {
           </p>
         </div>
         <div className="vh-side">
-          <button className="btn btn--primary" type="button">
-            Schedule send
-          </button>
+          {isPrincipal && (
+            <button
+              className="btn btn--primary"
+              type="button"
+              disabled={sendable === 0}
+              title={sendable === 0 ? "Nobody in this audience has agreed to SMS" : undefined}
+              onClick={() => setComposing(true)}
+            >
+              Send to this audience…
+            </button>
+          )}
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> {nf.format(a.sms)} consented for SMS
           </span>

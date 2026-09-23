@@ -1228,3 +1228,41 @@ figure { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   .pb-scrim { backdrop-filter: none; }
 }
+
+/* ------------------------------------------------------ broadcast composer */
+
+.bc-audience { display: flex; flex-direction: column; gap: 4px; }
+.bc-audience p { margin: 0; }
+.bc-phone {
+  align-self: flex-start;
+  max-width: 340px;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--gw-ink);
+  background: var(--gw-paper-2);
+  border-radius: 16px 16px 16px 4px;
+}
+.bc-phone p { margin: 0; }
+.bc-count { margin: -6px 0 0; font-variant-numeric: tabular-nums; }
+.bc-warn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--gw-ink);
+  background: hsl(38 92% 56% / 0.14);
+  border-left: 3px solid var(--gw-highlight);
+  border-radius: 6px;
+}
+.bc-warn p { margin: 0; flex: 1 1 260px; }
+.bc-actions { display: flex; gap: 8px; }
+
+@media (max-width: 720px) {
+  .bc-actions { width: 100%; }
+  .bc-actions .btn { flex: 1; }
+}
