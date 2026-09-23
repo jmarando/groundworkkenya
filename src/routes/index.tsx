@@ -150,6 +150,16 @@ function DemoForm() {
 
 function Landing() {
   const [scrolled, setScrolled] = useState(false);
+
+  // A sign-in that finishes here carries its session in the address, and only
+  // /auth reads it. Hand it over rather than leave someone signed out on the
+  // marketing page. Section links (#pricing and so on) are left alone.
+  useEffect(() => {
+    const { search, hash } = window.location;
+    if (/[#&?](access_token|error_description)=/.test(search + hash)) {
+      window.location.replace(`/auth${search}${hash}`);
+    }
+  }, []);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
