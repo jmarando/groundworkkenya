@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Access } from "@/lib/access.functions";
 import { supabase } from "@/integrations/supabase/client";
+
+type Access = {
+  userId: string;
+  roles: string[];
+  isPrincipal: boolean;
+};
 
 export function useAccess() {
   const { data, isPending } = useQuery<Access>({
