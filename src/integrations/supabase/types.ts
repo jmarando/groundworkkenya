@@ -789,6 +789,7 @@ export type Database = {
         Row: {
           actor: string | null
           channel: string | null
+          client_id: string | null
           created_at: string
           detail: string | null
           id: string
@@ -798,6 +799,7 @@ export type Database = {
         Insert: {
           actor?: string | null
           channel?: string | null
+          client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -807,6 +809,7 @@ export type Database = {
         Update: {
           actor?: string | null
           channel?: string | null
+          client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -1315,12 +1318,39 @@ export type Database = {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
       }
+      record_door: {
+        Args: {
+          _client_id: string
+          _consent: Json
+          _consent_source: string
+          _issue: string
+          _new: Json
+          _outcome: string
+          _person_id: string | null
+          _support: number | null
+          _visited_at: string
+        }
+        Returns: Json
+      }
       set_member_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: undefined
+      }
+      walk_list: {
+        Args: { _limit?: number; _ward_id: string }
+        Returns: {
+          full_name: string | null
+          id: string
+          last_contacted_at: string | null
+          last_outcome: string | null
+          last_visit_at: string | null
+          phone_masked: string
+          segment: string | null
+          support_score: number
+        }[]
       }
     }
     Enums: {
