@@ -83,6 +83,42 @@ export type Database = {
           },
         ]
       }
+      broadcasts: {
+        Row: {
+          audience: Json
+          body: string
+          channel: string
+          client_key: string
+          created_at: string
+          created_by: string | null
+          id: string
+          matched: number
+          recipients: number
+        }
+        Insert: {
+          audience?: Json
+          body: string
+          channel?: string
+          client_key: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matched?: number
+          recipients?: number
+        }
+        Update: {
+          audience?: Json
+          body?: string
+          channel?: string
+          client_key?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          matched?: number
+          recipients?: number
+        }
+        Relationships: []
+      }
       contributions: {
         Row: {
           amount_kes: number
@@ -223,6 +259,8 @@ export type Database = {
       expenses: {
         Row: {
           amount_kes: number
+          approved_at: string | null
+          approved_by: string | null
           category: string
           created_at: string
           description: string
@@ -235,6 +273,8 @@ export type Database = {
         }
         Insert: {
           amount_kes: number
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           description: string
@@ -247,6 +287,8 @@ export type Database = {
         }
         Update: {
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string
           created_at?: string
           description?: string
@@ -562,9 +604,12 @@ export type Database = {
       }
       messages: {
         Row: {
+          attempts: number
           author_handle: string | null
           body: string
+          broadcast_id: string | null
           channel: string
+          claimed_at: string | null
           conversation_id: string | null
           cost_kes: number
           created_at: string
@@ -574,6 +619,7 @@ export type Database = {
           id: string
           issue: string | null
           kind: string
+          outbox_kind: string
           permalink: string | null
           person_id: string | null
           phone: string | null
@@ -586,9 +632,12 @@ export type Database = {
           status: string
         }
         Insert: {
+          attempts?: number
           author_handle?: string | null
           body: string
+          broadcast_id?: string | null
           channel?: string
+          claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
@@ -598,6 +647,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
           phone?: string | null
@@ -610,9 +660,12 @@ export type Database = {
           status?: string
         }
         Update: {
+          attempts?: number
           author_handle?: string | null
           body?: string
+          broadcast_id?: string | null
           channel?: string
+          claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
@@ -622,6 +675,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
           phone?: string | null
@@ -634,6 +688,13 @@ export type Database = {
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -667,8 +728,10 @@ export type Database = {
           id: string
           language: string
           last_contacted_at: string | null
+          last_inbound_at: string | null
           notes: string | null
           opted_out: boolean
+          opted_out_at: string | null
           phone: string
           segment: string | null
           source: string
@@ -686,8 +749,10 @@ export type Database = {
           id?: string
           language?: string
           last_contacted_at?: string | null
+          last_inbound_at?: string | null
           notes?: string | null
           opted_out?: boolean
+          opted_out_at?: string | null
           phone: string
           segment?: string | null
           source?: string
@@ -705,8 +770,10 @@ export type Database = {
           id?: string
           language?: string
           last_contacted_at?: string | null
+          last_inbound_at?: string | null
           notes?: string | null
           opted_out?: boolean
+          opted_out_at?: string | null
           phone?: string
           segment?: string | null
           source?: string
@@ -729,6 +796,7 @@ export type Database = {
         Row: {
           actor: string | null
           channel: string | null
+          client_id: string | null
           created_at: string
           detail: string | null
           id: string
@@ -738,6 +806,7 @@ export type Database = {
         Insert: {
           actor?: string | null
           channel?: string | null
+          client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -747,6 +816,7 @@ export type Database = {
         Update: {
           actor?: string | null
           channel?: string | null
+          client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
@@ -759,6 +829,87 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_imports: {
+        Row: {
+          consent_count: number
+          consent_source: string | null
+          created_at: string
+          created_by: string | null
+          created_count: number
+          filename: string
+          id: string
+          rows_total: number
+          skipped_count: number
+          source: string
+          updated_count: number
+        }
+        Insert: {
+          consent_count?: number
+          consent_source?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          filename: string
+          id?: string
+          rows_total?: number
+          skipped_count?: number
+          source: string
+          updated_count?: number
+        }
+        Update: {
+          consent_count?: number
+          consent_source?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_count?: number
+          filename?: string
+          id?: string
+          rows_total?: number
+          skipped_count?: number
+          source?: string
+          updated_count?: number
+        }
+        Relationships: []
+      }
+      poll_invites: {
+        Row: {
+          channel: string
+          id: string
+          person_id: string
+          poll_id: string
+          sent_at: string
+        }
+        Insert: {
+          channel?: string
+          id?: string
+          person_id: string
+          poll_id: string
+          sent_at?: string
+        }
+        Update: {
+          channel?: string
+          id?: string
+          person_id?: string
+          poll_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poll_invites_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "poll_invites_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "polls"
             referencedColumns: ["id"]
           },
         ]
@@ -887,13 +1038,19 @@ export type Database = {
           created_by: string | null
           id: string
           kind: string
+          lang: string
+          launched_at: string | null
           opens_at: string | null
           options: Json
           question: string
+          question_sw: string | null
           reward: string | null
+          reward_amount: number
+          reward_method: string
           sample_target: number
           status: string
           updated_at: string
+          weighting: boolean
         }
         Insert: {
           audience?: Json
@@ -904,13 +1061,19 @@ export type Database = {
           created_by?: string | null
           id?: string
           kind?: string
+          lang?: string
+          launched_at?: string | null
           opens_at?: string | null
           options?: Json
           question: string
+          question_sw?: string | null
           reward?: string | null
+          reward_amount?: number
+          reward_method?: string
           sample_target?: number
           status?: string
           updated_at?: string
+          weighting?: boolean
         }
         Update: {
           audience?: Json
@@ -921,13 +1084,19 @@ export type Database = {
           created_by?: string | null
           id?: string
           kind?: string
+          lang?: string
+          launched_at?: string | null
           opens_at?: string | null
           options?: Json
           question?: string
+          question_sw?: string | null
           reward?: string | null
+          reward_amount?: number
+          reward_method?: string
           sample_target?: number
           status?: string
           updated_at?: string
+          weighting?: boolean
         }
         Relationships: []
       }
@@ -1098,6 +1267,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_person: {
+        Args: {
+          _consent: Json
+          _consent_source: string
+          _full_name: string
+          _language: string
+          _notes: string
+          _phone: string
+          _segment: string
+          _support_score: number
+          _ward_id: string
+        }
+        Returns: Json
+      }
+      approve_expense: { Args: { _expense_id: string }; Returns: Json }
+      audience_counts: { Args: never; Returns: Json }
+      audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      begin_person_import: {
+        Args: {
+          _consent_source: string
+          _filename: string
+          _rows_total: number
+          _source: string
+        }
+        Returns: string
+      }
+      broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
+      groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1105,8 +1302,95 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_people_chunk: {
+        Args: { _import_id: string; _rows: Json }
+        Returns: Json
+      }
+      in_broadcast_audience: {
+        Args: {
+          _audience: Json
+          _segment: string
+          _support: number
+          _ward_id: string
+        }
+        Returns: boolean
+      }
+      in_poll_audience: {
+        Args: { _audience: Json; _segment: string; _ward_id: string }
+        Returns: boolean
+      }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      launch_poll: {
+        Args: { _poll_id: string; _sms_body: string }
+        Returns: Json
+      }
+      outbox_block_reason: {
+        Args: {
+          _channel: string
+          _consent_sms: boolean
+          _consent_whatsapp: boolean
+          _kind: string
+          _opted_out: boolean
+        }
+        Returns: string
+      }
+      parse_import_rows: {
+        Args: { _consent_stated: boolean; _rows: Json }
+        Returns: {
+          call: boolean
+          full_name: string
+          language: string
+          phone: string
+          segment: string
+          sms: boolean
+          wa: boolean
+          ward_id: string
+        }[]
+      }
+      poll_tallies: { Args: { _poll_id: string }; Returns: Json }
+      process_outbox: {
+        Args: { _limit?: number; _live?: boolean }
+        Returns: Json
+      }
+      queue_broadcast: {
+        Args: { _audience: Json; _body: string; _client_key: string }
+        Returns: Json
+      }
+      record_door: {
+        Args: {
+          _client_id: string
+          _consent: Json
+          _consent_source: string
+          _issue: string
+          _new: Json
+          _outcome: string
+          _person_id: string
+          _support: number
+          _visited_at: string
+        }
+        Returns: Json
+      }
+      set_member_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      walk_list: {
+        Args: { _limit?: number; _ward_id: string }
+        Returns: {
+          full_name: string
+          id: string
+          last_contacted_at: string
+          last_outcome: string
+          last_visit_at: string
+          phone_masked: string
+          segment: string
+          support_score: number
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "organiser" | "agent" | "viewer"
