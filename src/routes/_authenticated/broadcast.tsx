@@ -3,9 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
-import { BroadcastComposer } from "@/components/gw/BroadcastComposer";
-import { useAccess } from "@/hooks/useAccess";
-import type { SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 
@@ -34,30 +31,10 @@ const stamp = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 
 const PAID = [
-  {
-    code: "M",
-    cls: "ch--fb",
-    name: "Meta · FB + IG",
-    note: 'Election ads need page authorisation and a "Paid for by" disclaimer.',
-  },
-  {
-    code: "G",
-    cls: "ch--gg",
-    name: "Google Search + Display",
-    note: "Election ads need advertiser verification for Kenya.",
-  },
-  {
-    code: "YT",
-    cls: "ch--yt",
-    name: "YouTube",
-    note: "Same verification as Google. Cut long video to 15s bumpers.",
-  },
-  {
-    code: "TT",
-    cls: "ch--tt",
-    name: "TikTok",
-    note: "Bans paid political ads. Contracted, disclosed creators instead.",
-  },
+  { code: "M", cls: "ch--fb", name: "Meta · FB + IG", note: "Election ads need page authorisation and a \"Paid for by\" disclaimer." },
+  { code: "G", cls: "ch--gg", name: "Google Search + Display", note: "Election ads need advertiser verification for Kenya." },
+  { code: "YT", cls: "ch--yt", name: "YouTube", note: "Same verification as Google. Cut long video to 15s bumpers." },
+  { code: "TT", cls: "ch--tt", name: "TikTok", note: "Bans paid political ads. Contracted, disclosed creators instead." },
 ];
 
 function Broadcast() {
@@ -69,8 +46,6 @@ function Broadcast() {
   const [segs, setSegs] = useState<string[]>([]);
   const [ward, setWard] = useState<string>("");
   const [lang, setLang] = useState<"sw" | "en">("sw");
-  const [composing, setComposing] = useState(false);
-  const { isPrincipal } = useAccess();
 
   const contacts = data?.contacts ?? [];
   const matched = useMemo(
@@ -87,9 +62,13 @@ function Broadcast() {
       }),
     [contacts, ward, segs, support45, undecided],
   );
-  const reachable = useMemo(() => matched.filter((c) => c.sms && !c.optedOut), [matched]);
+  const reachable = useMemo(
+    () => matched.filter((c) => c.sms && !c.optedOut),
+    [matched],
+  );
   const toggleSeg = (slug: string) =>
     setSegs((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
+
 
   if (!data) {
     return (
@@ -124,9 +103,7 @@ function Broadcast() {
 
   const exportAudience = () =>
     downloadCSV(
-      stampName(
-        `groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`,
-      ),
+      stampName(`groundwork-audience${wardName ? `-${wardName.toLowerCase().replace(/\s+/g, "-")}` : ""}`),
       [
         "Name",
         "Phone",
@@ -159,34 +136,6 @@ function Broadcast() {
 
   return (
     <section className="view active" aria-label="Broadcast">
-      {composing && (
-        <BroadcastComposer
-          audience={{
-            wardIds: ward ? [ward] : [],
-            segments: segs,
-            support: [
-              ...(support45 ? (["strong"] as SupportBand[]) : []),
-              ...(undecided ? (["undecided"] as SupportBand[]) : []),
-            ],
-          }}
-          describe={[
-            segNames.length ? segNames.join(", ") : "Everyone",
-            wardName ? `in ${wardName}` : "in every ward",
-            support45 && undecided
-              ? "· strong and undecided supporters"
-              : support45
-                ? "· strong supporters"
-                : undecided
-                  ? "· undecided"
-                  : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          initialBody={body}
-          smsRate={data.smsRate}
-          onClose={() => setComposing(false)}
-        />
-      )}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Comms · broadcast &amp; paid media</span>
@@ -199,17 +148,9 @@ function Broadcast() {
           </p>
         </div>
         <div className="vh-side">
-          {isPrincipal && (
-            <button
-              className="btn btn--primary"
-              type="button"
-              disabled={sendable === 0}
-              title={sendable === 0 ? "Nobody in this audience has agreed to SMS" : undefined}
-              onClick={() => setComposing(true)}
-            >
-              Send to this audience…
-            </button>
-          )}
+          <button className="btn btn--primary" type="button">
+            Schedule send
+          </button>
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> {nf.format(a.sms)} consented for SMS
           </span>
@@ -318,12 +259,7 @@ function Broadcast() {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={exportAudience}
-              disabled={!reach}
-            >
+            <button type="button" className="btn btn--ghost btn--sm" onClick={exportAudience} disabled={!reach}>
               Download this list · CSV
             </button>
           </div>

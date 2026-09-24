@@ -47,9 +47,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            // Back to /auth, not the marketing page: /auth is where the
-            // session carried in the confirmation link gets read.
-            emailRedirectTo: `${window.location.origin}/auth`,
+            emailRedirectTo: window.location.origin,
             data: { full_name: name },
           },
         });
@@ -72,12 +70,8 @@ function AuthPage() {
 
   async function google() {
     setErr(null);
-    // On the published site this is a full-page redirect, and the browser comes
-    // back to redirect_uri carrying the session. It has to be /auth: the home
-    // page never reads it, so returning there left people signed out on the
-    // marketing page.
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth`,
+      redirect_uri: window.location.origin,
     });
     if (result.error) {
       setErr("Google sign-in failed. Try again.");

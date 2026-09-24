@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { toast } from "sonner";
 
 import { getFinance } from "@/lib/console.functions";
-import { approveExpense } from "@/lib/finance.functions";
 import { useAccess } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/finance")({
@@ -37,18 +34,6 @@ const day = (iso: string) =>
 function Finance() {
   const { isPrincipal, loading } = useAccess();
   const fetchFinance = useServerFn(getFinance);
-  const approve = useServerFn(approveExpense);
-  const queryClient = useQueryClient();
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const approval = useMutation({
-    mutationFn: (id: string) => approve({ data: { id } }),
-    onSuccess: async () => {
-      toast.success("Approved. Your name and the time are on the record.");
-      await queryClient.invalidateQueries({ queryKey: ["finance"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-    onSettled: () => setApprovingId(null),
-  });
   const { data } = useQuery({
     queryKey: ["finance"],
     queryFn: () => fetchFinance(),
@@ -218,9 +203,7 @@ function Finance() {
           </div>
           <span className="mono">{data.pending.length} pending</span>
         </div>
-        {data.pending.length === 0 && (
-          <p className="f-note">Nothing waiting. The queue is clear.</p>
-        )}
+        {data.pending.length === 0 && <p className="f-note">Nothing waiting. The queue is clear.</p>}
         {data.pending.map((q) => (
           <div className="q-row" key={q.id}>
             <span className="q-desc">
@@ -247,18 +230,8 @@ function Finance() {
                   No document
                 </span>
               )}
-              <button
-                className="btn btn--primary btn--sm"
-                type="button"
-                disabled={!q.reference || approvingId === q.id}
-                onClick={() => {
-                  if (!window.confirm(`Approve KES ${money(q.amount)} for ${q.description}?`))
-                    return;
-                  setApprovingId(q.id);
-                  approval.mutate(q.id);
-                }}
-              >
-                {approvingId === q.id ? "Approving…" : "Approve"}
+              <button className="btn btn--primary btn--sm" disabled={!q.reference}>
+                Approve
               </button>
             </span>
             {!q.reference && (

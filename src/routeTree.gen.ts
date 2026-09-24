@@ -25,15 +25,9 @@ import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
-import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
-import { Route as PCodeRouteImport } from './routes/p.$code'
-import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
-import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
-import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
-import { Route as ApiPublicSmsInboundRouteImport } from './routes/api/public/sms/inbound'
 import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
 import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
 
@@ -117,11 +111,6 @@ const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
   path: '/social',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
-  id: '/team',
-  path: '/team',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedVotersRoute = AuthenticatedVotersRouteImport.update({
   id: '/voters',
   path: '/voters',
@@ -132,34 +121,9 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
   path: '/warroom',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const PCodeRoute = PCodeRouteImport.update({
-  id: '/p/$code',
-  path: '/p/$code',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
-  id: '/api/public/health',
-  path: '/api/public/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicUssdRoute = ApiPublicUssdRouteImport.update({
-  id: '/api/public/ussd',
-  path: '/api/public/ussd',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
   id: '/api/public/listening/scan',
   path: '/api/public/listening/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicOutboxDrainRoute = ApiPublicOutboxDrainRouteImport.update({
-  id: '/api/public/outbox/drain',
-  path: '/api/public/outbox/drain',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicSmsInboundRoute = ApiPublicSmsInboundRouteImport.update({
-  id: '/api/public/sms/inbound',
-  path: '/api/public/sms/inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicSocialMetaRoute = ApiPublicSocialMetaRouteImport.update({
@@ -189,15 +153,9 @@ export interface FileRoutesByFullPath {
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
-  '/p/$code': typeof PCodeRoute
-  '/api/public/health': typeof ApiPublicHealthRoute
-  '/api/public/ussd': typeof ApiPublicUssdRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
-  '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
-  '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -217,15 +175,9 @@ export interface FileRoutesByTo {
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
-  '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
-  '/p/$code': typeof PCodeRoute
-  '/api/public/health': typeof ApiPublicHealthRoute
-  '/api/public/ussd': typeof ApiPublicUssdRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
-  '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
-  '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -247,15 +199,9 @@ export interface FileRoutesById {
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
-  '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
-  '/p/$code': typeof PCodeRoute
-  '/api/public/health': typeof ApiPublicHealthRoute
-  '/api/public/ussd': typeof ApiPublicUssdRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
-  '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
-  '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
 }
@@ -277,15 +223,9 @@ export interface FileRouteTypes {
     | '/people'
     | '/polling'
     | '/social'
-    | '/team'
     | '/voters'
     | '/warroom'
-    | '/p/$code'
-    | '/api/public/health'
-    | '/api/public/ussd'
     | '/api/public/listening/scan'
-    | '/api/public/outbox/drain'
-    | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   fileRoutesByTo: FileRoutesByTo
@@ -305,15 +245,9 @@ export interface FileRouteTypes {
     | '/people'
     | '/polling'
     | '/social'
-    | '/team'
     | '/voters'
     | '/warroom'
-    | '/p/$code'
-    | '/api/public/health'
-    | '/api/public/ussd'
     | '/api/public/listening/scan'
-    | '/api/public/outbox/drain'
-    | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   id:
@@ -334,15 +268,9 @@ export interface FileRouteTypes {
     | '/_authenticated/people'
     | '/_authenticated/polling'
     | '/_authenticated/social'
-    | '/_authenticated/team'
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
-    | '/p/$code'
-    | '/api/public/health'
-    | '/api/public/ussd'
     | '/api/public/listening/scan'
-    | '/api/public/outbox/drain'
-    | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
   fileRoutesById: FileRoutesById
@@ -351,12 +279,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  PCodeRoute: typeof PCodeRoute
-  ApiPublicHealthRoute: typeof ApiPublicHealthRoute
-  ApiPublicUssdRoute: typeof ApiPublicUssdRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
-  ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
-  ApiPublicSmsInboundRoute: typeof ApiPublicSmsInboundRoute
   ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
   ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
 }
@@ -475,13 +398,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSocialRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/team': {
-      id: '/_authenticated/team'
-      path: '/team'
-      fullPath: '/team'
-      preLoaderRoute: typeof AuthenticatedTeamRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/voters': {
       id: '/_authenticated/voters'
       path: '/voters'
@@ -496,46 +412,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWarroomRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/p/$code': {
-      id: '/p/$code'
-      path: '/p/$code'
-      fullPath: '/p/$code'
-      preLoaderRoute: typeof PCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/health': {
-      id: '/api/public/health'
-      path: '/api/public/health'
-      fullPath: '/api/public/health'
-      preLoaderRoute: typeof ApiPublicHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/ussd': {
-      id: '/api/public/ussd'
-      path: '/api/public/ussd'
-      fullPath: '/api/public/ussd'
-      preLoaderRoute: typeof ApiPublicUssdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/listening/scan': {
       id: '/api/public/listening/scan'
       path: '/api/public/listening/scan'
       fullPath: '/api/public/listening/scan'
       preLoaderRoute: typeof ApiPublicListeningScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/outbox/drain': {
-      id: '/api/public/outbox/drain'
-      path: '/api/public/outbox/drain'
-      fullPath: '/api/public/outbox/drain'
-      preLoaderRoute: typeof ApiPublicOutboxDrainRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/sms/inbound': {
-      id: '/api/public/sms/inbound'
-      path: '/api/public/sms/inbound'
-      fullPath: '/api/public/sms/inbound'
-      preLoaderRoute: typeof ApiPublicSmsInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/social/meta': {
@@ -569,7 +450,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
-  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedVotersRoute: typeof AuthenticatedVotersRoute
   AuthenticatedWarroomRoute: typeof AuthenticatedWarroomRoute
 }
@@ -588,7 +468,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
-  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedVotersRoute: AuthenticatedVotersRoute,
   AuthenticatedWarroomRoute: AuthenticatedWarroomRoute,
 }
@@ -600,12 +479,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  PCodeRoute: PCodeRoute,
-  ApiPublicHealthRoute: ApiPublicHealthRoute,
-  ApiPublicUssdRoute: ApiPublicUssdRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
-  ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,
-  ApiPublicSmsInboundRoute: ApiPublicSmsInboundRoute,
   ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
   ApiPublicSocialXRoute: ApiPublicSocialXRoute,
 }

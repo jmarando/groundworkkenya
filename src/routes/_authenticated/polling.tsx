@@ -1,14 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { toast } from "sonner";
 
-import { PollBuilder } from "@/components/gw/PollBuilder";
-import { useAccess } from "@/hooks/useAccess";
 import { getPolling } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
-import { closePoll, getPollDetail, launchPoll } from "@/lib/polls.functions";
 
 export const Route = createFileRoute("/_authenticated/polling")({
   component: Polling,
@@ -34,111 +29,9 @@ const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
 
-/** Weighted results for one poll, fetched when the card is expanded. */
-function PollResults({ id }: { id: string }) {
-  const fetchDetail = useServerFn(getPollDetail);
-  const { data, isError } = useQuery({
-    queryKey: ["poll-detail", id],
-    queryFn: () => fetchDetail({ data: { id } }),
-  });
-
-  if (isError) return <p className="f-note">Could not load these results.</p>;
-  if (!data) return <p className="f-note">Weighting the answers…</p>;
-
-  const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
-  return (
-    <div className="pr">
-      <div className="pr-grid" role="table" aria-label="Weighted results">
-        <div className="pr-head" role="row">
-          <span role="columnheader">Answer</span>
-          <span role="columnheader">Raw</span>
-          <span role="columnheader">{data.weighting ? "Weighted" : "Share"}</span>
-        </div>
-        {data.options.map((o) => (
-          <div className="pr-row" role="row" key={o.key}>
-            <span role="cell">{o.label}</span>
-            <span role="cell" className="mono">
-              {pct(o.share)}
-            </span>
-            <span role="cell" className="mono pr-w">
-              {pct(data.weighting ? o.weighted : o.share)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <p className="f-note">
-        {nf.format(data.responses)} answers
-        {data.responseRate !== null ? ` · ${pct(data.responseRate)} of those invited` : ""}
-        {data.marginOfError !== null
-          ? ` · ±${data.marginOfError} points`
-          : " · too few answers for a margin of error"}
-        {data.weighting ? " · weighted to each ward's share of the audience" : ""}
-        {data.byChannel.length
-          ? ` · ${data.byChannel.map((c) => `${c.channel.toUpperCase()} ${nf.format(c.count)}`).join(", ")}`
-          : ""}
-      </p>
-      {data.byChannel.some((c) => c.channel === "web") && (
-        <p className="f-note">
-          Web answers are not verified: anyone can type any number into the form. Read them
-          alongside the SMS and USSD answers, where the network vouches for the number.
-        </p>
-      )}
-      {data.openAnswers.length > 0 && (
-        <ul className="pr-open">
-          {data.openAnswers.slice(0, 12).map((t, i) => (
-            <li key={i}>“{t}”</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function Polling() {
   const fetchPolling = useServerFn(getPolling);
-  const launch = useServerFn(launchPoll);
-  const close = useServerFn(closePoll);
-  const queryClient = useQueryClient();
-  const { isPrincipal } = useAccess();
-  const [building, setBuilding] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
   const { data } = useQuery({ queryKey: ["polling"], queryFn: () => fetchPolling() });
-
-  const refresh = async (id?: string) => {
-    await queryClient.invalidateQueries({ queryKey: ["polling"] });
-    if (id) await queryClient.invalidateQueries({ queryKey: ["poll-detail", id] });
-  };
-
-  const launching = useMutation({
-    mutationFn: (id: string) => launch({ data: { id } }),
-    onSuccess: async (r, id) => {
-      const held = r.audience - r.reachable;
-      toast.success(
-        r.live
-          ? `${r.code} is live. Sending to ${nf.format(r.queued)} people.`
-          : `${r.code} is live in dry run: ${nf.format(r.queued)} SMS composed, none sent.`,
-        {
-          description:
-            (held > 0 ? `${nf.format(held)} in the audience have not agreed to SMS. ` : "") +
-            (r.webLink ? `Web link: ${r.webLink}` : ""),
-        },
-      );
-      await refresh(id);
-    },
-    onError: (e: Error) => toast.error(e.message),
-    onSettled: () => setBusyId(null),
-  });
-
-  const closing = useMutation({
-    mutationFn: (id: string) => close({ data: { id } }),
-    onSuccess: async (_r, id) => {
-      toast.success("Poll closed. Late replies will go to the inbox.");
-      await refresh(id);
-    },
-    onError: (e: Error) => toast.error(e.message),
-    onSettled: () => setBusyId(null),
-  });
 
   if (!data) {
     return (
@@ -160,7 +53,6 @@ function Polling() {
 
   return (
     <section className="view active" aria-label="Polling">
-      {building && <PollBuilder onClose={() => setBuilding(false)} />}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Listening · polling</span>
@@ -172,11 +64,9 @@ function Polling() {
           </p>
         </div>
         <div className="vh-side">
-          {isPrincipal && (
-            <button className="btn btn--primary" type="button" onClick={() => setBuilding(true)}>
-              New poll
-            </button>
-          )}
+          <button className="btn btn--primary" type="button">
+            New poll
+          </button>
           <button
             type="button"
             className="btn btn--ghost btn--sm"
@@ -226,7 +116,9 @@ function Polling() {
       <div className="g2 fx2">
         {data.polls.map((p) => {
           const max = Math.max(...p.options.map((o) => o.count), 1);
-          const pct = p.sampleTarget ? Math.min((p.responses / p.sampleTarget) * 100, 100) : 0;
+          const pct = p.sampleTarget
+            ? Math.min((p.responses / p.sampleTarget) * 100, 100)
+            : 0;
           return (
             <div className="card" key={p.id}>
               <div className="card-head">
@@ -292,72 +184,12 @@ function Polling() {
                   <p className="f-note">{pct.toFixed(0)}% of the sample target reached.</p>
                 </>
               )}
-
-              {openId === p.id && <PollResults id={p.id} />}
-
-              <div className="pb-actions">
-                {isPrincipal && p.status === "draft" && (
-                  <button
-                    className="btn btn--primary btn--sm"
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => {
-                      if (
-                        !window.confirm(
-                          `Launch ${p.code}? Everyone in its audience who agreed to SMS will be sent the question.`,
-                        )
-                      )
-                        return;
-                      setBusyId(p.id);
-                      launching.mutate(p.id);
-                    }}
-                  >
-                    {busyId === p.id ? "Launching…" : "Launch"}
-                  </button>
-                )}
-                {isPrincipal && p.status === "live" && (
-                  <button
-                    className="btn btn--ghost btn--sm"
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => {
-                      setBusyId(p.id);
-                      closing.mutate(p.id);
-                    }}
-                  >
-                    {busyId === p.id ? "Closing…" : "Close poll"}
-                  </button>
-                )}
-                {p.responses > 0 && (
-                  <button
-                    className="btn btn--ghost btn--sm"
-                    type="button"
-                    aria-expanded={openId === p.id}
-                    onClick={() => setOpenId(openId === p.id ? null : p.id)}
-                  >
-                    {openId === p.id ? "Hide weighted results" : "Weighted results"}
-                  </button>
-                )}
-                {p.channels.includes("web") && p.status === "live" && (
-                  <button
-                    className="btn btn--ghost btn--sm"
-                    type="button"
-                    onClick={() => {
-                      const link = `${window.location.origin}/p/${p.code}`;
-                      void navigator.clipboard?.writeText(link);
-                      toast.success("Poll link copied.", { description: link });
-                    }}
-                  >
-                    Copy link
-                  </button>
-                )}
-              </div>
             </div>
           );
         })}
         {data.polls.length === 0 && (
           <div className="card">
-            <p className="f-note">No polls yet.{isPrincipal ? " Start one with New poll." : ""}</p>
+            <p className="f-note">No polls yet. Create one to start collecting answers.</p>
           </div>
         )}
       </div>

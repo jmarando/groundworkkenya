@@ -1,8 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
-
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Database } from "@/integrations/supabase/types";
 
 export const PLATFORMS = [
   { key: "facebook", label: "Facebook Page", code: "FB" },
@@ -371,10 +368,6 @@ export const replyToConversation = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !convo) throw new Error("That conversation is no longer available.");
 
-    if (convo.platform === "sms" || convo.channel === "sms") {
-      return replyBySms(sb, convo, data.body);
-    }
-
     const { data: account } = await sb
       .from("social_accounts")
       .select("live")
@@ -443,68 +436,3 @@ export const saveSocialAccount = createServerFn({ method: "POST" })
     if (error) throw new Error("Only an admin or manager can change connected accounts.");
     return { ok: true };
   });
-
-/**
- * An SMS reply goes through the outbox like every other text, so it is held
- * back if the person has since replied STOP, and sends once channels are live.
- * It needs the person's number: without it there is nothing to send to.
- */
-async function replyBySms(
-  sb: SupabaseClient<Database>,
-  convo: { id: string; person_id: string | null },
-  body: string,
-): Promise<{ status: string; note: string }> {
-  if (!convo.person_id) {
-    throw new Error("This conversation has no person attached, so there is no number to reply to.");
-  }
-  const { data: person } = await sb
-    .from("people")
-    .select("phone")
-    .eq("id", convo.person_id)
-    .maybeSingle();
-  if (!person?.phone) throw new Error("There is no phone number on this person.");
-
-  const { data: inserted, error } = await sb
-    .from("messages")
-    .insert({
-      person_id: convo.person_id,
-      conversation_id: convo.id,
-      phone: person.phone,
-      channel: "sms",
-      platform: "sms",
-      kind: "dm",
-      direction: "out",
-      body,
-      status: "queued",
-      outbox_kind: "inbox_reply",
-    })
-    .select("id")
-    .single();
-  if (error || !inserted) throw new Error("The reply could not be saved.");
-
-  await sb
-    .from("conversations")
-    .update({ unread: false, last_message_at: new Date().toISOString(), snippet: body })
-    .eq("id", convo.id);
-
-  const { settleIfDryRun } = await import("@/lib/outbox.server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await settleIfDryRun(supabaseAdmin);
-
-  const { data: after } = await sb
-    .from("messages")
-    .select("status, error")
-    .eq("id", inserted.id)
-    .maybeSingle();
-  const status = after?.status ?? "queued";
-
-  return {
-    status,
-    note:
-      status === "failed"
-        ? `Not sent. ${after?.error ?? "The outbox held it back."}`
-        : status === "staged"
-          ? "Reply saved. SMS is in dry run, so nothing was sent."
-          : "Reply queued for sending.",
-  };
-}
