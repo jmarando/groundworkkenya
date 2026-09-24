@@ -48,7 +48,4 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Schedule /api/public/outbox/drain every minute before setting CHANNELS_LIVE=true
 - [ ] M-Pesa Daraja credentials (reward payouts)
 - [ ] WhatsApp (policy risk; off by default)
-
-## Current
-- [x] Confirm the latest GitHub-synced changes are present in this workspace
 - [ ] Rate limit /p/* at the edge (Cloudflare rule) before a web poll goes wide

@@ -689,13 +689,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "messages_broadcast_id_fkey"
-            columns: ["broadcast_id"]
-            isOneToOne: false
-            referencedRelation: "broadcasts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
@@ -1275,9 +1268,9 @@ export type Database = {
           _language: string
           _notes: string
           _phone: string
-          _segment: string
-          _support_score: number
-          _ward_id: string
+          _segment: string | null
+          _support_score: number | null
+          _ward_id: string | null
         }
         Returns: Json
       }
@@ -1285,12 +1278,7 @@ export type Database = {
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
       begin_person_import: {
-        Args: {
-          _consent_source: string
-          _filename: string
-          _rows_total: number
-          _source: string
-        }
+        Args: { _consent_source: string; _filename: string; _rows_total: number; _source: string }
         Returns: string
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
@@ -1302,17 +1290,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      import_people_chunk: {
-        Args: { _import_id: string; _rows: Json }
-        Returns: Json
-      }
+      import_people_chunk: { Args: { _import_id: string; _rows: Json }; Returns: Json }
       in_broadcast_audience: {
-        Args: {
-          _audience: Json
-          _segment: string
-          _support: number
-          _ward_id: string
-        }
+        Args: { _audience: Json; _segment: string; _support: number; _ward_id: string }
         Returns: boolean
       }
       in_poll_audience: {
@@ -1321,10 +1301,7 @@ export type Database = {
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
-      launch_poll: {
-        Args: { _poll_id: string; _sms_body: string }
-        Returns: Json
-      }
+      launch_poll: { Args: { _poll_id: string; _sms_body: string }; Returns: Json }
       outbox_block_reason: {
         Args: {
           _channel: string
@@ -1335,24 +1312,8 @@ export type Database = {
         }
         Returns: string
       }
-      parse_import_rows: {
-        Args: { _consent_stated: boolean; _rows: Json }
-        Returns: {
-          call: boolean
-          full_name: string
-          language: string
-          phone: string
-          segment: string
-          sms: boolean
-          wa: boolean
-          ward_id: string
-        }[]
-      }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
-      process_outbox: {
-        Args: { _limit?: number; _live?: boolean }
-        Returns: Json
-      }
+      process_outbox: { Args: { _limit?: number; _live?: boolean }; Returns: Json }
       queue_broadcast: {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
@@ -1365,8 +1326,8 @@ export type Database = {
           _issue: string
           _new: Json
           _outcome: string
-          _person_id: string
-          _support: number
+          _person_id: string | null
+          _support: number | null
           _visited_at: string
         }
         Returns: Json
@@ -1381,13 +1342,13 @@ export type Database = {
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {
-          full_name: string
+          full_name: string | null
           id: string
-          last_contacted_at: string
-          last_outcome: string
-          last_visit_at: string
+          last_contacted_at: string | null
+          last_outcome: string | null
+          last_visit_at: string | null
           phone_masked: string
-          segment: string
+          segment: string | null
           support_score: number
         }[]
       }

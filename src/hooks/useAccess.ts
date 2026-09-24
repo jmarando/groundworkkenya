@@ -1,35 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 
-type Access = {
-  userId: string;
-  roles: string[];
-  isPrincipal: boolean;
-};
+import { getMyAccess, type Access } from "@/lib/access.functions";
 
 export function useAccess() {
-  const { data, isPending } = useQuery<Access>({
+  const fetchAccess = useServerFn(getMyAccess);
+  const { data, isPending, isError, refetch, isFetching } = useQuery<Access>({
     queryKey: ["my-access"],
-    queryFn: async () => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw userError ?? new Error("Not signed in");
-      const { data: rows, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userData.user.id);
-      if (error) throw error;
-      const roles = (rows ?? []).map((row) => row.role as string);
-      return {
-        userId: userData.user.id,
-        roles,
-        isPrincipal: roles.includes("admin") || roles.includes("manager"),
-      };
-    },
+    queryFn: () => fetchAccess(),
     staleTime: 5 * 60_000,
   });
   return {
     access: data,
     loading: isPending,
+    failed: isError,
+    checking: isFetching,
+    recheck: refetch,
     isPrincipal: data?.isPrincipal ?? false,
+    isAdmin: data?.isAdmin ?? false,
+    isPendingApproval: data?.isPending ?? false,
   };
 }
