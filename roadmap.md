@@ -50,5 +50,5 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] WhatsApp (policy risk; off by default)
 
 ## Current
-- [ ] Confirm the latest GitHub-synced changes are present in this workspace
+- [x] Confirm the latest GitHub-synced changes are present in this workspace
 - [ ] Rate limit /p/* at the edge (Cloudflare rule) before a web poll goes wide
