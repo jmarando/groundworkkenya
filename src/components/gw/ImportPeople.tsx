@@ -221,6 +221,7 @@ export function ImportPeople({
                       <input
                         value={consentSource}
                         maxLength={300}
+                        aria-label="How these people agreed to be contacted"
                         placeholder="e.g. Ticked 'send me updates' on the paper form; forms filed in the office"
                         onChange={(e) => setConsentSource(e.target.value)}
                       />
