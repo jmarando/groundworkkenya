@@ -689,6 +689,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "messages_broadcast_id_fkey"
+            columns: ["broadcast_id"]
+            isOneToOne: false
+            referencedRelation: "broadcasts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
@@ -1311,6 +1318,19 @@ export type Database = {
           _opted_out: boolean
         }
         Returns: string
+      }
+      parse_import_rows: {
+        Args: { _consent_stated: boolean; _rows: Json }
+        Returns: {
+          call: boolean
+          full_name: string | null
+          language: string | null
+          phone: string
+          segment: string | null
+          sms: boolean
+          wa: boolean
+          ward_id: string | null
+        }[]
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
       process_outbox: { Args: { _limit?: number; _live?: boolean }; Returns: Json }

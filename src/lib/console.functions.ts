@@ -921,7 +921,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         otherShare: share(otherVotes),
         otherCount: rest.length,
         validVotes,
-        lead: top.length === 2 ? top[0]!.votes - top[1]!.votes : (top[0]?.votes ?? 0),
+        lead: top[0] && top[1] ? top[0].votes - top[1].votes : (top[0]?.votes ?? 0),
         turnoutReported,
       },
       projection,
@@ -936,7 +936,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
             reportingPct: v.stations ? (v.reported / v.stations) * 100 : 0,
             registered: v.registered,
             leader: r[0]?.[0] ?? null,
-            margin: r.length > 1 ? r[0]![1] - r[1]![1] : (r[0]?.[1] ?? 0),
+            margin: r[0] && r[1] ? r[0][1] - r[1][1] : (r[0]?.[1] ?? 0),
           };
         })
         .sort((a, b) => b.margin - a.margin || b.registered - a.registered),
