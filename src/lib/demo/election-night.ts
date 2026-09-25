@@ -85,6 +85,13 @@ function gauss(rnd: () => number): number {
 
 const sum = (xs: number[]) => xs.reduce((x, y) => x + y, 0);
 
+/** Three letters for a station code: "Kayole Central" → "KAY". */
+const codeOf = (name: string) =>
+  name
+    .replace(/[^A-Za-z]/g, "")
+    .slice(0, 3)
+    .toUpperCase();
+
 export function buildNight(s: Scenario): Night {
   const rnd = seeded(s.night.seed);
   const keys = s.contenders.map((c) => c.key);
@@ -115,10 +122,10 @@ export function buildNight(s: Scenario): Night {
       const adjudicated = rnd() < ADJUDICATE;
       const verifiedAt =
         enteredAt + 5 + Math.round(25 * rnd()) + (adjudicated ? 40 + Math.round(80 * rnd()) : 0);
-      const round = Math.floor(i / SITES.length);
       stations.push({
         area: ai,
-        name: `${a.name} ${SITES[i % SITES.length]}${round > 0 ? ` ${round + 1}` : ""}`,
+        // Stations are known by a code and a building, e.g. "KAY-014 Primary School".
+        name: `${codeOf(a.name)}-${String(i + 1).padStart(3, "0")} ${SITES[(i * 7) % SITES.length]}`,
         registered,
         votes,
         others,
@@ -231,6 +238,8 @@ export type NightFrame = {
   portal: {
     reported: number;
     shares: number[];
+    /** Stations on the portal that we also have a photo for. */
+    checked: number;
     mismatches: number;
     mismatchVotes: number;
     alert: string | null;
@@ -253,6 +262,7 @@ export function frameAt(night: Night, minute: number): NightFrame {
   const portalVotes = new Array<number>(k).fill(0);
   let portalValid = 0;
   let portalIn = 0;
+  let checked = 0;
   let mismatches = 0;
   let mismatchVotes = 0;
   let reported = 0;
@@ -276,6 +286,7 @@ export function frameAt(night: Night, minute: number): NightFrame {
       portalIn++;
       for (let c = 0; c < k; c++) portalVotes[c]! += (st.votes[c] ?? 0) + (st.portalDelta[c] ?? 0);
       portalValid += valid + sum(st.portalDelta);
+      if (st.reportAt !== null && st.reportAt <= minute) checked++;
       if (st.reportAt !== null && st.reportAt <= minute && st.portalDelta.some((d) => d !== 0)) {
         mismatches++;
         mismatchVotes += st.portalDelta.reduce((x, y) => x + Math.abs(y), 0);
@@ -415,16 +426,21 @@ export function frameAt(night: Night, minute: number): NightFrame {
     portal: {
       reported: night.stations.length ? (portalIn / night.stations.length) * 100 : 0,
       shares: portalVotes.map((v) => (portalValid ? (v / portalValid) * 100 : 0)),
+      checked,
       mismatches,
       mismatchVotes,
       alert: mismatches > 0 ? s.night.divergence.detail : null,
     },
-    feed: feed.slice(0, 8).map(({ st, at }) => ({
-      at: clockOf(at),
-      station: st.name,
-      area: s.areas[st.area]?.name ?? "",
-      votes: st.votes,
-    })),
+    // The newest form from each area, so the feed shows the whole map, not one busy county.
+    feed: feed
+      .filter(({ st }, i, all) => all.findIndex((x) => x.st.area === st.area) === i)
+      .slice(0, 8)
+      .map(({ st, at }) => ({
+        at: clockOf(at),
+        station: st.name,
+        area: s.areas[st.area]?.name ?? "",
+        votes: st.votes,
+      })),
     incidents: s.night.incidents.filter((i) => minuteOf(i.at) <= minute),
     flags: flags.sort((x, y) => (x.at < y.at ? 1 : -1)),
   };

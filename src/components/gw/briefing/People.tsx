@@ -88,7 +88,7 @@ export function Voters({ s }: { s: Scenario }) {
           <li key={g.label}>
             <p>
               <b>{g.label}</b> <span className="dim">{g.size}</span>{" "}
-              <Delta value={g.move} unit={g.move > 0 ? " to you" : " away"} />
+              <Delta value={g.move} unit={g.move > 0 ? " pts to you" : " pts away"} />
             </p>
             <p className="dim">{g.note}</p>
           </li>

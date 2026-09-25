@@ -133,7 +133,7 @@ export function Delta({
     <span className={`mb-delta${tone}`}>
       <span aria-hidden="true">{up ? "▲" : "▼"}</span>
       <span className="sr">{up ? "up" : "down"}</span> {Math.abs(value)}
-      {unit}
+      {Math.abs(value) === 1 ? unit.replace(/\bpts\b/, "pt") : unit}
     </span>
   );
 }

@@ -13,7 +13,7 @@ import {
   Projection,
   Tally,
 } from "@/components/gw/warroom/NightCards";
-import { buildNight, clockOf, frameAt, NIGHT_END } from "@/lib/demo/election-night";
+import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
 import type { Scenario, ScenarioKey } from "@/lib/demo/types";
 
 /** Minutes of election night per second of playback. */
@@ -123,10 +123,11 @@ export function ElectionNight({ s, onPick }: { s: Scenario; onPick: (key: Scenar
               }}
             />
             <span className="en-scrub-ends" aria-hidden="true">
-              <span>17:00</span>
-              <span>21:00</span>
-              <span>01:00</span>
-              <span>06:00</span>
+              {["17:00", "21:00", "01:00", "06:00"].map((t) => (
+                <span key={t} style={{ left: `${(minuteOf(t) / NIGHT_END) * 100}%` }}>
+                  {t}
+                </span>
+              ))}
             </span>
           </label>
           <div className="en-speed" role="group" aria-label="Playback speed">

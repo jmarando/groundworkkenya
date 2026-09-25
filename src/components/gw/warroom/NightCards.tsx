@@ -202,7 +202,7 @@ export function NightMap({ s, f }: { s: Scenario; f: NightFrame }) {
     <div className="card w-span7 en-mapcard">
       <div className="card-head">
         <h2>Who leads where</h2>
-        <span className="mono">darker = more of the {s.geo.unit} counted</span>
+        <span className="mono">brighter = more of the {s.geo.unit} counted</span>
       </div>
       <ChoroplethMap
         file={s.geo.file}
@@ -251,7 +251,6 @@ export function NightMap({ s, f }: { s: Scenario; f: NightFrame }) {
 }
 
 export function Portal({ f }: { f: NightFrame }) {
-  const diff = (f.portal.shares[0] ?? 0) - (f.shares[0] ?? 0);
   return (
     <div className="card">
       <div className="card-head" style={{ marginBottom: 4 }}>
@@ -267,8 +266,12 @@ export function Portal({ f }: { f: NightFrame }) {
         <b className="stat">{pct(f.portal.reported)}</b>
       </div>
       <div className="d-row">
-        <span>Our share, portal against ours</span>
-        <b className="stat">{f.portal.reported > 0 && f.valid > 0 ? `${signed(diff)} pts` : "—"}</b>
+        <span>Forms checked against the portal</span>
+        <b className="stat">{nf.format(f.portal.checked)}</b>
+      </div>
+      <div className="d-row">
+        <span>Forms that disagree</span>
+        <b className="stat">{nf.format(f.portal.mismatches)}</b>
       </div>
       {f.portal.alert ? (
         <p className="en-alert" role="alert">
@@ -544,7 +547,17 @@ export function Feed({ s, f }: { s: Scenario; f: NightFrame }) {
                 ))}
               </span>
               <span className="en-feed-v">
-                {s.contenders.map((c, i) => `${c.short} ${nf.format(r.votes[i] ?? 0)}`).join(" · ")}
+                {s.contenders.map((c, i) => (
+                  <span key={c.key} title={c.name}>
+                    <i
+                      className="en-dot"
+                      style={{ background: toneVar(c.tone) }}
+                      aria-hidden="true"
+                    />
+                    <span className="sr">{c.short} </span>
+                    {nf.format(r.votes[i] ?? 0)}
+                  </span>
+                ))}
               </span>
             </li>
           );

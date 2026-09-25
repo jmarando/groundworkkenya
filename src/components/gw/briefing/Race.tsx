@@ -9,6 +9,9 @@ import type { AreaModel, Scenario } from "@/lib/demo/types";
 
 const nf = new Intl.NumberFormat("en-KE");
 const pct1 = (n: number) => `${n.toFixed(1)}%`;
+/** Ward figures carry a decimal; county and Mathira figures are whole numbers. */
+const share = (s: Scenario, v: number | undefined) =>
+  `${(v ?? 0).toFixed(s.office === "governor" ? 1 : 0)}%`;
 
 /** Our share, in the bands that matter for a presidential race. */
 const SHARE_BANDS = [
@@ -67,7 +70,7 @@ export function Race({ s }: { s: Scenario }) {
         {a.group !== name && <small>{a.group}</small>}
         {s.contenders.map((c) => (
           <span key={c.key}>
-            {c.short} <b>{a.shares[c.key] ?? 0}%</b>
+            {c.short} <b>{share(s, a.shares[c.key])}</b>
           </span>
         ))}
         <small>
@@ -161,8 +164,8 @@ export function Race({ s }: { s: Scenario }) {
                       <small className="dim"> {a.group}</small>
                     )}
                   </td>
-                  <td className="num">{a.shares[us.key]}%</td>
-                  <td className="num">{a.shares[rival.key]}%</td>
+                  <td className="num">{share(s, a.shares[us.key])}</td>
+                  <td className="num">{share(s, a.shares[rival.key])}</td>
                   <td className="num">{nf.format(a.registered)}</td>
                 </tr>
               ))}
