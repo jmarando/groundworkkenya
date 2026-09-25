@@ -260,6 +260,8 @@ export const getPeople = createServerFn({ method: "GET" })
 export type VotersData = {
   wards: {
     id: string;
+    /** Matches the ward's shape in public/geo/nairobi-wards.json. */
+    slug: string;
     name: string;
     constituency: string;
     registered: number;
@@ -267,6 +269,8 @@ export type VotersData = {
     supporters: number;
     people: number;
     contacted: number;
+    /** People pinned to a building or GPS point by a door visit. */
+    pinned: number;
     x: number;
     y: number;
   }[];
@@ -307,7 +311,7 @@ export const getVoters = createServerFn({ method: "GET" })
         sb
           .from("people")
           .select(
-            "id, full_name, phone, ward_id, support_score, last_contacted_at, opted_out",
+            "id, full_name, phone, ward_id, support_score, last_contacted_at, opted_out, building_id, lat",
           )
           .range(from, to),
       ),
@@ -317,11 +321,12 @@ export const getVoters = createServerFn({ method: "GET" })
     const p = people;
     const week = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-    const perWard = new Map<string, { people: number; contacted: number }>();
+    const perWard = new Map<string, { people: number; contacted: number; pinned: number }>();
     for (const person of p) {
       if (!person.ward_id) continue;
-      const cur = perWard.get(person.ward_id) ?? { people: 0, contacted: 0 };
+      const cur = perWard.get(person.ward_id) ?? { people: 0, contacted: 0, pinned: 0 };
       cur.people += 1;
+      if (person.building_id || person.lat !== null) cur.pinned += 1;
       if (person.last_contacted_at && new Date(person.last_contacted_at).getTime() > week) {
         cur.contacted += 1;
       }
@@ -333,6 +338,7 @@ export const getVoters = createServerFn({ method: "GET" })
     return {
       wards: w.map((x, i) => ({
         id: x.id,
+        slug: x.slug,
         name: x.name,
         constituency: x.constituency,
         registered: x.registered_voters ?? 0,
@@ -340,6 +346,7 @@ export const getVoters = createServerFn({ method: "GET" })
         supporters: x.supporters ?? 0,
         people: perWard.get(x.id)?.people ?? 0,
         contacted: perWard.get(x.id)?.contacted ?? 0,
+        pinned: perWard.get(x.id)?.pinned ?? 0,
         x: Number(x.map_x ?? (i % 10) * 10 + 5),
         y: Number(x.map_y ?? Math.floor(i / 10) * 10 + 5),
       })),

@@ -4,7 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import type { Visit } from "@/lib/field";
+import { cleanPlace, type Visit } from "@/lib/field";
 import { normalizeKePhone } from "@/lib/phone";
 
 export type WalkEntry = {
@@ -54,12 +54,14 @@ export const recordVisit = createServerFn({ method: "POST" })
   .inputValidator((input: Visit) => {
     if (!input?.clientId) throw new Error("Each visit needs its own id.");
     if (!input.personId && !input.newPerson) throw new Error("Who was this visit to?");
+    // Visits queued before phones sent a place have none; a malformed one is dropped.
+    const place = cleanPlace(input.place);
     if (input.newPerson) {
       const phone = normalizeKePhone(input.newPerson.phone);
       if (!phone) throw new Error("Use a Kenyan mobile number like 0712 345 678.");
-      return { ...input, newPerson: { ...input.newPerson, phone } };
+      return { ...input, place, newPerson: { ...input.newPerson, phone } };
     }
-    return input;
+    return { ...input, place };
   })
   .handler(async ({ data, context }): Promise<VisitResult> => {
     const { data: result, error } = await context.supabase.rpc("record_door", {
@@ -72,6 +74,7 @@ export const recordVisit = createServerFn({ method: "POST" })
       _consent: data.consent,
       _consent_source: data.consentSource,
       _visited_at: data.visitedAt,
+      _place: data.place,
     });
     if (error) {
       throw new Error(

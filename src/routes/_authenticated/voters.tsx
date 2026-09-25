@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
+import { VotersMap } from "@/components/gw/VotersMap";
 import { getVoters } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 
@@ -13,12 +14,14 @@ export const Route = createFileRoute("/_authenticated/voters")({
       { title: "Know your voters · Groundwork" },
       {
         name: "description",
-        content: "Ward-by-ward registration, targets, supporters and contact coverage.",
+        content:
+          "The county to the doorstep: wards, buildings and every household the canvass has reached.",
       },
       { property: "og:title", content: "Know your voters · Groundwork" },
       {
         property: "og:description",
-        content: "Ward-by-ward registration, targets, supporters and contact coverage.",
+        content:
+          "The county to the doorstep: wards, buildings and every household the canvass has reached.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -60,9 +63,9 @@ function Voters() {
       <section className="view active" aria-label="Know your voters">
         <div className="vh">
           <div>
-            <span className="eyebrow">Field · know your voters</span>
+            <span className="eyebrow">Know your voters · county to doorstep</span>
             <h1>
-              Every ward, <span className="serif">by the numbers.</span>
+              Every door, <span className="serif">known.</span>
             </h1>
             <p className="meta">Loading ward data…</p>
           </div>
@@ -71,7 +74,6 @@ function Voters() {
     );
   }
 
-  const t = data.totals;
   const selected = wards.find((w) => w.id === activeWard) ?? wards[0] ?? null;
   const maxReg = Math.max(...wards.map((w) => w.registered), 1);
   const wardPeople = selected
@@ -88,49 +90,31 @@ function Voters() {
     <section className="view active" aria-label="Know your voters">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Field · know your voters</span>
+          <span className="eyebrow">Know your voters · county to doorstep</span>
           <h1>
-            Every ward, <span className="serif">by the numbers.</span>
+            Every door, <span className="serif">known.</span>
           </h1>
           <p className="meta">
-            Registered voters, the number you need, and how many of them you have actually spoken
-            to.
+            Pan and zoom the county, drop into a ward, and see every building the canvass has
+            reached: who lives there, how the door went and what they raised.
           </p>
         </div>
         <div className="vh-side">
           <span className="syncline">
-            <span className="dot-live" aria-hidden="true" /> {data.wards.length} wards live
+            <span className="dot-live" aria-hidden="true" />{" "}
+            {nf.format(data.wards.reduce((s, w) => s + w.pinned, 0))} households pinned
           </span>
         </div>
       </div>
 
-      <div className="g4 fx2">
-        <div className="card kpi">
-          <span className="kpi-lbl">Registered voters</span>
-          <span className="kpi-val stat">{nf.format(t.registered)}</span>
-          <span className="kpi-sub">across every ward on file</span>
-        </div>
-        <div className="card kpi">
-          <span className="kpi-lbl">Votes needed</span>
-          <span className="kpi-val stat">{nf.format(t.target)}</span>
-          <span className="kpi-sub">
-            {t.registered ? ((t.target / t.registered) * 100).toFixed(1) : "0"}% of the register
-          </span>
-        </div>
-        <div className="card kpi">
-          <span className="kpi-lbl">Identified supporters</span>
-          <span className="kpi-val stat">{nf.format(t.supporters)}</span>
-          <div className="minibar">
-            <i style={{ width: `${t.target ? Math.min((t.supporters / t.target) * 100, 100) : 0}%` }} />
-          </div>
-          <span className="kpi-sub">
-            {t.target ? ((t.supporters / t.target) * 100).toFixed(1) : "0"}% of the target
-          </span>
-        </div>
-        <div className="card kpi">
-          <span className="kpi-lbl">Contacted this week</span>
-          <span className="kpi-val stat pulse-counter">{nf.format(t.contactedWeek)}</span>
-          <span className="kpi-sub">of {nf.format(t.people)} people on file</span>
+      <VotersMap wards={data.wards} totals={data.totals} />
+
+      <div className="card-head fx3" style={{ marginTop: 26 }}>
+        <div>
+          <h2>Every ward, by the numbers</h2>
+          <p className="meta">
+            Registered voters, the number you need, and how many you have reached.
+          </p>
         </div>
       </div>
 

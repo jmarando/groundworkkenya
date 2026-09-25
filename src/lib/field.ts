@@ -39,7 +39,43 @@ export type Visit = {
   visitedAt: string;
   /** Shown in the queue so the agent knows which visit is which. */
   label: string;
+  /** Where the door was. Missing on visits queued before phones sent it. */
+  place?: Place | null;
 };
+
+/** The phone's GPS fix at the door and the building the agent was at. */
+export type Place = {
+  lat: number;
+  lng: number;
+  /** Metres, as the phone reports it; null if unknown. */
+  accuracy: number | null;
+  /** Plus code of the building outline, from public/geo/buildings. */
+  buildingId: string | null;
+};
+
+/** A place fit to send, or null: anything malformed is dropped, never an error. */
+export function cleanPlace(p: unknown): Place | null {
+  if (!p || typeof p !== "object") return null;
+  const o = p as Record<string, unknown>;
+  const lat = typeof o["lat"] === "number" ? o["lat"] : NaN;
+  const lng = typeof o["lng"] === "number" ? o["lng"] : NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180)
+    return null;
+  const acc =
+    typeof o["accuracy"] === "number" && Number.isFinite(o["accuracy"])
+      ? Math.max(0, Math.round(o["accuracy"]))
+      : null;
+  const bid =
+    typeof o["buildingId"] === "string" && /^[0-9A-Z+]{4,24}$/.test(o["buildingId"])
+      ? o["buildingId"]
+      : null;
+  return {
+    lat: Math.round(lat * 1e7) / 1e7,
+    lng: Math.round(lng * 1e7) / 1e7,
+    accuracy: acc,
+    buildingId: bid,
+  };
+}
 
 export type Queued = Visit & { problem?: string };
 

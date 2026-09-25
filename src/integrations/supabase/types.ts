@@ -720,6 +720,7 @@ export type Database = {
       }
       people: {
         Row: {
+          building_id: string | null
           consent_call: boolean
           consent_sms: boolean
           consent_whatsapp: boolean
@@ -729,10 +730,13 @@ export type Database = {
           language: string
           last_contacted_at: string | null
           last_inbound_at: string | null
+          lat: number | null
+          lng: number | null
           notes: string | null
           opted_out: boolean
           opted_out_at: string | null
           phone: string
+          placed_at: string | null
           segment: string | null
           source: string
           support_score: number
@@ -741,6 +745,7 @@ export type Database = {
           ward_id: string | null
         }
         Insert: {
+          building_id?: string | null
           consent_call?: boolean
           consent_sms?: boolean
           consent_whatsapp?: boolean
@@ -750,10 +755,13 @@ export type Database = {
           language?: string
           last_contacted_at?: string | null
           last_inbound_at?: string | null
+          lat?: number | null
+          lng?: number | null
           notes?: string | null
           opted_out?: boolean
           opted_out_at?: string | null
           phone: string
+          placed_at?: string | null
           segment?: string | null
           source?: string
           support_score?: number
@@ -762,6 +770,7 @@ export type Database = {
           ward_id?: string | null
         }
         Update: {
+          building_id?: string | null
           consent_call?: boolean
           consent_sms?: boolean
           consent_whatsapp?: boolean
@@ -771,10 +780,13 @@ export type Database = {
           language?: string
           last_contacted_at?: string | null
           last_inbound_at?: string | null
+          lat?: number | null
+          lng?: number | null
           notes?: string | null
           opted_out?: boolean
           opted_out_at?: string | null
           phone?: string
+          placed_at?: string | null
           segment?: string | null
           source?: string
           support_score?: number
@@ -794,33 +806,45 @@ export type Database = {
       }
       person_events: {
         Row: {
+          accuracy_m: number | null
           actor: string | null
+          building_id: string | null
           channel: string | null
           client_id: string | null
           created_at: string
           detail: string | null
           id: string
           kind: string
+          lat: number | null
+          lng: number | null
           person_id: string
         }
         Insert: {
+          accuracy_m?: number | null
           actor?: string | null
+          building_id?: string | null
           channel?: string | null
           client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
           kind: string
+          lat?: number | null
+          lng?: number | null
           person_id: string
         }
         Update: {
+          accuracy_m?: number | null
           actor?: string | null
+          building_id?: string | null
           channel?: string | null
           client_id?: string | null
           created_at?: string
           detail?: string | null
           id?: string
           kind?: string
+          lat?: number | null
+          lng?: number | null
           person_id?: string
         }
         Relationships: [
@@ -1347,6 +1371,7 @@ export type Database = {
           _new: Json
           _outcome: string
           _person_id: string | null
+          _place?: Json
           _support: number | null
           _visited_at: string
         }
@@ -1358,6 +1383,25 @@ export type Database = {
           _user_id: string
         }
         Returns: undefined
+      }
+      ward_map: {
+        Args: { _ward_id: string }
+        Returns: {
+          building_id: string | null
+          consent_sms: boolean
+          full_name: string | null
+          id: string
+          last_contacted_at: string | null
+          last_issue: string | null
+          last_outcome: string | null
+          last_visit_at: string | null
+          lat: number | null
+          lng: number | null
+          opted_out: boolean
+          phone_masked: string
+          segment: string | null
+          support_score: number
+        }[]
       }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }

@@ -3,6 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { DoorPlace } from "@/components/gw/DoorPlace";
+import { useDoorPlace } from "@/hooks/useDoorPlace";
 import {
   isNetworkError,
   ISSUES,
@@ -18,6 +20,8 @@ import {
   type Visit,
 } from "@/lib/field";
 import { getWalkList, recordVisit, type WalkEntry } from "@/lib/field.functions";
+import { toBuildings, type Building } from "@/lib/geo";
+import { buildingsIndexQuery, wardBuildingsQuery } from "@/lib/geo-files";
 import { normalizeKePhone } from "@/lib/phone";
 
 const WARD_KEY = "gw-field-ward";
@@ -49,7 +53,7 @@ const OUTCOME_TEXT: Record<Outcome, string> = {
 export function FieldApp({
   wards,
 }: {
-  wards: { id: string; name: string; constituency: string }[];
+  wards: { id: string; slug: string; name: string; constituency: string }[];
 }) {
   const queryClient = useQueryClient();
   const fetchWalk = useServerFn(getWalkList);
@@ -104,6 +108,19 @@ export function FieldApp({
     enabled: Boolean(wardId),
     staleTime: 60_000,
   });
+
+  const ward = wards.find((w) => w.id === wardId);
+
+  // Building outlines, so a visit lands on the right building. Fetched once
+  // while there is signal and kept for the session.
+  const { data: index } = useQuery(buildingsIndexQuery);
+  const slug = ward?.slug ?? "";
+  const hasOutlines = Boolean(slug && index?.wards[slug]);
+  const { data: outlines } = useQuery({ ...wardBuildingsQuery(slug), enabled: hasOutlines });
+  const buildings = useMemo(
+    () => (hasOutlines && outlines ? toBuildings(outlines) : []),
+    [hasOutlines, outlines],
+  );
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -213,8 +230,6 @@ export function FieldApp({
     store().write(next);
     setQueue(next);
   };
-
-  const ward = wards.find((w) => w.id === wardId);
 
   return (
     <div className="fa">
@@ -337,6 +352,8 @@ export function FieldApp({
         <VisitSheet
           person={open.person}
           wardId={wardId}
+          buildings={buildings}
+          outlines={!hasOutlines ? "none" : outlines ? "ready" : "loading"}
           onSave={save}
           onClose={() => setOpen(null)}
         />
@@ -350,11 +367,15 @@ const CONSENT_SOURCES = ["Told us at the door", "Signed a sign-up form"];
 function VisitSheet({
   person,
   wardId,
+  buildings,
+  outlines,
   onSave,
   onClose,
 }: {
   person: WalkEntry | null;
   wardId: string;
+  buildings: Building[];
+  outlines: "none" | "loading" | "ready";
   /** Resolves to a reason if the server refused the visit; the sheet then stays open. */
   onSave: (v: Visit) => Promise<string | null>;
   onClose: () => void;
@@ -373,6 +394,7 @@ function VisitSheet({
   const [language, setLanguage] = useState<"sw" | "en">("sw");
   const [saving, setSaving] = useState(false);
   const [refused, setRefused] = useState<string | null>(null);
+  const door = useDoorPlace(buildings);
 
   const anyConsent = sms || whatsapp || call;
   const problem = !outcome
@@ -402,6 +424,7 @@ function VisitSheet({
       consentSource: spoke && anyConsent ? consentSource : "",
       visitedAt: new Date().toISOString(),
       label,
+      place: door.place,
     });
     setSaving(false);
     setRefused(reason);
@@ -421,6 +444,8 @@ function VisitSheet({
         </div>
 
         <div className="pb-body">
+          <DoorPlace door={door} buildings={buildings} outlines={outlines} />
+
           {isNew ? (
             <>
               <label className="pb-field">
