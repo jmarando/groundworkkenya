@@ -51,7 +51,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] WhatsApp: set this project as Incoming messages destination (Connectors → WhatsApp); publish
 - [ ] WhatsApp templates for broadcasts (Meta approval)
 - [ ] Email: user sets up sender domain (Cloud → Emails), then alerts/app emails
-- [ ] Custom domain: user connecting it themselves
+- [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
 - [x] Confirm the latest GitHub-synced changes are present in this workspace
