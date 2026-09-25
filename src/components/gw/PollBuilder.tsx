@@ -23,8 +23,15 @@ type Option = { label: string; labelSw: string };
 
 const nf = new Intl.NumberFormat("en-KE");
 
-export function PollBuilder({ onClose }: { onClose: () => void }) {
-  const [question, setQuestion] = useState("");
+export function PollBuilder({
+  onClose,
+  initialQuestion,
+}: {
+  onClose: () => void;
+  /** English question to start from, e.g. one suggested in the morning briefing. */
+  initialQuestion?: string | undefined;
+}) {
+  const [question, setQuestion] = useState(initialQuestion ?? "");
   const [questionSw, setQuestionSw] = useState("");
   const [kind, setKind] = useState<PollKind>("single_choice");
   const [lang, setLang] = useState<PollLang>("sw");

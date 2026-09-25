@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PollBuilder } from "@/components/gw/PollBuilder";
@@ -11,6 +11,11 @@ import { downloadCSV, stampName } from "@/lib/csv";
 import { closePoll, getPollDetail, launchPoll } from "@/lib/polls.functions";
 
 export const Route = createFileRoute("/_authenticated/polling")({
+  // ?ask= opens the builder with a question filled in (from the morning briefing).
+  validateSearch: (search: Record<string, unknown>): { ask?: string } =>
+    typeof search["ask"] === "string" && search["ask"].trim()
+      ? { ask: search["ask"].slice(0, 300) }
+      : {},
   component: Polling,
   head: () => ({
     meta: [
@@ -101,6 +106,15 @@ function Polling() {
   const queryClient = useQueryClient();
   const { isPrincipal } = useAccess();
   const [building, setBuilding] = useState(false);
+  const { ask } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  useEffect(() => {
+    if (ask && isPrincipal) setBuilding(true);
+  }, [ask, isPrincipal]);
+  const closeBuilder = () => {
+    setBuilding(false);
+    if (ask) void navigate({ search: {}, replace: true });
+  };
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const { data } = useQuery({ queryKey: ["polling"], queryFn: () => fetchPolling() });
@@ -160,7 +174,7 @@ function Polling() {
 
   return (
     <section className="view active" aria-label="Polling">
-      {building && <PollBuilder onClose={() => setBuilding(false)} />}
+      {building && <PollBuilder onClose={closeBuilder} initialQuestion={ask} />}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Listening · polling</span>
