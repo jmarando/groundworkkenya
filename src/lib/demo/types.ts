@@ -24,6 +24,8 @@ export type Tone = "us" | "a" | "b";
 export type Contender = {
   key: string;
   name: string;
+  /** What charts and tables call them. */
+  short: string;
   party: string;
   tone: Tone;
   us?: true;

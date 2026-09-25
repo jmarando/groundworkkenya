@@ -189,6 +189,10 @@ export type AreaFrame = {
   group: string;
   /** Share of this area's stations in, 0-100. */
   reported: number;
+  /** Counted votes so far, per contender, and all valid votes. */
+  votes: number[];
+  valid: number;
+  registered: number;
   /** Counted shares so far, per contender (0-100). */
   shares: number[];
   leader: number | null;
@@ -376,6 +380,9 @@ export function frameAt(night: Night, minute: number): NightFrame {
       name: area.name,
       group: area.group,
       reported: stAll[a] ? (stIn[a]! / stAll[a]!) * 100 : 0,
+      votes: obs[a]!,
+      valid: v,
+      registered: regAll[a]!,
       shares,
       leader,
       margin: v ? (shares[0] ?? 0) - Math.max(...shares.slice(1)) : 0,

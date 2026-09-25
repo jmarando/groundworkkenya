@@ -363,9 +363,15 @@ export const sakaja: Scenario = {
     fictional: false,
   },
   contenders: [
-    { key: "us", name: "Johnson Sakaja", party: "UDA", tone: "us", us: true },
-    { key: "a", name: "Challenger A", party: "Opposition coalition", tone: "a" },
-    { key: "b", name: "Challenger B", party: "Independent", tone: "b" },
+    { key: "us", name: "Johnson Sakaja", short: "Sakaja", party: "UDA", tone: "us", us: true },
+    {
+      key: "a",
+      name: "Challenger A",
+      short: "Challenger A",
+      party: "Opposition coalition",
+      tone: "a",
+    },
+    { key: "b", name: "Challenger B", short: "Challenger B", party: "Independent", tone: "b" },
   ],
   geo: { file: "/geo/nairobi-wards.json", unit: "ward", units: "wards", group: "Constituency" },
   areas,
