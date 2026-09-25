@@ -36,6 +36,7 @@ import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/ou
 import { Route as ApiPublicSmsInboundRouteImport } from './routes/api/public/sms/inbound'
 import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
 import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
+import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -172,6 +173,12 @@ const ApiPublicSocialXRoute = ApiPublicSocialXRouteImport.update({
   path: '/api/public/social/x',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWhatsappWebhookRoute =
+  ApiPublicWhatsappWebhookRouteImport.update({
+    id: '/api/public/whatsapp/webhook',
+    path: '/api/public/whatsapp/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -200,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -228,6 +236,7 @@ export interface FileRoutesByTo {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -258,6 +267,7 @@ export interface FileRoutesById {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/whatsapp/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/whatsapp/webhook'
   id:
     | '__root__'
     | '/'
@@ -345,6 +357,7 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/whatsapp/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -359,6 +372,7 @@ export interface RootRouteChildren {
   ApiPublicSmsInboundRoute: typeof ApiPublicSmsInboundRoute
   ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
   ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
+  ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -552,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSocialXRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/whatsapp/webhook': {
+      id: '/api/public/whatsapp/webhook'
+      path: '/api/public/whatsapp/webhook'
+      fullPath: '/api/public/whatsapp/webhook'
+      preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -608,6 +629,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSmsInboundRoute: ApiPublicSmsInboundRoute,
   ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
   ApiPublicSocialXRoute: ApiPublicSocialXRoute,
+  ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

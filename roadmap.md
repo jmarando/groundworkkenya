@@ -47,7 +47,11 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Provider delivery in processOutbox (src/lib/outbox.server.ts) — the seam is there
 - [ ] Schedule /api/public/outbox/drain every minute before setting CHANNELS_LIVE=true
 - [ ] M-Pesa Daraja credentials (reward payouts)
-- [ ] WhatsApp (policy risk; off by default)
+- [x] WhatsApp +254 182 668723 connected: inbound to Inbox, replies, delivery/read ticks, STOP/START
+- [ ] WhatsApp: set this project as Incoming messages destination (Connectors → WhatsApp); publish
+- [ ] WhatsApp templates for broadcasts (Meta approval)
+- [ ] Email: user sets up sender domain (Cloud → Emails), then alerts/app emails
+- [ ] Custom domain: user connecting it themselves
 
 ## Current
 - [x] Confirm the latest GitHub-synced changes are present in this workspace

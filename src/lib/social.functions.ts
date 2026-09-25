@@ -374,6 +374,9 @@ export const replyToConversation = createServerFn({ method: "POST" })
     if (convo.platform === "sms" || convo.channel === "sms") {
       return replyBySms(sb, convo, data.body);
     }
+    if (convo.platform === "whatsapp") {
+      return replyByWhatsApp(sb, convo, data.body);
+    }
 
     const { data: account } = await sb
       .from("social_accounts")
@@ -507,4 +510,60 @@ async function replyBySms(
           ? "Reply saved. SMS is in dry run, so nothing was sent."
           : "Reply queued for sending.",
   };
+}
+
+/**
+ * A WhatsApp reply goes straight out from the campaign number. Free-form text
+ * only works within 24 hours of their last message; WhatsApp's refusal is
+ * saved on the message so the team can see why.
+ */
+async function replyByWhatsApp(
+  sb: SupabaseClient<Database>,
+  convo: { id: string; person_id: string | null },
+  body: string,
+): Promise<{ status: string; note: string }> {
+  if (!convo.person_id) throw new Error("This conversation has no person attached.");
+  const { data: person } = await sb
+    .from("people")
+    .select("phone, opted_out")
+    .eq("id", convo.person_id)
+    .maybeSingle();
+  if (!person?.phone) throw new Error("There is no phone number on this person.");
+  if (person.opted_out) throw new Error("They replied STOP. Nothing was sent.");
+
+  const { data: inserted, error } = await sb
+    .from("messages")
+    .insert({
+      person_id: convo.person_id,
+      conversation_id: convo.id,
+      phone: person.phone,
+      channel: "whatsapp",
+      platform: "whatsapp",
+      kind: "dm",
+      direction: "out",
+      body,
+      status: "sending",
+      outbox_kind: "inbox_reply",
+    })
+    .select("id")
+    .single();
+  if (error || !inserted) throw new Error("The reply could not be saved.");
+
+  const { sendWhatsAppText } = await import("@/lib/whatsapp.server");
+  const r = await sendWhatsAppText(person.phone, body);
+  await sb
+    .from("messages")
+    .update(
+      r.ok
+        ? { status: "accepted", external_id: r.id, sent_at: new Date().toISOString() }
+        : { status: "failed", error: r.error },
+    )
+    .eq("id", inserted.id);
+  await sb
+    .from("conversations")
+    .update({ unread: false, last_message_at: new Date().toISOString(), snippet: body })
+    .eq("id", convo.id);
+
+  if (!r.ok) throw new Error(r.error);
+  return { status: "accepted", note: "Sent on WhatsApp." };
 }

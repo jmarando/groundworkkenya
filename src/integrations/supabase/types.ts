@@ -613,6 +613,7 @@ export type Database = {
           conversation_id: string | null
           cost_kes: number
           created_at: string
+          delivered_at: string | null
           direction: string
           error: string | null
           external_id: string | null
@@ -626,6 +627,7 @@ export type Database = {
           platform: string
           poll_id: string | null
           provider_ref: string | null
+          read_at: string | null
           sent_at: string | null
           sentiment: string | null
           sentiment_score: number | null
@@ -641,6 +643,7 @@ export type Database = {
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
+          delivered_at?: string | null
           direction?: string
           error?: string | null
           external_id?: string | null
@@ -654,6 +657,7 @@ export type Database = {
           platform?: string
           poll_id?: string | null
           provider_ref?: string | null
+          read_at?: string | null
           sent_at?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
@@ -669,6 +673,7 @@ export type Database = {
           conversation_id?: string | null
           cost_kes?: number
           created_at?: string
+          delivered_at?: string | null
           direction?: string
           error?: string | null
           external_id?: string | null
@@ -682,6 +687,7 @@ export type Database = {
           platform?: string
           poll_id?: string | null
           provider_ref?: string | null
+          read_at?: string | null
           sent_at?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
@@ -1283,6 +1289,39 @@ export type Database = {
           slug?: string
           supporters?: number
           target_votes?: number
+        }
+        Relationships: []
+      }
+      whatsapp_webhook_events: {
+        Row: {
+          attempts: number
+          delivery_id: string
+          event: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          processing_error: string | null
+          received_at: string
+        }
+        Insert: {
+          attempts?: number
+          delivery_id: string
+          event: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          received_at?: string
+        }
+        Update: {
+          attempts?: number
+          delivery_id?: string
+          event?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_error?: string | null
+          received_at?: string
         }
         Relationships: []
       }
