@@ -49,7 +49,7 @@ export const addPerson = createServerFn({ method: "POST" })
       _notes: data.notes,
       _consent: data.consent,
       _consent_source: data.consentSource,
-    } as unknown as Parameters<typeof context.supabase.rpc<"add_person">>[1];
+    } as never;
     const { data: result, error } = await context.supabase.rpc("add_person", args);
     if (error) throw new Error(friendly(error, "Only admitted team members can add people."));
     return { id: String((result as { id?: string } | null)?.id ?? "") };

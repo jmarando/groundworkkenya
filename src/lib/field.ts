@@ -143,7 +143,7 @@ export function mergeAfterSync(snapshot: Queued[], left: Queued[], latest: Queue
   ];
 }
 
-type RandomSource = { getRandomValues(array: Uint8Array): Uint8Array; randomUUID?: () => string };
+type RandomSource = Pick<Crypto, "getRandomValues"> & { randomUUID?: () => string };
 
 /** A random id for a visit. crypto.randomUUID is missing from older phones' browsers. */
 export function newVisitId(source: RandomSource = crypto): string {
