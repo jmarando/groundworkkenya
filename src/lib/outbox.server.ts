@@ -75,21 +75,37 @@ export async function processOutbox(admin: Sb, limit = 5000): Promise<OutboxResu
   const r = (data ?? {}) as { staged?: number; blocked?: number; sending?: Claimed[] };
   const claimed = r.sending ?? [];
 
+  let sent = 0;
+  let failed = 0;
   for (const m of claimed) {
-    // Delivery lands here once a provider is wired to the credentials. Until
-    // then, fail loudly rather than let a claimed message vanish.
-    await admin
-      .from("messages")
-      .update({ status: "failed", error: `No ${m.channel} provider is connected yet.` })
-      .eq("id", m.id);
+    if (m.channel !== "sms") {
+      await admin
+        .from("messages")
+        .update({ status: "failed", error: `No ${m.channel} provider is connected yet.` })
+        .eq("id", m.id);
+      failed++;
+      continue;
+    }
+    const { sendSms } = await import("@/lib/at.server");
+    const r = await sendSms(m.phone, m.body);
+    if (r.ok) {
+      await admin
+        .from("messages")
+        .update({ status: "sent", provider_ref: r.id, sent_at: new Date().toISOString() })
+        .eq("id", m.id);
+      sent++;
+    } else {
+      await admin.from("messages").update({ status: "failed", error: r.error }).eq("id", m.id);
+      failed++;
+    }
   }
 
   return {
     live,
     staged: r.staged ?? 0,
     blocked: r.blocked ?? 0,
-    sent: 0,
-    failed: claimed.length,
+    sent,
+    failed,
   };
 }
 
