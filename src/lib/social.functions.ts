@@ -374,6 +374,9 @@ export const replyToConversation = createServerFn({ method: "POST" })
     if (convo.platform === "sms" || convo.channel === "sms") {
       return replyBySms(sb, convo, data.body);
     }
+    if (convo.platform === "whatsapp") {
+      return replyByWhatsApp(sb, convo, data.body);
+    }
 
     const { data: account } = await sb
       .from("social_accounts")
