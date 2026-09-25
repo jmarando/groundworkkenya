@@ -64,7 +64,9 @@ export const recordVisit = createServerFn({ method: "POST" })
     return { ...input, place };
   })
   .handler(async ({ data, context }): Promise<VisitResult> => {
-    const { data: result, error } = await context.supabase.rpc("record_door", {
+    // The database accepts nulls for the optional fields; the generated types
+    // mark every argument required, so widen the call.
+    const args = {
       _client_id: data.clientId,
       _person_id: data.personId,
       _new: data.newPerson,
@@ -75,7 +77,8 @@ export const recordVisit = createServerFn({ method: "POST" })
       _consent_source: data.consentSource,
       _visited_at: data.visitedAt,
       _place: data.place,
-    });
+    } as never;
+    const { data: result, error } = await context.supabase.rpc("record_door", args);
     if (error) {
       throw new Error(
         error.code === "P0001" && error.message

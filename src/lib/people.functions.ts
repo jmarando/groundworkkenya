@@ -37,7 +37,9 @@ export const addPerson = createServerFn({ method: "POST" })
     return { ...input, phone };
   })
   .handler(async ({ data, context }) => {
-    const { data: result, error } = await context.supabase.rpc("add_person", {
+    // The database accepts nulls for the optional fields; the generated types
+    // mark every argument required, so widen the call.
+    const args = {
       _phone: data.phone,
       _full_name: data.name,
       _ward_id: data.wardId,
@@ -47,7 +49,8 @@ export const addPerson = createServerFn({ method: "POST" })
       _notes: data.notes,
       _consent: data.consent,
       _consent_source: data.consentSource,
-    });
+    } as never;
+    const { data: result, error } = await context.supabase.rpc("add_person", args);
     if (error) throw new Error(friendly(error, "Only admitted team members can add people."));
     return { id: String((result as { id?: string } | null)?.id ?? "") };
   });
