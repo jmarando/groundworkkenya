@@ -1299,9 +1299,9 @@ export type Database = {
           _language: string
           _notes: string
           _phone: string
-          _segment: string | null
-          _support_score: number | null
-          _ward_id: string | null
+          _segment: string
+          _support_score: number
+          _ward_id: string
         }
         Returns: Json
       }
@@ -1309,7 +1309,12 @@ export type Database = {
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
       begin_person_import: {
-        Args: { _consent_source: string; _filename: string; _rows_total: number; _source: string }
+        Args: {
+          _consent_source: string
+          _filename: string
+          _rows_total: number
+          _source: string
+        }
         Returns: string
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
@@ -1321,9 +1326,17 @@ export type Database = {
         }
         Returns: boolean
       }
-      import_people_chunk: { Args: { _import_id: string; _rows: Json }; Returns: Json }
+      import_people_chunk: {
+        Args: { _import_id: string; _rows: Json }
+        Returns: Json
+      }
       in_broadcast_audience: {
-        Args: { _audience: Json; _segment: string; _support: number; _ward_id: string }
+        Args: {
+          _audience: Json
+          _segment: string
+          _support: number
+          _ward_id: string
+        }
         Returns: boolean
       }
       in_poll_audience: {
@@ -1332,7 +1345,10 @@ export type Database = {
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
-      launch_poll: { Args: { _poll_id: string; _sms_body: string }; Returns: Json }
+      launch_poll: {
+        Args: { _poll_id: string; _sms_body: string }
+        Returns: Json
+      }
       outbox_block_reason: {
         Args: {
           _channel: string
@@ -1347,17 +1363,20 @@ export type Database = {
         Args: { _consent_stated: boolean; _rows: Json }
         Returns: {
           call: boolean
-          full_name: string | null
-          language: string | null
+          full_name: string
+          language: string
           phone: string
-          segment: string | null
+          segment: string
           sms: boolean
           wa: boolean
-          ward_id: string | null
+          ward_id: string
         }[]
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
-      process_outbox: { Args: { _limit?: number; _live?: boolean }; Returns: Json }
+      process_outbox: {
+        Args: { _limit?: number; _live?: boolean }
+        Returns: Json
+      }
       queue_broadcast: {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
@@ -1370,9 +1389,9 @@ export type Database = {
           _issue: string
           _new: Json
           _outcome: string
-          _person_id: string | null
+          _person_id: string
           _place?: Json
-          _support: number | null
+          _support: number
           _visited_at: string
         }
         Returns: Json
@@ -1384,35 +1403,35 @@ export type Database = {
         }
         Returns: undefined
       }
-      ward_map: {
-        Args: { _ward_id: string }
-        Returns: {
-          building_id: string | null
-          consent_sms: boolean
-          full_name: string | null
-          id: string
-          last_contacted_at: string | null
-          last_issue: string | null
-          last_outcome: string | null
-          last_visit_at: string | null
-          lat: number | null
-          lng: number | null
-          opted_out: boolean
-          phone_masked: string
-          segment: string | null
-          support_score: number
-        }[]
-      }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {
-          full_name: string | null
+          full_name: string
           id: string
-          last_contacted_at: string | null
-          last_outcome: string | null
-          last_visit_at: string | null
+          last_contacted_at: string
+          last_outcome: string
+          last_visit_at: string
           phone_masked: string
-          segment: string | null
+          segment: string
+          support_score: number
+        }[]
+      }
+      ward_map: {
+        Args: { _ward_id: string }
+        Returns: {
+          building_id: string
+          consent_sms: boolean
+          full_name: string
+          id: string
+          last_contacted_at: string
+          last_issue: string
+          last_outcome: string
+          last_visit_at: string
+          lat: number
+          lng: number
+          opted_out: boolean
+          phone_masked: string
+          segment: string
           support_score: number
         }[]
       }
