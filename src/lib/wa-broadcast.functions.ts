@@ -4,7 +4,10 @@
 // up to BATCH people and the composer keeps pressing until none are left.
 // A client key makes batches resumable and stops anyone getting it twice.
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
+
+import type { Database } from "@/integrations/supabase/types";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { BroadcastAudience } from "@/lib/broadcast.functions";
@@ -12,10 +15,7 @@ import { fillTemplate, firstName, WA_TEMPLATES } from "@/lib/wa-templates";
 
 const BATCH = 120;
 
-type Sb = Parameters<Parameters<ReturnType<typeof createServerFn>["handler"]>[0]>[0] extends never
-  ? never
-  : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    any;
+type Sb = SupabaseClient<Database>;
 
 type Person = {
   id: string;
