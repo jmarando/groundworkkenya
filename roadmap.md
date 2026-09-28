@@ -54,5 +54,9 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
+- [x] Multi-campaign: Kalonzo, Sakaja, Waruru Gikandi; per-campaign roles; Campaigns + invites
+- [ ] Campaign addresses: user adds wildcard *.groundwork.ke DNS + domains
+- [ ] Per-campaign WhatsApp/SMS numbers (all inbound goes to Sakaja for now)
+- [ ] Map outline per campaign (Mathira/Kalonzo still show Nairobi base map)
 - [x] Confirm the latest GitHub-synced changes are present in this workspace
 - [ ] Rate limit /p/* at the edge (Cloudflare rule) before a web poll goes wide
