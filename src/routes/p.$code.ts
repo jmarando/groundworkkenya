@@ -182,6 +182,20 @@ export const Route = createFileRoute("/p/$code")({
         if (!answer) return form(poll, "Chagua jibu. · Please choose an answer.");
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // A person answers once; a script answers hundreds of times. Sixty
+        // in ten minutes from one connection leaves room for a crowd sharing
+        // a carrier's address.
+        const { visitorKey, withinLimit } = await import("@/lib/rate-limit.server");
+        const visitor = visitorKey(request);
+        if (visitor && !(await withinLimit(supabaseAdmin, `poll-form:${visitor}`, 60, 600))) {
+          return notice(
+            "Subiri kidogo",
+            "Too many answers from this connection. Please wait a few minutes and try again.",
+            429,
+          );
+        }
+
         const { recordResponse, requestSmsConsent, upsertPersonByPhone } =
           await import("@/lib/inbound.server");
         const { settleIfDryRun } = await import("@/lib/outbox.server");

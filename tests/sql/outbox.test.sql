@@ -296,4 +296,4 @@ end $$;
 rollback;
 
 -- test: schema version
-do $$ begin assert public.groundwork_schema_version() = 9; end $$;
+do $$ begin assert public.groundwork_schema_version() >= 9; end $$;

@@ -302,7 +302,11 @@ export async function recordResponse(
     : (answer.freeText ?? "");
   await logEvent(sb, person.id, "poll_answer", channel, `${poll.question} → ${label}`);
 
-  const rewarded = first && poll.rewardMethod !== "none" && poll.rewardAmount > 0;
+  const rewarded =
+    first &&
+    poll.rewardMethod !== "none" &&
+    poll.rewardAmount > 0 &&
+    (await rewardable(sb, poll.id, person.id, channel));
   if (rewarded) {
     await queueMessages(sb, [
       {
@@ -317,6 +321,27 @@ export async function recordResponse(
   }
 
   return { recorded: true, alreadyAnswered: !first, rewarded };
+}
+
+/**
+ * May this answer be paid? On SMS, USSD and WhatsApp the network vouches for
+ * the number. A number typed into the web form is anyone's to type, so there
+ * only people the campaign invited are paid: otherwise a script feeding the
+ * form random numbers would send airtime or M-Pesa to every one of them.
+ */
+async function rewardable(
+  sb: Sb,
+  pollId: string,
+  personId: string,
+  channel: string,
+): Promise<boolean> {
+  if (VERIFIED.has(channel)) return true;
+  const { count } = await sb
+    .from("poll_invites")
+    .select("id", { count: "exact", head: true })
+    .eq("poll_id", pollId)
+    .eq("person_id", personId);
+  return (count ?? 0) > 0;
 }
 
 /** Live polls, newest invite first, that this person was invited to. */

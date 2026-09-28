@@ -1424,6 +1424,10 @@ export type Database = {
         }[]
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
+      rate_limit_hit: {
+        Args: { _key: string; _limit: number; _window_seconds: number }
+        Returns: boolean
+      }
       process_outbox: {
         Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
         Returns: Json
