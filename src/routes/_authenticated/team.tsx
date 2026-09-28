@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import {
   getTeam,
+  inviteMember,
+  removeMember,
   ROLE_COPY,
   ROLES,
   setMemberRole,
@@ -34,13 +36,20 @@ const day = (iso: string | null) =>
 function Team() {
   const fetchTeam = useServerFn(getTeam);
   const saveRole = useServerFn(setMemberRole);
+  const remove = useServerFn(removeMember);
+  const invite = useServerFn(inviteMember);
+  const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<Role>("organiser");
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data } = useQuery({ queryKey: ["team"], queryFn: () => fetchTeam() });
 
   const change = useMutation({
-    mutationFn: (input: { userId: string; role: Role }) => saveRole({ data: input }),
+    mutationFn: (input: { userId: string; role: Role }) =>
+      input.role === "viewer"
+        ? remove({ data: { userId: input.userId } })
+        : saveRole({ data: input }),
     onSuccess: async (_r, input) => {
       toast.success(
         input.role === "viewer" ? "Access removed." : `Now ${ROLE_COPY[input.role].name}.`,
@@ -59,6 +68,21 @@ function Team() {
     change.mutate({ userId: m.userId, role });
   };
 
+  const sendInvite = useMutation({
+    mutationFn: () =>
+      invite({ data: { campaignId: data!.campaignId!, email, role: inviteRole } }),
+    onSuccess: async (r) => {
+      toast.success(
+        r.result === "added"
+          ? "They already had an account, and are now on the team."
+          : "Invited. They join the moment they sign up with that email.",
+      );
+      setEmail("");
+      await queryClient.invalidateQueries({ queryKey: ["team"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const header = (
     <div className="vh">
       <div>
@@ -67,8 +91,8 @@ function Team() {
           Who gets <span className="serif">in.</span>
         </h1>
         <p className="meta">
-          Anyone can create an account. An account alone sees nothing: new sign-ups wait here until
-          an admin gives them a role.
+          Only this campaign's people. Invite by email, or admit people who signed in on the
+          campaign's address. Nobody sees anything until they have a role.
         </p>
       </div>
     </div>
@@ -88,7 +112,9 @@ function Team() {
       <section className="view active" aria-label="Team">
         {header}
         <div className="card">
-          <p className="f-note">Only an admin can see and change who is on the team.</p>
+          <p className="f-note">
+            Only the candidate or campaign manager can see and change who is on the team.
+          </p>
         </div>
       </section>
     );
@@ -100,6 +126,61 @@ function Team() {
   return (
     <section className="view active" aria-label="Team">
       {header}
+
+      <div className="card">
+        <div className="card-head">
+          <h2>Invite someone</h2>
+        </div>
+        <form
+          className="campaign-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendInvite.mutate();
+          }}
+        >
+          <label>
+            <span className="eyebrow">Email</span>
+            <input
+              className="team-select"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label>
+            <span className="eyebrow">Role</span>
+            <select
+              className="team-select"
+              value={inviteRole}
+              onChange={(e) => setInviteRole(e.target.value as Role)}
+            >
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_COPY[r].name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn btn--primary" type="submit" disabled={sendInvite.isPending}>
+            {sendInvite.isPending ? "Inviting…" : "Invite"}
+          </button>
+        </form>
+        {data.invites.length > 0 ? (
+          <ul className="team-list">
+            {data.invites.map((i) => (
+              <li key={i.id} className="team-row">
+                <div className="team-who">
+                  <span className="mono">{i.email}</span>
+                  <small>
+                    Invited as {ROLE_COPY[i.role].name} · {day(i.createdAt)} · not signed up yet
+                  </small>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
 
       <div className="card">
         <div className="card-head">
@@ -179,8 +260,8 @@ function Team() {
           ))}
         </ul>
         <p className="f-note">
-          Finance is admin and manager only, enforced by the database rather than by hiding the menu
-          item. Launching polls, which sends SMS, is too.
+          Finance is for the candidate and campaign manager only. The database enforces this, so
+          it's not just a hidden menu item. Launching polls, which sends SMS, is limited the same way.
         </p>
       </div>
     </section>

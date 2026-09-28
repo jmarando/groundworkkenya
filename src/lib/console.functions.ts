@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { myRoles } from "@/lib/access";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const STATUTORY_LIMIT = 433_800_000;
@@ -62,10 +63,7 @@ export const getFinance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FinanceData> => {
     const sb = context.supabase;
-    const { data: roles } = await sb
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
+    const { data: roles } = await myRoles(sb);
     const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
     if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
     const [{ data: expenses }, { data: contributions }] = await Promise.all([
@@ -857,7 +855,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         .order("filed_at", { ascending: false }),
       sb.from("form_photos").select("station_id, stream"),
       sb.from("ballot_candidates").select("id, position, name, party, ours").order("position"),
-      sb.from("user_roles").select("role").eq("user_id", context.userId),
+      myRoles(sb),
     ]);
 
     const st = stations ?? [];
@@ -1337,7 +1335,7 @@ export const getAgents = createServerFn({ method: "GET" })
         sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
         sb.from("polling_stations").select("*").order("code"),
         sb.from("wards").select("id, name, constituency").order("name"),
-        sb.from("user_roles").select("role").eq("user_id", context.userId),
+        myRoles(sb),
       ]);
 
     const sp = stipends ?? [];

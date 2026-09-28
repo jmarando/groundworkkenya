@@ -46,6 +46,7 @@ export const Route = createFileRoute("/api/public/social/meta")({
         if (events.length === 0) return new Response("ok");
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { channelCampaignId } = await import("@/lib/tenant.server");
 
         for (const e of events) {
           const threadId = `${e.platform}:${e.threadId}`;
@@ -65,6 +66,7 @@ export const Route = createFileRoute("/api/public/social/meta")({
                 .from("people")
                 .select("id")
                 .eq("phone", e.phone)
+                .eq("campaign_id", await channelCampaignId(supabaseAdmin))
                 .maybeSingle();
               if (person) {
                 personId = person.id;

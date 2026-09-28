@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above it; the full link row wraps and obscures navigation on phones and tablets.
+- Multi-tenancy: every campaign table has `campaign_id` (default `my_campaign()`, a trigger fills it from the parent or the channel-owning campaign) plus a restrictive "own campaign only" policy. Roles live in `campaign_members` (one campaign per user); `user_roles` 'admin' is the super admin only. Why: separation is enforced in the database, not by hiding UI.

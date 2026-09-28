@@ -7,6 +7,7 @@ import { GwMark } from "./GwMark";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
+import { CampaignSwitcher } from "./CampaignSwitcher";
 
 type NavItem = {
   to: string;
@@ -14,6 +15,7 @@ type NavItem = {
   faint?: string;
   principalOnly?: boolean;
   adminOnly?: boolean;
+  superOnly?: boolean;
 };
 
 const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
@@ -54,6 +56,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     title: "System",
     items: [
       { to: "/team", label: "Team", faint: "ACCESS", adminOnly: true },
+      { to: "/campaigns", label: "Campaigns", faint: "SUPER", superOnly: true },
       { to: "/foundations", label: "Brand & design" },
     ],
   },
@@ -63,9 +66,12 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isPrincipal, isAdmin } = useAccess();
+  const { isPrincipal, isAdmin, isSuper, campaign } = useAccess();
   const visible = (items: NavItem[]) =>
-    items.filter((i) => (!i.principalOnly || isPrincipal) && (!i.adminOnly || isAdmin));
+    items.filter(
+      (i) =>
+        (!i.principalOnly || isPrincipal) && (!i.adminOnly || isAdmin) && (!i.superOnly || isSuper),
+    );
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
     (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
   );
@@ -99,8 +105,9 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
           </div>
         </div>
         <div className="sb-tenant">
-          <div className="sb-tenant-name">Campaign 2027</div>
-          <div className="sb-tenant-sub">Governor · 2027 cycle</div>
+          <div className="sb-tenant-name">{campaign?.name ?? "No campaign open"}</div>
+          <div className="sb-tenant-sub">{campaign ? `${campaign.seat} · 2027 cycle` : "—"}</div>
+          {isSuper ? <CampaignSwitcher current={campaign?.id ?? null} /> : null}
         </div>
 
         <nav aria-label="Product">
@@ -175,6 +182,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
               onClick={() => setMenuOpen(false)}
             />
             <nav className="mobile-menu-panel" aria-label="Product menu">
+              <div className="mobile-menu-group">
+                <div className="mobile-menu-heading">{campaign?.name ?? "No campaign open"}</div>
+                {isSuper ? <CampaignSwitcher current={campaign?.id ?? null} /> : null}
+              </div>
               {groups.map((group) => (
                 <div className="mobile-menu-group" key={group.title}>
                   <div className="mobile-menu-heading">{group.title}</div>

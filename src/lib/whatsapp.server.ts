@@ -9,6 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { recordFormPhoto } from "@/lib/form34a.server";
 import { isStartWord, isStopWord } from "@/lib/polls.engine";
+import { channelCampaignId } from "@/lib/tenant.server";
 
 type Sb = SupabaseClient<Database>;
 
@@ -164,6 +165,7 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
         .from("people")
         .select("id, opted_out")
         .eq("phone", phone)
+        .eq("campaign_id", await channelCampaignId(sb))
         .maybeSingle();
       if (!person) {
         const { data: created, error } = await sb

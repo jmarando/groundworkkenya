@@ -12,6 +12,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { agentStations, handleForm34aUssd } from "@/lib/form34a.server";
 import { queueMessages, settleIfDryRun, type QueueItem } from "@/lib/outbox.server";
 import { normalizeKePhone } from "@/lib/phone";
+import { channelCampaignId } from "@/lib/tenant.server";
 import {
   consentRequestText,
   helpText,
@@ -112,7 +113,14 @@ export async function upsertPersonByPhone(
   const phone = normalizeKePhone(rawPhone);
   if (!phone) return null;
 
-  const find = () => sb.from("people").select(PERSON_COLUMNS).eq("phone", phone).maybeSingle();
+  const campaignId = await channelCampaignId(sb);
+  const find = () =>
+    sb
+      .from("people")
+      .select(PERSON_COLUMNS)
+      .eq("phone", phone)
+      .eq("campaign_id", campaignId)
+      .maybeSingle();
 
   const { data: existing } = await find();
   if (existing) {
