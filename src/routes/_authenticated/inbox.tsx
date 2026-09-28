@@ -5,7 +5,11 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { getInbox } from "@/lib/console.functions";
-import { replyToConversation } from "@/lib/social.functions";
+import {
+  replyToConversation,
+  searchPeopleForMessage,
+  startConversation,
+} from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: Inbox,
@@ -72,11 +76,25 @@ const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"]
 function Inbox() {
   const fetchInbox = useServerFn(getInbox);
   const sendReply = useServerFn(replyToConversation);
+  const searchPeople = useServerFn(searchPeopleForMessage);
+  const startConvo = useServerFn(startConversation);
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendNote, setSendNote] = useState<string | null>(null);
+
+  // New outbound message
+  const [composing, setComposing] = useState(false);
+  const [pq, setPq] = useState("");
+  const [results, setResults] = useState<
+    { id: string; name: string; phone: string | null; ward: string | null; optedOut: boolean; consentSms: boolean; consentWhatsapp: boolean }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
+  const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
+  const [newBody, setNewBody] = useState("");
+  const [newNote, setNewNote] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<string>("all");
   const [q, setQ] = useState("");
