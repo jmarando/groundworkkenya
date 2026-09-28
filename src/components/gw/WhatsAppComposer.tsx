@@ -45,7 +45,7 @@ export function WhatsAppComposer({
   onChannel: (v: "sms" | "wa") => void;
   onClose: () => void;
 }) {
-  const [tpl, setTpl] = useState(WA_TEMPLATES[0].name);
+  const [tpl, setTpl] = useState(WA_TEMPLATES[0]!.name);
   const t = WA_TEMPLATES.find((x) => x.name === tpl)!;
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const vals = fields[tpl] ?? t.fields.map(() => "");
@@ -65,7 +65,7 @@ export function WhatsAppComposer({
   const preview = fillTemplate(t.text, [
     "Mary",
     est?.campaign ?? "…",
-    ...vals.map((v, i) => v || `[${t.fields[i].label}]`),
+    ...vals.map((v, i) => v || `[${t.fields[i]?.label}]`),
   ]);
 
   const problem = vals.some((v) => !v.trim())
