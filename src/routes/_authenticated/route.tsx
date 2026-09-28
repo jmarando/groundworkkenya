@@ -26,7 +26,7 @@ function Gate({ children }: { children: ReactNode }) {
 function Waiting() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { recheck, checking } = useAccess();
+  const { recheck, checking, campaign, wrongCampaign } = useAccess();
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -37,12 +37,32 @@ function Waiting() {
 
   return (
     <Gate>
-      <span className="eyebrow">Groundwork · the campaign OS</span>
-      <h1>You're signed in. An admin needs to let you in.</h1>
-      <p>
-        Accounts start with no access to campaign data. Ask whoever runs the campaign to open{" "}
-        <b>Team</b> in the console and give you a role.
-      </p>
+      <span className="eyebrow">{campaign ? campaign.name : "Groundwork · the campaign OS"}</span>
+      {wrongCampaign ? (
+        <>
+          <h1>You're not part of this campaign.</h1>
+          <p>
+            Your account belongs to another campaign. Sign in at your own campaign's address, or
+            sign out and use a different email.
+          </p>
+        </>
+      ) : campaign ? (
+        <>
+          <h1>You're signed in. The campaign needs to let you in.</h1>
+          <p>
+            Ask the candidate or campaign manager of <b>{campaign.name}</b> to open <b>Team</b> and
+            give you a role.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1>You're signed in, but not on a campaign yet.</h1>
+          <p>
+            Open your campaign's own address (for example sakaja.groundwork.ke), or ask your
+            campaign to invite this email.
+          </p>
+        </>
+      )}
       <div className="gate-actions">
         <button
           className="btn btn--primary"
@@ -61,7 +81,7 @@ function Waiting() {
 }
 
 function Authenticated() {
-  const { loading, failed, recheck, checking, isPendingApproval } = useAccess();
+  const { loading, failed, recheck, checking, isPendingApproval, wrongCampaign } = useAccess();
 
   if (loading) {
     return (
@@ -91,7 +111,7 @@ function Authenticated() {
     );
   }
 
-  if (isPendingApproval) return <Waiting />;
+  if (isPendingApproval || wrongCampaign) return <Waiting />;
 
   return (
     <ConsoleShell>

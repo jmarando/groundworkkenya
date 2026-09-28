@@ -1,25 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { campaignSlugFromHost, PRINCIPAL_ROLES, TEAM_ROLES, type MyRole } from "@/lib/access";
 
-/** Roles that count as being on the team. Mirrors public.is_team_member(). */
-const TEAM_ROLES = ["admin", "manager", "organiser", "agent"];
+export type Campaign = {
+  id: string;
+  slug: string;
+  name: string;
+  candidate: string | null;
+  seat: string;
+  host: string | null;
+};
 
 export type Access = {
   userId: string;
-  roles: string[];
-  /** Candidate (admin) or campaign manager (manager) — the money-and-strategy circle. */
+  role: MyRole;
+  campaign: Campaign | null;
+  /** On a campaign's own address that is not theirs. */
+  wrongCampaign: boolean;
+  /** Candidate, campaign manager or super admin: the money-and-strategy circle. */
   isPrincipal: boolean;
-  /** Can admit people and change roles. */
+  /** Can admit people and change roles in this campaign. */
   isAdmin: boolean;
-  /** Signed up but not admitted: no role that grants any data. */
+  /** The platform owner, who can switch between campaigns. */
+  isSuper: boolean;
+  /** Signed in but not admitted to any campaign. */
   isPending: boolean;
 };
 
 /**
- * Read in the browser, from the signed-in session: row level security lets
- * each person read only their own roles, and this only decides what the
- * console shows. What data anyone gets is decided in the database.
+ * Read in the browser from the signed-in session. This only decides what the
+ * console shows; what data anyone gets is decided in the database.
  */
 export function useAccess() {
   const { data, isPending, isError, refetch, isFetching } = useQuery<Access>({
@@ -27,18 +38,40 @@ export function useAccess() {
     queryFn: async () => {
       const { data: auth, error: authError } = await supabase.auth.getUser();
       if (authError || !auth.user) throw authError ?? new Error("Not signed in.");
-      const { data: rows, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", auth.user.id);
+
+      // On sakaja.groundwork.ke and the like: ask to join (or, for the super
+      // admin, open) that campaign. Harmless if already a member.
+      const slug = campaignSlugFromHost(window.location.host);
+      let wrongCampaign = false;
+      if (slug) {
+        const { data: result } = await supabase.rpc("request_campaign_access", { _slug: slug });
+        wrongCampaign = result === "elsewhere";
+      }
+
+      const [{ data: role, error }, { data: campaignId }] = await Promise.all([
+        supabase.rpc("my_campaign_role"),
+        supabase.rpc("my_campaign"),
+      ]);
       if (error) throw new Error("Could not check your access.");
-      const roles = (rows ?? []).map((r) => r.role as string);
+      let campaign: Campaign | null = null;
+      if (campaignId) {
+        const { data: c } = await supabase
+          .from("campaigns")
+          .select("id, slug, name, candidate, seat, host")
+          .eq("id", campaignId as string)
+          .maybeSingle();
+        campaign = c ?? null;
+      }
+      const r = (role as MyRole) ?? null;
       return {
         userId: auth.user.id,
-        roles,
-        isPrincipal: roles.includes("admin") || roles.includes("manager"),
-        isAdmin: roles.includes("admin"),
-        isPending: !roles.some((r) => TEAM_ROLES.includes(r)),
+        role: r,
+        campaign,
+        wrongCampaign,
+        isPrincipal: PRINCIPAL_ROLES.includes(r),
+        isAdmin: PRINCIPAL_ROLES.includes(r),
+        isSuper: r === "super",
+        isPending: !TEAM_ROLES.includes(r),
       };
     },
     staleTime: 5 * 60_000,
@@ -49,8 +82,11 @@ export function useAccess() {
     failed: isError,
     checking: isFetching,
     recheck: refetch,
+    campaign: data?.campaign ?? null,
     isPrincipal: data?.isPrincipal ?? false,
     isAdmin: data?.isAdmin ?? false,
+    isSuper: data?.isSuper ?? false,
     isPendingApproval: data?.isPending ?? false,
+    wrongCampaign: data?.wrongCampaign ?? false,
   };
 }

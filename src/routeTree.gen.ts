@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBriefingRouteImport } from './routes/_authenticated/briefing'
 import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
+import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
 import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authenticated/canvassing'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
@@ -66,6 +67,11 @@ const AuthenticatedBriefingRoute = AuthenticatedBriefingRouteImport.update({
 const AuthenticatedBroadcastRoute = AuthenticatedBroadcastRouteImport.update({
   id: '/broadcast',
   path: '/broadcast',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCampaignsRoute = AuthenticatedCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCanvassingRoute = AuthenticatedCanvassingRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthenticatedAgentsRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthenticatedAgentsRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
+  '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/briefing': typeof AuthenticatedBriefingRoute
   '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
+  '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
   '/_authenticated/canvassing': typeof AuthenticatedCanvassingRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/briefing'
     | '/broadcast'
+    | '/campaigns'
     | '/canvassing'
     | '/field'
     | '/finance'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/briefing'
     | '/broadcast'
+    | '/campaigns'
     | '/canvassing'
     | '/field'
     | '/finance'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents'
     | '/_authenticated/briefing'
     | '/_authenticated/broadcast'
+    | '/_authenticated/campaigns'
     | '/_authenticated/canvassing'
     | '/_authenticated/field'
     | '/_authenticated/finance'
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       path: '/broadcast'
       fullPath: '/broadcast'
       preLoaderRoute: typeof AuthenticatedBroadcastRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/campaigns': {
+      id: '/_authenticated/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof AuthenticatedCampaignsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/canvassing': {
@@ -600,6 +619,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedBriefingRoute: typeof AuthenticatedBriefingRoute
   AuthenticatedBroadcastRoute: typeof AuthenticatedBroadcastRoute
+  AuthenticatedCampaignsRoute: typeof AuthenticatedCampaignsRoute
   AuthenticatedCanvassingRoute: typeof AuthenticatedCanvassingRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
@@ -619,6 +639,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedBriefingRoute: AuthenticatedBriefingRoute,
   AuthenticatedBroadcastRoute: AuthenticatedBroadcastRoute,
+  AuthenticatedCampaignsRoute: AuthenticatedCampaignsRoute,
   AuthenticatedCanvassingRoute: AuthenticatedCanvassingRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,

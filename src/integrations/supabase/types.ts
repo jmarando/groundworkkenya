@@ -14,10 +14,37 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_focus: {
+        Row: {
+          campaign_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_focus_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_stipends: {
         Row: {
           agent_name: string
           amount_kes: number
+          campaign_id: string
           created_at: string
           days: number
           id: string
@@ -35,6 +62,7 @@ export type Database = {
         Insert: {
           agent_name: string
           amount_kes?: number
+          campaign_id: string
           created_at?: string
           days?: number
           id?: string
@@ -52,6 +80,7 @@ export type Database = {
         Update: {
           agent_name?: string
           amount_kes?: number
+          campaign_id?: string
           created_at?: string
           days?: number
           id?: string
@@ -67,6 +96,13 @@ export type Database = {
           ward_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "agent_stipends_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agent_stipends_station_id_fkey"
             columns: ["station_id"]
@@ -85,6 +121,7 @@ export type Database = {
       }
       ballot_candidates: {
         Row: {
+          campaign_id: string
           created_at: string
           id: string
           name: string
@@ -93,6 +130,7 @@ export type Database = {
           position: number
         }
         Insert: {
+          campaign_id: string
           created_at?: string
           id?: string
           name: string
@@ -101,6 +139,7 @@ export type Database = {
           position: number
         }
         Update: {
+          campaign_id?: string
           created_at?: string
           id?: string
           name?: string
@@ -108,12 +147,21 @@ export type Database = {
           party?: string | null
           position?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ballot_candidates_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       broadcasts: {
         Row: {
           audience: Json
           body: string
+          campaign_id: string
           channel: string
           client_key: string
           created_at: string
@@ -125,6 +173,7 @@ export type Database = {
         Insert: {
           audience?: Json
           body: string
+          campaign_id: string
           channel?: string
           client_key: string
           created_at?: string
@@ -136,6 +185,7 @@ export type Database = {
         Update: {
           audience?: Json
           body?: string
+          campaign_id?: string
           channel?: string
           client_key?: string
           created_at?: string
@@ -144,11 +194,129 @@ export type Database = {
           matched?: number
           recipients?: number
         }
+        Relationships: [
+          {
+            foreignKeyName: "broadcasts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_invites: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          email: string
+          id: string
+          invited_by: string | null
+          role: Database["public"]["Enums"]["campaign_role"]
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          email: string
+          id?: string
+          invited_by?: string | null
+          role: Database["public"]["Enums"]["campaign_role"]
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["campaign_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_invites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_members: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["campaign_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["campaign_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["campaign_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_members_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          candidate: string | null
+          created_at: string
+          host: string | null
+          id: string
+          level: string
+          name: string
+          owns_channels: boolean
+          seat: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          candidate?: string | null
+          created_at?: string
+          host?: string | null
+          id?: string
+          level?: string
+          name: string
+          owns_channels?: boolean
+          seat: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          candidate?: string | null
+          created_at?: string
+          host?: string | null
+          id?: string
+          level?: string
+          name?: string
+          owns_channels?: boolean
+          seat?: string
+          slug?: string
+          updated_at?: string
+        }
         Relationships: []
       }
       contributions: {
         Row: {
           amount_kes: number
+          campaign_id: string
           created_at: string
           disclosed: boolean
           donor_name: string
@@ -160,6 +328,7 @@ export type Database = {
         }
         Insert: {
           amount_kes: number
+          campaign_id: string
           created_at?: string
           disclosed?: boolean
           donor_name: string
@@ -171,6 +340,7 @@ export type Database = {
         }
         Update: {
           amount_kes?: number
+          campaign_id?: string
           created_at?: string
           disclosed?: boolean
           donor_name?: string
@@ -180,13 +350,22 @@ export type Database = {
           received_at?: string
           reference?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contributions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
           assigned_to: string | null
           author_handle: string | null
           author_name: string | null
+          campaign_id: string
           channel: string
           created_at: string
           external_thread_id: string | null
@@ -207,6 +386,7 @@ export type Database = {
           assigned_to?: string | null
           author_handle?: string | null
           author_name?: string | null
+          campaign_id: string
           channel?: string
           created_at?: string
           external_thread_id?: string | null
@@ -227,6 +407,7 @@ export type Database = {
           assigned_to?: string | null
           author_handle?: string | null
           author_name?: string | null
+          campaign_id?: string
           channel?: string
           created_at?: string
           external_thread_id?: string | null
@@ -244,6 +425,13 @@ export type Database = {
           unread?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "conversations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "conversations_person_id_fkey"
             columns: ["person_id"]
@@ -288,6 +476,7 @@ export type Database = {
           amount_kes: number
           approved_at: string | null
           approved_by: string | null
+          campaign_id: string
           category: string
           created_at: string
           description: string
@@ -302,6 +491,7 @@ export type Database = {
           amount_kes: number
           approved_at?: string | null
           approved_by?: string | null
+          campaign_id: string
           category?: string
           created_at?: string
           description: string
@@ -316,6 +506,7 @@ export type Database = {
           amount_kes?: number
           approved_at?: string | null
           approved_by?: string | null
+          campaign_id?: string
           category?: string
           created_at?: string
           description?: string
@@ -326,10 +517,19 @@ export type Database = {
           statutory?: boolean
           vendor?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "expenses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       form_photos: {
         Row: {
+          campaign_id: string
           caption: string | null
           from_phone: string
           id: string
@@ -340,6 +540,7 @@ export type Database = {
           wa_message_id: string
         }
         Insert: {
+          campaign_id: string
           caption?: string | null
           from_phone: string
           id?: string
@@ -350,6 +551,7 @@ export type Database = {
           wa_message_id: string
         }
         Update: {
+          campaign_id?: string
           caption?: string | null
           from_phone?: string
           id?: string
@@ -361,6 +563,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "form_photos_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "form_photos_station_id_fkey"
             columns: ["station_id"]
             isOneToOne: false
@@ -371,6 +580,7 @@ export type Database = {
       }
       incidents: {
         Row: {
+          campaign_id: string
           created_at: string
           detail: string | null
           id: string
@@ -383,6 +593,7 @@ export type Database = {
           ward_id: string | null
         }
         Insert: {
+          campaign_id: string
           created_at?: string
           detail?: string | null
           id?: string
@@ -395,6 +606,7 @@ export type Database = {
           ward_id?: string | null
         }
         Update: {
+          campaign_id?: string
           created_at?: string
           detail?: string | null
           id?: string
@@ -407,6 +619,13 @@ export type Database = {
           ward_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "incidents_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "incidents_station_id_fkey"
             columns: ["station_id"]
@@ -427,6 +646,7 @@ export type Database = {
         Row: {
           alert_id: string | null
           body: string | null
+          campaign_id: string
           channel: string
           created_at: string
           destination: string
@@ -439,6 +659,7 @@ export type Database = {
         Insert: {
           alert_id?: string | null
           body?: string | null
+          campaign_id: string
           channel: string
           created_at?: string
           destination: string
@@ -451,6 +672,7 @@ export type Database = {
         Update: {
           alert_id?: string | null
           body?: string | null
+          campaign_id?: string
           channel?: string
           created_at?: string
           destination?: string
@@ -469,6 +691,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "listening_alert_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "listening_alert_events_mention_id_fkey"
             columns: ["mention_id"]
             isOneToOne: false
@@ -480,6 +709,7 @@ export type Database = {
       listening_alerts: {
         Row: {
           active: boolean
+          campaign_id: string
           channel: string
           created_at: string
           destination: string
@@ -495,6 +725,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          campaign_id: string
           channel?: string
           created_at?: string
           destination: string
@@ -510,6 +741,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          campaign_id?: string
           channel?: string
           created_at?: string
           destination?: string
@@ -524,6 +756,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "listening_alerts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "listening_alerts_topic_id_fkey"
             columns: ["topic_id"]
@@ -566,6 +805,7 @@ export type Database = {
       listening_mentions: {
         Row: {
           author: string | null
+          campaign_id: string
           created_at: string
           domain: string | null
           found_at: string
@@ -585,6 +825,7 @@ export type Database = {
         }
         Insert: {
           author?: string | null
+          campaign_id: string
           created_at?: string
           domain?: string | null
           found_at?: string
@@ -604,6 +845,7 @@ export type Database = {
         }
         Update: {
           author?: string | null
+          campaign_id?: string
           created_at?: string
           domain?: string | null
           found_at?: string
@@ -623,6 +865,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "listening_mentions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "listening_mentions_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
@@ -634,6 +883,7 @@ export type Database = {
       listening_topics: {
         Row: {
           active: boolean
+          campaign_id: string
           created_at: string
           exclude_terms: string[]
           id: string
@@ -646,6 +896,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          campaign_id: string
           created_at?: string
           exclude_terms?: string[]
           id?: string
@@ -658,6 +909,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          campaign_id?: string
           created_at?: string
           exclude_terms?: string[]
           id?: string
@@ -668,7 +920,15 @@ export type Database = {
           query?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "listening_topics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -676,6 +936,7 @@ export type Database = {
           author_handle: string | null
           body: string
           broadcast_id: string | null
+          campaign_id: string
           channel: string
           claim_id: string | null
           claimed_at: string | null
@@ -707,6 +968,7 @@ export type Database = {
           author_handle?: string | null
           body: string
           broadcast_id?: string | null
+          campaign_id: string
           channel?: string
           claim_id?: string | null
           claimed_at?: string | null
@@ -738,6 +1000,7 @@ export type Database = {
           author_handle?: string | null
           body?: string
           broadcast_id?: string | null
+          campaign_id?: string
           channel?: string
           claim_id?: string | null
           claimed_at?: string | null
@@ -773,6 +1036,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
@@ -798,6 +1068,7 @@ export type Database = {
       people: {
         Row: {
           building_id: string | null
+          campaign_id: string
           consent_call: boolean
           consent_sms: boolean
           consent_whatsapp: boolean
@@ -823,6 +1094,7 @@ export type Database = {
         }
         Insert: {
           building_id?: string | null
+          campaign_id: string
           consent_call?: boolean
           consent_sms?: boolean
           consent_whatsapp?: boolean
@@ -848,6 +1120,7 @@ export type Database = {
         }
         Update: {
           building_id?: string | null
+          campaign_id?: string
           consent_call?: boolean
           consent_sms?: boolean
           consent_whatsapp?: boolean
@@ -873,6 +1146,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "people_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "people_ward_id_fkey"
             columns: ["ward_id"]
             isOneToOne: false
@@ -886,6 +1166,7 @@ export type Database = {
           accuracy_m: number | null
           actor: string | null
           building_id: string | null
+          campaign_id: string
           channel: string | null
           client_id: string | null
           created_at: string
@@ -900,6 +1181,7 @@ export type Database = {
           accuracy_m?: number | null
           actor?: string | null
           building_id?: string | null
+          campaign_id: string
           channel?: string | null
           client_id?: string | null
           created_at?: string
@@ -914,6 +1196,7 @@ export type Database = {
           accuracy_m?: number | null
           actor?: string | null
           building_id?: string | null
+          campaign_id?: string
           channel?: string | null
           client_id?: string | null
           created_at?: string
@@ -926,6 +1209,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "person_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "person_events_person_id_fkey"
             columns: ["person_id"]
             isOneToOne: false
@@ -936,6 +1226,7 @@ export type Database = {
       }
       person_imports: {
         Row: {
+          campaign_id: string
           consent_count: number
           consent_source: string | null
           created_at: string
@@ -949,6 +1240,7 @@ export type Database = {
           updated_count: number
         }
         Insert: {
+          campaign_id: string
           consent_count?: number
           consent_source?: string | null
           created_at?: string
@@ -962,6 +1254,7 @@ export type Database = {
           updated_count?: number
         }
         Update: {
+          campaign_id?: string
           consent_count?: number
           consent_source?: string | null
           created_at?: string
@@ -974,10 +1267,19 @@ export type Database = {
           source?: string
           updated_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "person_imports_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       poll_invites: {
         Row: {
+          campaign_id: string
           channel: string
           id: string
           person_id: string
@@ -985,6 +1287,7 @@ export type Database = {
           sent_at: string
         }
         Insert: {
+          campaign_id: string
           channel?: string
           id?: string
           person_id: string
@@ -992,6 +1295,7 @@ export type Database = {
           sent_at?: string
         }
         Update: {
+          campaign_id?: string
           channel?: string
           id?: string
           person_id?: string
@@ -999,6 +1303,13 @@ export type Database = {
           sent_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "poll_invites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "poll_invites_person_id_fkey"
             columns: ["person_id"]
@@ -1017,6 +1328,7 @@ export type Database = {
       }
       poll_responses: {
         Row: {
+          campaign_id: string
           channel: string
           created_at: string
           free_text: string | null
@@ -1028,6 +1340,7 @@ export type Database = {
           weight: number
         }
         Insert: {
+          campaign_id: string
           channel?: string
           created_at?: string
           free_text?: string | null
@@ -1039,6 +1352,7 @@ export type Database = {
           weight?: number
         }
         Update: {
+          campaign_id?: string
           channel?: string
           created_at?: string
           free_text?: string | null
@@ -1050,6 +1364,13 @@ export type Database = {
           weight?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "poll_responses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "poll_responses_person_id_fkey"
             columns: ["person_id"]
@@ -1077,6 +1398,7 @@ export type Database = {
         Row: {
           agent_name: string | null
           agent_phone: string | null
+          campaign_id: string
           code: string
           created_at: string
           id: string
@@ -1092,6 +1414,7 @@ export type Database = {
         Insert: {
           agent_name?: string | null
           agent_phone?: string | null
+          campaign_id: string
           code: string
           created_at?: string
           id?: string
@@ -1107,6 +1430,7 @@ export type Database = {
         Update: {
           agent_name?: string | null
           agent_phone?: string | null
+          campaign_id?: string
           code?: string
           created_at?: string
           id?: string
@@ -1121,6 +1445,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "polling_stations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "polling_stations_ward_id_fkey"
             columns: ["ward_id"]
             isOneToOne: false
@@ -1132,6 +1463,7 @@ export type Database = {
       polls: {
         Row: {
           audience: Json
+          campaign_id: string
           channels: string[]
           closes_at: string | null
           code: string
@@ -1155,6 +1487,7 @@ export type Database = {
         }
         Insert: {
           audience?: Json
+          campaign_id: string
           channels?: string[]
           closes_at?: string | null
           code: string
@@ -1178,6 +1511,7 @@ export type Database = {
         }
         Update: {
           audience?: Json
+          campaign_id?: string
           channels?: string[]
           closes_at?: string | null
           code?: string
@@ -1199,7 +1533,15 @@ export type Database = {
           updated_at?: string
           weighting?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "polls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1281,6 +1623,7 @@ export type Database = {
       }
       social_accounts: {
         Row: {
+          campaign_id: string
           created_at: string
           display_name: string | null
           external_id: string | null
@@ -1294,6 +1637,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campaign_id: string
           created_at?: string
           display_name?: string | null
           external_id?: string | null
@@ -1307,6 +1651,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campaign_id?: string
           created_at?: string
           display_name?: string | null
           external_id?: string | null
@@ -1319,10 +1664,19 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stream_results: {
         Row: {
+          campaign_id: string
           channel: string
           corrected: boolean
           filed_at: string
@@ -1337,6 +1691,7 @@ export type Database = {
           votes: Json
         }
         Insert: {
+          campaign_id: string
           channel: string
           corrected?: boolean
           filed_at?: string
@@ -1351,6 +1706,7 @@ export type Database = {
           votes: Json
         }
         Update: {
+          campaign_id?: string
           channel?: string
           corrected?: boolean
           filed_at?: string
@@ -1365,6 +1721,13 @@ export type Database = {
           votes?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "stream_results_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "stream_results_station_id_fkey"
             columns: ["station_id"]
@@ -1397,6 +1760,7 @@ export type Database = {
       }
       wards: {
         Row: {
+          campaign_id: string
           constituency: string
           created_at: string
           id: string
@@ -1409,6 +1773,7 @@ export type Database = {
           target_votes: number
         }
         Insert: {
+          campaign_id: string
           constituency: string
           created_at?: string
           id?: string
@@ -1421,6 +1786,7 @@ export type Database = {
           target_votes?: number
         }
         Update: {
+          campaign_id?: string
           constituency?: string
           created_at?: string
           id?: string
@@ -1432,7 +1798,15 @@ export type Database = {
           supporters?: number
           target_votes?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wards_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_webhook_events: {
         Row: {
@@ -1503,6 +1877,22 @@ export type Database = {
         Returns: string
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
+      can_admit: {
+        Args: { _campaign: string; _user_id: string }
+        Returns: boolean
+      }
+      channel_campaign: { Args: never; Returns: string }
+      create_campaign: {
+        Args: {
+          _candidate: string
+          _host: string
+          _level: string
+          _name: string
+          _seat: string
+          _slug: string
+        }
+        Returns: string
+      }
       file_stream_result: {
         Args: {
           _channel: string
@@ -1514,6 +1904,7 @@ export type Database = {
         }
         Returns: Json
       }
+      focus_campaign: { Args: { _campaign: string }; Returns: undefined }
       groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
@@ -1539,12 +1930,23 @@ export type Database = {
         Args: { _audience: Json; _segment: string; _ward_id: string }
         Returns: boolean
       }
+      invite_member: {
+        Args: {
+          _campaign: string
+          _email: string
+          _role: Database["public"]["Enums"]["campaign_role"]
+        }
+        Returns: string
+      }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
       launch_poll: {
         Args: { _poll_id: string; _sms_body: string }
         Returns: Json
       }
+      my_campaign: { Args: never; Returns: string }
+      my_campaign_role: { Args: never; Returns: string }
       outbox_block_reason: {
         Args: {
           _channel: string
@@ -1619,10 +2021,12 @@ export type Database = {
         }
         Returns: Json
       }
+      remove_member: { Args: { _user_id: string }; Returns: undefined }
+      request_campaign_access: { Args: { _slug: string }; Returns: string }
       set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
+          _role: Database["public"]["Enums"]["campaign_role"]
           _user_id: string
         }
         Returns: undefined
@@ -1662,6 +2066,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "organiser" | "agent" | "viewer"
+      campaign_role: "candidate" | "manager" | "organiser" | "agent" | "pending"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1790,6 +2195,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "organiser", "agent", "viewer"],
+      campaign_role: ["candidate", "manager", "organiser", "agent", "pending"],
     },
   },
 } as const

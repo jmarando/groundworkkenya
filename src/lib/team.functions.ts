@@ -1,22 +1,23 @@
-// Who is on the team, and who is waiting at the door.
+// Who is on this campaign's team, and who is waiting at the door.
 //
-// Signup is open, so anyone can create an account. An account grants nothing:
-// a new user holds the 'viewer' marker, which is_team_member() excludes, and
-// sees a holding screen until an admin gives them a role here.
+// Every person belongs to one campaign. Someone who signs in on a campaign's
+// address waits there ('pending') until the candidate or campaign manager
+// admits them. People can also be invited by email before they sign up.
 
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const ROLES = ["admin", "manager", "organiser", "agent"] as const;
+export const ROLES = ["candidate", "manager", "organiser", "agent"] as const;
+/** "viewer" is a waiting (pending) member with no access. */
 export type Role = (typeof ROLES)[number] | "viewer";
 
 export const ROLE_COPY: Record<Role, { name: string; blurb: string }> = {
-  admin: { name: "Admin", blurb: "Everything, including money and who gets in." },
-  manager: { name: "Manager", blurb: "Everything except admitting people." },
-  organiser: { name: "Organiser", blurb: "People, poll results, inbox and field. No finance." },
-  agent: { name: "Agent", blurb: "Field work: walk lists and canvassing." },
-  viewer: { name: "Waiting", blurb: "Signed up, not yet admitted. Sees nothing." },
+  candidate: { name: "Candidate", blurb: "Everything, including money and who gets in." },
+  manager: { name: "Campaign manager", blurb: "Everything, including money and who gets in." },
+  organiser: { name: "Organiser", blurb: "People, polls, inbox and field. No finance." },
+  agent: { name: "Field agent", blurb: "Field work: walk lists and canvassing." },
+  viewer: { name: "Waiting", blurb: "Signed in, not yet admitted. Sees nothing." },
 };
 
 export type Member = {
@@ -28,46 +29,74 @@ export type Member = {
   joinedAt: string | null;
 };
 
-const RANK: Record<Role, number> = { admin: 4, manager: 3, organiser: 2, agent: 1, viewer: 0 };
+export type Invite = { id: string; email: string; role: Role; createdAt: string };
+
+const RANK: Record<Role, number> = { candidate: 4, manager: 3, organiser: 2, agent: 1, viewer: 0 };
 
 export const getTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ canManage: boolean; members: Member[] }> => {
-    const sb = context.supabase;
-    const { data: mine } = await sb.from("user_roles").select("role").eq("user_id", context.userId);
-    const canManage = (mine ?? []).some((r) => r.role === "admin");
-    // Only admins can read everyone's role, so only admins get a list that
-    // is not misleading.
-    if (!canManage) return { canManage, members: [] };
+  .handler(
+    async ({
+      context,
+    }): Promise<{
+      canManage: boolean;
+      campaignId: string | null;
+      members: Member[];
+      invites: Invite[];
+    }> => {
+      const sb = context.supabase;
+      const [{ data: campaignId }, { data: myRole }] = await Promise.all([
+        sb.rpc("my_campaign"),
+        sb.rpc("my_campaign_role"),
+      ]);
+      const canManage = myRole === "super" || myRole === "candidate" || myRole === "manager";
+      if (!canManage || !campaignId) {
+        return { canManage: false, campaignId: null, members: [], invites: [] };
+      }
 
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
-      sb.from("profiles").select("user_id, full_name, email, created_at"),
-      sb.from("user_roles").select("user_id, role"),
-    ]);
+      const [{ data: rows }, { data: invites }] = await Promise.all([
+        sb
+          .from("campaign_members")
+          .select("user_id, role, created_at")
+          .eq("campaign_id", campaignId as string),
+        sb
+          .from("campaign_invites")
+          .select("id, email, role, created_at")
+          .eq("campaign_id", campaignId as string)
+          .order("created_at", { ascending: false }),
+      ]);
+      const ids = (rows ?? []).map((r) => r.user_id);
+      const { data: profiles } = ids.length
+        ? await sb.from("profiles").select("user_id, full_name, email").in("user_id", ids)
+        : { data: [] };
+      const profileOf = new Map((profiles ?? []).map((p) => [p.user_id, p]));
 
-    const roleOf = new Map<string, Role>();
-    for (const r of roles ?? []) {
-      const role = r.role as Role;
-      const prev = roleOf.get(r.user_id);
-      if (!prev || RANK[role] > RANK[prev]) roleOf.set(r.user_id, role);
-    }
-
-    const members = (profiles ?? []).map((p) => ({
-      userId: p.user_id,
-      name: p.full_name,
-      email: p.email,
-      role: roleOf.get(p.user_id) ?? "viewer",
-      isSelf: p.user_id === context.userId,
-      joinedAt: p.created_at,
-    }));
-    members.sort(
-      (a, b) =>
-        Number(a.role !== "viewer") - Number(b.role !== "viewer") ||
-        RANK[b.role] - RANK[a.role] ||
-        (a.name ?? a.email ?? "").localeCompare(b.name ?? b.email ?? ""),
-    );
-    return { canManage, members };
-  });
+      const members: Member[] = (rows ?? []).map((r) => ({
+        userId: r.user_id,
+        name: profileOf.get(r.user_id)?.full_name ?? null,
+        email: profileOf.get(r.user_id)?.email ?? null,
+        role: r.role === "pending" ? "viewer" : (r.role as Role),
+        isSelf: r.user_id === context.userId,
+        joinedAt: r.created_at,
+      }));
+      members.sort(
+        (a, b) =>
+          RANK[b.role] - RANK[a.role] ||
+          (a.name ?? a.email ?? "").localeCompare(b.name ?? b.email ?? ""),
+      );
+      return {
+        canManage,
+        campaignId: campaignId as string,
+        members,
+        invites: (invites ?? []).map((i) => ({
+          id: i.id,
+          email: i.email,
+          role: i.role as Role,
+          createdAt: i.created_at,
+        })),
+      };
+    },
+  );
 
 export const setMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -77,12 +106,42 @@ export const setMemberRole = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }) => {
-    // One database call: the role check, the last-admin guard and the swap
-    // happen together, so an admin demoting themselves is never left roleless.
+    // The role check, the last-candidate guard and the change happen together
+    // in the database.
     const { error } = await context.supabase.rpc("set_member_role", {
       _user_id: data.userId,
-      _role: data.role,
+      _role: data.role === "viewer" ? "pending" : data.role,
     });
-    if (error) throw new Error(error.message || "Only an admin can change roles.");
+    if (error) throw new Error(error.message || "Could not change that role.");
     return { ok: true };
+  });
+
+export const removeMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { userId: string }) => {
+    if (!input?.userId) throw new Error("Which person?");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("remove_member", { _user_id: data.userId });
+    if (error) throw new Error(error.message || "Could not remove them.");
+    return { ok: true };
+  });
+
+export const inviteMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { campaignId: string; email: string; role: Role }) => {
+    if (!input?.campaignId) throw new Error("Which campaign?");
+    if (!input.email?.includes("@")) throw new Error("Add their email.");
+    if (input.role === "viewer" || !(input.role in RANK)) throw new Error("Pick a role.");
+    return { ...input, email: input.email.trim().toLowerCase() };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("invite_member", {
+      _campaign: data.campaignId,
+      _email: data.email,
+      _role: data.role as Exclude<Role, "viewer">,
+    });
+    if (error) throw new Error(error.message || "Could not invite them.");
+    return { result: result as "added" | "invited" };
   });
