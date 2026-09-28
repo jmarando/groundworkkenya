@@ -607,7 +607,8 @@ figure { margin: 0; }
 .msg--out { background:var(--gw-ink); color:var(--gw-paper); border-bottom-right-radius:4px; align-self:flex-end; }
 .msg--out small { color:hsl(150 16% 70%); }
 .msg--note { align-self:center; max-width:90%; background:hsl(38 92% 56% / .12); border:1px dashed hsl(38 92% 40% / .4); font-size:12px; border-radius:10px; }
-.th-compose { border-top:1px solid var(--border); padding:14px 20px 16px; display:flex; flex-direction:column; gap:10px; }
+.th-compose { border-top:2px solid var(--gw-ink); padding:14px 20px 16px; display:flex; flex-direction:column; gap:10px; background:var(--card); }
+.th-compose-label { font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-foreground); font-weight:600; }
 .suggest { border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-size:12.5px; background:var(--card); }
 .suggest .eyebrow { font-size:9.5px; display:block; margin-bottom:4px; }
 .th-compose textarea { width:100%; min-height:64px; border:1px solid var(--border); border-radius:10px; padding:10px 12px; font:inherit; font-size:13px; resize:vertical; background:#fff; color:var(--foreground); }
