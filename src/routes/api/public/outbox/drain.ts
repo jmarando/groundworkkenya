@@ -4,6 +4,8 @@
 // In dry run the console already settles messages as they are written, so
 // this only matters once channels go live: then it is what sends, and it must
 // be scheduled (every minute is sensible) before CHANNELS_LIVE is switched on.
+// A run stops starting new requests after 40 seconds, so give the scheduler's
+// HTTP call a timeout of about a minute.
 
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -22,7 +24,7 @@ export const Route = createFileRoute("/api/public/outbox/drain")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { processOutbox } = await import("@/lib/outbox.server");
-        return Response.json(await processOutbox(supabaseAdmin, 500));
+        return Response.json(await processOutbox(supabaseAdmin, 1000));
       },
     },
   },

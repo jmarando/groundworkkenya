@@ -24,12 +24,16 @@ export const Route = createFileRoute("/api/public/sms/delivery")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+        // Sent, Submitted and Buffered are on the way; these are final.
         const done = status === "success" || status === "delivered";
-        const rejected = status === "failed" || status === "rejected";
+        const rejected = ["failed", "rejected", "absentsubscriber", "expired"].includes(status);
         const patch = done
           ? { status: "delivered", delivered_at: new Date().toISOString() }
           : rejected
-            ? { status: "failed", error: `Delivery ${status}: ${body["failureReason"] ?? ""}`.trim() }
+            ? {
+                status: "failed",
+                error: `Delivery ${status}: ${body["failureReason"] ?? ""}`.trim(),
+              }
             : null;
         if (patch) {
           await supabaseAdmin.from("messages").update(patch).eq("provider_ref", ref);

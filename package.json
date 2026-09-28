@@ -9,7 +9,8 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "npx -y tsx --tsconfig tsconfig.json tests/demo.test.ts && npx -y tsx --tsconfig tsconfig.json tests/outbox.test.ts && bash tests/sql/run.sh"
   },
   "overrides": {
     "rolldown": "1.2.1"

@@ -609,6 +609,7 @@ export type Database = {
           body: string
           broadcast_id: string | null
           channel: string
+          claim_id: string | null
           claimed_at: string | null
           conversation_id: string | null
           cost_kes: number
@@ -639,6 +640,7 @@ export type Database = {
           body: string
           broadcast_id?: string | null
           channel?: string
+          claim_id?: string | null
           claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
@@ -669,6 +671,7 @@ export type Database = {
           body?: string
           broadcast_id?: string | null
           channel?: string
+          claim_id?: string | null
           claimed_at?: string | null
           conversation_id?: string | null
           cost_kes?: number
@@ -1398,6 +1401,15 @@ export type Database = {
         }
         Returns: string
       }
+      outbox_mark_submitting: {
+        Args: { _claim: string; _ids: string[] }
+        Returns: string[]
+      }
+      outbox_record: { Args: { _claim: string; _results: Json }; Returns: number }
+      outbox_release: {
+        Args: { _claim: string; _ids: string[] }
+        Returns: number
+      }
       parse_import_rows: {
         Args: { _consent_stated: boolean; _rows: Json }
         Returns: {
@@ -1413,7 +1425,7 @@ export type Database = {
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
       process_outbox: {
-        Args: { _limit?: number; _live?: boolean }
+        Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
         Returns: Json
       }
       queue_broadcast: {

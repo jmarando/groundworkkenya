@@ -24,36 +24,58 @@ export async function sendWhatsAppText(phone: string, body: string): Promise<WaS
   const waKey = process.env["WHATSAPP_API_KEY"];
   if (!lovableKey || !waKey) return { ok: false, error: "WhatsApp is not connected." };
   const to = phone.replace(/\D/g, "");
-  const res = await fetch(`${GATEWAY_URL}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": waKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to,
-      type: "text",
-      text: { body: body.slice(0, 4096) },
-    }),
-  });
-  const text = await res.text();
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(`${GATEWAY_URL}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": waKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { body: body.slice(0, 4096) },
+      }),
+    });
+    text = await res.text();
+  } catch (e) {
+    // The reply may or may not have gone; say so rather than leave it 'sending'.
+    return {
+      ok: false,
+      error:
+        `Could not reach WhatsApp, so it may not have been sent: ${(e as Error).message}`.slice(
+          0,
+          500,
+        ),
+    };
+  }
   if (!res.ok) {
     console.error(`WhatsApp send failed [${res.status}]: ${text}`);
     let msg = text;
     try {
       const j = JSON.parse(text) as { error?: { message?: string; code?: number } };
       if (j.error?.code === 131047)
-        msg = "More than 24 hours since they last wrote. WhatsApp only allows an approved template now.";
+        msg =
+          "More than 24 hours since they last wrote. WhatsApp only allows an approved template now.";
       else if (j.error?.message) msg = j.error.message;
     } catch {
       /* keep raw */
     }
     return { ok: false, error: `WhatsApp refused it (${res.status}): ${msg}`.slice(0, 500) };
   }
-  const id = (JSON.parse(text) as { messages?: { id?: string }[] }).messages?.[0]?.id;
-  return id ? { ok: true, id } : { ok: false, error: "WhatsApp gave no message id." };
+  let id: string | undefined;
+  try {
+    id = (JSON.parse(text) as { messages?: { id?: string }[] }).messages?.[0]?.id;
+  } catch {
+    /* no id to keep */
+  }
+  return id
+    ? { ok: true, id }
+    : { ok: false, error: "WhatsApp accepted it but gave no message id." };
 }
 
 /* ------------------------------------------------------------ inbound */
@@ -141,7 +163,12 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
       if (conversationId) {
         const { error } = await sb
           .from("conversations")
-          .update({ unread: true, status: "open", last_message_at: at, snippet: body.slice(0, 280) })
+          .update({
+            unread: true,
+            status: "open",
+            last_message_at: at,
+            snippet: body.slice(0, 280),
+          })
           .eq("id", conversationId);
         if (error) throw new Error(error.message);
       } else {
@@ -182,21 +209,31 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
       });
       if (msgErr && !msgErr.message.includes("duplicate")) throw new Error(msgErr.message);
 
+      // Same records as an SMS STOP or START, so the person's history reads the same.
       if (OPT_OUT.test(body) && !person.opted_out) {
-        await sb.from("people").update({ opted_out: true }).eq("id", person.id);
         await sb
-          .from("person_events")
-          .insert({ person_id: person.id, kind: "opted_out", channel: "whatsapp", detail: "Replied STOP on WhatsApp" });
-      } else if (OPT_IN.test(body) && person.opted_out) {
-        await sb.from("people").update({ opted_out: false, consent_whatsapp: true }).eq("id", person.id);
+          .from("people")
+          .update({ opted_out: true, opted_out_at: new Date().toISOString() })
+          .eq("id", person.id);
+        await sb.from("person_events").insert({
+          person_id: person.id,
+          kind: "opt_out",
+          channel: "whatsapp",
+          detail: "Replied STOP on WhatsApp",
+        });
+      } else if (OPT_IN.test(body)) {
         await sb
-          .from("person_events")
-          .insert({ person_id: person.id, kind: "consent_given", channel: "whatsapp", detail: "Replied START on WhatsApp" });
+          .from("people")
+          .update({ opted_out: false, opted_out_at: null, consent_whatsapp: true })
+          .eq("id", person.id);
+        await sb.from("person_events").insert({
+          person_id: person.id,
+          kind: "opt_in",
+          channel: "whatsapp",
+          detail: "Replied START on WhatsApp",
+        });
       }
-      await sb
-        .from("people")
-        .update({ last_contacted_at: at })
-        .eq("id", person.id);
+      await sb.from("people").update({ last_contacted_at: at }).eq("id", person.id);
     }
   }
 
@@ -248,14 +285,21 @@ export async function processEventRow(
       .update({
         attempts: row.attempts + 1,
         processed_at: done || give_up ? new Date().toISOString() : null,
-        processing_error: done ? null : give_up ? "No matching message after 20 tries." : "Waiting for message id.",
+        processing_error: done
+          ? null
+          : give_up
+            ? "No matching message after 20 tries."
+            : "Waiting for message id.",
       })
       .eq("id", row.id);
     return true;
   } catch (e) {
     await sb
       .from("whatsapp_webhook_events")
-      .update({ attempts: row.attempts + 1, processing_error: String((e as Error).message).slice(0, 500) })
+      .update({
+        attempts: row.attempts + 1,
+        processing_error: String((e as Error).message).slice(0, 500),
+      })
       .eq("id", row.id);
     return false;
   }
