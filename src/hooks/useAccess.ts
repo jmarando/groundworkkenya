@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
-import { campaignSlugFromHost, PRINCIPAL_ROLES, TEAM_ROLES, type MyRole } from "@/lib/access";
+import { currentCampaignSlug, PRINCIPAL_ROLES, TEAM_ROLES, type MyRole } from "@/lib/access";
 
 export type Campaign = {
   id: string;
@@ -41,7 +41,7 @@ export function useAccess() {
 
       // On sakaja.groundwork.ke and the like: ask to join (or, for the super
       // admin, open) that campaign. Harmless if already a member.
-      const slug = campaignSlugFromHost(window.location.host);
+      const slug = currentCampaignSlug();
       let wrongCampaign = false;
       if (slug) {
         const { data: result } = await supabase.rpc("request_campaign_access", { _slug: slug });
