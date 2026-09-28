@@ -14,3 +14,4 @@ Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above 
 - Page access per role lives in `canOpen()` in src/lib/access.ts (menu and page guard both use it); agents get field pages only. Why: one list, so the menu and the pages never disagree.
 - Campaign subdomains render a campaign-first home and sign-in experience from the hostname; the root domain remains the general Groundwork site. Why: each team needs a clear, isolated entrance without browser state leaking branding across campaigns.
 - Local Vite preview allows `groundwork.ke` and its subdomains. Why: hostname-based campaign screens must be testable against the actual domain shape.
+- The root head provides shared PNG/ICO Chrome favicons and a web manifest using `/brand/` icons. Why: every campaign host and the main site need the same reliable browser-tab and installed-app identity.
