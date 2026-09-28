@@ -9,7 +9,13 @@ import { fillTemplate, WA_TEMPLATES } from "@/lib/wa-templates";
 
 const nf = new Intl.NumberFormat("en-KE");
 
-export function ChannelTabs({ value, onChange }: { value: "sms" | "wa"; onChange: (v: "sms" | "wa") => void }) {
+export function ChannelTabs({
+  value,
+  onChange,
+}: {
+  value: "sms" | "wa";
+  onChange: (v: "sms" | "wa") => void;
+}) {
   return (
     <div className="bc-tabs" role="tablist" aria-label="Channel">
       {(["sms", "wa"] as const).map((c) => (
@@ -56,7 +62,11 @@ export function WhatsAppComposer({
     queryFn: () => fetchEst({ data: audience }),
   });
   const recipients = est?.reachable ?? 0;
-  const preview = fillTemplate(t.text, ["Mary", est?.campaign ?? "…", ...vals.map((v, i) => v || `[${t.fields[i].label}]`)]);
+  const preview = fillTemplate(t.text, [
+    "Mary",
+    est?.campaign ?? "…",
+    ...vals.map((v, i) => v || `[${t.fields[i].label}]`),
+  ]);
 
   const problem = vals.some((v) => !v.trim())
     ? "Fill in every blank."
@@ -81,7 +91,10 @@ export function WhatsAppComposer({
         if (r.sent === 0) break;
       }
       if (sent) toast.success(`Sent on WhatsApp to ${nf.format(sent)} people.`);
-      if (failed) toast.error(`${nf.format(failed)} could not be sent.`, { description: lastError ?? undefined });
+      if (failed)
+        toast.error(`${nf.format(failed)} could not be sent.`, {
+          description: lastError ?? undefined,
+        });
       if (!sent && !failed) toast.info("Everyone in this audience already got it.");
       await qc.invalidateQueries({ queryKey: ["broadcast"] });
       await qc.invalidateQueries({ queryKey: ["inbox"] });
@@ -100,7 +113,9 @@ export function WhatsAppComposer({
         <div className="pb-head">
           <div>
             <span className="eyebrow">Broadcast · WhatsApp</span>
-            <h2 id="wa-title">{reviewing ? "Check it, then send." : "Pick an approved message."}</h2>
+            <h2 id="wa-title">
+              {reviewing ? "Check it, then send." : "Pick an approved message."}
+            </h2>
           </div>
           <button className="btn btn--ghost btn--sm" type="button" onClick={onClose}>
             Close
@@ -110,10 +125,15 @@ export function WhatsAppComposer({
           <ChannelTabs value="wa" onChange={onChannel} />
           <div className="bc-audience">
             <span className="eyebrow">To</span>
-            <p><b>{describe}</b></p>
+            <p>
+              <b>{describe}</b>
+            </p>
             <p className="f-note">
               {est ? (
-                <><b>{nf.format(recipients)} have agreed to WhatsApp</b> and will get it. Opted-out people are skipped.</>
+                <>
+                  <b>{nf.format(recipients)} have agreed to WhatsApp</b> and will get it. Opted-out
+                  people are skipped.
+                </>
               ) : (
                 "Counting the audience…"
               )}
@@ -126,7 +146,9 @@ export function WhatsAppComposer({
                 <span>Message</span>
                 <select value={tpl} onChange={(e) => setTpl(e.target.value)}>
                   {WA_TEMPLATES.map((x) => (
-                    <option key={x.name} value={x.name}>{x.label}</option>
+                    <option key={x.name} value={x.name}>
+                      {x.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -152,26 +174,43 @@ export function WhatsAppComposer({
             <p>{preview}</p>
           </div>
           <p className="f-note">
-            Wording is fixed by Meta's approval. Each person's first name and the campaign name are filled in automatically.
+            Wording is fixed by Meta's approval. Each person's first name and the campaign name are
+            filled in automatically.
           </p>
         </div>
         <div className="pb-foot">
           <p className="f-note" aria-live="polite">
             {busy && progress
               ? `Sending… ${nf.format(progress.sent)} sent${progress.failed ? `, ${nf.format(progress.failed)} failed` : ""}`
-              : problem ?? `${nf.format(recipients)} ${recipients === 1 ? "person" : "people"} · billed by Meta per message`}
+              : (problem ??
+                `${nf.format(recipients)} ${recipients === 1 ? "person" : "people"} · billed by Meta per message`)}
           </p>
           {reviewing ? (
             <div className="bc-actions">
-              <button className="btn btn--ghost" type="button" disabled={busy} onClick={() => setReviewing(false)}>
+              <button
+                className="btn btn--ghost"
+                type="button"
+                disabled={busy}
+                onClick={() => setReviewing(false)}
+              >
                 Edit
               </button>
-              <button className="btn btn--primary" type="button" disabled={Boolean(problem) || busy} onClick={go}>
+              <button
+                className="btn btn--primary"
+                type="button"
+                disabled={Boolean(problem) || busy}
+                onClick={go}
+              >
                 {busy ? "Sending…" : `Send to ${nf.format(recipients)}`}
               </button>
             </div>
           ) : (
-            <button className="btn btn--primary" type="button" disabled={Boolean(problem)} onClick={() => setReviewing(true)}>
+            <button
+              className="btn btn--primary"
+              type="button"
+              disabled={Boolean(problem)}
+              onClick={() => setReviewing(true)}
+            >
               Review
             </button>
           )}

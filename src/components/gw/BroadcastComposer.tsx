@@ -32,7 +32,12 @@ export function BroadcastComposer({
   const [channel, setChannel] = useState<"sms" | "wa">("sms");
   if (channel === "wa") {
     return (
-      <WhatsAppComposer audience={audience} describe={describe} onChannel={setChannel} onClose={onClose} />
+      <WhatsAppComposer
+        audience={audience}
+        describe={describe}
+        onChannel={setChannel}
+        onClose={onClose}
+      />
     );
   }
   return (

@@ -138,9 +138,10 @@ export async function sendWhatsAppTemplate(
   } catch {
     /* none */
   }
-  return id ? { ok: true, id } : { ok: false, error: "WhatsApp accepted it but gave no message id." };
+  return id
+    ? { ok: true, id }
+    : { ok: false, error: "WhatsApp accepted it but gave no message id." };
 }
-
 
 /** A reply Groundwork writes itself, kept in the conversation like any other. */
 async function replyAutomatically(

@@ -77,7 +77,11 @@ async function assertCanSend(sb: Sb, userId: string) {
 
 async function campaignName(sb: Sb): Promise<string> {
   const { data: id } = await sb.rpc("my_campaign");
-  const { data } = await sb.from("campaigns").select("name, candidate").eq("id", id).maybeSingle();
+  const { data } = await sb
+    .from("campaigns")
+    .select("name, candidate")
+    .eq("id", id ?? "")
+    .maybeSingle();
   return (data?.candidate || data?.name || "Groundwork") as string;
 }
 
@@ -89,7 +93,12 @@ export const estimateWhatsApp = createServerFn({ method: "POST" })
     return { reachable: people.length, campaign: await campaignName(context.supabase) };
   });
 
-export type WaBatchResult = { sent: number; failed: number; remaining: number; lastError: string | null };
+export type WaBatchResult = {
+  sent: number;
+  failed: number;
+  remaining: number;
+  lastError: string | null;
+};
 
 export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -102,7 +111,11 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
     }) => {
       const t = WA_TEMPLATES.find((x) => x.name === input?.template);
       if (!t) throw new Error("Pick a template.");
-      const fields = (input.fields ?? []).map((f) => String(f ?? "").trim().slice(0, 200));
+      const fields = (input.fields ?? []).map((f) =>
+        String(f ?? "")
+          .trim()
+          .slice(0, 200),
+      );
       if (fields.length !== t.fields.length || fields.some((f) => !f)) {
         throw new Error("Fill in every blank in the template.");
       }
