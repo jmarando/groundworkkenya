@@ -792,9 +792,34 @@ export type WarRoomData = {
   }[];
   flags: { id: string; title: string; detail: string; at: string }[];
   unstaffedList: { code: string; name: string; ward: string | null; registered: number }[];
+  forms: {
+    streamsFiled: number;
+    /** Streams with a photo of their form. */
+    photos: number;
+    /** Photos an agent sent without saying which stream. */
+    photosUnplaced: number;
+    recent: {
+      id: string;
+      code: string;
+      station: string;
+      stream: number;
+      at: string;
+      total: number;
+      photo: boolean;
+      corrected: boolean;
+      overRegister: boolean;
+    }[];
+  };
+  ballot: { id: string; position: number; name: string; party: string | null; ours: boolean }[];
+  /** Forms are filed: candidates can be renamed, not added, removed or moved. */
+  ballotLocked: boolean;
+  canEditBallot: boolean;
 };
 
 type StationResults = Record<string, unknown> | null;
+
+/** A filed stream with no photo of its form after this long is flagged. */
+const PHOTO_GRACE_MS = 30 * 60_000;
 
 function candidateVotes(results: StationResults): Record<string, number> {
   if (!results || typeof results !== "object") return {};
@@ -813,10 +838,26 @@ export const getWarRoom = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WarRoomData> => {
     const sb = context.supabase;
-    const [{ data: stations }, { data: wards }, { data: incidents }] = await Promise.all([
+    const [
+      { data: stations },
+      { data: wards },
+      { data: incidents },
+      { data: filings },
+      { data: photos },
+      { data: ballot },
+      { data: roles },
+    ] = await Promise.all([
       sb.from("polling_stations").select("*").order("code"),
       sb.from("wards").select("id, name, constituency"),
       sb.from("incidents").select("*").order("occurred_at", { ascending: false }),
+      sb
+        .from("stream_results")
+        .select("id, station_id, stream, valid_votes, rejected, corrected, over_register, filed_at")
+        .is("superseded_at", null)
+        .order("filed_at", { ascending: false }),
+      sb.from("form_photos").select("station_id, stream"),
+      sb.from("ballot_candidates").select("id, position, name, party, ours").order("position"),
+      sb.from("user_roles").select("role").eq("user_id", context.userId),
     ]);
 
     const st = stations ?? [];
@@ -884,6 +925,44 @@ export const getWarRoom = createServerFn({ method: "GET" })
         });
       }
     }
+
+    const stationById = new Map(st.map((x) => [x.id, x]));
+    const photoKeys = new Set(
+      (photos ?? []).filter((p) => p.stream !== null).map((p) => `${p.station_id}/${p.stream}`),
+    );
+    const filed = filings ?? [];
+    const nowMs = Date.now();
+    for (const f of filed) {
+      const station = stationById.get(f.station_id);
+      if (!station) continue;
+      const where = `${station.name} · ${station.code} stream ${f.stream}`;
+      if (f.over_register) {
+        flags.push({
+          id: `${f.id}-over`,
+          title: "Streams together above the register",
+          detail: `${where} — ${station.registered_voters ?? 0} registered; check every stream's form`,
+          at: f.filed_at,
+        });
+      }
+      if (f.corrected) {
+        flags.push({
+          id: `${f.id}-corrected`,
+          title: "Form corrected after filing",
+          detail: `${where} — the agent filed it again; compare with the photo`,
+          at: f.filed_at,
+        });
+      }
+      const waited = nowMs - Date.parse(f.filed_at);
+      if (!photoKeys.has(`${f.station_id}/${f.stream}`) && waited > PHOTO_GRACE_MS) {
+        flags.push({
+          id: `${f.id}-photo`,
+          title: "No photo of the form yet",
+          detail: `${where} — counts filed ${Math.round(waited / 60_000)} min ago`,
+          at: f.filed_at,
+        });
+      }
+    }
+    flags.sort((a, b) => b.at.localeCompare(a.at));
 
     const ranked = [...totals.entries()]
       .map(([name, votes]) => ({ name, votes }))
@@ -958,6 +1037,34 @@ export const getWarRoom = createServerFn({ method: "GET" })
         occurredAt: i.occurred_at as string,
       })),
       flags: flags.slice(0, 8),
+      forms: {
+        streamsFiled: filed.length,
+        photos: filed.filter((f) => photoKeys.has(`${f.station_id}/${f.stream}`)).length,
+        photosUnplaced: (photos ?? []).filter((p) => p.stream === null).length,
+        recent: filed.slice(0, 10).map((f) => {
+          const station = stationById.get(f.station_id);
+          return {
+            id: f.id,
+            code: station?.code ?? "—",
+            station: station?.name ?? "—",
+            stream: f.stream,
+            at: f.filed_at,
+            total: f.valid_votes + f.rejected,
+            photo: photoKeys.has(`${f.station_id}/${f.stream}`),
+            corrected: f.corrected,
+            overRegister: f.over_register,
+          };
+        }),
+      },
+      ballot: (ballot ?? []).map((b) => ({
+        id: b.id,
+        position: b.position,
+        name: b.name,
+        party: b.party,
+        ours: b.ours,
+      })),
+      ballotLocked: filed.length > 0,
+      canEditBallot: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
       unstaffedList: st
         .filter((s) => s.status !== "confirmed")
         .sort((a, b) => (b.registered_voters ?? 0) - (a.registered_voters ?? 0))
@@ -1176,6 +1283,8 @@ export const getCanvassing = createServerFn({ method: "GET" })
 /* ------------------------------------------------------- agents & stipends */
 
 export type AgentsData = {
+  /** Admins and managers put agents on stations. */
+  canAssign: boolean;
   stations: { total: number; confirmed: number; unstaffed: number; registered: number };
   money: { pending: number; approved: number; paid: number; total: number };
   counts: { agents: number; coordinators: number; lines: number };
@@ -1223,11 +1332,13 @@ export const getAgents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AgentsData> => {
     const sb = context.supabase;
-    const [{ data: stipends }, { data: stations }, { data: wards }] = await Promise.all([
-      sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
-      sb.from("polling_stations").select("*").order("code"),
-      sb.from("wards").select("id, name, constituency").order("name"),
-    ]);
+    const [{ data: stipends }, { data: stations }, { data: wards }, { data: roles }] =
+      await Promise.all([
+        sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
+        sb.from("polling_stations").select("*").order("code"),
+        sb.from("wards").select("id, name, constituency").order("name"),
+        sb.from("user_roles").select("role").eq("user_id", context.userId),
+      ]);
 
     const sp = stipends ?? [];
     const st = stations ?? [];
@@ -1252,6 +1363,7 @@ export const getAgents = createServerFn({ method: "GET" })
     });
 
     return {
+      canAssign: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
       stations: {
         total: st.length,
         confirmed: st.filter((s) => s.status === "confirmed").length,

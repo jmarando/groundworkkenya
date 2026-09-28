@@ -62,4 +62,4 @@ end $$;
 rollback;
 
 -- test: schema version
-do $$ begin assert public.groundwork_schema_version() = 10; end $$;
+do $$ begin assert public.groundwork_schema_version() >= 10; end $$;

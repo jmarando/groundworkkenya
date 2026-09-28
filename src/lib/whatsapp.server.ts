@@ -7,6 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/integrations/supabase/types";
+import { recordFormPhoto } from "@/lib/form34a.server";
 import { isStartWord, isStopWord } from "@/lib/polls.engine";
 
 type Sb = SupabaseClient<Database>;
@@ -79,6 +80,29 @@ export async function sendWhatsAppText(phone: string, body: string): Promise<WaS
     : { ok: false, error: "WhatsApp accepted it but gave no message id." };
 }
 
+/** A reply Groundwork writes itself, kept in the conversation like any other. */
+async function replyAutomatically(
+  sb: Sb,
+  to: { personId: string; conversationId: string | null; phone: string },
+  body: string,
+): Promise<void> {
+  const r = await sendWhatsAppText(to.phone, body);
+  await sb.from("messages").insert({
+    person_id: to.personId,
+    conversation_id: to.conversationId,
+    phone: to.phone,
+    channel: "whatsapp",
+    platform: "whatsapp",
+    kind: "dm",
+    direction: "out",
+    body,
+    outbox_kind: "reply",
+    ...(r.ok
+      ? { status: "accepted", external_id: r.id, sent_at: new Date().toISOString() }
+      : { status: "failed", error: r.error }),
+  });
+}
+
 /* ------------------------------------------------------------ inbound */
 
 const RANK: Record<string, number> = { accepted: 1, sent: 2, delivered: 3, read: 4, failed: 5 };
@@ -91,7 +115,7 @@ type WaValue = {
     timestamp?: string;
     type?: string;
     text?: { body?: string };
-    image?: { caption?: string };
+    image?: { id?: string; caption?: string };
     button?: { text?: string };
     interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
   }[];
@@ -238,6 +262,14 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
           detail: "Replied START on WhatsApp",
         });
       }
+      // A Form 34A photo from a polling agent: file it against their stream
+      // and tell them which one it went to.
+      if (m.type === "image" && m.image?.id) {
+        const note = await recordFormPhoto(sb, phone, m);
+        if (note)
+          await replyAutomatically(sb, { personId: person.id, conversationId, phone }, note);
+      }
+
       await sb.from("people").update({ last_contacted_at: at }).eq("id", person.id);
     }
   }

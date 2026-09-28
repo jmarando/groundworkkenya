@@ -83,6 +83,33 @@ export type Database = {
           },
         ]
       }
+      ballot_candidates: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          ours: boolean
+          party: string | null
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          ours?: boolean
+          party?: string | null
+          position: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          ours?: boolean
+          party?: string | null
+          position?: number
+        }
+        Relationships: []
+      }
       broadcasts: {
         Row: {
           audience: Json
@@ -300,6 +327,47 @@ export type Database = {
           vendor?: string | null
         }
         Relationships: []
+      }
+      form_photos: {
+        Row: {
+          caption: string | null
+          from_phone: string
+          id: string
+          received_at: string
+          station_id: string
+          stream: number | null
+          wa_media_id: string | null
+          wa_message_id: string
+        }
+        Insert: {
+          caption?: string | null
+          from_phone: string
+          id?: string
+          received_at?: string
+          station_id: string
+          stream?: number | null
+          wa_media_id?: string | null
+          wa_message_id: string
+        }
+        Update: {
+          caption?: string | null
+          from_phone?: string
+          id?: string
+          received_at?: string
+          station_id?: string
+          stream?: number | null
+          wa_media_id?: string | null
+          wa_message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_photos_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "polling_stations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       incidents: {
         Row: {
@@ -1235,6 +1303,59 @@ export type Database = {
         }
         Relationships: []
       }
+      stream_results: {
+        Row: {
+          channel: string
+          corrected: boolean
+          filed_at: string
+          filed_by: string
+          id: string
+          over_register: boolean
+          rejected: number
+          station_id: string
+          stream: number
+          superseded_at: string | null
+          valid_votes: number
+          votes: Json
+        }
+        Insert: {
+          channel: string
+          corrected?: boolean
+          filed_at?: string
+          filed_by: string
+          id?: string
+          over_register?: boolean
+          rejected: number
+          station_id: string
+          stream: number
+          superseded_at?: string | null
+          valid_votes: number
+          votes: Json
+        }
+        Update: {
+          channel?: string
+          corrected?: boolean
+          filed_at?: string
+          filed_by?: string
+          id?: string
+          over_register?: boolean
+          rejected?: number
+          station_id?: string
+          stream?: number
+          superseded_at?: string | null
+          valid_votes?: number
+          votes?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_results_station_id_fkey"
+            columns: ["station_id"]
+            isOneToOne: false
+            referencedRelation: "polling_stations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1350,6 +1471,10 @@ export type Database = {
       approve_expense: { Args: { _expense_id: string }; Returns: Json }
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      assign_station_agent: {
+        Args: { _name: string; _phone: string; _station_id: string }
+        Returns: undefined
+      }
       begin_person_import: {
         Args: {
           _consent_source: string
@@ -1361,6 +1486,17 @@ export type Database = {
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
       groundwork_schema_version: { Args: never; Returns: number }
+      file_stream_result: {
+        Args: {
+          _channel: string
+          _phone: string
+          _rejected: number
+          _station_id: string
+          _stream: number
+          _votes: number[]
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1436,6 +1572,17 @@ export type Database = {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
       }
+      record_form_photo: {
+        Args: {
+          _caption: string
+          _code: string
+          _phone: string
+          _stream: number
+          _wa_media_id: string
+          _wa_message_id: string
+        }
+        Returns: Json
+      }
       record_door: {
         Args: {
           _client_id: string
@@ -1451,6 +1598,7 @@ export type Database = {
         }
         Returns: Json
       }
+      set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

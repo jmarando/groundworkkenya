@@ -1712,3 +1712,28 @@ figure { margin: 0; }
   .t-share { font-size:15px; margin-left:6px; }
   .w-clockside { align-items:flex-start; }
 }
+
+/* ------------------------------------------------------ election day: ballot */
+
+.ballot-list { margin: 0 0 12px; padding-left: 22px; display: grid; gap: 6px; }
+.pb-row--ballot {
+  grid-template-columns: 26px minmax(0, 2fr) minmax(0, 1fr) auto auto;
+  align-items: end;
+}
+.ballot-pos {
+  align-self: end;
+  margin-bottom: 9px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  background: var(--gw-paper-2);
+  border-radius: 6px;
+}
+.pb-check { display: flex; align-items: center; gap: 6px; min-height: 44px; font-size: 14px; }
+.ballot-moves { display: flex; gap: 4px; align-items: center; min-height: 44px; }
+@media (max-width: 640px) {
+  .pb-row--ballot { grid-template-columns: 26px minmax(0, 1fr); }
+  .pb-row--ballot > :nth-child(n + 3) { grid-column: 2; }
+}

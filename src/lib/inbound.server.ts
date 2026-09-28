@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { agentStations, handleForm34aUssd } from "@/lib/form34a.server";
 import { queueMessages, settleIfDryRun, type QueueItem } from "@/lib/outbox.server";
 import { normalizeKePhone } from "@/lib/phone";
 import {
@@ -489,6 +490,8 @@ export async function handleUssd(sb: Sb, rawPhone: string, text: string): Promis
   const poll = await ussdPollFor(sb, person);
 
   if (!top) {
+    // Polling agents also see the Form 34A entry; nobody else does.
+    const agent = (await agentStations(sb, person.phone)).length > 0;
     return fit(
       [
         `CON ${CAMPAIGN}`,
@@ -496,9 +499,12 @@ export async function handleUssd(sb: Sb, rawPhone: string, text: string): Promis
         "2. Jiunge kama mjitolea",
         "3. Nipigie simu",
         "4. Acha kupokea SMS",
+        ...(agent ? ["5. Fomu 34A (ajenti)"] : []),
       ].join("\n"),
     );
   }
+
+  if (top === "5") return handleForm34aUssd(sb, person.phone, rest);
 
   if (top === "1") {
     if (!poll) return "END Hakuna kura ya maoni kwa sasa. Asante!";

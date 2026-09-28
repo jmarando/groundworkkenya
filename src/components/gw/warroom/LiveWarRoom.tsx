@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
+import { BallotCard } from "@/components/gw/warroom/BallotCard";
+import { FormsCard } from "@/components/gw/warroom/FormsCard";
 import { getWarRoom } from "@/lib/console.functions";
 
 const nf = new Intl.NumberFormat("en-KE");
@@ -293,6 +295,16 @@ export function LiveWarRoom() {
               <span className="l">No agent · blind spot</span>
             </div>
           </div>
+        </div>
+
+        <FormsCard forms={data.forms} streams={data.streams} />
+
+        <div className="w-rail fx5">
+          <BallotCard
+            ballot={data.ballot}
+            locked={data.ballotLocked}
+            canEdit={data.canEditBallot}
+          />
         </div>
 
         <div className="card w-span7 fx5">

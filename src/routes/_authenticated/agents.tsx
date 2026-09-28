@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
+import { AssignAgent } from "@/components/gw/AssignAgent";
 import { getAgents } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 
@@ -54,6 +55,7 @@ function Agents() {
   const [q, setQ] = useState("");
   const [stationView, setStationView] = useState("");
   const [sq, setSq] = useState("");
+  const [assigning, setAssigning] = useState<string | null>(null);
 
   const stations = useMemo(() => {
     const list = data?.board ?? [];
@@ -417,6 +419,11 @@ function Agents() {
                 <th>Status</th>
                 <th style={{ textAlign: "right" }}>Turnout</th>
                 <th style={{ textAlign: "right" }}>Owed</th>
+                {data?.canAssign && (
+                  <th>
+                    <span className="sr">Assign</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -434,11 +441,23 @@ function Agents() {
                   <td className="meta">{b.status}</td>
                   <td className="num">{b.turnout != null ? nf.format(b.turnout) : "—"}</td>
                   <td className="num">{b.owed ? nf.format(b.owed) : "—"}</td>
+                  {data?.canAssign && (
+                    <td>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() => setAssigning(b.id)}
+                        aria-label={`${b.agent ? "Change" : "Assign"} the agent at ${b.code}`}
+                      >
+                        {b.agent ? "Change" : "Assign"}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {stations.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="meta">
+                  <td colSpan={data?.canAssign ? 11 : 10} className="meta">
                     No stations match that view.
                   </td>
                 </tr>
@@ -451,6 +470,11 @@ function Agents() {
           {nf.format(stations.reduce((a, b) => a + b.registered, 0))} registered voters behind them.
         </p>
       </div>
+      {assigning &&
+        (() => {
+          const b = data?.board.find((x) => x.id === assigning);
+          return b ? <AssignAgent station={b} onClose={() => setAssigning(null)} /> : null;
+        })()}
     </section>
   );
 }
