@@ -41,7 +41,10 @@ function AuthPage() {
   const fetchCampaign = useServerFn(getPublicCampaign);
   const { data: campaign } = useQuery({
     queryKey: ["public-campaign", slug],
-    queryFn: () => fetchCampaign({ data: { slug: slug! } }),
+    queryFn: () => {
+      if (!slug) return null;
+      return fetchCampaign({ data: { slug } });
+    },
     enabled: !!slug,
   });
 
@@ -114,15 +117,19 @@ function AuthPage() {
         </div>
         {campaign ? (
           <div className="auth-campaign">
-            <span className="eyebrow">Campaign workspace</span>
-            <b>{campaign.name}</b>
-            <span className="meta">{campaign.seat}</span>
+            <span className="eyebrow">Official campaign workspace · 2027</span>
+            <h1>{campaign.candidate || campaign.name}</h1>
+            <span className="auth-campaign-seat">{campaign.seat}</span>
           </div>
+        ) : (
+          <h1 className="auth-title">
+            {mode === "in" ? "Welcome " : "Join the "}
+            <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
+          </h1>
+        )}
+        {campaign ? (
+          <h2 className="auth-action-title">{mode === "in" ? "Team sign in" : "Request access"}</h2>
         ) : null}
-        <h1 className="auth-title">
-          {mode === "in" ? "Welcome " : "Join the "}
-          <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
-        </h1>
         <p className="meta">
           {campaign
             ? `Only ${campaign.name}'s team can get in. New accounts wait for the candidate or campaign manager to let them in.`

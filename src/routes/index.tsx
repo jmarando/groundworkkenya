@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { campaignSlugFromHost } from "@/lib/access";
+import { getPublicCampaign, type PublicCampaign } from "@/lib/campaign-public.functions";
 import shot1 from "@/assets/landing/shot1.webp";
 import shot2 from "@/assets/landing/shot2.webp";
 import shot3 from "@/assets/landing/shot3.webp";
@@ -148,13 +152,79 @@ function DemoForm() {
   );
 }
 
+function CampaignHome({ campaign, slug }: { campaign: PublicCampaign; slug: string }) {
+  const campaignLabel = campaign.candidate || campaign.name;
+
+  return (
+    <div className="campaign-home">
+      <header className="campaign-home-nav">
+        <a className="campaign-home-brand" href="#top" aria-label={`${campaign.name} home`}>
+          <Mark stroke="currentColor" />
+          <span>
+            <b>groundwork</b>
+            <small>The campaign OS</small>
+          </span>
+        </a>
+        <Link to="/auth" className="campaign-home-signin">
+          Team sign in
+        </Link>
+      </header>
+
+      <main className="campaign-home-main" id="top">
+        <div className="campaign-home-copy">
+          <span className="campaign-home-kicker">Official campaign workspace · 2027</span>
+          <h1>{campaignLabel}</h1>
+          <p className="campaign-home-seat">{campaign.seat}</p>
+          <p className="campaign-home-lede">
+            The campaign team’s secure home for voters, field operations, communications, polling,
+            finance and election day.
+          </p>
+          <div className="campaign-home-actions">
+            <Link to="/auth" className="campaign-home-primary">
+              Sign in to the campaign
+            </Link>
+            <span>Access is limited to approved team members.</span>
+          </div>
+        </div>
+
+        <div className="campaign-home-product" aria-label="Groundwork campaign console preview">
+          <div className="campaign-home-product-bar">
+            <span>{slug}.groundwork.ke</span>
+            <span>Private workspace</span>
+          </div>
+          <img
+            src={shot1}
+            alt="Groundwork campaign console showing voter and field operations data"
+          />
+        </div>
+      </main>
+
+      <footer className="campaign-home-footer">
+        <span>{campaign.name}</span>
+        <span>Powered by Groundwork</span>
+      </footer>
+    </div>
+  );
+}
+
 function Landing() {
   const [scrolled, setScrolled] = useState(false);
+  const [hostSlug, setHostSlug] = useState<string | null>(null);
+  const fetchCampaign = useServerFn(getPublicCampaign);
+  const { data: hostCampaign, isFetched: campaignChecked } = useQuery({
+    queryKey: ["public-campaign-home", hostSlug],
+    queryFn: () => {
+      if (!hostSlug) return null;
+      return fetchCampaign({ data: { slug: hostSlug } });
+    },
+    enabled: !!hostSlug,
+  });
 
   // A sign-in that finishes here carries its session in the address, and only
   // /auth reads it. Hand it over rather than leave someone signed out on the
   // marketing page. Section links (#pricing and so on) are left alone.
   useEffect(() => {
+    setHostSlug(campaignSlugFromHost(window.location.host));
     const { search, hash } = window.location;
     if (/[#&?](access_token|error_description)=/.test(search + hash)) {
       window.location.replace(`/auth${search}${hash}`);
@@ -166,6 +236,14 @@ function Landing() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (hostSlug && !campaignChecked) {
+    return <div className="campaign-home-loading" aria-label="Opening campaign" />;
+  }
+
+  if (hostSlug && hostCampaign) {
+    return <CampaignHome campaign={hostCampaign} slug={hostSlug} />;
+  }
 
   return (
     <div className="gw-landing">

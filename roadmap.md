@@ -55,7 +55,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 
 ## Current
 - [x] Multi-campaign: Kalonzo, Sakaja, Waruru Gikandi; per-campaign roles; Campaigns + invites
-- [ ] Campaign addresses: user adds wildcard *.groundwork.ke DNS + domains
+- [x] Campaign addresses connected; campaign-specific home and sign-in screens identify Kalonzo, Sakaja and Mathira
 - [ ] Per-campaign WhatsApp/SMS numbers (all inbound goes to Sakaja for now)
 - [ ] Map outline per campaign (Mathira/Kalonzo still show Nairobi base map)
 - [x] Confirm the latest GitHub-synced changes are present in this workspace
