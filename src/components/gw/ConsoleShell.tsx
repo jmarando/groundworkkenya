@@ -77,7 +77,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         canOpen(access?.role ?? null, i.to),
     );
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
-    (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
+    (g) => g.items.length > 0,
   );
   const queryClient = useQueryClient();
 

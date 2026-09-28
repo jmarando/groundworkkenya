@@ -1,5 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
+
+import { currentCampaignSlug } from "@/lib/access";
+import { getPublicCampaign } from "@/lib/campaign-public.functions";
 
 import { GwMark } from "@/components/gw/GwMark";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +34,16 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Each campaign signs in on its own address (sakaja.groundwork.ke), or with
+  // ?campaign=sakaja while the addresses are being set up.
+  const [slug, setSlug] = useState<string | null>(null);
+  useEffect(() => setSlug(currentCampaignSlug()), []);
+  const fetchCampaign = useServerFn(getPublicCampaign);
+  const { data: campaign } = useQuery({
+    queryKey: ["public-campaign", slug],
+    queryFn: () => fetchCampaign({ data: { slug: slug! } }),
+    enabled: !!slug,
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -97,11 +112,22 @@ function AuthPage() {
             <div className="sb-brand-sub">the campaign OS</div>
           </div>
         </div>
+        {campaign ? (
+          <div className="auth-campaign">
+            <span className="eyebrow">Campaign workspace</span>
+            <b>{campaign.name}</b>
+            <span className="meta">{campaign.seat}</span>
+          </div>
+        ) : null}
         <h1 className="auth-title">
           {mode === "in" ? "Welcome " : "Join the "}
           <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
         </h1>
-        <p className="meta">2027 cycle</p>
+        <p className="meta">
+          {campaign
+            ? `Only ${campaign.name}'s team can get in. New accounts wait for the candidate or campaign manager to let them in.`
+            : "2027 cycle"}
+        </p>
 
         <form onSubmit={submit} className="auth-form">
           {mode === "up" ? (

@@ -6,7 +6,7 @@ import { ConsoleShell } from "@/components/gw/ConsoleShell";
 import { GwMark } from "@/components/gw/GwMark";
 import { useAccess } from "@/hooks/useAccess";
 import { canOpen, homeFor } from "@/lib/access";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 function Gate({ children }: { children: ReactNode }) {
@@ -120,7 +120,9 @@ function Authenticated() {
   const role = access?.role ?? null;
   return (
     <ConsoleShell>
-      {canOpen(role, pathname) ? (
+      {pathname === "/overview" && homeFor(role) !== "/overview" ? (
+        <Navigate to={homeFor(role)} replace />
+      ) : canOpen(role, pathname) ? (
         <Outlet />
       ) : (
         <section className="view active" aria-label="Not available">
