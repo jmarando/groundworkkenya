@@ -286,3 +286,13 @@ a.sb-item {
 }
 .t-row--link:hover { background: color-mix(in oklab, var(--muted) 55%, transparent); }
 .t-row--link:active { transform: scale(.996); }
+
+.auth-campaign {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--gw-border);
+  border-left: 3px solid var(--gw-accent);
+  border-radius: 12px;
+}
+.auth-campaign b { font-size: 1.15rem; }

@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { ConsoleShell } from "@/components/gw/ConsoleShell";
 import { GwMark } from "@/components/gw/GwMark";
 import { useAccess } from "@/hooks/useAccess";
+import { canOpen, homeFor } from "@/lib/access";
+import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 function Gate({ children }: { children: ReactNode }) {
@@ -81,7 +83,9 @@ function Waiting() {
 }
 
 function Authenticated() {
-  const { loading, failed, recheck, checking, isPendingApproval, wrongCampaign } = useAccess();
+  const { loading, failed, recheck, checking, isPendingApproval, wrongCampaign, access } =
+    useAccess();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   if (loading) {
     return (
@@ -113,9 +117,24 @@ function Authenticated() {
 
   if (isPendingApproval || wrongCampaign) return <Waiting />;
 
+  const role = access?.role ?? null;
   return (
     <ConsoleShell>
-      <Outlet />
+      {pathname === "/overview" && homeFor(role) !== "/overview" ? (
+        <Navigate to={homeFor(role)} replace />
+      ) : canOpen(role, pathname) ? (
+        <Outlet />
+      ) : (
+        <section className="view active" aria-label="Not available">
+          <div className="card">
+            <h2>This page isn't part of your role.</h2>
+            <p className="f-note">
+              Ask your candidate or campaign manager if you need it.{" "}
+              <Link to={homeFor(role)}>Go to your start page</Link>
+            </p>
+          </div>
+        </section>
+      )}
     </ConsoleShell>
   );
 }

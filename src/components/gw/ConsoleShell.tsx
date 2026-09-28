@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
 import { CampaignSwitcher } from "./CampaignSwitcher";
+import { canOpen } from "@/lib/access";
 
 type NavItem = {
   to: string;
@@ -66,14 +67,17 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isPrincipal, isAdmin, isSuper, campaign } = useAccess();
+  const { isPrincipal, isAdmin, isSuper, campaign, access } = useAccess();
   const visible = (items: NavItem[]) =>
     items.filter(
       (i) =>
-        (!i.principalOnly || isPrincipal) && (!i.adminOnly || isAdmin) && (!i.superOnly || isSuper),
+        (!i.principalOnly || isPrincipal) &&
+        (!i.adminOnly || isAdmin) &&
+        (!i.superOnly || isSuper) &&
+        canOpen(access?.role ?? null, i.to),
     );
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
-    (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
+    (g) => g.items.length > 0,
   );
   const queryClient = useQueryClient();
 
