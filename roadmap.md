@@ -11,7 +11,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [x] Database schema + seed (wards, people, segments, polls, responses,
       messages, conversations, contributions, expenses, incidents, agents)
 - [x] Accounts: email/password + Google, profiles, user_roles (admin/manager/agent)
-- [x] Console shell: sidebar, mobile topbar, routing per view
+- [x] Console shell: desktop sidebar, grouped mobile/tablet menu, routing per view
 - [x] Access: sign-ups hold no data until an admin admits them (Team screen)
 
 ## Screens
