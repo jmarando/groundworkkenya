@@ -291,7 +291,7 @@ a.sb-item {
   display: grid;
   gap: 4px;
   padding: 14px 16px;
-  border: 1px solid var(--gw-line, currentColor);
+  border: 1px solid var(--gw-border);
   border-left: 3px solid var(--gw-accent);
   border-radius: 12px;
 }
