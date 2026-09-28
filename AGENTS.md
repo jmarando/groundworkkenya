@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above it; the full link row wraps and obscures navigation on phones and tablets.
