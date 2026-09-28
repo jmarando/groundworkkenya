@@ -81,6 +81,68 @@ export async function sendWhatsAppText(phone: string, body: string): Promise<WaS
     : { ok: false, error: "WhatsApp accepted it but gave no message id." };
 }
 
+/** Send an approved template. Allowed at any time, not just inside 24h. */
+export async function sendWhatsAppTemplate(
+  phone: string,
+  name: string,
+  language: string,
+  params: string[],
+): Promise<WaSendResult> {
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const waKey = process.env["WHATSAPP_API_KEY"];
+  if (!lovableKey || !waKey) return { ok: false, error: "WhatsApp is not connected." };
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(`${GATEWAY_URL}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableKey}`,
+        "X-Connection-Api-Key": waKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phone.replace(/\D/g, ""),
+        type: "template",
+        template: {
+          name,
+          language: { code: language },
+          components: [
+            { type: "body", parameters: params.map((t) => ({ type: "text", text: t })) },
+          ],
+        },
+      }),
+    });
+    text = await res.text();
+  } catch (e) {
+    return {
+      ok: false,
+      error: `Outcome unknown: could not reach WhatsApp (${(e as Error).message}).`.slice(0, 500),
+    };
+  }
+  if (!res.ok) {
+    console.error(`WhatsApp template send failed [${res.status}]: ${text}`);
+    let msg = text;
+    try {
+      const j = JSON.parse(text) as { error?: { message?: string } };
+      if (j.error?.message) msg = j.error.message;
+    } catch {
+      /* keep raw */
+    }
+    return { ok: false, error: `WhatsApp refused it (${res.status}): ${msg}`.slice(0, 500) };
+  }
+  let id: string | undefined;
+  try {
+    id = (JSON.parse(text) as { messages?: { id?: string }[] }).messages?.[0]?.id;
+  } catch {
+    /* none */
+  }
+  return id
+    ? { ok: true, id }
+    : { ok: false, error: "WhatsApp accepted it but gave no message id." };
+}
+
 /** A reply Groundwork writes itself, kept in the conversation like any other. */
 async function replyAutomatically(
   sb: Sb,
