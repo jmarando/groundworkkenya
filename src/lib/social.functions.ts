@@ -426,7 +426,7 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
     const q = data.q.replace(/[%_,]/g, " ");
     const { data: rows, error } = await context.supabase
       .from("people")
-      .select("id, full_name, phone, ward, opted_out, consent_sms, consent_whatsapp")
+      .select("id, full_name, phone, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)")
       .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
       .order("full_name")
       .limit(12);
@@ -435,7 +435,7 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
       id: p.id,
       name: p.full_name ?? "Unnamed",
       phone: p.phone,
-      ward: p.ward,
+      ward: (p.wards as { name: string } | null)?.name ?? null,
       optedOut: p.opted_out === true,
       consentSms: p.consent_sms === true,
       consentWhatsapp: p.consent_whatsapp === true,
