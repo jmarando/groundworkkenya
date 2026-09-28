@@ -145,6 +145,41 @@ function Inbox() {
 
   const open = list.find((c) => c.id === openId) ?? list[0] ?? null;
 
+  async function findPeople() {
+    if (pq.trim().length < 2 || searching) return;
+    setSearching(true);
+    try {
+      setResults(await searchPeople({ data: { q: pq.trim() } }));
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function sendNew() {
+    if (!picked || !newBody.trim() || sending) return;
+    setSending(true);
+    setNewNote(null);
+    try {
+      const r = await startConvo({
+        data: { personId: picked.id, channel, body: newBody.trim() },
+      });
+      setNewNote(r.note);
+      setNewBody("");
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      setComposing(false);
+      setPicked(null);
+      setResults([]);
+      setPq("");
+      setOpenId(r.conversationId);
+    } catch (err) {
+      setNewNote(err instanceof Error ? err.message : "The message could not be sent.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function send(conversationId: string) {
     if (!draft.trim() || sending) return;
     setSending(true);
@@ -430,12 +465,20 @@ function Inbox() {
                 )}
               </div>
               <div className="th-compose">
-                <input
-                  placeholder={`Reply to ${open.name} by ${badge(open.platform).code}`}
+                <label className="th-compose-label" htmlFor="replyBox">
+                  Reply to {open.name} by {badge(open.platform).code}
+                </label>
+                <textarea
+                  id="replyBox"
+                  rows={3}
+                  placeholder={`Write your reply to ${open.name}…`}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") void send(open.id);
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void send(open.id);
+                    }
                   }}
                 />
                 <button
