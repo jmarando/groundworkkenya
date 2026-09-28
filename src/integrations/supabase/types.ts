@@ -62,7 +62,7 @@ export type Database = {
         Insert: {
           agent_name: string
           amount_kes?: number
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           days?: number
           id?: string
@@ -130,7 +130,7 @@ export type Database = {
           position: number
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           id?: string
           name: string
@@ -173,7 +173,7 @@ export type Database = {
         Insert: {
           audience?: Json
           body: string
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           client_key: string
           created_at?: string
@@ -328,7 +328,7 @@ export type Database = {
         }
         Insert: {
           amount_kes: number
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           disclosed?: boolean
           donor_name: string
@@ -386,7 +386,7 @@ export type Database = {
           assigned_to?: string | null
           author_handle?: string | null
           author_name?: string | null
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           created_at?: string
           external_thread_id?: string | null
@@ -491,7 +491,7 @@ export type Database = {
           amount_kes: number
           approved_at?: string | null
           approved_by?: string | null
-          campaign_id: string
+          campaign_id?: string
           category?: string
           created_at?: string
           description: string
@@ -540,7 +540,7 @@ export type Database = {
           wa_message_id: string
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           caption?: string | null
           from_phone: string
           id?: string
@@ -593,7 +593,7 @@ export type Database = {
           ward_id: string | null
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           detail?: string | null
           id?: string
@@ -659,7 +659,7 @@ export type Database = {
         Insert: {
           alert_id?: string | null
           body?: string | null
-          campaign_id: string
+          campaign_id?: string
           channel: string
           created_at?: string
           destination: string
@@ -725,7 +725,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           created_at?: string
           destination: string
@@ -825,7 +825,7 @@ export type Database = {
         }
         Insert: {
           author?: string | null
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           domain?: string | null
           found_at?: string
@@ -896,7 +896,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           exclude_terms?: string[]
           id?: string
@@ -968,7 +968,7 @@ export type Database = {
           author_handle?: string | null
           body: string
           broadcast_id?: string | null
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           claim_id?: string | null
           claimed_at?: string | null
@@ -1094,7 +1094,7 @@ export type Database = {
         }
         Insert: {
           building_id?: string | null
-          campaign_id: string
+          campaign_id?: string
           consent_call?: boolean
           consent_sms?: boolean
           consent_whatsapp?: boolean
@@ -1181,7 +1181,7 @@ export type Database = {
           accuracy_m?: number | null
           actor?: string | null
           building_id?: string | null
-          campaign_id: string
+          campaign_id?: string
           channel?: string | null
           client_id?: string | null
           created_at?: string
@@ -1240,7 +1240,7 @@ export type Database = {
           updated_count: number
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           consent_count?: number
           consent_source?: string | null
           created_at?: string
@@ -1287,7 +1287,7 @@ export type Database = {
           sent_at: string
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           id?: string
           person_id: string
@@ -1340,7 +1340,7 @@ export type Database = {
           weight: number
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           channel?: string
           created_at?: string
           free_text?: string | null
@@ -1414,7 +1414,7 @@ export type Database = {
         Insert: {
           agent_name?: string | null
           agent_phone?: string | null
-          campaign_id: string
+          campaign_id?: string
           code: string
           created_at?: string
           id?: string
@@ -1487,7 +1487,7 @@ export type Database = {
         }
         Insert: {
           audience?: Json
-          campaign_id: string
+          campaign_id?: string
           channels?: string[]
           closes_at?: string | null
           code: string
@@ -1637,7 +1637,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           created_at?: string
           display_name?: string | null
           external_id?: string | null
@@ -1691,7 +1691,7 @@ export type Database = {
           votes: Json
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           channel: string
           corrected?: boolean
           filed_at?: string
@@ -1773,7 +1773,7 @@ export type Database = {
           target_votes: number
         }
         Insert: {
-          campaign_id: string
+          campaign_id?: string
           constituency: string
           created_at?: string
           id?: string
