@@ -1234,6 +1234,24 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          hits: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          hits: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       segments: {
         Row: {
           colour: string | null
@@ -1469,12 +1487,12 @@ export type Database = {
         Returns: Json
       }
       approve_expense: { Args: { _expense_id: string }; Returns: Json }
-      audience_counts: { Args: never; Returns: Json }
-      audience_estimate: { Args: { _audience: Json }; Returns: Json }
       assign_station_agent: {
         Args: { _name: string; _phone: string; _station_id: string }
         Returns: undefined
       }
+      audience_counts: { Args: never; Returns: Json }
+      audience_estimate: { Args: { _audience: Json }; Returns: Json }
       begin_person_import: {
         Args: {
           _consent_source: string
@@ -1485,7 +1503,6 @@ export type Database = {
         Returns: string
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
-      groundwork_schema_version: { Args: never; Returns: number }
       file_stream_result: {
         Args: {
           _channel: string
@@ -1497,6 +1514,7 @@ export type Database = {
         }
         Returns: Json
       }
+      groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1541,7 +1559,10 @@ export type Database = {
         Args: { _claim: string; _ids: string[] }
         Returns: string[]
       }
-      outbox_record: { Args: { _claim: string; _results: Json }; Returns: number }
+      outbox_record: {
+        Args: { _claim: string; _results: Json }
+        Returns: number
+      }
       outbox_release: {
         Args: { _claim: string; _ids: string[] }
         Returns: number
@@ -1560,10 +1581,6 @@ export type Database = {
         }[]
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
-      rate_limit_hit: {
-        Args: { _key: string; _limit: number; _window_seconds: number }
-        Returns: boolean
-      }
       process_outbox: {
         Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
         Returns: Json
@@ -1572,16 +1589,9 @@ export type Database = {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
       }
-      record_form_photo: {
-        Args: {
-          _caption: string
-          _code: string
-          _phone: string
-          _stream: number
-          _wa_media_id: string
-          _wa_message_id: string
-        }
-        Returns: Json
+      rate_limit_hit: {
+        Args: { _key: string; _limit: number; _window_seconds: number }
+        Returns: boolean
       }
       record_door: {
         Args: {
@@ -1595,6 +1605,17 @@ export type Database = {
           _place?: Json
           _support: number
           _visited_at: string
+        }
+        Returns: Json
+      }
+      record_form_photo: {
+        Args: {
+          _caption: string
+          _code: string
+          _phone: string
+          _stream: number
+          _wa_media_id: string
+          _wa_message_id: string
         }
         Returns: Json
       }
