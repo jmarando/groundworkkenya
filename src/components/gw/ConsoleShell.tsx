@@ -1,8 +1,10 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Menu, X } from "lucide-react";
 
 import { GwMark } from "./GwMark";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
 
@@ -59,14 +61,25 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
 
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isPrincipal, isAdmin } = useAccess();
   const visible = (items: NavItem[]) =>
     items.filter((i) => (!i.principalOnly || isPrincipal) && (!i.adminOnly || isAdmin));
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
     (g) => g.items.length > 0 || (g.inert?.length ?? 0) > 0,
   );
-  const topbar = groups.flatMap((g) => g.items);
   const queryClient = useQueryClient();
+
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -134,17 +147,59 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="main">
-        <div className="topbar">
-          <GwMark />
-          <span className="sb-brand-name">groundwork</span>
-          <nav className="topbar-nav" aria-label="Views">
-            {topbar.map((item) => (
-              <Link key={item.to} to={item.to} activeProps={{ "aria-current": "page" }}>
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <header className="topbar">
+          <div className="topbar-brand">
+            <GwMark />
+            <span className="sb-brand-name">groundwork</span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="topbar-toggle"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
+            <span>Menu</span>
+          </Button>
+        </header>
+        {menuOpen && (
+          <div className="mobile-menu-layer" id="mobile-menu">
+            <Button
+              type="button"
+              variant="ghost"
+              className="mobile-menu-backdrop"
+              aria-label="Close menu"
+              onClick={() => setMenuOpen(false)}
+            />
+            <nav className="mobile-menu-panel" aria-label="Product menu">
+              {groups.map((group) => (
+                <div className="mobile-menu-group" key={group.title}>
+                  <div className="mobile-menu-heading">{group.title}</div>
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="mobile-menu-item"
+                      activeProps={{ "aria-current": "page" }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <span>{item.label}</span>
+                      {item.faint && <span className="mobile-menu-faint">{item.faint}</span>}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+              <div className="mobile-menu-footer">
+                <Button type="button" variant="ghost" className="mobile-menu-signout" onClick={signOut}>
+                  Sign out
+                </Button>
+              </div>
+            </nav>
+          </div>
+        )}
         <div className="wrap">{children}</div>
       </div>
     </div>
