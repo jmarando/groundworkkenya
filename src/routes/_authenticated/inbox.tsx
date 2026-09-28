@@ -5,7 +5,11 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { getInbox } from "@/lib/console.functions";
-import { replyToConversation } from "@/lib/social.functions";
+import {
+  replyToConversation,
+  searchPeopleForMessage,
+  startConversation,
+} from "@/lib/social.functions";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: Inbox,
@@ -72,11 +76,25 @@ const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"]
 function Inbox() {
   const fetchInbox = useServerFn(getInbox);
   const sendReply = useServerFn(replyToConversation);
+  const searchPeople = useServerFn(searchPeopleForMessage);
+  const startConvo = useServerFn(startConversation);
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendNote, setSendNote] = useState<string | null>(null);
+
+  // New outbound message
+  const [composing, setComposing] = useState(false);
+  const [pq, setPq] = useState("");
+  const [results, setResults] = useState<
+    { id: string; name: string; phone: string | null; ward: string | null; optedOut: boolean; consentSms: boolean; consentWhatsapp: boolean }[]
+  >([]);
+  const [searching, setSearching] = useState(false);
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
+  const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
+  const [newBody, setNewBody] = useState("");
+  const [newNote, setNewNote] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<string>("all");
   const [q, setQ] = useState("");
@@ -127,6 +145,41 @@ function Inbox() {
 
   const open = list.find((c) => c.id === openId) ?? list[0] ?? null;
 
+  async function findPeople() {
+    if (pq.trim().length < 2 || searching) return;
+    setSearching(true);
+    try {
+      setResults(await searchPeople({ data: { q: pq.trim() } }));
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function sendNew() {
+    if (!picked || !newBody.trim() || sending) return;
+    setSending(true);
+    setNewNote(null);
+    try {
+      const r = await startConvo({
+        data: { personId: picked.id, channel, body: newBody.trim() },
+      });
+      setNewNote(r.note);
+      setNewBody("");
+      await queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      setComposing(false);
+      setPicked(null);
+      setResults([]);
+      setPq("");
+      setOpenId(r.conversationId);
+    } catch (err) {
+      setNewNote(err instanceof Error ? err.message : "The message could not be sent.");
+    } finally {
+      setSending(false);
+    }
+  }
+
   async function send(conversationId: string) {
     if (!draft.trim() || sending) return;
     setSending(true);
@@ -155,7 +208,132 @@ function Inbox() {
             {data.counts.all} conversations · {data.counts.unread} unread · {data.counts.open} open
           </p>
         </div>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={() => {
+            setComposing(true);
+            setNewNote(null);
+          }}
+        >
+          New message
+        </button>
       </div>
+
+      {composing && (
+        <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="nm-title">
+          <div className="pb">
+            <div className="pb-head">
+              <div>
+                <span className="eyebrow">Inbox · outbound</span>
+                <h2 id="nm-title">Start a conversation.</h2>
+              </div>
+              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setComposing(false)}>
+                Close
+              </button>
+            </div>
+            <div className="pb-body">
+              {!picked ? (
+                <>
+                  <label className="pb-field">
+                    <span>Who?</span>
+                    <input
+                      type="search"
+                      placeholder="Search by name or phone number"
+                      value={pq}
+                      onChange={(e) => setPq(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void findPeople();
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    disabled={searching || pq.trim().length < 2}
+                    onClick={() => void findPeople()}
+                  >
+                    {searching ? "Searching…" : "Search people"}
+                  </button>
+                  {results.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="cv"
+                      onClick={() => {
+                        setPicked({ id: p.id, name: p.name });
+                        setChannel(p.consentWhatsapp ? "whatsapp" : "sms");
+                      }}
+                    >
+                      <span className="cv-name">{p.name}</span>
+                      <span className="cv-snip">
+                        {p.phone ?? "no number"} · {p.ward ?? "ward unknown"}
+                        {p.optedOut ? " · opted out" : ""}
+                      </span>
+                    </button>
+                  ))}
+                  {results.length === 0 && !searching && pq.trim().length >= 2 && (
+                    <p className="f-note">Nobody matches. Add them on the People page first.</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="f-note">
+                    To <b>{picked.name}</b>{" "}
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPicked(null)}>
+                      Change
+                    </button>
+                  </p>
+                  <div className="bc-actions">
+                    <button
+                      type="button"
+                      className={`btn btn--sm ${channel === "sms" ? "btn--primary" : "btn--ghost"}`}
+                      onClick={() => setChannel("sms")}
+                    >
+                      SMS
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn--sm ${channel === "whatsapp" ? "btn--primary" : "btn--ghost"}`}
+                      onClick={() => setChannel("whatsapp")}
+                    >
+                      WhatsApp
+                    </button>
+                  </div>
+                  {channel === "whatsapp" && (
+                    <p className="f-note">
+                      WhatsApp only allows a first message as an approved template. If they have not
+                      messaged the campaign in the last 24 hours, Meta will refuse this send.
+                    </p>
+                  )}
+                  <label className="pb-field">
+                    <span>Message</span>
+                    <textarea
+                      rows={4}
+                      value={newBody}
+                      maxLength={2000}
+                      onChange={(e) => setNewBody(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+            <div className="pb-foot">
+              <p className="f-note" aria-live="polite">{newNote ?? ""}</p>
+              {picked && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={sending || !newBody.trim()}
+                  onClick={() => void sendNew()}
+                >
+                  {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : "WhatsApp"}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="ibx fx2">
         <div className="ibx-rail">
@@ -287,12 +465,20 @@ function Inbox() {
                 )}
               </div>
               <div className="th-compose">
-                <input
-                  placeholder={`Reply to ${open.name} by ${badge(open.platform).code}`}
+                <label className="th-compose-label" htmlFor="replyBox">
+                  Reply to {open.name} by {badge(open.platform).code}
+                </label>
+                <textarea
+                  id="replyBox"
+                  rows={3}
+                  placeholder={`Write your reply to ${open.name}…`}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") void send(open.id);
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void send(open.id);
+                    }
                   }}
                 />
                 <button

@@ -412,6 +412,105 @@ export const replyToConversation = createServerFn({ method: "POST" })
     };
   });
 
+/* ------------------------------------------------------------- new message */
+
+/** Find people to start a conversation with, by name or phone. */
+export const searchPeopleForMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { q: string }) => {
+    const q = (input.q ?? "").trim();
+    if (q.length < 2) throw new Error("Type at least two letters or digits.");
+    return { q };
+  })
+  .handler(async ({ data, context }) => {
+    const q = data.q.replace(/[%_,]/g, " ");
+    const { data: rows, error } = await context.supabase
+      .from("people")
+      .select("id, full_name, phone, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)")
+      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
+      .order("full_name")
+      .limit(12);
+    if (error) throw new Error("The search failed.");
+    return (rows ?? []).map((p) => ({
+      id: p.id,
+      name: p.full_name ?? "Unnamed",
+      phone: p.phone,
+      ward: (p.wards as { name: string } | null)?.name ?? null,
+      optedOut: p.opted_out === true,
+      consentSms: p.consent_sms === true,
+      consentWhatsapp: p.consent_whatsapp === true,
+    }));
+  });
+
+/**
+ * Start an outbound conversation with one person. Reuses the open
+ * conversation for that person and channel when there is one, so history
+ * stays in one thread. SMS goes through the outbox (consent checked at send
+ * time); WhatsApp goes straight out and Meta refuses it if the 24-hour
+ * window has closed.
+ */
+export const startConversation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp"; body: string }) => {
+    const body = (input.body ?? "").trim();
+    if (!input.personId) throw new Error("Pick a person first.");
+    if (input.channel !== "sms" && input.channel !== "whatsapp")
+      throw new Error("Pick SMS or WhatsApp.");
+    if (!body) throw new Error("Write something before sending.");
+    if (body.length > 2000) throw new Error("That message is too long.");
+    return { personId: input.personId, channel: input.channel, body };
+  })
+  .handler(async ({ data, context }): Promise<{ conversationId: string; note: string }> => {
+    const sb = context.supabase;
+    const { data: person, error: pError } = await sb
+      .from("people")
+      .select("id, phone")
+      .eq("id", data.personId)
+      .maybeSingle();
+    if (pError || !person) throw new Error("That person is no longer available.");
+    if (!person.phone) throw new Error("There is no phone number on this person.");
+
+    let conversationId: string;
+    const { data: existing } = await sb
+      .from("conversations")
+      .select("id")
+      .eq("person_id", person.id)
+      .eq("platform", data.channel)
+      .eq("status", "open")
+      .order("last_message_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      conversationId = existing.id;
+    } else {
+      const { phoneKey } = await import("@/lib/at.server");
+      const { data: created, error: cError } = await sb
+        .from("conversations")
+        .insert({
+          person_id: person.id,
+          platform: data.channel,
+          channel: data.channel,
+          external_thread_id: `${data.channel}:${phoneKey(person.phone)}`,
+          status: "open",
+          unread: false,
+          snippet: data.body,
+          last_message_at: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (cError || !created) throw new Error("The conversation could not be started.");
+      conversationId = created.id;
+    }
+
+    const convo = { id: conversationId, person_id: person.id };
+    const r =
+      data.channel === "sms"
+        ? await replyBySms(sb, convo, data.body)
+        : await replyByWhatsApp(sb, convo, data.body);
+    return { conversationId, note: r.note };
+  });
+
 /* ------------------------------------------------------------------ accounts */
 
 export const saveSocialAccount = createServerFn({ method: "POST" })
