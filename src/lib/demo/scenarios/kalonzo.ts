@@ -485,4 +485,52 @@ export const kalonzo: Scenario = {
         "The portal shows 1,204 fewer votes for us at 3 stations than our photographed 34As. Sent for review.",
     },
   },
+  ops: {
+    seed: 4747,
+    list: { target: 7_110_000, found: 4_386_000 },
+    sureShare: 0.55,
+    foundLastWeek: 68_000,
+    doors: { lastWeek: 612_000, plan: 700_000 },
+    volunteers: { active: 41_800, newLastWeek: 2_600 },
+    contacts: { optedIn: 3_420_000, newLastWeek: 52_000, optedOutLastWeek: 2_900 },
+    agents: { recruited: 0.58, trained: 0.41, confirmed: 0.7 },
+    money: {
+      raised: 3_100_000_000,
+      spent: 1_640_000_000,
+      limit: 4_400_000_000,
+      cash: 1_460_000_000,
+      burnPerWeek: 58_000_000,
+      pledged: 420_000_000,
+      categories: [
+        { label: "Media and ads", kes: 520_000_000 },
+        { label: "Field and transport", kes: 410_000_000 },
+        { label: "Rallies and tours", kes: 330_000_000 },
+        { label: "Agents and training", kes: 160_000_000 },
+        { label: "Staff", kes: 140_000_000 },
+        { label: "Digital and SMS", kes: 80_000_000 },
+      ],
+    },
+    coordinatorRole: "County coordinator",
+    needs: [
+      {
+        label: "12 county budget requests",
+        detail: "KES 214M for October's tours, waiting on the finance committee",
+        action: { kind: "go", label: "Review", to: "/finance" },
+      },
+      {
+        label: "Coalition partners' agent lists due Friday",
+        detail: "Merge them before training starts, so no stream is covered twice",
+        action: {
+          kind: "task",
+          label: "Add to my list",
+          task: "Chase the coalition partners' agent lists before Friday",
+        },
+      },
+      {
+        label: "Broadcast drafted: tour stops in Nyanza",
+        detail: "Next week's stops, to opted-in supporters in the region",
+        action: { kind: "go", label: "Check and send", to: "/broadcast" },
+      },
+    ],
+  },
 };

@@ -743,4 +743,47 @@ export const sakaja: Scenario = {
         "The portal shows 318 more votes for Challenger A at 2 stations than our photographed 37As. Sent for review.",
     },
   },
+  ops: {
+    seed: 1702,
+    sureShare: 0.58,
+    foundLastWeek: 5_400,
+    doors: { lastWeek: 38_500, plan: 45_000 },
+    volunteers: { active: 2_310, newLastWeek: 140 },
+    contacts: { optedIn: 356_000, newLastWeek: 6_800, optedOutLastWeek: 310 },
+    agents: { recruited: 0.64, trained: 0.55, confirmed: 0.78 },
+    money: {
+      raised: 402_000_000,
+      spent: 238_000_000,
+      limit: 433_800_000,
+      cash: 164_000_000,
+      burnPerWeek: 7_500_000,
+      pledged: 58_000_000,
+      categories: [
+        { label: "Media and ads", kes: 71_000_000 },
+        { label: "Field and transport", kes: 58_000_000 },
+        { label: "Events and rallies", kes: 44_000_000 },
+        { label: "Staff", kes: 33_000_000 },
+        { label: "Digital and SMS", kes: 19_000_000 },
+        { label: "Other", kes: 13_000_000 },
+      ],
+    },
+    coordinatorRole: "Ward coordinator",
+    needs: [
+      {
+        label: "7 expenses waiting for approval",
+        detail: "KES 3.8M · mostly transport for Saturday's Eastlands rallies",
+        action: { kind: "go", label: "Review", to: "/finance" },
+      },
+      {
+        label: "Broadcast drafted: Nairobi Works update",
+        detail: "New garbage collection routes, to opted-in supporters countywide",
+        action: { kind: "go", label: "Check and send", to: "/broadcast" },
+      },
+      {
+        label: "86 replies waiting",
+        detail: "Mostly about water rationing and garbage collection",
+        action: { kind: "go", label: "Reply", to: "/inbox" },
+      },
+    ],
+  },
 };

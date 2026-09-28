@@ -8,8 +8,17 @@ export type ScenarioKey = "kalonzo" | "sakaja" | "mathira";
 export type NewsTag =
   "Local" | "County" | "National" | "Party" | "Opponent" | "Economy" | "Security";
 
-/** Routes a briefing action may open. */
-export type ActionRoute = "/voters" | "/canvassing" | "/listening" | "/broadcast" | "/field";
+/** Routes a briefing or overview action may open. */
+export type ActionRoute =
+  | "/voters"
+  | "/canvassing"
+  | "/listening"
+  | "/broadcast"
+  | "/field"
+  | "/finance"
+  | "/agents"
+  | "/inbox"
+  | "/warroom";
 
 /** One tap from the briefing to doing something about it. */
 export type Action =
@@ -159,6 +168,39 @@ export type NightScript = {
   divergence: { at: string; area: string; detail: string };
 };
 
+/**
+ * The campaign's own machine, for the Overview: what is hand-written. Every
+ * per-area figure is derived from the scenario's areas (see ops.ts).
+ */
+export type OpsConfig = {
+  /** Seeds the per-area spread. */
+  seed: number;
+  /** President: the supporter list target and count. Governor and MP use winNumber. */
+  list?: { target: number; found: number };
+  /** Share of found supporters who rated their support 4 or 5 at the door, 0-1. */
+  sureShare: number;
+  /** New supporters found in the last seven days, campaign-wide. */
+  foundLastWeek: number;
+  doors: { lastWeek: number; plan: number };
+  volunteers: { active: number; newLastWeek: number };
+  contacts: { optedIn: number; newLastWeek: number; optedOutLastWeek: number };
+  /** Polling-day agents: share of streams recruited, of those trained, of those confirmed. */
+  agents: { recruited: number; trained: number; confirmed: number };
+  money: {
+    raised: number;
+    spent: number;
+    /** The spending limit for the office. A demo figure, not the official one. */
+    limit: number;
+    cash: number;
+    burnPerWeek: number;
+    pledged: number;
+    categories: { label: string; kes: number }[];
+  };
+  /** "Ward coordinator", "County coordinator". */
+  coordinatorRole: string;
+  needs: { label: string; detail: string; action: Action }[];
+};
+
 export type Scenario = {
   key: ScenarioKey;
   office: Office;
@@ -198,4 +240,5 @@ export type Scenario = {
   diary: DiaryItem[];
   watch: WatchItem[];
   night: NightScript;
+  ops: OpsConfig;
 };

@@ -394,4 +394,47 @@ export const mathira: Scenario = {
         "The portal shows 96 more votes for Challenger A at one station than our photographed 35A. Sent for review.",
     },
   },
+  ops: {
+    seed: 3107,
+    sureShare: 0.61,
+    foundLastWeek: 250,
+    doors: { lastWeek: 3_100, plan: 4_000 },
+    volunteers: { active: 146, newLastWeek: 12 },
+    contacts: { optedIn: 18_900, newLastWeek: 410, optedOutLastWeek: 23 },
+    agents: { recruited: 0.71, trained: 0.62, confirmed: 0.8 },
+    money: {
+      raised: 31_500_000,
+      spent: 18_200_000,
+      limit: 33_000_000,
+      cash: 13_300_000,
+      burnPerWeek: 900_000,
+      pledged: 6_000_000,
+      categories: [
+        { label: "Field and transport", kes: 6_100_000 },
+        { label: "Media and ads", kes: 4_300_000 },
+        { label: "Events and rallies", kes: 3_600_000 },
+        { label: "Staff", kes: 2_700_000 },
+        { label: "Digital and SMS", kes: 900_000 },
+        { label: "Other", kes: 600_000 },
+      ],
+    },
+    coordinatorRole: "Ward coordinator",
+    needs: [
+      {
+        label: "3 expenses waiting for approval",
+        detail: "KES 412,000 · fuel and hall hire for Saturday's Konyu meeting",
+        action: { kind: "go", label: "Review", to: "/finance" },
+      },
+      {
+        label: "Broadcast drafted: Karatina market day",
+        detail: "Thursday's walkabout, to opted-in supporters in Karatina Town and Konyu",
+        action: { kind: "go", label: "Check and send", to: "/broadcast" },
+      },
+      {
+        label: "14 replies waiting",
+        detail: "Mostly about the Ruguru water project",
+        action: { kind: "go", label: "Reply", to: "/inbox" },
+      },
+    ],
+  },
 };
