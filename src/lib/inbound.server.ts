@@ -9,7 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
-import { agentStations, handleForm34aUssd } from "@/lib/form34a.server";
+import { agentStations, campaignForm, handleForm34aUssd } from "@/lib/form34a.server";
 import { queueMessages, settleIfDryRun, type QueueItem } from "@/lib/outbox.server";
 import { normalizeKePhone } from "@/lib/phone";
 import { channelCampaignId } from "@/lib/tenant.server";
@@ -498,8 +498,9 @@ export async function handleUssd(sb: Sb, rawPhone: string, text: string): Promis
   const poll = await ussdPollFor(sb, person);
 
   if (!top) {
-    // Polling agents also see the Form 34A entry; nobody else does.
-    const agent = (await agentStations(sb, person.phone)).length > 0;
+    // Polling agents also see their race's results form; nobody else does.
+    const station = (await agentStations(sb, person.phone))[0];
+    const form = station ? await campaignForm(sb, station.campaignId) : null;
     return fit(
       [
         `CON ${CAMPAIGN}`,
@@ -507,7 +508,7 @@ export async function handleUssd(sb: Sb, rawPhone: string, text: string): Promis
         "2. Jiunge kama mjitolea",
         "3. Nipigie simu",
         "4. Acha kupokea SMS",
-        ...(agent ? ["5. Fomu 34A (ajenti)"] : []),
+        ...(form ? [`5. Fomu ${form} (ajenti)`] : []),
       ].join("\n"),
     );
   }

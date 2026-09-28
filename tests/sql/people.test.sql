@@ -3,26 +3,9 @@
 -- with where it came from, never assumed, never laid over a STOP.
 -- Run with tests/sql/run.sh; each test rolls back.
 
-\set QUIET on
-\set ON_ERROR_STOP on
+\ir fixtures.sql
 
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000a1', 'admin@example.test');
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000b2', 'agent@example.test');
-update public.user_roles set role = 'agent' where user_id = '00000000-0000-0000-0000-0000000000b2';
-
--- Everything below runs as the agent unless it says otherwise.
-create or replace function pg_temp.fails_with(_sql text, _message text)
-returns boolean language plpgsql as $$
-begin
-  execute _sql;
-  return false;
-exception when others then
-  if sqlerrm <> _message then
-    raise notice 'expected "%", got "%"', _message, sqlerrm;
-    return false;
-  end if;
-  return true;
-end $$;
+-- Everything below runs as Sakaja's field agent (b2) unless it says otherwise.
 
 -- test: adding a person by hand checks the number, the name and consent
 begin;
@@ -206,8 +189,8 @@ begin;
 insert into public.people (phone, full_name, consent_sms) values ('+254755000001', 'Yes', true);
 insert into public.people (phone, full_name, consent_sms) values ('+254755000002', 'No consent', false);
 insert into public.people (phone, full_name, consent_sms, opted_out) values ('+254755000003', 'Stopped', true, true);
-update public.user_roles set role = 'manager' where user_id = '00000000-0000-0000-0000-0000000000b2';
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+-- Sending a broadcast is for the candidate or the campaign manager (c3).
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
 set local role authenticated;
 do $$
 declare

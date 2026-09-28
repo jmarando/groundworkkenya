@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { LiveBriefing } from "@/components/gw/briefing/LiveBriefing";
 import { MorningBriefing } from "@/components/gw/briefing/MorningBriefing";
-import { getScenario, scenarioKey } from "@/lib/demo";
+import { useAccess } from "@/hooks/useAccess";
+import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/briefing")({
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/briefing")({
 
 function Briefing() {
   const { c, view } = Route.useSearch();
+  // Each campaign's workspace opens on the demo for its own race.
+  const { campaign } = useAccess();
   const navigate = useNavigate({ from: Route.fullPath });
   const live = view === "live";
 
@@ -59,7 +62,7 @@ function Briefing() {
       ) : (
         <section className="view active" aria-label="Morning briefing">
           <MorningBriefing
-            s={getScenario(scenarioKey(c))}
+            s={getScenario(c ?? scenarioForLevel(campaign?.level))}
             onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
           />
         </section>

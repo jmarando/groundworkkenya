@@ -1,25 +1,30 @@
-// Form 34A over USSD and WhatsApp, against the database. The screens and the
-// caption reading are pure functions in form34a.ts; this finds the agent's
-// station and the ballot, files through file_stream_result(), and records
-// photos through record_form_photo(). Both run with the service role, with
-// the number the network gave: that number is the agent's credential.
+// Polling-station result forms over USSD and WhatsApp, against the database:
+// 34A for a presidential campaign, 37A for a governor's, 35A for an MP's (see
+// race.ts). The screens and caption reading are pure functions in form34a.ts;
+// this finds the agent's station, its campaign's ballot and race, files
+// through file_stream_result(), and records photos through record_form_photo().
+// Both run with the service role, with the number the network gave: that
+// number is the agent's credential, and the station it is on decides the
+// campaign.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { ascii, form34aStep, parseFormCaption, USSD_MAX, type Form34aStation } from "@/lib/form34a";
+import { resultForm } from "@/lib/race";
+import { channelCampaignId } from "@/lib/tenant.server";
 
 type Sb = SupabaseClient<Database>;
 
-export type AgentStation = Form34aStation & { id: string };
+export type AgentStation = Form34aStation & { id: string; campaignId: string };
 
 const fit = (s: string) => (s.length <= USSD_MAX ? s : s.slice(0, USSD_MAX));
 
-/** The stations this number is the agent for. */
+/** The stations this number is the agent for, in whichever campaign. */
 export async function agentStations(sb: Sb, phone: string): Promise<AgentStation[]> {
   const { data } = await sb
     .from("polling_stations")
-    .select("id, code, name, streams, registered_voters")
+    .select("id, code, name, streams, registered_voters, campaign_id")
     .eq("agent_phone", phone)
     .order("code")
     .limit(10);
@@ -29,22 +34,35 @@ export async function agentStations(sb: Sb, phone: string): Promise<AgentStation
     name: s.name,
     streams: s.streams ?? 1,
     registered: s.registered_voters ?? 0,
+    campaignId: s.campaign_id,
   }));
 }
 
-/** The campaign's WhatsApp number, for telling agents where to send the photo. */
+/** The result form for a campaign's race: "37A" for a governor's campaign. */
+export async function campaignForm(sb: Sb, campaignId: string): Promise<string> {
+  const { data } = await sb.from("campaigns").select("level").eq("id", campaignId).maybeSingle();
+  return resultForm(data?.level);
+}
+
+/**
+ * The WhatsApp number agents send photos to: the one the webhook listens on,
+ * which belongs to the campaign that owns the channels.
+ */
 async function campaignWhatsApp(sb: Sb): Promise<string | null> {
+  const owner = await channelCampaignId(sb).catch(() => null);
+  if (!owner) return null;
   const { data } = await sb
     .from("social_accounts")
     .select("handle, live")
     .eq("platform", "whatsapp")
+    .eq("campaign_id", owner)
     .maybeSingle();
   return data?.live && data.handle ? ascii(data.handle).replace(/\s+/g, "") : null;
 }
 
 /**
- * An agent filing on USSD. `inputs` is everything typed after choosing
- * "Fomu 34A" on the menu.
+ * An agent filing on USSD. `inputs` is everything typed after choosing the
+ * results form on the menu.
  */
 export async function handleForm34aUssd(sb: Sb, phone: string, inputs: string[]): Promise<string> {
   const stations = await agentStations(sb, phone);
@@ -67,11 +85,16 @@ export async function handleForm34aUssd(sb: Sb, phone: string, inputs: string[])
     rest = inputs.slice(1);
   }
 
-  const { data: ballot } = await sb
-    .from("ballot_candidates")
-    .select("name, party")
-    .order("position");
-  const step = form34aStep(station, ballot ?? [], rest);
+  // The station's own campaign: its ballot, and the form its race files.
+  const [{ data: ballot }, form] = await Promise.all([
+    sb
+      .from("ballot_candidates")
+      .select("name, party")
+      .eq("campaign_id", station.campaignId)
+      .order("position"),
+    campaignForm(sb, station.campaignId),
+  ]);
+  const step = form34aStep(station, ballot ?? [], rest, form);
   if (step.kind === "con") return fit(`CON ${step.text}`);
   if (step.kind === "end") return fit(`END ${step.text}`);
 
@@ -89,7 +112,7 @@ export async function handleForm34aUssd(sb: Sb, phone: string, inputs: string[])
   const corrected = (data as { corrected?: boolean } | null)?.corrected === true;
   const tag = `${station.code}/${step.stream}`;
   const wa = await campaignWhatsApp(sb);
-  const photo = wa ? ` Tuma picha ya Fomu 34A kwa WhatsApp ${wa}, andika: 34A ${tag}` : "";
+  const photo = wa ? ` Tuma picha ya Fomu ${form} kwa WhatsApp ${wa}, andika: ${form} ${tag}` : "";
   return fit(`END Imepokelewa: ${tag}${corrected ? " (imesahihishwa)" : ""}.${photo}`);
 }
 
@@ -114,8 +137,9 @@ export async function recordFormPhoto(
     _stream: stream ?? 0,
   });
   if (error || !data) return null;
-  const r = data as { station: string; stream: number | null; streams: number };
+  const r = data as { station: string; stream: number | null; streams: number; level?: string };
+  const form = resultForm(r.level);
   return r.stream
-    ? `Picha ya Fomu 34A imepokelewa: ${r.station} mkondo ${r.stream}. Asante.`
-    : `Picha imepokelewa kwa ${r.station}, lakini mkondo haujulikani. Itume tena na maelezo, mfano: 34A ${r.station}/1`;
+    ? `Picha ya Fomu ${form} imepokelewa: ${r.station} mkondo ${r.stream}. Asante.`
+    : `Picha imepokelewa kwa ${r.station}, lakini mkondo haujulikani. Itume tena na maelezo, mfano: ${form} ${r.station}/1`;
 }

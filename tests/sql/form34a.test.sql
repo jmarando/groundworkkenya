@@ -1,34 +1,19 @@
 -- Form 34A filing: the ballot, assigning agents, filing a stream, and photos.
 -- Run with tests/sql/run.sh; each test rolls back.
 
-\set QUIET on
-\set ON_ERROR_STOP on
+\ir fixtures.sql
 
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000a1', 'admin@example.test');
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000b2', 'agent@example.test');
-update public.user_roles set role = 'agent' where user_id = '00000000-0000-0000-0000-0000000000b2';
-
--- A station of our own beside the seeded ones: 3 streams, 1,000 registered.
-insert into public.polling_stations (id, code, name, registered_voters, streams, agent_name, agent_phone, status)
-values ('00000000-0000-0000-0000-00000000f001', 'TS-0001', 'Test Primary', 1000, 3, 'Achieng', '+254711222333', 'confirmed');
-
-create or replace function pg_temp.fails_with(_sql text, _message text)
-returns boolean language plpgsql as $$
-begin
-  execute _sql;
-  return false;
-exception when others then
-  if sqlerrm <> _message then
-    raise notice 'expected "%", got "%"', _message, sqlerrm;
-    return false;
-  end if;
-  return true;
-end $$;
+-- A station of our own beside the seeded ones, in Sakaja: 3 streams, 1,000 registered.
+insert into public.polling_stations (id, campaign_id, code, name, registered_voters, streams, agent_name, agent_phone, status)
+values ('00000000-0000-0000-0000-00000000f001', 'ca000000-0000-4000-8000-000000000002',
+        'TS-0001', 'Test Primary', 1000, 3, 'Achieng', '+254711222333', 'confirmed');
 
 create or replace function pg_temp.ballot3() returns void language sql as $$
-  delete from public.ballot_candidates;
-  insert into public.ballot_candidates (position, name, party, ours) values
-    (1, 'Amani', 'ABC', true), (2, 'Baraka', 'DEF', false), (3, 'Chege', null, false);
+  delete from public.ballot_candidates where campaign_id = 'ca000000-0000-4000-8000-000000000002';
+  insert into public.ballot_candidates (campaign_id, position, name, party, ours) values
+    ('ca000000-0000-4000-8000-000000000002', 1, 'Amani', 'ABC', true),
+    ('ca000000-0000-4000-8000-000000000002', 2, 'Baraka', 'DEF', false),
+    ('ca000000-0000-4000-8000-000000000002', 3, 'Chege', null, false);
 $$;
 
 create or replace function pg_temp.file(_stream int, _votes int[], _rejected int, _phone text default '+254711222333')
@@ -43,7 +28,7 @@ set local role authenticated;
 do $$
 begin
   assert pg_temp.fails_with($q$select public.set_ballot('[{"name": "Amani"}]')$q$,
-    'Only an admin or manager can change the ballot.');
+    'Only the candidate or campaign manager can change the ballot.');
 end $$;
 reset role;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
@@ -83,7 +68,7 @@ do $$
 begin
   assert pg_temp.fails_with(
     $q$select public.assign_station_agent('00000000-0000-0000-0000-00000000f001', 'Me', '+254700000000')$q$,
-    'Only an admin or manager can assign agents.');
+    'Only the candidate or campaign manager can assign agents.');
 end $$;
 rollback;
 
@@ -204,8 +189,9 @@ begin
   perform pg_temp.file(1, array[1, 2, 3], 0);
   perform pg_temp.file(3, array[1, 2, 3], 0);
 
-  r := public.record_form_photo('+254711222333', 'wamid.1', 'media-1', '34A TS-0001/1', 'TS-0001', 1);
+  r := public.record_form_photo('+254711222333', 'wamid.1', 'media-1', '37A TS-0001/1', 'TS-0001', 1);
   assert r ->> 'station' = 'TS-0001' and (r ->> 'stream')::int = 1;
+  assert r ->> 'level' = 'governor', 'the reply names the governor''s form: ' || r;
 
   -- No stream in the caption: the latest filed stream still without a photo.
   r := public.record_form_photo('+254711222333', 'wamid.2', 'media-2', null, null, null);
@@ -222,6 +208,54 @@ begin
   -- Someone who is not an agent: nothing recorded.
   assert public.record_form_photo('+254799999999', 'wamid.4', 'media-4', null, null, null) is null;
   assert not exists (select 1 from public.form_photos where wa_message_id = 'wamid.4');
+end $$;
+rollback;
+
+-- test: each campaign sets its own ballot and assigns its own agents
+begin;
+do $$ begin perform pg_temp.ballot3(); end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
+set local role authenticated;
+do $$
+begin
+  assert public.set_ballot('[{"name": "Waruru", "ours": true}, {"name": "Challenger"}]') = 2;
+  assert (select count(*) from public.ballot_candidates) = 2, 'Mathira sees its own ballot only';
+  assert pg_temp.fails_with(
+    $q$select public.assign_station_agent('00000000-0000-0000-0000-00000000f001', 'Mole', '+254722000999')$q$,
+    'That station is not on file.');
+end $$;
+reset role;
+do $$
+begin
+  assert (select count(*) from public.ballot_candidates
+           where campaign_id = 'ca000000-0000-4000-8000-000000000002') = 3, 'Sakaja''s ballot untouched';
+  assert (select agent_phone from public.polling_stations
+           where id = '00000000-0000-0000-0000-00000000f001') = '+254711222333', 'Sakaja''s agent untouched';
+end $$;
+rollback;
+
+-- test: a station files against its own campaign's ballot
+begin;
+do $$
+declare
+  r jsonb;
+begin
+  perform pg_temp.ballot3();
+  insert into public.ballot_candidates (campaign_id, position, name, ours) values
+    ('ca000000-0000-4000-8000-000000000003', 1, 'Waruru', true),
+    ('ca000000-0000-4000-8000-000000000003', 2, 'Challenger', false);
+  insert into public.polling_stations (id, campaign_id, code, name, registered_voters, streams, agent_phone, status)
+  values ('00000000-0000-0000-0000-00000000f003', 'ca000000-0000-4000-8000-000000000003',
+          'MT-0001', 'Karatina Primary', 800, 1, '+254733444555', 'confirmed');
+
+  assert pg_temp.fails_with(
+    $q$select public.file_stream_result('+254733444555', '00000000-0000-0000-0000-00000000f003', 1, array[1, 2, 3], 0, 'ussd')$q$,
+    'Kura za wagombea 2 zinahitajika, zimepokelewa 3.'), 'Mathira''s ballot has two candidates, not Sakaja''s three';
+  r := public.file_stream_result('+254733444555', '00000000-0000-0000-0000-00000000f003', 1, array[300, 200], 4, 'ussd');
+  assert (select results -> 'candidates' from public.polling_stations
+           where id = '00000000-0000-0000-0000-00000000f003') = '{"Waruru": 300, "Challenger": 200}'::jsonb;
+  assert (select campaign_id from public.stream_results where id = (r ->> 'id')::uuid)
+         = 'ca000000-0000-4000-8000-000000000003', 'the filing belongs to Mathira';
 end $$;
 rollback;
 

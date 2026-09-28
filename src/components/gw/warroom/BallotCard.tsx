@@ -12,10 +12,12 @@ export function BallotCard({
   ballot,
   locked,
   canEdit,
+  race,
 }: {
   ballot: WarRoomData["ballot"];
   locked: boolean;
   canEdit: boolean;
+  race: WarRoomData["race"];
 }) {
   const [editing, setEditing] = useState(false);
   return (
@@ -26,10 +28,13 @@ export function BallotCard({
           {locked ? "order locked · forms filed" : "agents key votes in this order"}
         </span>
       </div>
+      <p className="meta">
+        {race.seat || race.label} · agents file Form {race.form}
+      </p>
       {ballot.length === 0 ? (
         <p className="meta">
-          No candidates yet. Agents cannot file a Form 34A until the ballot is set, in the order
-          printed on the form.
+          No candidates yet. Agents cannot file a Form {race.form} until the ballot is set, in the
+          order printed on the form.
         </p>
       ) : (
         <ol className="ballot-list">

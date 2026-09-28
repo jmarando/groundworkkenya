@@ -15,6 +15,13 @@ export function scenarioKey(v: unknown): ScenarioKey {
   return v === "kalonzo" || v === "sakaja" || v === "mathira" ? v : DEFAULT_SCENARIO;
 }
 
+/** The demo scenario for a campaign's race: president, governor or MP. */
+export function scenarioForLevel(level: string | null | undefined): ScenarioKey {
+  if (level === "president") return "kalonzo";
+  if (level === "mp") return "mathira";
+  return DEFAULT_SCENARIO;
+}
+
 export function getScenario(key: ScenarioKey): Scenario {
   return SCENARIOS.find((s) => s.key === key) ?? sakaja;
 }

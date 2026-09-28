@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { EngineRoom } from "@/components/gw/overview/EngineRoom";
 import { LiveOverview } from "@/components/gw/overview/LiveOverview";
-import { getScenario, scenarioKey } from "@/lib/demo";
+import { useAccess } from "@/hooks/useAccess";
+import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/overview")({
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/overview")({
 
 function Overview() {
   const { c, view } = Route.useSearch();
+  // Each campaign's workspace opens on the demo for its own race.
+  const { campaign } = useAccess();
   const navigate = useNavigate({ from: Route.fullPath });
   const live = view === "live";
 
@@ -59,7 +62,7 @@ function Overview() {
       ) : (
         <section className="view active" aria-label="Command centre">
           <EngineRoom
-            s={getScenario(scenarioKey(c))}
+            s={getScenario(c ?? scenarioForLevel(campaign?.level))}
             onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
           />
         </section>

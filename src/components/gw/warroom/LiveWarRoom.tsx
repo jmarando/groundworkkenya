@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { BallotCard } from "@/components/gw/warroom/BallotCard";
 import { FormsCard } from "@/components/gw/warroom/FormsCard";
 import { getWarRoom } from "@/lib/console.functions";
+import { raceArea } from "@/lib/race";
 
 const nf = new Intl.NumberFormat("en-KE");
 const pct = (n: number) => `${n.toFixed(1)}%`;
@@ -50,7 +51,7 @@ export function LiveWarRoom() {
         <div className="w-top">
           <div>
             <span className="eyebrow">Election night · parallel tally</span>
-            <div className="w-title">Governor · Nairobi County</div>
+            <div className="w-title">Parallel tally</div>
             <p className="w-tagline">
               The county, <span className="serif">counted.</span>
             </p>
@@ -83,9 +84,9 @@ export function LiveWarRoom() {
             {now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })} ·
             parallel tally
           </span>
-          <div className="w-title">Governor · Nairobi County</div>
+          <div className="w-title">{data.race.seat || "Your race"}</div>
           <p className="w-tagline">
-            The county, <span className="serif">counted.</span>
+            The {raceArea(data.race.level)}, <span className="serif">counted.</span>
           </p>
         </div>
         <div className="w-clockside">
@@ -117,8 +118,8 @@ export function LiveWarRoom() {
                 <span className="mono">tally opens as agents file</span>
               </div>
               <p className="meta">
-                Every signed Form 34A your agents photograph lands here. Until the first one is
-                filed we show nothing rather than a guess.
+                Every signed Form {data.race.form} your agents photograph lands here. Until the
+                first one is filed we show nothing rather than a guess.
               </p>
               <div className="t-chips">
                 <span className="chip">
@@ -297,13 +298,14 @@ export function LiveWarRoom() {
           </div>
         </div>
 
-        <FormsCard forms={data.forms} streams={data.streams} />
+        <FormsCard forms={data.forms} streams={data.streams} form={data.race.form} />
 
         <div className="w-rail fx5">
           <BallotCard
             ballot={data.ballot}
             locked={data.ballotLocked}
             canEdit={data.canEditBallot}
+            race={data.race}
           />
         </div>
 

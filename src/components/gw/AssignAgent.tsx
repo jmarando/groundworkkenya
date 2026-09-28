@@ -8,7 +8,7 @@ import { normalizeKePhone } from "@/lib/phone";
 
 /**
  * Put a polling agent on a station. Their phone is how they are recognised
- * when they file Form 34A on USSD and send its photo on WhatsApp.
+ * when they file the result form on USSD and send its photo on WhatsApp.
  */
 export function AssignAgent({
   station,
@@ -94,8 +94,8 @@ export function AssignAgent({
           </div>
           <p className="meta">
             On election night they dial the campaign&apos;s USSD code from this number, choose{" "}
-            <b>5. Fomu 34A</b>, and key in each stream&apos;s counts. Then they send the signed
-            form&apos;s photo on WhatsApp from the same number.
+            <b>5</b> (the results form), and key in each stream&apos;s counts. Then they send the
+            signed form&apos;s photo on WhatsApp from the same number.
           </p>
         </div>
 

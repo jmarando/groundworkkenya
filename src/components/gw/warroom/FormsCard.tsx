@@ -9,11 +9,20 @@ const hhmm = (iso: string) =>
   });
 
 /** Forms as agents file them: counts by USSD, the signed form's photo on WhatsApp. */
-export function FormsCard({ forms, streams }: { forms: WarRoomData["forms"]; streams: number }) {
+export function FormsCard({
+  forms,
+  streams,
+  form,
+}: {
+  forms: WarRoomData["forms"];
+  streams: number;
+  /** The race's result form: "37A" for a governor's campaign. */
+  form: string;
+}) {
   return (
     <div className="card w-span7 fx5">
       <div className="card-head">
-        <h2>Form 34A</h2>
+        <h2>Form {form}</h2>
         <span className="mono">
           {nf.format(forms.streamsFiled)} of {nf.format(streams)} streams filed ·{" "}
           {nf.format(forms.photos)} with a photo
@@ -21,7 +30,7 @@ export function FormsCard({ forms, streams }: { forms: WarRoomData["forms"]; str
       </div>
       {forms.recent.length === 0 ? (
         <p className="meta">
-          Agents dial the campaign&apos;s USSD code, choose <b>5. Fomu 34A</b>, key in each
+          Agents dial the campaign&apos;s USSD code, choose <b>5. Fomu {form}</b>, key in each
           stream&apos;s counts from the signed form, then send its photo on WhatsApp. Filings land
           here as they come in.
         </p>
@@ -70,7 +79,7 @@ export function FormsCard({ forms, streams }: { forms: WarRoomData["forms"]; str
         <p className="method">
           {nf.format(forms.photosUnplaced)} photo{forms.photosUnplaced === 1 ? "" : "s"} came
           without saying which stream; the agent was asked to send it again with a caption like
-          &ldquo;34A PS-0001/2&rdquo;.
+          &ldquo;{form} PS-0001/2&rdquo;.
         </p>
       )}
       <p className="method">

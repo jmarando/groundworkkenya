@@ -3,7 +3,8 @@ import { useEffect } from "react";
 
 import { ElectionNight } from "@/components/gw/warroom/ElectionNight";
 import { LiveWarRoom } from "@/components/gw/warroom/LiveWarRoom";
-import { getScenario, scenarioKey } from "@/lib/demo";
+import { useAccess } from "@/hooks/useAccess";
+import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/warroom")({
@@ -44,11 +45,13 @@ function useWarRoomSurface() {
 function WarRoom() {
   useWarRoomSurface();
   const { c, mode } = Route.useSearch();
+  // Each campaign's workspace opens on the demo for its own race.
+  const { campaign } = useAccess();
   const navigate = useNavigate({ from: Route.fullPath });
   if (mode === "live") return <LiveWarRoom />;
   return (
     <ElectionNight
-      s={getScenario(scenarioKey(c))}
+      s={getScenario(c ?? scenarioForLevel(campaign?.level))}
       onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
     />
   );

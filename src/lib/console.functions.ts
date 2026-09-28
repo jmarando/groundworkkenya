@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { myRoles } from "@/lib/access";
+import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const STATUTORY_LIMIT = 433_800_000;
@@ -811,6 +812,8 @@ export type WarRoomData = {
   ballot: { id: string; position: number; name: string; party: string | null; ours: boolean }[];
   /** Forms are filed: candidates can be renamed, not added, removed or moved. */
   ballotLocked: boolean;
+  /** This campaign's race: its seat and the result form agents file (37A for governor). */
+  race: { level: string; label: string; seat: string; form: string };
   canEditBallot: boolean;
 };
 
@@ -844,6 +847,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
       { data: photos },
       { data: ballot },
       { data: roles },
+      { data: campaignId },
     ] = await Promise.all([
       sb.from("polling_stations").select("*").order("code"),
       sb.from("wards").select("id, name, constituency"),
@@ -856,7 +860,15 @@ export const getWarRoom = createServerFn({ method: "GET" })
       sb.from("form_photos").select("station_id, stream"),
       sb.from("ballot_candidates").select("id, position, name, party, ours").order("position"),
       myRoles(sb),
+      sb.rpc("my_campaign"),
     ]);
+    const { data: campaign } = campaignId
+      ? await sb
+          .from("campaigns")
+          .select("level, seat")
+          .eq("id", campaignId as string)
+          .maybeSingle()
+      : { data: null };
 
     const st = stations ?? [];
     const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
@@ -1062,6 +1074,12 @@ export const getWarRoom = createServerFn({ method: "GET" })
         ours: b.ours,
       })),
       ballotLocked: filed.length > 0,
+      race: {
+        level: campaign?.level ?? "",
+        label: officeLabel(campaign?.level),
+        seat: campaign?.seat ?? "",
+        form: resultForm(campaign?.level),
+      },
       canEditBallot: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
       unstaffedList: st
         .filter((s) => s.status !== "confirmed")

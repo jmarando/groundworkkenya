@@ -9,6 +9,8 @@ export type Campaign = {
   name: string;
   candidate: string | null;
   seat: string;
+  /** The race: "president", "governor", "mp", ... */
+  level: string;
   host: string | null;
 };
 
@@ -57,7 +59,7 @@ export function useAccess() {
       if (campaignId) {
         const { data: c } = await supabase
           .from("campaigns")
-          .select("id, slug, name, candidate, seat, host")
+          .select("id, slug, name, candidate, seat, level, host")
           .eq("id", campaignId as string)
           .maybeSingle();
         campaign = c ?? null;

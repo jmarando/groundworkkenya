@@ -78,6 +78,8 @@ export function form34aStep(
   station: Form34aStation,
   ballot: Form34aCandidate[],
   inputs: string[],
+  /** The race's result form: 34A president, 35A MP, 37A governor, and so on. */
+  form = "34A",
 ): Form34aStep {
   if (!ballot.length) return end("Orodha ya wagombea haijawekwa. Mjulishe mratibu.");
 
@@ -102,7 +104,7 @@ export function form34aStep(
   for (let k = 0; k < ballot.length; k++) {
     const raw = inputs[i + k];
     if (raw === undefined) {
-      return con(`${tag} Fomu 34A (${k + 1}/${ballot.length})\nKura za ${label(ballot[k]!)}?`);
+      return con(`${tag} Fomu ${form} (${k + 1}/${ballot.length})\nKura za ${label(ballot[k]!)}?`);
     }
     const n = count(raw);
     if (n === null) return end(`"${clip(raw)}" si namba ya kura. Piga tena uanze upya.`);

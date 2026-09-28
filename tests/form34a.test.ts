@@ -13,6 +13,7 @@ import {
   type Form34aStation,
 } from "@/lib/form34a";
 import { handleForm34aUssd, recordFormPhoto } from "@/lib/form34a.server";
+import { resultForm } from "@/lib/race";
 
 let pass = 0;
 let fail = 0;
@@ -178,16 +179,44 @@ eq(
   ],
 );
 
+// ---- each race's result form
+eq(
+  "result forms by race",
+  ["president", "mp", "mca", "governor", "senator", "woman_rep", null].map(resultForm),
+  ["34A", "35A", "36A", "37A", "38A", "39A", "34A"],
+);
+eq(
+  "levels written other ways",
+  ["Governor", "Woman Representative", "member-of-parliament", "presidential", "king"].map(
+    resultForm,
+  ),
+  ["37A", "39A", "35A", "34A", "34A"],
+);
+eq(
+  "the screens name the form they are told",
+  text(form34aStep(station, ballot, ["2"], "37A")),
+  "PS-0001/2 Fomu 37A (1/2)\nKura za AMANI (ABC)?",
+);
+
 // ---- the USSD handler, against a stand-in database
 
 type Call = { fn: string; args: Record<string, unknown> };
 
-function fakeDb(opts: { stations: object[]; ballot: object[]; fileError?: string }) {
+function fakeDb(opts: {
+  stations: object[];
+  ballot: object[];
+  fileError?: string;
+  /** The station's campaign's race. */
+  level?: string;
+}) {
   const calls: Call[] = [];
   const from = (table: string) => {
     const answer = () => {
       if (table === "polling_stations") return { data: opts.stations, error: null };
       if (table === "ballot_candidates") return { data: opts.ballot, error: null };
+      // Both the station's campaign (its level) and the channel owner (its id).
+      if (table === "campaigns")
+        return { data: { id: "camp-1", level: opts.level ?? "president" }, error: null };
       if (table === "social_accounts")
         return { data: { handle: "+254 182 668723", live: true }, error: null };
       return { data: null, error: null };
@@ -219,6 +248,7 @@ const row = {
   name: "Kilimani Primary",
   streams: 3,
   registered_voters: 700,
+  campaign_id: "camp-1",
 };
 
 async function main() {
@@ -287,6 +317,28 @@ async function main() {
     eq("then files for the one chosen", db.calls[0]?.args["_station_id"], "st-2");
   }
 
+  // ---- a governor's race files Form 37A, not 34A
+  {
+    const db = fakeDb({ stations: [row], ballot, level: "governor" });
+    const reply = await handleForm34aUssd(db as never, "+254711000001", [
+      "2",
+      "120",
+      "80",
+      "5",
+      "1",
+    ]);
+    ok(
+      "the receipt names the governor's form",
+      reply.includes("Fomu 37A") && reply.includes("andika: 37A PS-0001/2"),
+      reply,
+    );
+    eq(
+      "and so do the screens",
+      await handleForm34aUssd(db as never, "+254711000001", ["2"]),
+      "CON PS-0001/2 Fomu 37A (1/2)\nKura za AMANI (ABC)?",
+    );
+  }
+
   // ---- a photo on WhatsApp
   {
     const calls: Call[] = [];
@@ -297,7 +349,7 @@ async function main() {
       },
     });
     const note = await recordFormPhoto(
-      photoDb({ station: "PS-0001", stream: 2, streams: 3 }) as never,
+      photoDb({ station: "PS-0001", stream: 2, streams: 3, level: "mp" }) as never,
       "+254711000001",
       { id: "wamid.1", image: { id: "media-1", caption: "34A PS-0001/2" } },
     );
@@ -312,7 +364,7 @@ async function main() {
     eq(
       "the agent is told where it went",
       note,
-      "Picha ya Fomu 34A imepokelewa: PS-0001 mkondo 2. Asante.",
+      "Picha ya Fomu 35A imepokelewa: PS-0001 mkondo 2. Asante.",
     );
 
     calls.length = 0;
