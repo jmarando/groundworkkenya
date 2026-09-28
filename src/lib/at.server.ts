@@ -12,6 +12,8 @@
 //   unknown   no usable answer (network, server error, unreadable reply).
 //             Some or all of the texts may have gone out.
 
+import { normalizeKePhone } from "@/lib/phone";
+
 const AT_API = "https://api.africastalking.com/version1/messaging";
 
 /** Status codes meaning Africa's Talking accepted the text: processed, sent, queued. */
@@ -60,10 +62,8 @@ export function atConfigured(): boolean {
  * address the text and to match Africa's Talking's report back to it.
  */
 export function phoneKey(phone: string | null | undefined): string {
-  const d = (phone ?? "").replace(/\D/g, "");
-  if (d.length === 10 && d.startsWith("0")) return `254${d.slice(1)}`;
-  if (d.length === 9 && (d.startsWith("7") || d.startsWith("1"))) return `254${d}`;
-  return d;
+  const ke = normalizeKePhone(phone);
+  return ke ? ke.slice(1) : (phone ?? "").replace(/\D/g, "");
 }
 
 /** "KES 0.8000" → 0.8. Anything not in shillings is left unrecorded. */

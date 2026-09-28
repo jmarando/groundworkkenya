@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "npx -y tsx --tsconfig tsconfig.json tests/demo.test.ts && npx -y tsx --tsconfig tsconfig.json tests/outbox.test.ts && bash tests/sql/run.sh"
+    "test": "for t in tests/*.test.ts; do npx -y tsx --tsconfig tsconfig.json \"$t\" || exit 1; done && bash tests/sql/run.sh"
   },
   "overrides": {
     "rolldown": "1.2.1"

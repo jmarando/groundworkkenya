@@ -34,12 +34,16 @@ if ! pg_ctl -D "$dir/data" -l "$dir/log" -w \
 fi
 
 run_psql() {
-  psql -X -q -v ON_ERROR_STOP=1 -h "$sock" -p "$port" -U postgres -d postgres "$@"
+  local db="$1"
+  shift
+  psql -X -q -v ON_ERROR_STOP=1 -h "$sock" -p "$port" -U postgres -d "$db" "$@"
 }
 
-run_psql -f tests/sql/supabase-stub.sql
+# Migrations go into a template; each test file then gets its own copy.
+run_psql postgres -c "create database gw_template"
+run_psql gw_template -f tests/sql/supabase-stub.sql
 for f in supabase/migrations/*.sql; do
-  if ! run_psql -f "$f" >/dev/null 2>"$dir/err"; then
+  if ! run_psql gw_template -f "$f" >/dev/null 2>"$dir/err"; then
     echo "FAIL migration $f"
     cat "$dir/err"
     exit 1
@@ -48,8 +52,11 @@ done
 echo "ok   $(ls supabase/migrations/*.sql | wc -l | tr -d ' ') migrations apply cleanly"
 
 status=0
+n=0
 for t in tests/sql/*.test.sql; do
-  if run_psql -f "$t" 2>"$dir/err"; then
+  n=$((n + 1))
+  run_psql postgres -c "create database gw_test_$n template gw_template"
+  if run_psql "gw_test_$n" -f "$t" 2>"$dir/err"; then
     echo "ok   $t ($(grep -c '^-- test:' "$t") tests)"
   else
     echo "FAIL $t"

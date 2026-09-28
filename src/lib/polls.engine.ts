@@ -40,6 +40,7 @@ const STOP_WORDS = [
   "ondoa",
   "ondoka",
   "sitaki",
+  "toka",
 ];
 
 /** And back in again. */

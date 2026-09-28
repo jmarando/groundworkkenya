@@ -7,6 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/integrations/supabase/types";
+import { isStartWord, isStopWord } from "@/lib/polls.engine";
 
 type Sb = SupabaseClient<Database>;
 
@@ -81,8 +82,6 @@ export async function sendWhatsAppText(phone: string, body: string): Promise<WaS
 /* ------------------------------------------------------------ inbound */
 
 const RANK: Record<string, number> = { accepted: 1, sent: 2, delivered: 3, read: 4, failed: 5 };
-const OPT_OUT = /^\s*(stop|acha|unsubscribe|toka)\s*$/i;
-const OPT_IN = /^\s*(start|anza)\s*$/i;
 
 type WaValue = {
   contacts?: { profile?: { name?: string }; wa_id?: string }[];
@@ -210,10 +209,16 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
       if (msgErr && !msgErr.message.includes("duplicate")) throw new Error(msgErr.message);
 
       // Same records as an SMS STOP or START, so the person's history reads the same.
-      if (OPT_OUT.test(body) && !person.opted_out) {
+      if (isStopWord(body) && !person.opted_out) {
         await sb
           .from("people")
-          .update({ opted_out: true, opted_out_at: new Date().toISOString() })
+          .update({
+            opted_out: true,
+            opted_out_at: new Date().toISOString(),
+            consent_sms: false,
+            consent_whatsapp: false,
+            consent_call: false,
+          })
           .eq("id", person.id);
         await sb.from("person_events").insert({
           person_id: person.id,
@@ -221,7 +226,7 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
           channel: "whatsapp",
           detail: "Replied STOP on WhatsApp",
         });
-      } else if (OPT_IN.test(body)) {
+      } else if (isStartWord(body)) {
         await sb
           .from("people")
           .update({ opted_out: false, opted_out_at: null, consent_whatsapp: true })
