@@ -289,10 +289,11 @@ a.sb-item {
 
 .auth-campaign {
   display: grid;
-  gap: 4px;
-  padding: 14px 16px;
-  border: 1px solid var(--gw-border);
-  border-left: 3px solid var(--gw-accent);
-  border-radius: 12px;
+  gap: 8px;
+  padding: 20px 0 18px;
+  border-top: 1px solid var(--gw-border);
+  border-bottom: 1px solid var(--gw-border);
 }
-.auth-campaign b { font-size: 1.15rem; }
+.auth-campaign h1 { margin: 4px 0 0; font-size: clamp(30px, 7vw, 42px); line-height: 1; letter-spacing: 0; }
+.auth-campaign-seat { color: var(--gw-accent); font-weight: 700; }
+.auth-action-title { margin: 4px 0 -2px; font-size: 18px; letter-spacing: 0; }
