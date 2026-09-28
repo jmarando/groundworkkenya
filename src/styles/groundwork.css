@@ -1753,3 +1753,5 @@ figure { margin: 0; }
 .campaign-form { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; }
 .campaign-form label { display: grid; gap: 6px; }
 .campaign-form input, .campaign-form select { width: 100%; }
+
+.bc-tabs { display: flex; gap: 8px; margin-bottom: 16px; }

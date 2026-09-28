@@ -10,6 +10,7 @@ import {
   type BroadcastAudience,
 } from "@/lib/broadcast.functions";
 import { plainify, smsParts } from "@/lib/sms";
+import { ChannelTabs, WhatsAppComposer } from "@/components/gw/WhatsAppComposer";
 
 const nf = new Intl.NumberFormat("en-KE");
 const kes = new Intl.NumberFormat("en-KE", { maximumFractionDigits: 2 });
@@ -27,6 +28,39 @@ export function BroadcastComposer({
   initialBody: string;
   smsRate: number;
   onClose: () => void;
+}) {
+  const [channel, setChannel] = useState<"sms" | "wa">("sms");
+  if (channel === "wa") {
+    return (
+      <WhatsAppComposer audience={audience} describe={describe} onChannel={setChannel} onClose={onClose} />
+    );
+  }
+  return (
+    <SmsComposer
+      audience={audience}
+      describe={describe}
+      initialBody={initialBody}
+      smsRate={smsRate}
+      onClose={onClose}
+      onChannel={setChannel}
+    />
+  );
+}
+
+function SmsComposer({
+  audience,
+  describe,
+  initialBody,
+  smsRate,
+  onClose,
+  onChannel,
+}: {
+  audience: BroadcastAudience;
+  describe: string;
+  initialBody: string;
+  smsRate: number;
+  onClose: () => void;
+  onChannel: (v: "sms" | "wa") => void;
 }) {
   const [body, setBody] = useState(initialBody);
   const [reviewing, setReviewing] = useState(false);
@@ -93,6 +127,7 @@ export function BroadcastComposer({
         </div>
 
         <div className="pb-body">
+          <ChannelTabs value="sms" onChange={onChannel} />
           <div className="bc-audience">
             <span className="eyebrow">To</span>
             <p>
