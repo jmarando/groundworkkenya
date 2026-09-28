@@ -173,7 +173,132 @@ function Inbox() {
             {data.counts.all} conversations · {data.counts.unread} unread · {data.counts.open} open
           </p>
         </div>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={() => {
+            setComposing(true);
+            setNewNote(null);
+          }}
+        >
+          New message
+        </button>
       </div>
+
+      {composing && (
+        <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="nm-title">
+          <div className="pb">
+            <div className="pb-head">
+              <div>
+                <span className="eyebrow">Inbox · outbound</span>
+                <h2 id="nm-title">Start a conversation.</h2>
+              </div>
+              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setComposing(false)}>
+                Close
+              </button>
+            </div>
+            <div className="pb-body">
+              {!picked ? (
+                <>
+                  <label className="pb-field">
+                    <span>Who?</span>
+                    <input
+                      type="search"
+                      placeholder="Search by name or phone number"
+                      value={pq}
+                      onChange={(e) => setPq(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void findPeople();
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    disabled={searching || pq.trim().length < 2}
+                    onClick={() => void findPeople()}
+                  >
+                    {searching ? "Searching…" : "Search people"}
+                  </button>
+                  {results.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="cv"
+                      onClick={() => {
+                        setPicked({ id: p.id, name: p.name });
+                        setChannel(p.consentWhatsapp ? "whatsapp" : "sms");
+                      }}
+                    >
+                      <span className="cv-name">{p.name}</span>
+                      <span className="cv-snip">
+                        {p.phone ?? "no number"} · {p.ward ?? "ward unknown"}
+                        {p.optedOut ? " · opted out" : ""}
+                      </span>
+                    </button>
+                  ))}
+                  {results.length === 0 && !searching && pq.trim().length >= 2 && (
+                    <p className="f-note">Nobody matches. Add them on the People page first.</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="f-note">
+                    To <b>{picked.name}</b>{" "}
+                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPicked(null)}>
+                      Change
+                    </button>
+                  </p>
+                  <div className="bc-actions">
+                    <button
+                      type="button"
+                      className={`btn btn--sm ${channel === "sms" ? "btn--primary" : "btn--ghost"}`}
+                      onClick={() => setChannel("sms")}
+                    >
+                      SMS
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn--sm ${channel === "whatsapp" ? "btn--primary" : "btn--ghost"}`}
+                      onClick={() => setChannel("whatsapp")}
+                    >
+                      WhatsApp
+                    </button>
+                  </div>
+                  {channel === "whatsapp" && (
+                    <p className="f-note">
+                      WhatsApp only allows a first message as an approved template. If they have not
+                      messaged the campaign in the last 24 hours, Meta will refuse this send.
+                    </p>
+                  )}
+                  <label className="pb-field">
+                    <span>Message</span>
+                    <textarea
+                      rows={4}
+                      value={newBody}
+                      maxLength={2000}
+                      onChange={(e) => setNewBody(e.target.value)}
+                    />
+                  </label>
+                </>
+              )}
+            </div>
+            <div className="pb-foot">
+              <p className="f-note" aria-live="polite">{newNote ?? ""}</p>
+              {picked && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  disabled={sending || !newBody.trim()}
+                  onClick={() => void sendNew()}
+                >
+                  {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : "WhatsApp"}`}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="ibx fx2">
         <div className="ibx-rail">
