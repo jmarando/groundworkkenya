@@ -49,7 +49,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] M-Pesa Daraja credentials (reward payouts)
 - [x] WhatsApp +254 182 668723 connected: inbound to Inbox, replies, delivery/read ticks, STOP/START
 - [ ] WhatsApp: set this project as Incoming messages destination (Connectors → WhatsApp); publish
-- [ ] WhatsApp templates for broadcasts (Meta approval)
+- [x] WhatsApp template broadcasts wired into Broadcast
 - [ ] Email: user sets up sender domain (Cloud → Emails), then alerts/app emails
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
