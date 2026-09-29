@@ -27,8 +27,8 @@ export type Action =
   | { kind: "go"; label: string; to: ActionRoute }
   | { kind: "task"; label: string; task: string };
 
-/** Colour role: our candidate, the main rival, the third. CSS maps each to a validated series colour. */
-export type Tone = "us" | "a" | "b";
+/** Colour role: our candidate, then rivals in order. CSS maps each to a validated series colour. */
+export type Tone = "us" | "a" | "b" | "c" | "d";
 
 export type Contender = {
   key: string;
