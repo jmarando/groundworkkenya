@@ -23,6 +23,13 @@ export function ActionButton({ action, quiet = false }: { action: Action; quiet?
       </Link>
     );
   }
+  if (action.kind === "jump") {
+    return (
+      <a href={action.to} className={cls}>
+        {action.label}
+      </a>
+    );
+  }
   if (action.kind === "task") {
     return (
       <button

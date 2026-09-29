@@ -25,6 +25,7 @@ export type Action =
   | { kind: "poll"; label: string; ask: string }
   | { kind: "draft"; label: string; title: string; body: string }
   | { kind: "go"; label: string; to: ActionRoute }
+  | { kind: "jump"; label: string; to: "#race" | "#campaign" }
   | { kind: "task"; label: string; task: string };
 
 /** Colour role: our candidate, then rivals in order. CSS maps each to a validated series colour. */

@@ -7,6 +7,7 @@ import { getScenario } from "@/lib/demo";
 import type { Scenario } from "@/lib/demo/types";
 import {
   greetingName,
+  issueBoard,
   raceVerdict,
   realToday,
   sectionModes,
@@ -116,6 +117,26 @@ eq(
     true,
   );
 }
+{
+  const items = realToday({
+    pendingExpenses: 0,
+    unread: 0,
+    topIssue: null,
+    rivalMove: {
+      title: "James Gakuya up 3.8 points in Mizani Africa's latest poll",
+      detail: "From 11.2% in Jul 2026 to 15% in Aug 2026.",
+    },
+  });
+  eq(
+    "a rival's move, with a jump to the race",
+    [items[0]?.title, items[0]?.action, items[0]?.sample],
+    [
+      "James Gakuya up 3.8 points in Mizani Africa's latest poll",
+      { kind: "jump", label: "See the race", to: "#race" },
+      false,
+    ],
+  );
+}
 
 // ---------------------------------------------------------------- issues
 
@@ -157,6 +178,79 @@ eq(
   topIssue(Array.from({ length: 6 }, () => ({ issue: "General", sentiment: null }))),
   null,
 );
+{
+  const at = (d: number) => new Date(Date.UTC(2026, 8, 29 - d)).toISOString();
+  const board = issueBoard([
+    {
+      issue: "water",
+      sentiment: "negative",
+      title: "Taps dry in Kayole",
+      url: "https://a.test/1",
+      found_at: at(1),
+    },
+    {
+      issue: "Water",
+      sentiment: null,
+      title: "Bowser timetable out",
+      url: "https://a.test/2",
+      found_at: at(3),
+    },
+    {
+      issue: "water",
+      sentiment: "negative",
+      title: " Rationing extended in 14 wards ",
+      url: null,
+      found_at: at(0),
+    },
+    {
+      issue: "floods",
+      sentiment: "negative",
+      title: "Drains blocked on Jogoo Road",
+      url: "https://a.test/4",
+      found_at: at(2),
+    },
+    {
+      issue: "general",
+      sentiment: null,
+      title: "Weekend roundup",
+      url: "https://a.test/5",
+      found_at: at(1),
+    },
+    {
+      issue: "campaign",
+      sentiment: null,
+      title: "Rally on Saturday",
+      url: "https://a.test/6",
+      found_at: at(1),
+    },
+    { issue: "floods", sentiment: null, title: null, url: "https://a.test/7", found_at: at(4) },
+  ]);
+  eq(
+    "issues by volume, catch-alls left out",
+    board.map((b) => [b.key, b.label, b.count, b.angry]),
+    [
+      ["water", "Water", 3, 2],
+      ["floods", "Floods", 2, 1],
+    ],
+  );
+  eq("the latest two lines, trimmed", board[0]?.examples, [
+    { text: "Rationing extended in 14 wards", url: null },
+    { text: "Taps dry in Kayole", url: "https://a.test/1" },
+  ]);
+  eq(
+    "at most five",
+    issueBoard(
+      ["a1", "b1", "c1", "d1", "e1", "f1"].map((i) => ({
+        issue: i,
+        sentiment: null,
+        title: null,
+        url: null,
+        found_at: at(0),
+      })),
+    ).length,
+    5,
+  );
+}
 
 // ---------------------------------------------------------------- names
 
@@ -216,7 +310,7 @@ async function main() {
     const h = await loadHome(db() as never, ME, "manager");
     eq("the signed-in person's name", h.firstName, "Njeri Kamau");
     eq("sample people are not counted as real", h.facts.realPeople, 1);
-    eq("race data comes with part 2", [h.facts.rivals, h.facts.polls], [0, 0]);
+    eq("no race on record, no race facts", [h.facts.rivals, h.facts.polls], [0, 0]);
     eq("a manager sees expenses to approve", h.signals.pendingExpenses, 2);
     eq("unread conversations", h.signals.unread, 1);
     eq("the week's loudest issue, older mentions ignored", h.signals.topIssue, {
@@ -232,6 +326,153 @@ async function main() {
   {
     const h = await loadHome(db({ profiles: [] }) as never, ME, "candidate");
     eq("no profile, no name", h.firstName, null);
+  }
+  {
+    const rival = (id: string, name: string, tone: string, sort: number, isUs = false) => ({
+      id,
+      name,
+      party: null,
+      office: null,
+      is_us: isUs,
+      tone,
+      sort,
+      facebook: null,
+      x: null,
+      tiktok: null,
+    });
+    const h = await loadHome(
+      db({
+        listening_mentions: [
+          {
+            issue: "water",
+            sentiment: "negative",
+            title: "Taps dry",
+            url: "https://a.test/1",
+            found_at: daysAgo(2),
+          },
+          {
+            issue: "water",
+            sentiment: "negative",
+            title: "Rationing",
+            url: "https://a.test/2",
+            found_at: daysAgo(3),
+          },
+          {
+            issue: "water",
+            sentiment: null,
+            title: "Bowsers",
+            url: "https://a.test/3",
+            found_at: daysAgo(5),
+          },
+          {
+            issue: "floods",
+            sentiment: null,
+            title: "Drains",
+            url: "https://a.test/4",
+            found_at: daysAgo(20),
+          },
+          {
+            issue: "floods",
+            sentiment: null,
+            title: "Too old",
+            url: "https://a.test/5",
+            found_at: daysAgo(40),
+          },
+        ],
+        race_rivals: [
+          rival("s", "Johnson Sakaja", "us", 0, true),
+          rival("g", "James Gakuya", "c", 3),
+          rival("b", "Babu Owino", "a", 1),
+        ],
+        race_polls: [
+          {
+            id: "mj",
+            pollster: "Mizani Africa",
+            fieldwork_from: null,
+            fieldwork_to: null,
+            published_on: "2026-07-01",
+            sample_size: null,
+            margin: null,
+            source_url: "https://a.test/mj",
+            shares: [
+              { name: "Babu Owino", share: 27.1, rival_id: "b" },
+              { name: "Johnson Sakaja", share: 19.9, rival_id: "s" },
+              { name: "James Gakuya", share: 11.2, rival_id: "g" },
+            ],
+            undecided: 13.3,
+            approval: null,
+            disapproval: null,
+          },
+          {
+            id: "ma",
+            pollster: "Mizani Africa",
+            fieldwork_from: "2026-08-21",
+            fieldwork_to: "2026-08-28",
+            published_on: "2026-09-10",
+            sample_size: 1820,
+            margin: 2.3,
+            source_url: "https://a.test/ma",
+            shares: [
+              { name: "Babu Owino", share: 28.4, rival_id: "b" },
+              { name: "Johnson Sakaja", share: 17, rival_id: "s" },
+              { name: "James Gakuya", share: 15, rival_id: "g" },
+            ],
+            undecided: 8.1,
+            approval: null,
+            disapproval: null,
+          },
+        ],
+      }) as never,
+      ME,
+      "organiser",
+      "2026-09-29",
+    );
+    eq("race facts", [h.facts.rivals, h.facts.polls], [3, 2]);
+    eq(
+      "the race, ours first then in order",
+      h.race.rivals.map((r) => r.id),
+      ["s", "b", "g"],
+    );
+    eq(
+      "polls newest first",
+      h.race.polls.map((p) => p.id),
+      ["ma", "mj"],
+    );
+    eq(
+      "the rival's move",
+      h.signals.rivalMove?.title,
+      "James Gakuya up 3.8 points in Mizani Africa's latest poll",
+    );
+    eq("this week's loudest issue", h.signals.topIssue, { label: "Water", count: 3, angry: 2 });
+    eq(
+      "thirty days of what people say",
+      h.race.issues.map((i) => [i.key, i.count]),
+      [
+        ["water", 3],
+        ["floods", 1],
+      ],
+    );
+  }
+  {
+    const sb = db();
+    const broken = {
+      ...sb,
+      from: (t: string) =>
+        t === "race_rivals" || t === "race_polls"
+          ? {
+              select: async () => ({
+                data: null,
+                error: { message: 'relation "race_rivals" does not exist' },
+              }),
+            }
+          : sb.from(t),
+    };
+    const h = await loadHome(broken as never, ME, "manager", "2026-09-29");
+    eq(
+      "no race tables yet: the sample, not an error",
+      [h.facts.rivals, h.facts.polls, h.race.rivals.length],
+      [0, 0, 0],
+    );
   }
 
   console.log(`${pass} passed, ${fail} failed`);
