@@ -30,7 +30,6 @@ function AuthPage() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -61,25 +60,16 @@ function AuthPage() {
     setMsg(null);
     try {
       if (mode === "up") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            // Back to /auth, not the marketing page: /auth is where the
-            // session carried in the confirmation link gets read.
-            emailRedirectTo: `${window.location.origin}/auth`,
-            data: { full_name: name },
-          },
+        // "up" is the forgot-password mode: accounts are created by invite only.
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/set-password`,
         });
         if (error) throw error;
-        if (!data.session) {
-          setMsg("Check your email to confirm the account, then sign in.");
-          return;
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        setMsg("If that email is on a team, a link to set a new password is on its way.");
+        return;
       }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       navigate({ to: "/overview", replace: true });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
@@ -123,26 +113,20 @@ function AuthPage() {
           </div>
         ) : (
           <h1 className="auth-title">
-            {mode === "in" ? "Welcome " : "Join the "}
-            <span className="serif">{mode === "in" ? "back." : "workspace."}</span>
+            {mode === "in" ? "Welcome " : "Reset your "}
+            <span className="serif">{mode === "in" ? "back." : "password."}</span>
           </h1>
         )}
         {campaign ? (
-          <h2 className="auth-action-title">{mode === "in" ? "Team sign in" : "Request access"}</h2>
+          <h2 className="auth-action-title">{mode === "in" ? "Team sign in" : "Reset password"}</h2>
         ) : null}
         <p className="meta">
           {campaign
-            ? `Only ${campaign.name}'s team can get in. New accounts wait for the candidate or campaign manager to let them in.`
-            : "2027 cycle"}
+            ? `Only ${campaign.name}'s team can get in. Accounts are created by invitation from the candidate or campaign manager.`
+            : "2027 cycle · by invitation only"}
         </p>
 
         <form onSubmit={submit} className="auth-form">
-          {mode === "up" ? (
-            <label className="auth-field">
-              <span className="eyebrow">Full name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} required />
-            </label>
-          ) : null}
           <label className="auth-field">
             <span className="eyebrow">Email</span>
             <input
@@ -153,34 +137,41 @@ function AuthPage() {
               autoComplete="email"
             />
           </label>
-          <label className="auth-field">
-            <span className="eyebrow">Password</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete={mode === "in" ? "current-password" : "new-password"}
-            />
-          </label>
+          {mode === "in" ? (
+            <label className="auth-field">
+              <span className="eyebrow">Password</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </label>
+          ) : null}
           {err ? <p className="auth-err">{err}</p> : null}
           {msg ? <p className="auth-msg">{msg}</p> : null}
           <button className="btn btn--primary" type="submit" disabled={busy}>
-            {busy ? "Working…" : mode === "in" ? "Sign in" : "Create account"}
+            {busy ? "Working…" : mode === "in" ? "Sign in" : "Email me a link"}
           </button>
         </form>
 
-        <button className="btn btn--ghost" type="button" onClick={google}>
-          Continue with Google
-        </button>
+        {mode === "in" ? (
+          <button className="btn btn--ghost" type="button" onClick={google}>
+            Continue with Google
+          </button>
+        ) : null}
 
         <button
           className="auth-switch"
           type="button"
-          onClick={() => setMode(mode === "in" ? "up" : "in")}
+          onClick={() => {
+            setMsg(null);
+            setErr(null);
+            setMode(mode === "in" ? "up" : "in");
+          }}
         >
-          {mode === "in" ? "No account yet? Create one" : "Already have an account? Sign in"}
+          {mode === "in" ? "Forgot password?" : "Back to sign in"}
         </button>
       </div>
     </div>
