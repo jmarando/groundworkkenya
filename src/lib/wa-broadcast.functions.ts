@@ -11,7 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { BroadcastAudience } from "@/lib/broadcast.functions";
-import { fillTemplate, firstName, WA_TEMPLATES } from "@/lib/wa-templates";
+import { fillTemplate, firstName, WA_TEMPLATES_ALL } from "@/lib/wa-templates";
 
 const BATCH = 120;
 
@@ -107,9 +107,10 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
       clientKey: string;
       template: string;
       fields: string[];
+      imageUrl?: string | undefined;
       audience: Partial<BroadcastAudience>;
     }) => {
-      const t = WA_TEMPLATES.find((x) => x.name === input?.template);
+      const t = WA_TEMPLATES_ALL.find((x) => x.name === input?.template);
       if (!t) throw new Error("Pick a template.");
       const fields = (input.fields ?? []).map((f) =>
         String(f ?? "")
@@ -119,10 +120,17 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
       if (fields.length !== t.fields.length || fields.some((f) => !f)) {
         throw new Error("Fill in every blank in the template.");
       }
+      let imageUrl: string | undefined;
+      if (t.image) {
+        imageUrl = String(input?.imageUrl ?? "").trim();
+        if (!/^https:\/\/\S{1,480}$/.test(imageUrl)) {
+          throw new Error("Add a public picture link starting with https://");
+        }
+      }
       if (!/^[0-9a-f-]{36}$/i.test(String(input?.clientKey ?? ""))) {
         throw new Error("Open the composer again and resend.");
       }
-      return { clientKey: input.clientKey, t, fields, audience: clean(input.audience) };
+      return { clientKey: input.clientKey, t, fields, imageUrl, audience: clean(input.audience) };
     },
   )
   .handler(async ({ data, context }): Promise<WaBatchResult> => {
@@ -150,7 +158,13 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
       const rows = await Promise.all(
         group.map(async (p) => {
           const params = [firstName(p.full_name), campaign, ...data.fields];
-          const r = await sendWhatsAppTemplate(p.phone, data.t.name, data.t.language, params);
+          const r = await sendWhatsAppTemplate(
+            p.phone,
+            data.t.name,
+            data.t.language,
+            params,
+            data.imageUrl,
+          );
           if (r.ok) sent++;
           else {
             failed++;

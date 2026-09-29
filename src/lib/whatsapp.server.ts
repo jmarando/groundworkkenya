@@ -87,6 +87,7 @@ export async function sendWhatsAppTemplate(
   name: string,
   language: string,
   params: string[],
+  imageUrl?: string | undefined,
 ): Promise<WaSendResult> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const waKey = process.env["WHATSAPP_API_KEY"];
@@ -109,6 +110,14 @@ export async function sendWhatsAppTemplate(
           name,
           language: { code: language },
           components: [
+            ...(imageUrl
+              ? [
+                  {
+                    type: "header",
+                    parameters: [{ type: "image", image: { link: imageUrl } }],
+                  },
+                ]
+              : []),
             { type: "body", parameters: params.map((t) => ({ type: "text", text: t })) },
           ],
         },

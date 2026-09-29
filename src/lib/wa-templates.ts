@@ -1,6 +1,7 @@
 // WhatsApp templates approved by Meta for the campaign number. Browser-safe.
 // {{1}} is always the person's first name and {{2}} the campaign; the rest
-// are filled in by whoever sends.
+// are filled in by whoever sends. Picture versions send an image header above
+// the same approved wording.
 
 export type WaTemplate = {
   name: string;
@@ -9,6 +10,8 @@ export type WaTemplate = {
   text: string;
   /** Fields for {{3}}, {{4}}… in order. */
   fields: { label: string; placeholder: string }[];
+  /** Meta approved this template with an image header; a picture link is required. */
+  image?: boolean;
 };
 
 export const WA_TEMPLATES: WaTemplate[] = [
@@ -44,6 +47,27 @@ export const WA_TEMPLATES: WaTemplate[] = [
     fields: [{ label: "Election date", placeholder: "Tuesday 10 August 2027" }],
   },
 ];
+
+export const WA_TEMPLATES_IMG: WaTemplate[] = [
+  {
+    name: "rally_invitation_img",
+    label: "Rally / community meeting · with picture",
+    language: "en",
+    image: true,
+    text: WA_TEMPLATES[0]!.text,
+    fields: WA_TEMPLATES[0]!.fields,
+  },
+  {
+    name: "poll_invitation_img",
+    label: "Poll invitation · with picture",
+    language: "en",
+    image: true,
+    text: WA_TEMPLATES[1]!.text,
+    fields: WA_TEMPLATES[1]!.fields,
+  },
+];
+
+export const WA_TEMPLATES_ALL: WaTemplate[] = [...WA_TEMPLATES, ...WA_TEMPLATES_IMG];
 
 export function fillTemplate(text: string, params: string[]): string {
   return text.replace(/\{\{(\d+)\}\}/g, (m, n) => params[Number(n) - 1] || m);
