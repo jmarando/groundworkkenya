@@ -61,25 +61,16 @@ function AuthPage() {
     setMsg(null);
     try {
       if (mode === "up") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            // Back to /auth, not the marketing page: /auth is where the
-            // session carried in the confirmation link gets read.
-            emailRedirectTo: `${window.location.origin}/auth`,
-            data: { full_name: name },
-          },
+        // "up" is the forgot-password mode: accounts are created by invite only.
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/set-password`,
         });
         if (error) throw error;
-        if (!data.session) {
-          setMsg("Check your email to confirm the account, then sign in.");
-          return;
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        setMsg("If that email is on a team, a link to set a new password is on its way.");
+        return;
       }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       navigate({ to: "/overview", replace: true });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
