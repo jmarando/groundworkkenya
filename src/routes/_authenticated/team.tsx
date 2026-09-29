@@ -75,7 +75,7 @@ function Team() {
       toast.success(
         r.result === "added"
           ? "They already had an account, and are now on the team."
-          : "Invited. They join the moment they sign up with that email.",
+          : "Invite sent. They get an email to set their password, then join the team.",
       );
       setEmail("");
       await queryClient.invalidateQueries({ queryKey: ["team"] });
@@ -182,8 +182,8 @@ function Team() {
                   type="button"
                   onClick={() =>
                     invite({ data: { campaignId: data.campaignId!, email: i.email, role: i.role } })
-                      .then(() => toastMsg("Invite sent again."))
-                      .catch((e: Error) => toastMsg(e.message))
+                      .then(() => toast.success("Invite sent again."))
+                      .catch((e: Error) => toast.error(e.message))
                   }
                 >
                   Resend invite
