@@ -351,6 +351,20 @@ for (const t of ["bold", "classic", "minimal"] as const) {
     baseUrl: "https://groundwork.ke",
   });
   ok("and in Swahili", sw.includes('<html lang="sw"') && sw.includes("Faragha"));
+  ok(
+    "a campaign named for its candidate is not named twice",
+    html.includes("The campaign of Waruru Gikandi decides"),
+  );
+  const sakaja = renderPrivacy({
+    campaign: { ...campaign, name: "Sakaja 2027", candidate: "Johnson Sakaja" },
+    content: site(),
+    lang: "en",
+    baseUrl: "https://groundwork.ke",
+  });
+  ok(
+    "otherwise both names",
+    sakaja.includes("Sakaja 2027, the campaign of Johnson Sakaja, decides"),
+  );
 }
 
 console.log(`${pass} passed, ${fail} failed`);

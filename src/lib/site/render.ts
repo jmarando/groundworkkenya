@@ -190,7 +190,8 @@ function styles(c: SiteContent): string {
   const { primary, accent } = c.colors;
   return `:root{--p:${primary};--on-p:${textOn(primary)};--a:${accent};--on-a:${textOn(accent)};--ink:#141c19;--muted:#59625d;--line:#e2e2dc;--paper:#fff;--soft:#f5f5f0}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+html{-webkit-text-size-adjust:100%}
+section[id]{scroll-margin-top:72px}
 body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
 a{color:inherit}
 img{max-width:100%;display:block}
@@ -204,13 +205,13 @@ img{max-width:100%;display:block}
 .nav a:hover{color:var(--ink)}
 .lang{margin-left:auto;font-size:14px;font-weight:600;border:1px solid var(--line);border-radius:999px;padding:5px 12px;text-decoration:none;white-space:nowrap}
 .nav+.lang{margin-left:0}
-@media (max-width:760px){.top .w{flex-wrap:wrap;gap:4px 16px;padding-top:8px}.nav{order:3;width:100%;margin:0;gap:18px}.nav a{padding:6px 0 10px}}
+@media (max-width:760px){.top .w{flex-wrap:wrap;gap:4px 16px;padding-top:8px}.nav{order:3;width:100%;margin:0;gap:18px}.nav a{padding:6px 0 10px}.nav+.lang{margin-left:auto}section[id]{scroll-margin-top:112px}}
 .hero{padding:64px 0}
 .hero .w{display:grid;gap:36px;align-items:center}
 @media (min-width:820px){.hero.ph .w{grid-template-columns:1.1fr .9fr}}
 .hero h1{font-size:clamp(36px,7vw,68px);line-height:1.04;letter-spacing:-.025em;margin:0 0 18px}
 .hero .sub{font-size:clamp(18px,2.4vw,23px);margin:0 0 30px;opacity:.92;max-width:34em}
-.hero img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:20px}
+.hero img{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:50% 25%;border-radius:20px}
 @media (max-width:819px){.hero img{aspect-ratio:4/3}}
 .btns{display:flex;flex-wrap:wrap;gap:12px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 26px;border-radius:999px;font-weight:700;text-decoration:none;border:2px solid transparent}
@@ -236,7 +237,7 @@ h3{line-height:1.25}
 .ev .d span{font-size:12px;text-transform:uppercase;letter-spacing:.1em}
 .ev h3{margin:2px 0 4px;font-size:19px}
 .ev p{margin:0;color:var(--muted)}
-.updates{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.updates{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}
 .up{overflow:hidden}
 .up img{aspect-ratio:16/9;object-fit:cover;width:100%}
 .up .in{padding:18px 20px}
@@ -253,7 +254,7 @@ input[type=text],input[type=tel],select{width:100%;font:inherit;border:2px solid
 legend{font-weight:600;margin:16px 0 6px;padding:0}
 button{margin-top:20px;min-height:54px;width:100%;border:0;border-radius:999px;background:var(--p);color:var(--on-p);font:inherit;font-weight:800;cursor:pointer}
 fieldset[disabled] button{opacity:.55;cursor:not-allowed}
-.fine{font-size:14px;color:var(--muted);margin-top:14px}
+.fine{font-size:14px;color:var(--muted);margin-top:14px;max-width:560px}
 .err{background:#fdece7;color:#9c2f0f;border-radius:12px;padding:12px 14px;margin:0 0 8px}
 .done{background:var(--soft);border-left:6px solid var(--p);border-radius:12px;padding:20px 22px;max-width:560px}
 .done h3{margin:0 0 6px;font-size:22px}
@@ -597,7 +598,7 @@ const PRIVACY = {
     sections: [
       [
         "Who is responsible",
-        "{name}, the campaign of {who}, decides how your details are used. Groundwork (groundwork.ke) runs this website and the campaign's records for the campaign, and uses your details only as the campaign instructs.",
+        "{owner} decides how your details are used. Groundwork (groundwork.ke) runs this website and the campaign's records for the campaign, and uses your details only as the campaign instructs.",
       ],
       [
         "What we collect",
@@ -621,6 +622,8 @@ const PRIVACY = {
       ],
     ],
     back: "Back to the website",
+    owner: "{name}, the campaign of {who},",
+    ownerSame: "The campaign of {who}",
     via: ": ",
     office: " through its office",
   },
@@ -631,7 +634,7 @@ const PRIVACY = {
     sections: [
       [
         "Anayehusika",
-        "{name}, kampeni ya {who}, huamua jinsi maelezo yako yanavyotumika. Groundwork (groundwork.ke) huendesha tovuti hii na kumbukumbu za kampeni kwa niaba yake, na hutumia maelezo yako tu kama kampeni inavyoelekeza.",
+        "{owner} huamua jinsi maelezo yako yanavyotumika. Groundwork (groundwork.ke) huendesha tovuti hii na kumbukumbu za kampeni kwa niaba yake, na hutumia maelezo yako tu kama kampeni inavyoelekeza.",
       ],
       [
         "Tunachokusanya",
@@ -655,6 +658,8 @@ const PRIVACY = {
       ],
     ],
     back: "Rudi kwenye tovuti",
+    owner: "{name}, kampeni ya {who},",
+    ownerSame: "Kampeni ya {who}",
     via: ": ",
     office: " kupitia ofisi yake",
   },
@@ -673,9 +678,12 @@ export function renderPrivacy(v: {
     Boolean,
   );
   const contact = reach.length ? p.via + reach.join(", ") : p.office;
+  // "Waruru Gikandi, the campaign of Waruru Gikandi" says the name twice.
+  const owner = v.campaign.name.trim() === who ? p.ownerSame : p.owner;
   const fill = (s: string) =>
     esc(
       s
+        .replace(/\{owner\}/g, owner)
         .replace(/\{who\}/g, who)
         .replace(/\{seat\}/g, v.campaign.seat)
         .replace(/\{name\}/g, v.campaign.name)
