@@ -3,7 +3,7 @@
 // Talking. No request leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/outbox.test.ts
 
-import { interpretAtReply, parseCostKes, phoneKey } from "@/lib/at.server";
+import { interpretAtReply, parseCostKes, phoneKey, sendSmsBatch } from "@/lib/at.server";
 import {
   DEFAULT_SMS_DAILY_CAP,
   outcomesFor,
@@ -120,7 +120,8 @@ const success = (numbers: string[]) => ({
 function live(on: boolean) {
   if (on) {
     process.env["CHANNELS_LIVE"] = "true";
-    process.env["AT_USERNAME"] = "sandbox";
+    // A live account: the "sandbox" account talks to a different server.
+    process.env["AT_USERNAME"] = "groundwork";
     process.env["AT_API_KEY"] = "test-key-not-real";
   } else {
     delete process.env["CHANNELS_LIVE"];
@@ -514,6 +515,20 @@ async function main() {
     const db = fakeDb([{ ...sms(1), phone: null }]);
     const r = await processOutbox(db as never, 1000);
     eq("no number, no request", [requests.length, r.failed], [0, 1]);
+  }
+
+  // The Africa's Talking sandbox account ("sandbox") has a server of its own.
+  {
+    const urls: string[] = [];
+    globalThis.fetch = (async (url: string | URL) => {
+      urls.push(String(url));
+      return new Response(success(["+254700000001"]).body, { status: 201 });
+    }) as typeof fetch;
+    process.env["AT_USERNAME"] = " Sandbox ";
+    await sendSmsBatch(["+254700000001"], "Rally at noon");
+    eq("the sandbox account uses the sandbox server", urls, [
+      "https://api.sandbox.africastalking.com/version1/messaging",
+    ]);
   }
 
   console.log(`${pass} passed, ${fail} failed`);
