@@ -143,5 +143,9 @@ export const inviteMember = createServerFn({ method: "POST" })
       _role: data.role as Exclude<Role, "viewer">,
     });
     if (error) throw new Error(error.message || "Could not invite them.");
+    if (result === "invited") {
+      const { sendInviteEmail } = await import("./invite-email.server");
+      await sendInviteEmail(data.campaignId, data.email);
+    }
     return { result: result as "added" | "invited" };
   });

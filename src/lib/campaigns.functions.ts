@@ -60,12 +60,17 @@ export const createCampaign = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message || "Could not add the campaign.");
     if (data.candidateEmail?.includes("@")) {
-      const { error: inv } = await sb.rpc("invite_member", {
+      const email = data.candidateEmail.trim().toLowerCase();
+      const { data: res, error: inv } = await sb.rpc("invite_member", {
         _campaign: id as string,
-        _email: data.candidateEmail.trim().toLowerCase(),
+        _email: email,
         _role: "candidate",
       });
       if (inv) throw new Error(`Campaign added, but the invite failed: ${inv.message}`);
+      if (res === "invited") {
+        const { sendInviteEmail } = await import("./invite-email.server");
+        await sendInviteEmail(id as string, email);
+      }
     }
     return { id: id as string };
   });

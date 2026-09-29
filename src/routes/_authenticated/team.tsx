@@ -173,9 +173,21 @@ function Team() {
                 <div className="team-who">
                   <span className="mono">{i.email}</span>
                   <small>
-                    Invited as {ROLE_COPY[i.role].name} · {day(i.createdAt)} · not signed up yet
+                    Invited as {ROLE_COPY[i.role].name} · {day(i.createdAt)} · hasn't set a
+                    password yet
                   </small>
                 </div>
+                <button
+                  className="btn btn--ghost"
+                  type="button"
+                  onClick={() =>
+                    invite({ data: { campaignId: data.campaignId!, email: i.email, role: i.role } })
+                      .then(() => toastMsg("Invite sent again."))
+                      .catch((e: Error) => toastMsg(e.message))
+                  }
+                >
+                  Resend invite
+                </button>
               </li>
             ))}
           </ul>
