@@ -188,9 +188,9 @@ on conflict (id) do update
        file_size_limit    = excluded.file_size_limit,
        allowed_mime_types = excluded.allowed_mime_types;
 
--- Every campaign texts from the same number. A reply belongs to the campaign
--- that texted that number last, and STOP applies to every campaign: finding
--- both by phone needs these.
+-- On the shared SMS line a reply belongs to the campaign that texted the
+-- number last, and STOP applies to every campaign: finding both by phone
+-- needs these.
 create index if not exists messages_phone_out_idx
   on public.messages (phone, created_at desc) where direction = 'out';
 create index if not exists people_phone_idx on public.people (phone);
