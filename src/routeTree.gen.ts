@@ -31,6 +31,7 @@ import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
+import { Route as AuthenticatedWebsiteRouteImport } from './routes/_authenticated/website'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
@@ -158,6 +159,11 @@ const AuthenticatedWarroomRoute = AuthenticatedWarroomRouteImport.update({
   path: '/warroom',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedWebsiteRoute = AuthenticatedWebsiteRouteImport.update({
+  id: '/website',
+  path: '/website',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/website': typeof AuthenticatedWebsiteRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
+  '/website': typeof AuthenticatedWebsiteRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
+  '/_authenticated/website': typeof AuthenticatedWebsiteRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/voters'
     | '/warroom'
+    | '/website'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/voters'
     | '/warroom'
+    | '/website'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
+    | '/_authenticated/website'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -661,6 +673,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWarroomRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/website': {
+      id: '/_authenticated/website'
+      path: '/website'
+      fullPath: '/website'
+      preLoaderRoute: typeof AuthenticatedWebsiteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/p/$code': {
       id: '/p/$code'
       path: '/p/$code'
@@ -794,6 +813,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedVotersRoute: typeof AuthenticatedVotersRoute
   AuthenticatedWarroomRoute: typeof AuthenticatedWarroomRoute
+  AuthenticatedWebsiteRoute: typeof AuthenticatedWebsiteRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -814,6 +834,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedVotersRoute: AuthenticatedVotersRoute,
   AuthenticatedWarroomRoute: AuthenticatedWarroomRoute,
+  AuthenticatedWebsiteRoute: AuthenticatedWebsiteRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
