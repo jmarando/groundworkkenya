@@ -1943,3 +1943,11 @@ figure { margin: 0; }
 .home-issue-line a { color:inherit; }
 .home-head-link { font:inherit; color:var(--foreground); text-decoration:underline; text-underline-offset:3px; background:none; border:0; padding:0; cursor:pointer; }
 .home-remove.is-sure { color:var(--gw-destructive); border-color:var(--gw-destructive); }
+/* Editing the race: who's running, and adding a poll. */
+.re-list { display:flex; flex-direction:column; gap:14px; }
+.re-row { border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+.re-actions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+.re-check { display:inline-flex; align-items:center; gap:8px; font-size:14px; }
+.re-check input { width:18px; height:18px; accent-color:var(--gw-accent); }
+.re-shares { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+.re-problem { color:var(--gw-destructive); font-size:13px; margin:0; }

@@ -1,5 +1,8 @@
+import { useState } from "react";
+
 import { CampaignSection } from "@/components/gw/home/CampaignSection";
 import { HomeHeader } from "@/components/gw/home/HomeHeader";
+import { AddPoll, EditRivals, useRemovePoll } from "@/components/gw/home/RaceEditor";
 import { RaceSection } from "@/components/gw/home/RaceSection";
 import { TodaySection } from "@/components/gw/home/TodaySection";
 import { nairobiToday } from "@/lib/demo/insights";
@@ -30,6 +33,8 @@ export function Home({
   data?: HomeData;
   canEdit?: boolean;
 }) {
+  const [editing, setEditing] = useState<null | "rivals" | "poll">(null);
+  const removePollNow = useRemovePoll();
   const today = nairobiToday();
   const d = data ?? NOTHING_YET;
   const modes = sectionModes(d.facts);
@@ -51,9 +56,13 @@ export function Home({
         mode={modes.race}
         race={d.race}
         canEdit={canEdit}
-        onEdit={() => undefined}
-        onRemovePoll={() => undefined}
+        onEdit={setEditing}
+        onRemovePoll={removePollNow}
       />
+      {editing === "rivals" && (
+        <EditRivals rivals={d.race.rivals} onClose={() => setEditing(null)} />
+      )}
+      {editing === "poll" && <AddPoll rivals={d.race.rivals} onClose={() => setEditing(null)} />}
       <CampaignSection s={s} today={today} mode={modes.campaign} />
       <p className="mb-foot">
         Sections marked Sample show invented figures for a race like yours
