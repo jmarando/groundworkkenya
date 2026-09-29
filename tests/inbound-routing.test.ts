@@ -171,6 +171,35 @@ async function main() {
     );
     eq("one confirmation", outgoing(d).length, 1);
   }
+  {
+    // STOP sent to Kalonzo's own short code stops Kalonzo, not the shared line.
+    const d = db({
+      campaign_channels: [{ campaign_id: "camp-kalonzo", kind: "sms", identifier: "22384" }],
+      people: [
+        {
+          id: "pk",
+          campaign_id: "camp-kalonzo",
+          phone: PHONE,
+          opted_out: false,
+          consent_sms: true,
+        },
+        {
+          id: "ps",
+          campaign_id: CHANNEL_CAMPAIGN,
+          phone: PHONE,
+          opted_out: false,
+          consent_sms: true,
+        },
+      ],
+    });
+    eq(
+      "STOP to a campaign's own code",
+      await handleInboundSms(d as never, PHONE, "STOP", "22384"),
+      "opt_out",
+    );
+    eq("stops that campaign", people(d).find((p) => p["id"] === "pk")?.["opted_out"], true);
+    eq("and leaves the others", people(d).find((p) => p["id"] === "ps")?.["opted_out"], false);
+  }
 
   console.log(`${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);

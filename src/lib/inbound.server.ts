@@ -400,6 +400,15 @@ const REPLY_WINDOW_MS = 30 * 864e5;
  * A volunteer confirming a Mathira sign-up must land in Mathira's records.
  */
 export async function replyCampaignId(sb: Sb, phone: string, to?: string): Promise<string> {
+  return (await inboundLine(sb, phone, to)).campaignId;
+}
+
+/** The campaign an inbound text belongs to, and whether it came in on the shared line. */
+async function inboundLine(
+  sb: Sb,
+  phone: string,
+  to?: string,
+): Promise<{ campaignId: string; shared: boolean }> {
   const code = (to ?? "").trim();
   if (code) {
     const { data: own } = await sb
@@ -408,7 +417,7 @@ export async function replyCampaignId(sb: Sb, phone: string, to?: string): Promi
       .eq("kind", "sms")
       .eq("identifier", code)
       .maybeSingle();
-    if (own?.campaign_id) return own.campaign_id;
+    if (own?.campaign_id) return { campaignId: own.campaign_id, shared: false };
   }
   const since = new Date(Date.now() - REPLY_WINDOW_MS).toISOString();
   const { data } = await sb
@@ -421,7 +430,7 @@ export async function replyCampaignId(sb: Sb, phone: string, to?: string): Promi
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data?.campaign_id ?? (await channelCampaignId(sb));
+  return { campaignId: data?.campaign_id ?? (await channelCampaignId(sb)), shared: true };
 }
 
 /** How a campaign signs its texts. The line owner keeps CAMPAIGN_NAME. */
@@ -438,9 +447,13 @@ async function textSignature(sb: Sb, campaignId: string): Promise<string> {
 /**
  * STOP on the shared line stops every campaign that texts from it: the person
  * cannot tell them apart, and a STOP must never leave texts still coming.
+ * STOP to a campaign's own short code stops that campaign's record only.
  */
-async function optOutEverywhere(sb: Sb, phone: string): Promise<void> {
-  const { data: records } = await sb.from("people").select("id").eq("phone", phone);
+async function optOut(sb: Sb, phone: string, only?: string): Promise<void> {
+  const ids = only
+    ? [only]
+    : ((await sb.from("people").select("id").eq("phone", phone)).data ?? []).map((r) => r.id);
+  if (!ids.length) return;
   await sb
     .from("people")
     .update({
@@ -450,9 +463,9 @@ async function optOutEverywhere(sb: Sb, phone: string): Promise<void> {
       consent_whatsapp: false,
       consent_call: false,
     })
-    .eq("phone", phone);
-  for (const r of records ?? []) {
-    await logEvent(sb, r.id, "opt_out", "sms", "Replied STOP");
+    .in("id", ids);
+  for (const id of ids) {
+    await logEvent(sb, id, "opt_out", "sms", "Replied STOP");
   }
 }
 
@@ -469,7 +482,8 @@ export async function handleInboundSms(
 ): Promise<InboundRoute> {
   const phone = normalizeKePhone(rawFrom);
   if (!phone) return "ignored";
-  const campaign = await replyCampaignId(sb, phone, to);
+  const line = await inboundLine(sb, phone, to);
+  const campaign = line.campaignId;
   const person = await upsertPersonByPhone(sb, phone, "sms", campaign);
   if (!person) return "ignored";
   const signature = await textSignature(sb, campaign);
@@ -496,7 +510,7 @@ export async function handleInboundSms(
 
   if (isStopWord(body)) {
     await saveInbound(null);
-    await optOutEverywhere(sb, person.phone);
+    await optOut(sb, person.phone, line.shared ? undefined : person.id);
     // A 'reply' passes the consent check: confirming the opt-out is the one
     // message someone who just opted out must still get.
     await reply({ body: optOutText(signature), kind: "reply" });
