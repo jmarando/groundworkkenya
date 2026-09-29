@@ -34,6 +34,7 @@ import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticate
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
+import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
 import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
 import { Route as ApiPublicSmsDeliveryRouteImport } from './routes/api/public/sms/delivery'
@@ -170,6 +171,11 @@ const ApiPublicUssdRoute = ApiPublicUssdRouteImport.update({
   path: '/api/public/ussd',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
+  id: '/api/public/email/inbound',
+  path: '/api/public/email/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
   id: '/api/public/listening/scan',
   path: '/api/public/listening/scan',
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -433,6 +444,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -454,6 +466,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
+  ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
   ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
   ApiPublicSmsDeliveryRoute: typeof ApiPublicSmsDeliveryRoute
@@ -643,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUssdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/inbound': {
+      id: '/api/public/email/inbound'
+      path: '/api/public/email/inbound'
+      fullPath: '/api/public/email/inbound'
+      preLoaderRoute: typeof ApiPublicEmailInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/listening/scan': {
       id: '/api/public/listening/scan'
       path: '/api/public/listening/scan'
@@ -768,6 +788,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
+  ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
   ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,
   ApiPublicSmsDeliveryRoute: ApiPublicSmsDeliveryRoute,

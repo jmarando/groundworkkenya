@@ -88,11 +88,12 @@ function Inbox() {
   const [composing, setComposing] = useState(false);
   const [pq, setPq] = useState("");
   const [results, setResults] = useState<
-    { id: string; name: string; phone: string | null; ward: string | null; optedOut: boolean; consentSms: boolean; consentWhatsapp: boolean }[]
+    { id: string; name: string; phone: string | null; email: string | null; ward: string | null; optedOut: boolean; consentSms: boolean; consentWhatsapp: boolean }[]
   >([]);
   const [searching, setSearching] = useState(false);
-  const [picked, setPicked] = useState<{ id: string; name: string } | null>(null);
-  const [channel, setChannel] = useState<"sms" | "whatsapp">("sms");
+  const [picked, setPicked] = useState<{ id: string; name: string; email: string | null } | null>(null);
+  const [channel, setChannel] = useState<"sms" | "whatsapp" | "email">("sms");
+  const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
   const [newNote, setNewNote] = useState<string | null>(null);
 
@@ -163,10 +164,11 @@ function Inbox() {
     setNewNote(null);
     try {
       const r = await startConvo({
-        data: { personId: picked.id, channel, body: newBody.trim() },
+        data: { personId: picked.id, channel, body: newBody.trim(), subject: newSubject.trim() },
       });
       setNewNote(r.note);
       setNewBody("");
+      setNewSubject("");
       await queryClient.invalidateQueries({ queryKey: ["inbox"] });
       setComposing(false);
       setPicked(null);
@@ -239,7 +241,7 @@ function Inbox() {
                     <span>Who?</span>
                     <input
                       type="search"
-                      placeholder="Search by name or phone number"
+                      placeholder="Search by name, phone or email"
                       value={pq}
                       onChange={(e) => setPq(e.target.value)}
                       onKeyDown={(e) => {
@@ -261,13 +263,13 @@ function Inbox() {
                       type="button"
                       className="cv"
                       onClick={() => {
-                        setPicked({ id: p.id, name: p.name });
-                        setChannel(p.consentWhatsapp ? "whatsapp" : "sms");
+                        setPicked({ id: p.id, name: p.name, email: p.email });
+                        setChannel(p.consentWhatsapp ? "whatsapp" : p.phone?.startsWith("email:") ? "email" : "sms");
                       }}
                     >
                       <span className="cv-name">{p.name}</span>
                       <span className="cv-snip">
-                        {p.phone ?? "no number"} · {p.ward ?? "ward unknown"}
+                        {p.phone?.startsWith("email:") ? "" : `${p.phone ?? "no number"} · `}{p.email ? `${p.email} · ` : ""}{p.ward ?? "ward unknown"}
                         {p.optedOut ? " · opted out" : ""}
                       </span>
                     </button>
@@ -299,7 +301,22 @@ function Inbox() {
                     >
                       WhatsApp
                     </button>
+                    <button
+                      type="button"
+                      className={`btn btn--sm ${channel === "email" ? "btn--primary" : "btn--ghost"}`}
+                      disabled={!picked.email}
+                      title={picked.email ? picked.email : "No email address on this person"}
+                      onClick={() => setChannel("email")}
+                    >
+                      Email
+                    </button>
                   </div>
+                  {channel === "email" && (
+                    <label className="pb-field">
+                      <span>Subject</span>
+                      <input value={newSubject} maxLength={150} onChange={(e) => setNewSubject(e.target.value)} />
+                    </label>
+                  )}
                   {channel === "whatsapp" && (
                     <p className="f-note">
                       WhatsApp only allows a first message as an approved template. If they have not
@@ -327,7 +344,7 @@ function Inbox() {
                   disabled={sending || !newBody.trim()}
                   onClick={() => void sendNew()}
                 >
-                  {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : "WhatsApp"}`}
+                  {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : channel === "email" ? "email" : "WhatsApp"}`}
                 </button>
               )}
             </div>
