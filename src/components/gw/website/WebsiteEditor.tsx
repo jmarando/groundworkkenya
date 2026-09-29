@@ -106,6 +106,8 @@ export function WebsiteEditor({
   const [savedAt, setSavedAt] = useState<string | null>(data.savedAt);
   const [changed, setChanged] = useState(data.changed);
   const [busy, setBusy] = useState<"publish" | "offline" | "restore" | null>(null);
+  // On narrow screens the preview opens above the form when asked for.
+  const [showPreview, setShowPreview] = useState(false);
 
   const latest = useRef(draft);
   const rev = useRef(data.rev);
@@ -299,10 +301,16 @@ export function WebsiteEditor({
               <button
                 type="button"
                 className="btn btn--primary"
-                disabled={busy !== null || state === "conflict"}
+                disabled={busy !== null || state === "conflict" || (data.live && !changed)}
                 onClick={() => void doPublish()}
               >
-                {busy === "publish" ? "Publishing…" : data.live ? "Publish changes" : "Publish"}
+                {busy === "publish"
+                  ? "Publishing…"
+                  : !data.live
+                    ? "Publish"
+                    : changed
+                      ? "Publish changes"
+                      : "Published"}
               </button>
             ) : null}
           </div>
@@ -346,6 +354,14 @@ export function WebsiteEditor({
               </div>
             </div>
             <span className="ws-hint">The preview follows. Visitors can switch language.</span>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm ws-preview-toggle"
+              aria-expanded={showPreview}
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              {showPreview ? "Hide preview" : "Show preview"}
+            </button>
           </div>
 
           <SectionCard title="Look" hint="Choose a layout and your campaign's colours.">
@@ -981,7 +997,7 @@ export function WebsiteEditor({
           </SectionCard>
         </div>
 
-        <aside className="ws-side" aria-label="Preview">
+        <aside className="ws-side" aria-label="Preview" data-open={showPreview ? "" : undefined}>
           <PhonePreview html={html} />
           <p className="ws-hint">
             Preview in {LANG_NAME[lang]}. The form is switched off here.
