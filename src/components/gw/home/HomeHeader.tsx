@@ -93,7 +93,13 @@ export function HomeHeader({
             onClick={() =>
               speech.on
                 ? speech.stop()
-                : speech.play(spokenBriefing(s, today, { name, today: items }))
+                : speech.play(
+                    spokenBriefing(s, today, {
+                      name,
+                      today: items,
+                      ...(raceMode === "real" && verdict ? { race: verdict } : {}),
+                    }),
+                  )
             }
           >
             <span className="mb-listen-icon" aria-hidden="true">

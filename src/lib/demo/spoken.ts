@@ -23,12 +23,17 @@ const ORDINAL = ["First", "Second", "Third"];
 
 /**
  * `name` and `today` let Home read out what it shows: the person signed in and
- * its Today list, real items first. Without them it is the race's sample.
+ * its Today list, real items first. `race` is the real race's verdict; with it
+ * the sample race and its rivals are left out. Without them it is the sample.
  */
 export function spokenBriefing(
   s: Scenario,
   todayIso: string,
-  opts: { name?: string; today?: { title: string; detail: string; sample: boolean }[] } = {},
+  opts: {
+    name?: string;
+    today?: { title: string; detail: string; sample: boolean }[];
+    race?: string;
+  } = {},
 ): string {
   const us = ours(s);
   const keys = s.contenders.map((c) => c.key);
@@ -46,6 +51,7 @@ export function spokenBriefing(
   out.push(
     `Good morning, ${opts.name ?? s.candidate.first}. It's ${spokenDate(todayIso)}, and ${days} days to the election.`,
   );
+  if (opts.race) out.push(`Where you stand: ${opts.race}`);
 
   const items = opts.today ?? s.today.map((t) => ({ ...t, sample: true }));
   if (items.length) out.push(`${COUNT[items.length] ?? `${items.length} things`} today.`);
@@ -60,29 +66,32 @@ export function spokenBriefing(
   out.push(`Why it matters: ${s.story.numbers.map((n) => `${n.value}, ${n.label}`).join("; ")}.`);
   out.push(`${s.story.rivals} Our line: ${s.story.line}`);
 
-  const undecided = own["undecided"] ?? 0;
-  out.push(
-    `Where you stand. Our latest poll has you on ${own[us.key]}, ${rival?.name ?? "your rival"} on ${own[rival?.key ?? ""]}, and ${undecided} undecided.`,
-  );
-  if (s.office === "president") {
-    const at25 = countAtLeast(s.areas, us.key, 25);
-    const share = model[us.key] ?? 0;
+  // The sample's race and rivals, unless the real race was said above.
+  if (!opts.race) {
+    const undecided = own["undecided"] ?? 0;
     out.push(
-      `Among decided voters you're at ${share.toFixed(1)} percent: ${share < 50 ? "short of" : "above"} the 50 percent line. You're at 25 percent or more in ${at25} counties; you need 24.`,
+      `Where you stand. Our latest poll has you on ${own[us.key]}, ${rival?.name ?? "your rival"} on ${own[rival?.key ?? ""]}, and ${undecided} undecided.`,
     );
-  } else {
-    const lead = (model[us.key] ?? 0) - (model[rival?.key ?? ""] ?? 0);
-    out.push(`Among decided voters you lead by ${lead.toFixed(1)} points.`);
-    if (s.winNumber) {
+    if (s.office === "president") {
+      const at25 = countAtLeast(s.areas, us.key, 25);
+      const share = model[us.key] ?? 0;
       out.push(
-        `You've found ${nf.format(s.winNumber.found)} of the ${nf.format(s.winNumber.target)} supporters you need.`,
+        `Among decided voters you're at ${share.toFixed(1)} percent: ${share < 50 ? "short of" : "above"} the 50 percent line. You're at 25 percent or more in ${at25} counties; you need 24.`,
       );
+    } else {
+      const lead = (model[us.key] ?? 0) - (model[rival?.key ?? ""] ?? 0);
+      out.push(`Among decided voters you lead by ${lead.toFixed(1)} points.`);
+      if (s.winNumber) {
+        out.push(
+          `You've found ${nf.format(s.winNumber.found)} of the ${nf.format(s.winNumber.target)} supporters you need.`,
+        );
+      }
     }
-  }
 
-  for (const o of s.opponents) {
-    const name = s.contenders.find((c) => c.key === o.key)?.name ?? "A rival";
-    out.push(`${name}: ${o.yesterday} Watch for this: ${o.watch}`);
+    for (const o of s.opponents) {
+      const name = s.contenders.find((c) => c.key === o.key)?.name ?? "A rival";
+      out.push(`${name}: ${o.yesterday} Watch for this: ${o.watch}`);
+    }
   }
 
   const top = s.voters.issues[0];

@@ -14,12 +14,15 @@ export function SectionHead({
   mode,
   hint,
   hintTo,
+  onHint,
 }: {
   id: string;
   title: string;
   mode: SectionMode;
   hint?: string;
   hintTo?: "/people" | "/listening";
+  /** Makes the hint a button, for a hint that opens something on this page. */
+  onHint?: () => void;
 }) {
   return (
     <div className="home-head">
@@ -27,7 +30,17 @@ export function SectionHead({
       {mode === "sample" ? (
         <span className="home-head-note">
           <SampleTag />
-          {hint ? hintTo ? <Link to={hintTo}>{hint}</Link> : <span>{hint}</span> : null}
+          {hint ? (
+            onHint ? (
+              <button type="button" className="home-head-link" onClick={onHint}>
+                {hint}
+              </button>
+            ) : hintTo ? (
+              <Link to={hintTo}>{hint}</Link>
+            ) : (
+              <span>{hint}</span>
+            )
+          ) : null}
         </span>
       ) : null}
     </div>

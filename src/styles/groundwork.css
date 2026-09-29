@@ -1449,12 +1449,14 @@ figure { margin: 0; }
    ordinal ramp for "our share" and an orange/blue diverging scale for "who leads". */
 :root {
   --series-us: #eb6834; --series-a: #2a78d6; --series-b: #1baf7a; --series-und: #a9a8a1;
+  --series-c: #eda100; --series-d: #e87ba4;
   --map-o1: #f2a07c; --map-o2: #e2622e; --map-o3: #a8411a; --map-below: #dcdbd4;
   --map-us2: #e2622e; --map-us1: #f5b597; --map-mid: #e6e5df; --map-a1: #9ec5f4; --map-a2: #2a78d6;
   --map-none: #ecebe6;
 }
 [data-surface="warroom"] {
   --series-us: #d95926; --series-a: #3987e5; --series-b: #199e70; --series-und: #6b6d68;
+  --series-c: #c98500; --series-d: #d55181;
   --map-none: hsl(158 12% 15%);
 }
 
@@ -1606,6 +1608,7 @@ figure { margin: 0; }
 .mb-rival-threat { margin-left:auto; font-size:12px; color:var(--muted-foreground); }
 .mb-swatch { width:10px; height:10px; border-radius:3px; display:inline-block; }
 .mb-swatch--us { background:var(--series-us); } .mb-swatch--a { background:var(--series-a); } .mb-swatch--b { background:var(--series-b); }
+.mb-swatch--c { background:var(--series-c); } .mb-swatch--d { background:var(--series-d); }
 .mb-rival-dl { display:grid; grid-template-columns:82px 1fr; gap:6px 12px; margin:10px 0 0; font-size:13px; }
 .mb-rival-dl dt { color:var(--muted-foreground); font-size:12px; }
 .mb-rival-dl dd { margin:0; line-height:1.45; }
@@ -1927,3 +1930,16 @@ figure { margin: 0; }
 .card-head-r { display:inline-flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
 .card-go { font-size:12px; font-weight:600; color:var(--foreground); text-decoration:none; white-space:nowrap; }
 .card-go:hover { text-decoration:underline; text-underline-offset:3px; }
+/* The real race: polls with their sources, who's running, what people say. */
+.home-poll-tbl td small { display:block; }
+.home-rival-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.home-rival-list li { display:grid; grid-template-columns:12px minmax(0, 1fr) auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+.home-rival-list li:last-child { border-bottom:0; }
+.home-rival-list small { display:block; }
+.home-rival-share { text-align:right; }
+.home-issues { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+.home-issue-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap; }
+.home-issue-line { margin:4px 0 0; font-size:13px; color:var(--muted-foreground); overflow-wrap:anywhere; }
+.home-issue-line a { color:inherit; }
+.home-head-link { font:inherit; color:var(--foreground); text-decoration:underline; text-underline-offset:3px; background:none; border:0; padding:0; cursor:pointer; }
+.home-remove.is-sure { color:var(--gw-destructive); border-color:var(--gw-destructive); }

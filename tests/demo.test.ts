@@ -263,6 +263,20 @@ for (const s of SCENARIOS) {
       oneReal.indexOf(NOTE) < oneReal.indexOf("The story that matters"),
   );
 }
+// With the campaign's real race on record, Listen says where it really stands
+// and leaves out the sample race and its invented rivals.
+{
+  const s = getScenario("sakaja");
+  const NOTE = "From here on, this briefing is a sample, invented for a race like yours.";
+  const race = "Third, behind Babu Owino and Agnes Kagure (Mizani Africa, Aug 2026).";
+  const text = spokenBriefing(s, "2026-09-25", { name: "Njeri", race });
+  ok(
+    "a real race is said before the sample note",
+    text.includes(`Where you stand: ${race}`) && text.indexOf(race) < text.indexOf(NOTE),
+  );
+  ok("and the sample race is not read", !text.includes("Our latest poll has you on"));
+  ok("nor the sample rivals", !text.includes(s.opponents[0]!.watch));
+}
 
 // ---- a campaign's own workspace
 {

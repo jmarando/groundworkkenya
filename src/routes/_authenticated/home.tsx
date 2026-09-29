@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/home")({
 
 function HomePage() {
   // Each workspace shows its own race: the sample for it, named for its candidate.
-  const { campaign } = useAccess();
+  const { campaign, isPrincipal } = useAccess();
   const fetchHome = useServerFn(getHome);
   const { data } = useQuery({
     queryKey: ["home", campaign?.id ?? null],
@@ -41,7 +41,7 @@ function HomePage() {
   const s = forCampaign(getScenario(scenarioForLevel(campaign?.level)), campaign);
   return (
     <section className="view active" aria-label="Home">
-      <Home s={s} {...(data ? { data } : {})} />
+      <Home s={s} canEdit={isPrincipal} {...(data ? { data } : {})} />
     </section>
   );
 }
