@@ -107,7 +107,7 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
       clientKey: string;
       template: string;
       fields: string[];
-      imageUrl?: string;
+      imageUrl?: string | undefined;
       audience: Partial<BroadcastAudience>;
     }) => {
       const t = WA_TEMPLATES_ALL.find((x) => x.name === input?.template);
