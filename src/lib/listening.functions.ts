@@ -456,10 +456,17 @@ export const setMentionStatus = createServerFn({ method: "POST" })
 export const resumeListening = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { error } = await context.supabase
+    // One sweep serves every campaign, so only Groundwork restarts it. Row
+    // level security turns anyone else's update into a no-op; say so.
+    const { data: restarted, error } = await context.supabase
       .from("listening_jobs")
       .update({ status: "idle", paused_reason: null, locked_until: null })
-      .eq("key", "listening_scan");
-    if (error) throw new Error("Only an admin or manager can restart sweeping.");
+      .eq("key", "listening_scan")
+      .select("key");
+    if (error || !restarted?.length) {
+      throw new Error(
+        "Sweeping runs for every campaign, so only Groundwork can restart it. Let your Groundwork contact know it has paused.",
+      );
+    }
     return { ok: true };
   });
