@@ -1670,6 +1670,124 @@ export type Database = {
         }
         Relationships: []
       }
+      race_polls: {
+        Row: {
+          approval: number | null
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          disapproval: number | null
+          fieldwork_from: string | null
+          fieldwork_to: string | null
+          id: string
+          margin: number | null
+          pollster: string
+          published_on: string
+          sample_size: number | null
+          shares: Json
+          source_url: string
+          undecided: number | null
+        }
+        Insert: {
+          approval?: number | null
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          disapproval?: number | null
+          fieldwork_from?: string | null
+          fieldwork_to?: string | null
+          id?: string
+          margin?: number | null
+          pollster: string
+          published_on: string
+          sample_size?: number | null
+          shares: Json
+          source_url: string
+          undecided?: number | null
+        }
+        Update: {
+          approval?: number | null
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          disapproval?: number | null
+          fieldwork_from?: string | null
+          fieldwork_to?: string | null
+          id?: string
+          margin?: number | null
+          pollster?: string
+          published_on?: string
+          sample_size?: number | null
+          shares?: Json
+          source_url?: string
+          undecided?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_polls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      race_rivals: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          facebook: string | null
+          id: string
+          is_us: boolean
+          name: string
+          office: string | null
+          party: string | null
+          sort: number
+          tiktok: string | null
+          tone: string
+          updated_at: string
+          x: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          facebook?: string | null
+          id?: string
+          is_us?: boolean
+          name: string
+          office?: string | null
+          party?: string | null
+          sort?: number
+          tiktok?: string | null
+          tone?: string
+          updated_at?: string
+          x?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          facebook?: string | null
+          id?: string
+          is_us?: boolean
+          name?: string
+          office?: string | null
+          party?: string | null
+          sort?: number
+          tiktok?: string | null
+          tone?: string
+          updated_at?: string
+          x?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "race_rivals_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           hits: number
