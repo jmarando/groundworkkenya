@@ -34,6 +34,7 @@ import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticate
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
+import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
 import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
 import { Route as ApiPublicSmsDeliveryRouteImport } from './routes/api/public/sms/delivery'
@@ -43,6 +44,7 @@ import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -169,6 +171,11 @@ const ApiPublicUssdRoute = ApiPublicUssdRouteImport.update({
   path: '/api/public/ussd',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
+  id: '/api/public/email/inbound',
+  path: '/api/public/email/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
   id: '/api/public/listening/scan',
   path: '/api/public/listening/scan',
@@ -215,6 +222,12 @@ const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
   path: '/lovable/email/auth/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -241,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -250,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -276,6 +291,7 @@ export interface FileRoutesByTo {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -285,6 +301,7 @@ export interface FileRoutesByTo {
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -313,6 +330,7 @@ export interface FileRoutesById {
   '/p/$code': typeof PCodeRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
@@ -322,6 +340,7 @@ export interface FileRoutesById {
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -350,6 +369,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -359,6 +379,7 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -394,6 +416,7 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
   id:
     | '__root__'
     | '/'
@@ -421,6 +444,7 @@ export interface FileRouteTypes {
     | '/p/$code'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
@@ -430,6 +454,7 @@ export interface FileRouteTypes {
     | '/api/public/whatsapp/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -441,6 +466,7 @@ export interface RootRouteChildren {
   PCodeRoute: typeof PCodeRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
+  ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
   ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
   ApiPublicSmsDeliveryRoute: typeof ApiPublicSmsDeliveryRoute
@@ -450,6 +476,7 @@ export interface RootRouteChildren {
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -629,6 +656,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicUssdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/inbound': {
+      id: '/api/public/email/inbound'
+      path: '/api/public/email/inbound'
+      fullPath: '/api/public/email/inbound'
+      preLoaderRoute: typeof ApiPublicEmailInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/listening/scan': {
       id: '/api/public/listening/scan'
       path: '/api/public/listening/scan'
@@ -692,6 +726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -747,6 +788,7 @@ const rootRouteChildren: RootRouteChildren = {
   PCodeRoute: PCodeRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
+  ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
   ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,
   ApiPublicSmsDeliveryRoute: ApiPublicSmsDeliveryRoute,
@@ -756,6 +798,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

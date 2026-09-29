@@ -297,3 +297,13 @@ a.sb-item {
 .auth-campaign h1 { margin: 4px 0 0; font-size: clamp(30px, 7vw, 42px); line-height: 1; letter-spacing: 0; }
 .auth-campaign-seat { color: var(--gw-accent); font-weight: 700; }
 .auth-action-title { margin: 4px 0 -2px; font-size: 18px; letter-spacing: 0; }
+
+/* Campaign channel checklist */
+.chk-wrap { flex-basis: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--gw-line, rgba(0,0,0,.1)); }
+.team-row:has(.chk-wrap) { flex-wrap: wrap; }
+.chk-row { align-items: flex-start; }
+.chk-status { margin-left: 8px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; border: 1px solid currentColor; opacity: .7; }
+.chk-status--live { color: var(--gw-murram, #D9481C); opacity: 1; }
+.chk-edit { display: grid; gap: 12px; margin-top: 12px; max-width: 520px; }
+.chk-edit label { display: grid; gap: 4px; }
+.chk-steps { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; line-height: 1.5; opacity: .85; }

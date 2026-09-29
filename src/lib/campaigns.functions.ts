@@ -86,3 +86,70 @@ export const focusCampaign = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message || "Could not switch campaign.");
     return { ok: true };
   });
+
+/* ---------------------------------------------------------------- channels */
+
+export const CHANNEL_KINDS = ["whatsapp", "sms", "email", "facebook", "instagram", "x"] as const;
+export type ChannelKind = (typeof CHANNEL_KINDS)[number];
+export type Channel = {
+  kind: ChannelKind;
+  identifier: string | null;
+  display: string | null;
+  status: "not_started" | "pending" | "live";
+  note: string | null;
+};
+
+export const listChannels = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { campaignId: string }) => {
+    if (!input?.campaignId) throw new Error("Which campaign?");
+    return input;
+  })
+  .handler(async ({ data, context }): Promise<Channel[]> => {
+    const { data: rows, error } = await context.supabase
+      .from("campaign_channels")
+      .select("kind, identifier, display, status, note")
+      .eq("campaign_id", data.campaignId);
+    if (error) throw new Error("Could not load channels.");
+    return CHANNEL_KINDS.map((kind) => {
+      const r = (rows ?? []).find((x) => x.kind === kind);
+      return {
+        kind,
+        identifier: r?.identifier ?? null,
+        display: r?.display ?? null,
+        status: (r?.status as Channel["status"]) ?? "not_started",
+        note: r?.note ?? null,
+      };
+    });
+  });
+
+export const saveChannel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: { campaignId: string; kind: ChannelKind; identifier: string; display: string; status: Channel["status"] }) => {
+      if (!input?.campaignId) throw new Error("Which campaign?");
+      if (!CHANNEL_KINDS.includes(input.kind)) throw new Error("Unknown channel.");
+      if (!["not_started", "pending", "live"].includes(input.status)) throw new Error("Unknown status.");
+      const identifier = (input.identifier ?? "").trim().slice(0, 200);
+      if (input.kind === "email" && identifier && !/^[a-z0-9-]{2,40}$/i.test(identifier))
+        throw new Error("Use letters, numbers or dashes for the email name.");
+      return { ...input, identifier: identifier || null, display: (input.display ?? "").trim().slice(0, 200) || null };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("campaign_channels").upsert(
+      {
+        campaign_id: data.campaignId,
+        kind: data.kind,
+        identifier: data.kind === "email" ? data.identifier?.toLowerCase() ?? null : data.identifier,
+        display: data.display,
+        status: data.status,
+      },
+      { onConflict: "campaign_id,kind" },
+    );
+    if (error)
+      throw new Error(
+        error.code === "23505" ? "Another campaign already uses that." : "Could not save that channel.",
+      );
+    return { ok: true };
+  });

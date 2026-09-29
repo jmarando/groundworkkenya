@@ -366,7 +366,7 @@ export const replyToConversation = createServerFn({ method: "POST" })
     const sb = context.supabase;
     const { data: convo, error } = await sb
       .from("conversations")
-      .select("id, person_id, platform, channel")
+      .select("id, person_id, platform, channel, subject")
       .eq("id", data.conversationId)
       .maybeSingle();
     if (error || !convo) throw new Error("That conversation is no longer available.");
@@ -376,6 +376,10 @@ export const replyToConversation = createServerFn({ method: "POST" })
     }
     if (convo.platform === "whatsapp") {
       return replyByWhatsApp(sb, convo, data.body);
+    }
+    if (convo.platform === "email") {
+      const { sendConversationEmail } = await import("@/lib/email.server");
+      return sendConversationEmail(sb, convo, data.body, await senderName(sb, context.userId));
     }
 
     const { data: account } = await sb
@@ -426,8 +430,8 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
     const q = data.q.replace(/[%_,]/g, " ");
     const { data: rows, error } = await context.supabase
       .from("people")
-      .select("id, full_name, phone, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)")
-      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
+      .select("id, full_name, phone, email, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)")
+      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
       .order("full_name")
       .limit(12);
     if (error) throw new Error("The search failed.");
@@ -435,6 +439,7 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
       id: p.id,
       name: p.full_name ?? "Unnamed",
       phone: p.phone,
+      email: p.email ?? null,
       ward: (p.wards as { name: string } | null)?.name ?? null,
       optedOut: p.opted_out === true,
       consentSms: p.consent_sms === true,
@@ -451,24 +456,28 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
  */
 export const startConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp"; body: string }) => {
+  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp" | "email"; body: string; subject?: string }) => {
     const body = (input.body ?? "").trim();
     if (!input.personId) throw new Error("Pick a person first.");
-    if (input.channel !== "sms" && input.channel !== "whatsapp")
-      throw new Error("Pick SMS or WhatsApp.");
+    if (!["sms", "whatsapp", "email"].includes(input.channel))
+      throw new Error("Pick SMS, WhatsApp or email.");
     if (!body) throw new Error("Write something before sending.");
     if (body.length > 2000) throw new Error("That message is too long.");
-    return { personId: input.personId, channel: input.channel, body };
+    const subject = (input.subject ?? "").trim().slice(0, 150) || null;
+    return { personId: input.personId, channel: input.channel, body, subject };
   })
   .handler(async ({ data, context }): Promise<{ conversationId: string; note: string }> => {
     const sb = context.supabase;
     const { data: person, error: pError } = await sb
       .from("people")
-      .select("id, phone")
+      .select("id, phone, email")
       .eq("id", data.personId)
       .maybeSingle();
     if (pError || !person) throw new Error("That person is no longer available.");
-    if (!person.phone) throw new Error("There is no phone number on this person.");
+    if (data.channel === "email" && !person.email)
+      throw new Error("There is no email address on this person.");
+    if (data.channel !== "email" && !person.phone)
+      throw new Error("There is no phone number on this person.");
 
     let conversationId: string;
     const { data: existing } = await sb
@@ -491,7 +500,11 @@ export const startConversation = createServerFn({ method: "POST" })
           person_id: person.id,
           platform: data.channel,
           channel: data.channel,
-          external_thread_id: `${data.channel}:${phoneKey(person.phone)}`,
+          external_thread_id:
+            data.channel === "email"
+              ? `email:${person.email!.toLowerCase()}`
+              : `${data.channel}:${phoneKey(person.phone)}`,
+          subject: data.channel === "email" ? data.subject : null,
           status: "open",
           unread: false,
           snippet: data.body,
@@ -503,11 +516,17 @@ export const startConversation = createServerFn({ method: "POST" })
       conversationId = created.id;
     }
 
-    const convo = { id: conversationId, person_id: person.id };
-    const r =
-      data.channel === "sms"
-        ? await replyBySms(sb, convo, data.body)
-        : await replyByWhatsApp(sb, convo, data.body);
+    const convo = { id: conversationId, person_id: person.id, subject: data.subject };
+    let r: { note: string };
+    if (data.channel === "email") {
+      const { sendConversationEmail } = await import("@/lib/email.server");
+      r = await sendConversationEmail(sb, convo, data.body, await senderName(sb, context.userId));
+    } else {
+      r =
+        data.channel === "sms"
+          ? await replyBySms(sb, convo, data.body)
+          : await replyByWhatsApp(sb, convo, data.body);
+    }
     return { conversationId, note: r.note };
   });
 
@@ -665,4 +684,9 @@ async function replyByWhatsApp(
 
   if (!r.ok) throw new Error(r.error);
   return { status: "accepted", note: "Sent on WhatsApp." };
+}
+
+async function senderName(sb: SupabaseClient<Database>, userId: string): Promise<string | null> {
+  const { data } = await sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
+  return data?.full_name?.split(" ")[0] ?? null;
 }
