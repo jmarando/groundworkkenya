@@ -131,3 +131,40 @@ do $$ begin
     values ('ca000000-0000-4000-8000-000000000003', 'Bad Handle', 'a', 'not a handle')$q$) = '23514', 'a bad X handle';
 end $$;
 rollback;
+
+-- test: Sakaja's race is on record from its sources, and nobody else's is touched
+do $$
+begin
+  assert (select count(*) from public.race_rivals where campaign_id = 'ca000000-0000-4000-8000-000000000002') = 5,
+    'five candidates in Sakaja''s race';
+  assert (select name from public.race_rivals where campaign_id = 'ca000000-0000-4000-8000-000000000002' and is_us)
+         = 'Johnson Sakaja', 'Sakaja is the campaign''s own';
+  assert (select count(*) from public.race_polls where campaign_id = 'ca000000-0000-4000-8000-000000000002') = 4,
+    'four published polls';
+  assert (select count(*) from public.race_polls
+           where campaign_id = 'ca000000-0000-4000-8000-000000000002' and source_url like 'https://%') = 4,
+    'each with its source';
+  assert (select count(*) from public.race_rivals where campaign_id <> 'ca000000-0000-4000-8000-000000000002') = 0,
+    'another campaign got rivals';
+  assert (select count(*) from public.race_polls where campaign_id <> 'ca000000-0000-4000-8000-000000000002') = 0,
+    'another campaign got polls';
+  assert (select (s->>'share')::numeric
+            from public.race_polls p, jsonb_array_elements(p.shares) s
+           where p.published_on = '2026-09-10' and s->>'name' = 'Johnson Sakaja') = 17.0,
+    'Mizani''s August poll has Sakaja on 17';
+  assert (select count(*)
+            from public.race_polls p, jsonb_array_elements(p.shares) s
+           where s ? 'rival_id'
+             and not exists (select 1 from public.race_rivals r where r.id::text = s->>'rival_id')) = 0,
+    'a share points at a rival who is not there';
+end $$;
+
+-- test: running it again changes nothing
+begin;
+\ir ../../supabase/migrations/20260929131000_sakaja_race.sql
+do $$ begin
+  assert (select count(*) from public.race_rivals) = 5, 'rivals added twice';
+  assert (select count(*) from public.race_polls) = 4, 'polls added twice';
+  assert public.groundwork_schema_version() = 17, 'schema version';
+end $$;
+rollback;
