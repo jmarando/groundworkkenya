@@ -1,17 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { ElectionNight } from "@/components/gw/warroom/ElectionNight";
 import { LiveWarRoom } from "@/components/gw/warroom/LiveWarRoom";
 import { useAccess } from "@/hooks/useAccess";
-import { forCampaign, getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
-import type { ScenarioKey } from "@/lib/demo/types";
+import { forCampaign, getScenario, scenarioForLevel } from "@/lib/demo";
 
 export const Route = createFileRoute("/_authenticated/warroom")({
-  validateSearch: (search: Record<string, unknown>): { c?: ScenarioKey; mode?: "live" } => ({
-    ...(typeof search["c"] === "string" ? { c: scenarioKey(search["c"]) } : {}),
-    ...(search["mode"] === "live" ? { mode: "live" as const } : {}),
-  }),
+  validateSearch: (search: Record<string, unknown>): { mode?: "live" } =>
+    search["mode"] === "live" ? { mode: "live" } : {},
   component: WarRoom,
   head: () => ({
     meta: [
@@ -44,15 +41,11 @@ function useWarRoomSurface() {
 
 function WarRoom() {
   useWarRoomSurface();
-  const { c, mode } = Route.useSearch();
-  // Each campaign's workspace opens on the demo for its own race.
+  const { mode } = Route.useSearch();
+  // Each campaign's workspace shows the demo for its own race, and only that.
   const { campaign } = useAccess();
-  const navigate = useNavigate({ from: Route.fullPath });
   if (mode === "live") return <LiveWarRoom />;
   return (
-    <ElectionNight
-      s={forCampaign(getScenario(c ?? scenarioForLevel(campaign?.level)), campaign)}
-      onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
-    />
+    <ElectionNight s={forCampaign(getScenario(scenarioForLevel(campaign?.level)), campaign)} />
   );
 }

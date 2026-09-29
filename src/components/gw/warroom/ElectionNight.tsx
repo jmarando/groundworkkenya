@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { DemoBadge, ScenarioSwitch } from "@/components/gw/demo/ScenarioSwitch";
+import { DemoBadge } from "@/components/gw/demo/DemoBadge";
 import {
   Areas,
   Feed,
@@ -14,7 +14,7 @@ import {
   Tally,
 } from "@/components/gw/warroom/NightCards";
 import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
-import type { Scenario, ScenarioKey } from "@/lib/demo/types";
+import type { Scenario } from "@/lib/demo/types";
 
 /** Minutes of election night per second of playback. */
 const SPEEDS = [5, 15, 30] as const;
@@ -23,9 +23,9 @@ const nf = new Intl.NumberFormat("en-KE");
 
 /**
  * Election night, simulated: results arrive station by station from 17:00
- * to 06:00. Play it, scrub it, or switch candidate to see another office.
+ * to 06:00, for the campaign's own race. Play it or scrub it.
  */
-export function ElectionNight({ s, onPick }: { s: Scenario; onPick: (key: ScenarioKey) => void }) {
+export function ElectionNight({ s }: { s: Scenario }) {
   const night = useMemo(() => buildNight(s), [s]);
   // Open on a busy moment: the first time about a third of stations are in.
   const opening = useMemo(() => {
@@ -101,7 +101,6 @@ export function ElectionNight({ s, onPick }: { s: Scenario; onPick: (key: Scenar
       <div className="en-bar">
         <div className="en-bar-top">
           <DemoBadge fictional={s.candidate.fictional} />
-          <ScenarioSwitch value={s.key} onChange={onPick} />
         </div>
         <div className="en-play">
           <button type="button" className="en-playbtn" aria-pressed={playing} onClick={play}>

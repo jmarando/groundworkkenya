@@ -103,7 +103,7 @@ export function LiveWarRoom() {
               {nf.format(s.reporting)} / {nf.format(s.total)}
             </b>
           </span>
-          <Link to="/warroom" search={({ mode: _live, ...rest }) => rest} className="en-mode">
+          <Link to="/warroom" search={{}} className="en-mode">
             Election-night simulation
           </Link>
         </div>

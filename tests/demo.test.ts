@@ -14,6 +14,7 @@ import {
   weightedShares,
 } from "@/lib/demo/insights";
 import { spokenBriefing } from "@/lib/demo/spoken";
+import { Route as warRoomRoute } from "@/routes/_authenticated/warroom";
 
 let pass = 0;
 let fail = 0;
@@ -261,6 +262,14 @@ for (const s of SCENARIOS) {
     forCampaign(sakaja, { candidate: "A Senator", level: "senator" }) === sakaja,
   );
   ok("no campaign, no change", forCampaign(mathira, null) === mathira);
+}
+
+// ---- the war room shows its own race
+
+{
+  const search = warRoomRoute.options.validateSearch as (s: Record<string, unknown>) => unknown;
+  eq("the war room ignores another race's ?c=", search({ c: "kalonzo" }), {});
+  eq("its live view still opens", search({ c: "kalonzo", mode: "live" }), { mode: "live" });
 }
 
 console.log(`${pass} passed, ${fail} failed`);
