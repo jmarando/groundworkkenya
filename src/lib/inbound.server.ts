@@ -389,6 +389,62 @@ async function invitedLivePoll(sb: Sb, personId: string): Promise<EnginePoll | n
 
 export type InboundRoute = "opt_out" | "opt_in" | "poll" | "poll_help" | "inbox" | "ignored";
 
+/** How long a campaign's text makes the number's replies its own. */
+const REPLY_WINDOW_MS = 30 * 864e5;
+
+/**
+ * Every campaign texts from the same line, so a reply belongs to the campaign
+ * that texted this number last, within 30 days; otherwise to the campaign
+ * that owns the line. A volunteer confirming a Mathira sign-up must land in
+ * Mathira's records, not the line owner's.
+ */
+export async function replyCampaignId(sb: Sb, phone: string): Promise<string> {
+  const since = new Date(Date.now() - REPLY_WINDOW_MS).toISOString();
+  const { data } = await sb
+    .from("messages")
+    .select("campaign_id")
+    .eq("phone", phone)
+    .eq("direction", "out")
+    .eq("channel", "sms")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.campaign_id ?? (await channelCampaignId(sb));
+}
+
+/** How a campaign signs its texts. The line owner keeps CAMPAIGN_NAME. */
+async function textSignature(sb: Sb, campaignId: string): Promise<string> {
+  if (campaignId === (await channelCampaignId(sb))) return CAMPAIGN;
+  const { data } = await sb
+    .from("campaigns")
+    .select("name, candidate")
+    .eq("id", campaignId)
+    .maybeSingle();
+  return data?.candidate?.trim() || data?.name || CAMPAIGN;
+}
+
+/**
+ * STOP on the shared line stops every campaign that texts from it: the person
+ * cannot tell them apart, and a STOP must never leave texts still coming.
+ */
+async function optOutEverywhere(sb: Sb, phone: string): Promise<void> {
+  const { data: records } = await sb.from("people").select("id").eq("phone", phone);
+  await sb
+    .from("people")
+    .update({
+      opted_out: true,
+      opted_out_at: new Date().toISOString(),
+      consent_sms: false,
+      consent_whatsapp: false,
+      consent_call: false,
+    })
+    .eq("phone", phone);
+  for (const r of records ?? []) {
+    await logEvent(sb, r.id, "opt_out", "sms", "Replied STOP");
+  }
+}
+
 /**
  * One inbound SMS. STOP is honoured before anything else, so someone trying
  * to leave is never mistaken for someone answering a poll.
@@ -398,8 +454,12 @@ export async function handleInboundSms(
   rawFrom: string,
   text: string,
 ): Promise<InboundRoute> {
-  const person = await upsertPersonByPhone(sb, rawFrom, "sms");
+  const phone = normalizeKePhone(rawFrom);
+  if (!phone) return "ignored";
+  const campaign = await replyCampaignId(sb, phone);
+  const person = await upsertPersonByPhone(sb, phone, "sms", campaign);
   if (!person) return "ignored";
+  const signature = await textSignature(sb, campaign);
 
   const body = (text ?? "").trim().slice(0, 1000);
   await logEvent(sb, person.id, "sms_in", "sms", body);
@@ -423,24 +483,17 @@ export async function handleInboundSms(
 
   if (isStopWord(body)) {
     await saveInbound(null);
-    await updatePerson(sb, person.id, {
-      opted_out: true,
-      opted_out_at: new Date().toISOString(),
-      consent_sms: false,
-      consent_whatsapp: false,
-      consent_call: false,
-    });
-    await logEvent(sb, person.id, "opt_out", "sms", "Replied STOP");
+    await optOutEverywhere(sb, person.phone);
     // A 'reply' passes the consent check: confirming the opt-out is the one
     // message someone who just opted out must still get.
-    await reply({ body: optOutText(CAMPAIGN), kind: "reply" });
+    await reply({ body: optOutText(signature), kind: "reply" });
     route = "opt_out";
   } else if (isStartWord(body)) {
     await saveInbound(null);
     await updatePerson(sb, person.id, { opted_out: false, opted_out_at: null, consent_sms: true });
     await logEvent(sb, person.id, "opt_in", "sms", "Replied START");
     await reply({
-      body: `${CAMPAIGN}: Umejiunga. Tuma STOP wakati wowote kujiondoa.`,
+      body: `${signature}: Umejiunga. Tuma STOP wakati wowote kujiondoa.`,
       kind: "reply",
     });
     route = "opt_in";
@@ -451,7 +504,7 @@ export async function handleInboundSms(
       await saveInbound(null);
       const outcome = await recordResponse(sb, poll, person, "sms", answer);
       await reply({
-        body: thanksText(poll, CAMPAIGN, outcome.rewarded),
+        body: thanksText(poll, signature, outcome.rewarded),
         kind: "poll_thanks",
         pollId: poll.id,
       });
