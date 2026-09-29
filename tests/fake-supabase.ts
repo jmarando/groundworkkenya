@@ -134,6 +134,16 @@ export function fakeSupabase(
         filters.push((r) => vs.includes(r[c]));
         return q;
       },
+      /** Only "cs" (array contains), negated: rows whose array lacks any listed value. */
+      not(c: string, op: string, v: string) {
+        if (op !== "cs") throw new Error(`fake not(): unsupported operator ${op}`);
+        const want = v.replace(/^\{|\}$/g, "").split(",").filter(Boolean);
+        filters.push((r) => {
+          const have = Array.isArray(r[c]) ? (r[c] as unknown[]) : [];
+          return !want.every((w) => have.includes(w));
+        });
+        return q;
+      },
       is(c: string, v: unknown) {
         filters.push((r) => (r[c] ?? null) === v);
         return q;
