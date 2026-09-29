@@ -4,7 +4,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { getScenario, scenarioKey, SCENARIOS } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioKey, SCENARIOS } from "@/lib/demo";
 import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
 import {
   countAtLeast,
@@ -225,6 +225,42 @@ for (const s of SCENARIOS) {
   );
   const words = text.split(/\s+/).length;
   ok(`${s.key}: about three minutes to listen`, words > 250 && words < 600, String(words));
+}
+
+// ---- a campaign's own workspace
+{
+  const mathira = getScenario("mathira");
+  const theirs = forCampaign(mathira, { candidate: "Waruru Gikandi", level: "mp" });
+  eq(
+    "the MP demo carries the campaign's own candidate",
+    [
+      theirs.candidate.name,
+      theirs.candidate.first,
+      theirs.candidate.initials,
+      theirs.candidate.fictional,
+    ],
+    ["Waruru Gikandi", "Waruru", "WG", false],
+  );
+  eq(
+    "in the race too, and only for our side",
+    theirs.contenders.map((c) => c.name),
+    ["Waruru Gikandi", "Challenger A", "Challenger B"],
+  );
+  eq("the figures are the demo's", theirs.areas, mathira.areas);
+  const sakaja = getScenario("sakaja");
+  ok(
+    "a matching name changes nothing",
+    forCampaign(sakaja, { candidate: "Johnson Sakaja", level: "governor" }) === sakaja,
+  );
+  ok(
+    "another race's demo is left alone",
+    forCampaign(sakaja, { candidate: "Waruru Gikandi", level: "mp" }) === sakaja,
+  );
+  ok(
+    "a race with no demo of its own is left alone",
+    forCampaign(sakaja, { candidate: "A Senator", level: "senator" }) === sakaja,
+  );
+  ok("no campaign, no change", forCampaign(mathira, null) === mathira);
 }
 
 console.log(`${pass} passed, ${fail} failed`);

@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { EngineRoom } from "@/components/gw/overview/EngineRoom";
 import { LiveOverview } from "@/components/gw/overview/LiveOverview";
 import { useAccess } from "@/hooks/useAccess";
-import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/overview")({
@@ -62,7 +62,7 @@ function Overview() {
       ) : (
         <section className="view active" aria-label="Command centre">
           <EngineRoom
-            s={getScenario(c ?? scenarioForLevel(campaign?.level))}
+            s={forCampaign(getScenario(c ?? scenarioForLevel(campaign?.level)), campaign)}
             onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
           />
         </section>

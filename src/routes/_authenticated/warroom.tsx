@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { ElectionNight } from "@/components/gw/warroom/ElectionNight";
 import { LiveWarRoom } from "@/components/gw/warroom/LiveWarRoom";
 import { useAccess } from "@/hooks/useAccess";
-import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/warroom")({
@@ -51,7 +51,7 @@ function WarRoom() {
   if (mode === "live") return <LiveWarRoom />;
   return (
     <ElectionNight
-      s={getScenario(c ?? scenarioForLevel(campaign?.level))}
+      s={forCampaign(getScenario(c ?? scenarioForLevel(campaign?.level)), campaign)}
       onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
     />
   );

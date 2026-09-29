@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LiveBriefing } from "@/components/gw/briefing/LiveBriefing";
 import { MorningBriefing } from "@/components/gw/briefing/MorningBriefing";
 import { useAccess } from "@/hooks/useAccess";
-import { getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioForLevel, scenarioKey } from "@/lib/demo";
 import type { ScenarioKey } from "@/lib/demo/types";
 
 export const Route = createFileRoute("/_authenticated/briefing")({
@@ -62,7 +62,7 @@ function Briefing() {
       ) : (
         <section className="view active" aria-label="Morning briefing">
           <MorningBriefing
-            s={getScenario(c ?? scenarioForLevel(campaign?.level))}
+            s={forCampaign(getScenario(c ?? scenarioForLevel(campaign?.level)), campaign)}
             onPick={(key) => void navigate({ search: (prev) => ({ ...prev, c: key }) })}
           />
         </section>
