@@ -2175,6 +2175,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      site_editor: { Args: never; Returns: string }
       unpublish_site: { Args: never; Returns: undefined }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
