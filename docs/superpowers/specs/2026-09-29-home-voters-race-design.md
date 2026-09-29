@@ -107,23 +107,29 @@ Sakaja's starting data, from public sources:
 | CAP, 14–19 Apr 2026, 6,000 voters, ±1.94 ([Citizen](https://citizen.digital/article/nairobi-governor-race-babu-owino-leads-agnes-kagure-follows-as-sakaja-trails-in-new-poll-n381233)) | 37% | 34% | 10% | 7% | Nyakera 1, Karauri 1, undecided 9; Sakaja approval 10%, disapproval 80% |
 | Mizani, published 1 Jul 2026 ([Streamlinefeed](https://streamlinefeed.co.ke/news/babu-owino-and-agnes-kagure-overtake-sakaja-in-latest-nairobi-gubernatorial-poll)) | 27.1% | 23.7% | 19.9% | 11.2% | Waweru 1.5, Aladwa 1.4, undecided 13.3 |
 | ISS Africa, Sep 2025, 1,063 voters ([Kenyans.co.ke](https://www.kenyans.co.ke/news/116303-babu-owino-leads-sakajas-popularity-plummets-ahead-nairobi-2027-governor-race-new-poll)) | 28.1% | — | 16.4% | 11.2% | Nyakera 19.2 |
+| Mizani, 21–28 Aug 2026, published 10 Sep, 1,820 voters, ±2.3 ([Nairobi News](https://nairobinews.co.ke/babu-owino-takes-early-lead-in-nairobi-2027-governor-race-as-new-poll-puts-him-ahead-of-sakaja/)) | 28.4% | 27.2% | 17.0% | 15.0% | undecided 8.1 |
 
-A Mizani poll of 21–28 Aug 2026 (1,820 voters, ±2.3: Babu 28.4, Kagure 27.2,
-Sakaja 17.0, Gakuya 15.0) appears in search summaries; it goes in only once its
-article is found and read.
+Every figure above was checked against its article on 2026-09-29. CAP's fieldwork was
+14–19 Apr, published 21 Apr; ISS Africa published 17 Sep 2025; the July Mizani article
+gives no fieldwork dates, sample or margin.
 
 Rivals: Babu Owino (Embakasi East MP, The Mwananchi Party), Agnes Kagure (Kenya
 Patriots Party), James Gakuya (Embakasi North MP, DCP) and Ronald Karauri (Kasarani
 MP), per [Citizen, 25 Sep 2026](https://citizen.digital/article/city-hall-chessboard-sakaja-babu-gakuya-karauri-gear-up-for-2027-nairobi-battle-n390883).
-Handles are confirmed from each official page while building. The 2022 result comes
-from the IEBC declaration, checked against a second source.
+Sakaja stays with UDA; Karauri's party is not stated. Handles are confirmed from each
+official page while building the social sweep. The 2022 result comes from the IEBC
+declaration (Sakaja 699,392, Igathe 573,516), matched by Citizen Digital and Equal
+Politics; one Kenyans.co.ke article misprints Igathe's total as 576,516.
 
 ### Social posts
 
 - A daily sweep reads each rival's and the candidate's recent public posts on
   Facebook, X and TikTok through ScrapeCreators (`api.scrapecreators.com/v1`,
-  `x-api-key` header), using the key Lovable already holds. The server reads it from
-  the project secret; its exact name is confirmed before building.
+  `x-api-key` header), using the key Lovable already holds: `SCRAPECREATORS_API_KEY`,
+  read by Lovable's `src/lib/scrapecreators.server.ts`, which the sweep builds on.
+- Lovable's hourly keyword search on TikTok, Reddit and YouTube (added 29 Sep) stays,
+  and gets a daily limit of its own so the two together cannot run the credits out
+  (the user, 29 Sep).
 - Each post is stored in `listening_mentions` like a news item: source
   (`facebook`, `x`, `tiktok`), author (the rival), link, text, time, reach
   (reactions + comments + shares). The existing classifier gives it a mood and an
@@ -159,8 +165,10 @@ from the IEBC declaration, checked against a second source.
    Keywords tab and Google Alert feeds, then the social sweep.
 3. **Voters**: the map-first screen, forwards and access.
 
-Each ships on its own after the user's OK: tests, a guarded migration where there is
-one, then publish.
+Part 2 is two plans: 2a, race data (tables, editor, Sakaja's data, the real race on
+Home), and 2b, Listening (Keywords, Google Alerts) and the social sweep. On 29 Sep the
+user chose to build all three parts and release them together: tests, guarded
+migrations applied before the code, then one push and publish.
 
 ## Testing
 
