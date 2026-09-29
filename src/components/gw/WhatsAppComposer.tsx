@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import type { BroadcastAudience } from "@/lib/broadcast.functions";
 import { estimateWhatsApp, sendWhatsAppBroadcast } from "@/lib/wa-broadcast.functions";
-import { fillTemplate, WA_TEMPLATES } from "@/lib/wa-templates";
+import { fillTemplate, WA_TEMPLATES_ALL } from "@/lib/wa-templates";
 
 const nf = new Intl.NumberFormat("en-KE");
 
@@ -45,10 +45,12 @@ export function WhatsAppComposer({
   onChannel: (v: "sms" | "wa") => void;
   onClose: () => void;
 }) {
-  const [tpl, setTpl] = useState(WA_TEMPLATES[0]!.name);
-  const t = WA_TEMPLATES.find((x) => x.name === tpl)!;
+  const [tpl, setTpl] = useState(WA_TEMPLATES_ALL[0]!.name);
+  const t = WA_TEMPLATES_ALL.find((x) => x.name === tpl)!;
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const vals = fields[tpl] ?? t.fields.map(() => "");
+  const [imgUrls, setImgUrls] = useState<Record<string, string>>({});
+  const imgUrl = t.image ? (imgUrls[tpl] ?? "").trim() : "";
   const [reviewing, setReviewing] = useState(false);
   const [clientKey] = useState(() => crypto.randomUUID());
   const [progress, setProgress] = useState<{ sent: number; failed: number } | null>(null);
@@ -70,9 +72,11 @@ export function WhatsAppComposer({
 
   const problem = vals.some((v) => !v.trim())
     ? "Fill in every blank."
-    : est && recipients === 0
-      ? "Nobody in this audience has agreed to WhatsApp."
-      : null;
+    : t.image && !/^https:\/\/\S+$/.test(imgUrl)
+      ? "Add a picture link (a public https:// address)."
+      : est && recipients === 0
+        ? "Nobody in this audience has agreed to WhatsApp."
+        : null;
 
   async function go() {
     setBusy(true);
@@ -81,7 +85,9 @@ export function WhatsAppComposer({
     let lastError: string | null = null;
     try {
       for (let round = 0; round < 200; round++) {
-        const r = await send({ data: { clientKey, template: tpl, fields: vals, audience } });
+        const r = await send({
+          data: { clientKey, template: tpl, fields: vals, imageUrl: imgUrl || undefined, audience },
+        });
         sent += r.sent;
         failed += r.failed;
         lastError = r.lastError ?? lastError;
@@ -145,13 +151,25 @@ export function WhatsAppComposer({
               <label className="pb-field">
                 <span>Message</span>
                 <select value={tpl} onChange={(e) => setTpl(e.target.value)}>
-                  {WA_TEMPLATES.map((x) => (
+                  {WA_TEMPLATES_ALL.map((x) => (
                     <option key={x.name} value={x.name}>
                       {x.label}
                     </option>
                   ))}
                 </select>
               </label>
+              {t.image && (
+                <label className="pb-field">
+                  <span>Picture link (shown at the top of the message)</span>
+                  <input
+                    value={imgUrls[tpl] ?? ""}
+                    placeholder="https://groundwork.ke/posters/rally.jpg"
+                    maxLength={500}
+                    inputMode="url"
+                    onChange={(e) => setImgUrls({ ...imgUrls, [tpl]: e.target.value })}
+                  />
+                </label>
+              )}
               {t.fields.map((f, i) => (
                 <label className="pb-field" key={f.label}>
                   <span>{f.label}</span>
@@ -171,6 +189,16 @@ export function WhatsAppComposer({
           )}
 
           <div className="bc-phone" aria-label="Message preview">
+            {t.image && /^https:\/\/\S+$/.test(imgUrl) && (
+              <img
+                src={imgUrl}
+                alt=""
+                style={{ maxWidth: "100%", borderRadius: "8px 8px 0 0", display: "block" }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            )}
             <p>{preview}</p>
           </div>
           <p className="f-note">
