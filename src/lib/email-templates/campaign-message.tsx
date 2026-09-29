@@ -33,7 +33,7 @@ const CampaignMessage = ({ campaignName = 'The campaign', subject = 'A message f
 
 export const template = {
   component: CampaignMessage,
-  subject: (d: Record<string, any>) => d.subject || 'A message from the campaign',
+  subject: (d: Record<string, any>) => d['subject'] || 'A message from the campaign',
   displayName: 'Campaign Inbox message',
   previewData: {
     campaignName: 'Sakaja 2027',

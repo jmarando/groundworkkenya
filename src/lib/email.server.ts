@@ -14,7 +14,7 @@ export function replyAddress(slug: string, conversationId: string) {
 /** Parse "slug+uuid@in.groundwork.ke" (or "slug@…"). */
 export function parseInboundAddress(addr: string): { slug: string; conversationId: string | null } | null {
   const m = addr.trim().toLowerCase().match(/^([a-z0-9-]+)(?:\+([0-9a-f-]{36}))?@/);
-  return m ? { slug: m[1], conversationId: m[2] ?? null } : null;
+  return m && m[1] ? { slug: m[1], conversationId: m[2] ?? null } : null;
 }
 
 export async function sendConversationEmail(
