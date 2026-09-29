@@ -150,27 +150,16 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
     const todo = people.filter((p) => !seen.has(p.id));
     const batch = todo.slice(0, BATCH);
 
+    const { sendRecordedGroup } = await import("@/lib/wa-broadcast.server");
     let sent = 0;
     let failed = 0;
     let lastError: string | null = null;
+    let reached = 0;
     for (let i = 0; i < batch.length; i += 10) {
-      const group = batch.slice(i, i + 10);
-      const rows = await Promise.all(
-        group.map(async (p) => {
-          const params = [firstName(p.full_name), campaign, ...data.fields];
-          const r = await sendWhatsAppTemplate(
-            p.phone,
-            data.t.name,
-            data.t.language,
-            params,
-            data.imageUrl,
-          );
-          if (r.ok) sent++;
-          else {
-            failed++;
-            lastError = r.error;
-          }
-          return {
+      const group = batch.slice(i, i + 10).map((p) => {
+        const params = [firstName(p.full_name), campaign, ...data.fields];
+        return {
+          row: {
             campaign_id: p.campaign_id,
             person_id: p.id,
             phone: p.phone,
@@ -181,14 +170,18 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
             body: fillTemplate(data.t.text, params),
             outbox_kind: "broadcast",
             provider_ref: key,
-            ...(r.ok
-              ? { status: "accepted", external_id: r.id, sent_at: new Date().toISOString() }
-              : { status: "failed", error: r.error }),
-          };
-        }),
-      );
-      const { error } = await supabaseAdmin.from("messages").insert(rows);
-      if (error) console.error(`Could not record WhatsApp broadcast: ${error.message}`);
+          },
+          send: () =>
+            sendWhatsAppTemplate(p.phone, data.t.name, data.t.language, params, data.imageUrl),
+        };
+      });
+      // Each message is on record before it goes, so a retry never sends it twice.
+      const r = await sendRecordedGroup(supabaseAdmin, group);
+      sent += r.sent;
+      failed += r.failed;
+      lastError = r.lastError ?? lastError;
+      if (!r.attempted) break;
+      reached += group.length;
     }
-    return { sent, failed, remaining: todo.length - batch.length, lastError };
+    return { sent, failed, remaining: todo.length - reached, lastError };
   });
