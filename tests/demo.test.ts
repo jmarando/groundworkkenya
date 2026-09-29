@@ -227,6 +227,42 @@ for (const s of SCENARIOS) {
   const words = text.split(/\s+/).length;
   ok(`${s.key}: about three minutes to listen`, words > 250 && words < 600, String(words));
 }
+// Home reads out what it shows: the person signed in, its Today list (real items
+// first), and a spoken Sample tag before anything invented.
+{
+  const s = getScenario("sakaja");
+  const NOTE = "From here on, this briefing is a sample, invented for a race like yours.";
+  const real = {
+    title: "2 expenses to approve",
+    detail: "Approval needs the document.",
+    sample: false,
+  };
+  const [a, b] = s.today.map((t) => ({ ...t, sample: true }));
+  const text = spokenBriefing(s, "2026-09-25", { name: "Njeri", today: [real, a!, b!] });
+  const at = (x: string) => text.indexOf(x);
+  ok("it greets the person signed in", text.startsWith("Good morning, Njeri."));
+  ok(
+    "the real item comes before the sample note",
+    at("First: 2 expenses to approve.") > -1 && at("First: 2 expenses to approve.") < at(NOTE),
+  );
+  ok(
+    "the note comes before the first invented item",
+    at(NOTE) > -1 && at(NOTE) < at(`Second: ${a!.title}.`),
+  );
+  ok("the note is said once", text.split(NOTE).length === 2);
+  const allSample = spokenBriefing(s, "2026-09-25");
+  ok(
+    "all sample: the note comes before the first item",
+    allSample.indexOf(NOTE) > -1 && allSample.indexOf(NOTE) < allSample.indexOf("First:"),
+  );
+  const oneReal = spokenBriefing(s, "2026-09-25", { name: "Njeri", today: [real] });
+  ok("one item, said as one", oneReal.includes("One thing today."));
+  ok(
+    "all real: the note still comes before the invented story",
+    oneReal.indexOf(NOTE) > oneReal.indexOf("First: 2 expenses") &&
+      oneReal.indexOf(NOTE) < oneReal.indexOf("The story that matters"),
+  );
+}
 
 // ---- a campaign's own workspace
 {

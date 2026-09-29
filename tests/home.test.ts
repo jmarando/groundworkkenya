@@ -139,6 +139,24 @@ eq(
   ]),
   null,
 );
+// The listening classifier files what it cannot place as "general", and news
+// about the campaign itself as "campaign": neither is an issue voters raise.
+eq(
+  "the classifier's catch-alls are not issues",
+  topIssue([
+    ...Array.from({ length: 5 }, () => ({ issue: "general", sentiment: "negative" })),
+    ...Array.from({ length: 4 }, () => ({ issue: "campaign", sentiment: null })),
+    { issue: "water", sentiment: "negative" },
+    { issue: "water", sentiment: null },
+    { issue: "water", sentiment: null },
+  ]),
+  { label: "Water", count: 3, angry: 1 },
+);
+eq(
+  "only catch-alls, nothing",
+  topIssue(Array.from({ length: 6 }, () => ({ issue: "General", sentiment: null }))),
+  null,
+);
 
 // ---------------------------------------------------------------- names
 

@@ -16,7 +16,20 @@ function spokenDate(iso: string): string {
   });
 }
 
-export function spokenBriefing(s: Scenario, todayIso: string): string {
+/** Said once, before the first invented thing: everything after it is invented too. */
+const SAMPLE_NOTE = "From here on, this briefing is a sample, invented for a race like yours.";
+const COUNT = ["", "One thing", "Two things", "Three things"];
+const ORDINAL = ["First", "Second", "Third"];
+
+/**
+ * `name` and `today` let Home read out what it shows: the person signed in and
+ * its Today list, real items first. Without them it is the race's sample.
+ */
+export function spokenBriefing(
+  s: Scenario,
+  todayIso: string,
+  opts: { name?: string; today?: { title: string; detail: string; sample: boolean }[] } = {},
+): string {
   const us = ours(s);
   const keys = s.contenders.map((c) => c.key);
   const rival = s.contenders[1];
@@ -24,15 +37,24 @@ export function spokenBriefing(s: Scenario, todayIso: string): string {
   const model = weightedShares(s.areas, keys);
   const days = daysBetween(todayIso, ELECTION_DAY);
   const out: string[] = [];
+  let noted = false;
+  const sampleFromHere = () => {
+    if (!noted) out.push(SAMPLE_NOTE);
+    noted = true;
+  };
 
   out.push(
-    `Good morning, ${s.candidate.first}. It's ${spokenDate(todayIso)}, and ${days} days to the election.`,
+    `Good morning, ${opts.name ?? s.candidate.first}. It's ${spokenDate(todayIso)}, and ${days} days to the election.`,
   );
 
-  out.push("Three things today.");
-  s.today.forEach((t, i) =>
-    out.push(`${["First", "Second", "Third"][i]}: ${t.title}. ${t.detail}`),
-  );
+  const items = opts.today ?? s.today.map((t) => ({ ...t, sample: true }));
+  if (items.length) out.push(`${COUNT[items.length] ?? `${items.length} things`} today.`);
+  items.forEach((t, i) => {
+    if (t.sample) sampleFromHere();
+    out.push(`${ORDINAL[i] ?? "Next"}: ${t.title}. ${t.detail}`);
+  });
+  // The story, the race, rivals, voters and the diary below are all the sample.
+  sampleFromHere();
 
   out.push(`The story that matters: ${s.story.headline}. ${s.story.summary}`);
   out.push(`Why it matters: ${s.story.numbers.map((n) => `${n.value}, ${n.label}`).join("; ")}.`);

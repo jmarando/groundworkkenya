@@ -22,6 +22,7 @@ export function Home({ s, data }: { s: Scenario; data?: HomeData }) {
   const today = nairobiToday();
   const d = data ?? NOTHING_YET;
   const modes = sectionModes(d.facts);
+  const items = todayItems(realToday(d.signals), s.today);
   return (
     <div className="mb ov home">
       <HomeHeader
@@ -30,8 +31,9 @@ export function Home({ s, data }: { s: Scenario; data?: HomeData }) {
         name={greetingName(d.firstName, s.candidate.first)}
         verdict={raceVerdict(s)}
         raceMode={modes.race}
+        items={items}
       />
-      <TodaySection s={s} items={todayItems(realToday(d.signals), s.today)} />
+      <TodaySection s={s} items={items} />
       <RaceSection s={s} mode={modes.race} />
       <CampaignSection s={s} today={today} mode={modes.campaign} />
       <p className="mb-foot">

@@ -4,7 +4,7 @@ import { SampleTag } from "@/components/gw/home/SectionHead";
 import { daysBetween, ELECTION_DAY } from "@/lib/demo/insights";
 import { spokenBriefing } from "@/lib/demo/spoken";
 import type { Scenario } from "@/lib/demo/types";
-import type { SectionMode } from "@/lib/home";
+import type { SectionMode, TodayItem } from "@/lib/home";
 
 function longDate(iso: string): string {
   return new Date(`${iso}T09:00:00Z`).toLocaleDateString("en-GB", {
@@ -56,12 +56,15 @@ export function HomeHeader({
   name,
   verdict,
   raceMode,
+  items,
 }: {
   s: Scenario;
   today: string;
   name: string;
   verdict: string;
   raceMode: SectionMode;
+  /** The Today list as shown, so Listen reads out the same list. */
+  items: TodayItem[];
 }) {
   const speech = useSpeech();
   const days = daysBetween(today, ELECTION_DAY);
@@ -87,7 +90,11 @@ export function HomeHeader({
             type="button"
             className={`mb-listen${speech.on ? " is-on" : ""}`}
             aria-pressed={speech.on}
-            onClick={() => (speech.on ? speech.stop() : speech.play(spokenBriefing(s, today)))}
+            onClick={() =>
+              speech.on
+                ? speech.stop()
+                : speech.play(spokenBriefing(s, today, { name, today: items }))
+            }
           >
             <span className="mb-listen-icon" aria-hidden="true">
               {speech.on ? "■" : "▶"}

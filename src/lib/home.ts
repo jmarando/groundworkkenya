@@ -70,6 +70,9 @@ export function todayItems(real: TodayItem[], sample: Scenario["today"], max = 3
   return [...real, ...sample.map((t) => ({ ...t, sample: true }))].slice(0, max);
 }
 
+/** The listening classifier's labels for "no issue": what it cannot place, and the campaign itself. */
+const NOT_ISSUES = new Set(["general", "campaign"]);
+
 /** The issue mentioned most, if it was mentioned at least `min` times. */
 export function topIssue(
   rows: { issue: string | null; sentiment: string | null }[],
@@ -78,8 +81,8 @@ export function topIssue(
   const tally = new Map<string, { label: string; count: number; angry: number }>();
   for (const r of rows) {
     const label = (r.issue ?? "").trim();
-    if (!label) continue;
     const key = label.toLowerCase();
+    if (!label || NOT_ISSUES.has(key)) continue;
     const t = tally.get(key) ?? {
       label: label.charAt(0).toUpperCase() + label.slice(1).toLowerCase(),
       count: 0,
