@@ -47,28 +47,30 @@ export function Polls({ s }: { s: Scenario }) {
       </p>
 
       <p className="mb-label">Worth knowing</p>
-      <table className="tbl mb-cross">
-        <thead>
-          <tr>
-            <th>Group</th>
-            <th style={{ textAlign: "right" }}>{us.short}</th>
-            <th style={{ textAlign: "right" }}>{rival.short}</th>
-            <th>What it means</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.crosstabs.map((c) => (
-            <tr key={c.group}>
-              <td>
-                <b>{c.group}</b>
-              </td>
-              <td className="num">{c.us}%</td>
-              <td className="num">{c.rival}%</td>
-              <td className="meta">{c.note}</td>
+      <div className="tblwrap">
+        <table className="tbl mb-cross">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th style={{ textAlign: "right" }}>{us.short}</th>
+              <th style={{ textAlign: "right" }}>{rival.short}</th>
+              <th>What it means</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {p.crosstabs.map((c) => (
+              <tr key={c.group}>
+                <td>
+                  <b>{c.group}</b>
+                </td>
+                <td className="num">{c.us}%</td>
+                <td className="num">{c.rival}%</td>
+                <td className="meta">{c.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <p className="mb-label">Other polls</p>
       <ul className="mb-outside">

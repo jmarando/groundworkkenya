@@ -89,7 +89,7 @@ export function Race({ s }: { s: Scenario }) {
     <section className="card mb-race" aria-labelledby="mb-race-h">
       <div className="card-head">
         <div>
-          <h2 id="mb-race-h">The race</h2>
+          <h2 id="mb-race-h">Where it stands</h2>
           <p className="meta">
             {president
               ? "To win outright: more than half of all votes, and at least 25% in 24 of the 47 counties."
@@ -146,31 +146,33 @@ export function Race({ s }: { s: Scenario }) {
             {president ? "Closest counties" : `Closest ${s.geo.units}`}{" "}
             <span className="dim">decide it</span>
           </h3>
-          <table className="tbl">
-            <thead>
-              <tr>
-                <th>{s.geo.unit[0]!.toUpperCase() + s.geo.unit.slice(1)}</th>
-                <th style={{ textAlign: "right" }}>{us.short}</th>
-                <th style={{ textAlign: "right" }}>{rival.short}</th>
-                <th style={{ textAlign: "right" }}>Voters</th>
-              </tr>
-            </thead>
-            <tbody>
-              {close.map(({ a }) => (
-                <tr key={a.slug}>
-                  <td>
-                    <b>{a.name}</b>
-                    {a.group !== a.name && s.office !== "mp" && (
-                      <small className="dim"> {a.group}</small>
-                    )}
-                  </td>
-                  <td className="num">{share(s, a.shares[us.key])}</td>
-                  <td className="num">{share(s, a.shares[rival.key])}</td>
-                  <td className="num">{nf.format(a.registered)}</td>
+          <div className="tblwrap">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>{s.geo.unit[0]!.toUpperCase() + s.geo.unit.slice(1)}</th>
+                  <th style={{ textAlign: "right" }}>{us.short}</th>
+                  <th style={{ textAlign: "right" }}>{rival.short}</th>
+                  <th style={{ textAlign: "right" }}>Voters</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {close.map(({ a }) => (
+                  <tr key={a.slug}>
+                    <td>
+                      <b>{a.name}</b>
+                      {a.group !== a.name && s.office !== "mp" && (
+                        <small className="dim"> {a.group}</small>
+                      )}
+                    </td>
+                    <td className="num">{share(s, a.shares[us.key])}</td>
+                    <td className="num">{share(s, a.shares[rival.key])}</td>
+                    <td className="num">{nf.format(a.registered)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <p className="mb-source">
