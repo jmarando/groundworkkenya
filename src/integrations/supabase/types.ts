@@ -318,6 +318,53 @@ export type Database = {
           },
         ]
       }
+      campaign_sites: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          draft: Json
+          draft_rev: number
+          id: string
+          published: Json | null
+          published_at: string | null
+          published_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          draft?: Json
+          draft_rev?: number
+          id?: string
+          published?: Json | null
+          published_at?: string | null
+          published_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          draft?: Json
+          draft_rev?: number
+          id?: string
+          published?: Json | null
+          published_at?: string | null
+          published_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_sites_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           candidate: string | null
@@ -1679,6 +1726,38 @@ export type Database = {
           },
         ]
       }
+      site_versions: {
+        Row: {
+          campaign_id: string
+          content: Json
+          id: string
+          published_at: string
+          published_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          content: Json
+          id?: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          content?: Json
+          id?: string
+          published_at?: string
+          published_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_versions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_accounts: {
         Row: {
           campaign_id: string
@@ -2049,6 +2128,7 @@ export type Database = {
         Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
         Returns: Json
       }
+      publish_site: { Args: never; Returns: string }
       queue_broadcast: {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
@@ -2085,6 +2165,8 @@ export type Database = {
       }
       remove_member: { Args: { _user_id: string }; Returns: undefined }
       request_campaign_access: { Args: { _slug: string }; Returns: string }
+      restore_site_version: { Args: { _version: string }; Returns: number }
+      save_site_draft: { Args: { _draft: Json; _rev: number }; Returns: number }
       set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
         Args: {
@@ -2093,6 +2175,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      unpublish_site: { Args: never; Returns: undefined }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {

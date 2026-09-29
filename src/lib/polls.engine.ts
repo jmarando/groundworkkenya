@@ -203,6 +203,11 @@ export function consentRequestText(campaign: string): string {
   return `${campaign}: Mtu aliomba taarifa za kampeni kwa namba hii. Jibu START kukubali. Usipojibu, hutapokea ujumbe zaidi.`;
 }
 
+/** The same, after someone signs up to volunteer on a campaign's website. */
+export function volunteerConsentText(campaign: string): string {
+  return `${campaign}: Mtu alijiandikisha kujitolea kwa namba hii. Jibu START kuthibitisha. Usipojibu, hutapokea ujumbe zaidi.`;
+}
+
 /* ---------------------------------------------------------------- answers */
 
 export type ParsedAnswer = { optionKey: string | null; freeText: string | null };

@@ -101,19 +101,20 @@ function toPerson(p: {
 }
 
 /**
- * Find or create a person by number. Never changes consent: a new record
- * starts with none, because a number arriving here proves only that someone
- * typed it.
+ * Find or create a person by number, in the given campaign or else the one
+ * that owns the channels. Never changes consent: a new record starts with
+ * none, because a number arriving here proves only that someone typed it.
  */
 export async function upsertPersonByPhone(
   sb: Sb,
   rawPhone: string,
   source: string,
+  campaign?: string,
 ): Promise<PersonRef | null> {
   const phone = normalizeKePhone(rawPhone);
   if (!phone) return null;
 
-  const campaignId = await channelCampaignId(sb);
+  const campaignId = campaign ?? (await channelCampaignId(sb));
   const find = () =>
     sb
       .from("people")
@@ -133,7 +134,7 @@ export async function upsertPersonByPhone(
 
   const { data: created, error } = await sb
     .from("people")
-    .insert({ phone, source, last_inbound_at: new Date().toISOString() })
+    .insert({ phone, source, last_inbound_at: new Date().toISOString(), campaign_id: campaignId })
     .select(PERSON_COLUMNS)
     .single();
   if (created) return toPerson(created);
@@ -151,7 +152,7 @@ async function updatePerson(sb: Sb, id: string, patch: PeopleUpdate): Promise<vo
   await sb.from("people").update(patch).eq("id", id);
 }
 
-async function logEvent(
+export async function logEvent(
   sb: Sb,
   personId: string,
   kind: string,
@@ -213,17 +214,23 @@ const CONSENT_REQUESTS_PER_HOUR = 200;
 /**
  * Double opt-in. Ticking "send me updates" on a public form cannot make a
  * number consent — anyone can type anyone's number. Instead the number gets
- * one message asking them to reply START, at most once a day, and never after
- * they have said STOP. Consent is recorded only when START comes back.
+ * one message asking them to reply START, at most once a day whichever
+ * campaign asks, and never after they have said STOP. Consent is recorded
+ * only when START comes back.
  */
-export async function requestSmsConsent(sb: Sb, person: PersonRef): Promise<void> {
+export async function requestSmsConsent(
+  sb: Sb,
+  person: PersonRef,
+  body = consentRequestText(CAMPAIGN),
+): Promise<void> {
   if (person.optedOut) return;
 
   const since = new Date(Date.now() - 864e5).toISOString();
   const { count } = await sb
     .from("messages")
     .select("id", { count: "exact", head: true })
-    .eq("person_id", person.id)
+    .eq("phone", person.phone)
+    .eq("direction", "out")
     .eq("outbox_kind", "consent_check")
     .gte("created_at", since);
   if ((count ?? 0) > 0) return;
@@ -250,7 +257,7 @@ export async function requestSmsConsent(sb: Sb, person: PersonRef): Promise<void
       personId: person.id,
       phone: person.phone,
       channel: "sms",
-      body: consentRequestText(CAMPAIGN),
+      body,
       kind: "consent_check",
     },
   ]);

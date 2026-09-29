@@ -32,8 +32,10 @@ import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/t
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
 import { Route as PCodeRouteImport } from './routes/p.$code'
+import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
+import { Route as SSlugPrivacyRouteImport } from './routes/s.$slug_.privacy'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
 import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
@@ -161,6 +163,11 @@ const PCodeRoute = PCodeRouteImport.update({
   path: '/p/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SSlugRoute = SSlugRouteImport.update({
+  id: '/s/$slug',
+  path: '/s/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
   id: '/api/public/health',
   path: '/api/public/health',
@@ -169,6 +176,11 @@ const ApiPublicHealthRoute = ApiPublicHealthRouteImport.update({
 const ApiPublicUssdRoute = ApiPublicUssdRouteImport.update({
   id: '/api/public/ussd',
   path: '/api/public/ussd',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SSlugPrivacyRoute = SSlugPrivacyRouteImport.update({
+  id: '/s/$slug_/privacy',
+  path: '/s/$slug/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
@@ -252,8 +264,10 @@ export interface FileRoutesByFullPath {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/p/$code': typeof PCodeRoute
+  '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/s/$slug/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
@@ -289,8 +303,10 @@ export interface FileRoutesByTo {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/p/$code': typeof PCodeRoute
+  '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/s/$slug/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
@@ -328,8 +344,10 @@ export interface FileRoutesById {
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
   '/p/$code': typeof PCodeRoute
+  '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
+  '/s/$slug_/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
@@ -367,8 +385,10 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/p/$code'
+    | '/s/$slug'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/s/$slug/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
@@ -404,8 +424,10 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/p/$code'
+    | '/s/$slug'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/s/$slug/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
@@ -442,8 +464,10 @@ export interface FileRouteTypes {
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
     | '/p/$code'
+    | '/s/$slug'
     | '/api/public/health'
     | '/api/public/ussd'
+    | '/s/$slug_/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
     | '/api/public/outbox/drain'
@@ -464,8 +488,10 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SetPasswordRoute: typeof SetPasswordRoute
   PCodeRoute: typeof PCodeRoute
+  SSlugRoute: typeof SSlugRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
+  SSlugPrivacyRoute: typeof SSlugPrivacyRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
   ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
@@ -642,6 +668,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/s/$slug': {
+      id: '/s/$slug'
+      path: '/s/$slug'
+      fullPath: '/s/$slug'
+      preLoaderRoute: typeof SSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/health': {
       id: '/api/public/health'
       path: '/api/public/health'
@@ -654,6 +687,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/ussd'
       fullPath: '/api/public/ussd'
       preLoaderRoute: typeof ApiPublicUssdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$slug_/privacy': {
+      id: '/s/$slug_/privacy'
+      path: '/s/$slug/privacy'
+      fullPath: '/s/$slug/privacy'
+      preLoaderRoute: typeof SSlugPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/email/inbound': {
@@ -786,8 +826,10 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SetPasswordRoute: SetPasswordRoute,
   PCodeRoute: PCodeRoute,
+  SSlugRoute: SSlugRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
+  SSlugPrivacyRoute: SSlugPrivacyRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
   ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,

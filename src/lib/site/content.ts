@@ -127,7 +127,7 @@ const list = (x: unknown): unknown[] => (Array.isArray(x) ? x : []);
 // Control characters other than tab and newline, and the invisible
 // direction overrides that can disguise text.
 // eslint-disable-next-line no-control-regex
-const HIDDEN = /[\u0000-\u0008\u000b-\u001f\u007f‪-‮⁦-⁩]/g;
+const HIDDEN = /[\u0000-\u0008\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g;
 
 /** Multi-line text: paragraphs kept, at most one blank line between them. */
 function text(x: unknown, max: number): string {
