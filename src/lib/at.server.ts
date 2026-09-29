@@ -14,7 +14,16 @@
 
 import { normalizeKePhone } from "@/lib/phone";
 
-const AT_API = "https://api.africastalking.com/version1/messaging";
+/** The sandbox account ("sandbox") lives on a separate server with its own keys. */
+export function atIsSandbox(): boolean {
+  return (process.env["AT_USERNAME"] ?? "").trim().toLowerCase() === "sandbox";
+}
+
+function atApi(): string {
+  return atIsSandbox()
+    ? "https://api.sandbox.africastalking.com/version1/messaging"
+    : "https://api.africastalking.com/version1/messaging";
+}
 
 /** Status codes meaning Africa's Talking accepted the text: processed, sent, queued. */
 const ACCEPTED = new Set([100, 101, 102]);
@@ -147,7 +156,7 @@ export async function sendSmsBatch(phones: string[], body: string): Promise<AtBa
 
   let res: Response;
   try {
-    res = await fetch(AT_API, {
+    res = await fetch(atApi(), {
       method: "POST",
       headers: {
         apiKey,

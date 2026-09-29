@@ -25,7 +25,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [x] Inbox
 - [x] Broadcast & ads
 - [x] Social & sentiment
-- [x] Listening
+- [x] Listening (web + TikTok/Reddit/YouTube via ScrapeCreators)
 - [x] Finance (admin/manager, enforced in the database)
 - [x] War room
 - [x] Field app

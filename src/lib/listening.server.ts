@@ -1,10 +1,19 @@
 /**
  * Media listening engine (server only).
  *
- * Sweeps the watchlist through Firecrawl search, stores anything new as a
+ * Sweeps the watchlist through Firecrawl web search plus ScrapeCreators
+ * keyword searches (TikTok, Reddit, YouTube), stores anything new as a
  * mention, has the AI read the mood, then fires any alert rule that matches.
  * Used by the manual "Sweep now" button and by the hourly cron route.
  */
+
+import {
+  ScrapeCreatorsCreditError,
+  scConfigured,
+  scSearchReddit,
+  scSearchTikTok,
+  scSearchYouTube,
+} from "./scrapecreators.server";
 
 type AnyClient = {
   from: (table: string) => any;
@@ -280,6 +289,37 @@ export async function runListeningScan(
         continue;
       }
       found += hits.length;
+
+      // social platforms via ScrapeCreators — best effort, never pauses the sweep
+      let socialFound = 0;
+      if (scConfigured()) {
+        const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
+        if (kw) {
+          const social = await Promise.allSettled([
+            scSearchTikTok(kw, 8),
+            scSearchReddit(kw, 8),
+            scSearchYouTube(kw, 8),
+          ]);
+          let creditNoted = false;
+          for (const r of social) {
+            if (r.status === "fulfilled") {
+              hits.push(...r.value);
+              socialFound += r.value.length;
+              continue;
+            }
+            const err = r.reason instanceof Error ? r.reason : new Error(String(r.reason));
+            if (err instanceof ScrapeCreatorsCreditError) {
+              if (!creditNoted) {
+                notes.push("Social search skipped — ScrapeCreators is out of credits.");
+                creditNoted = true;
+              }
+            } else {
+              notes.push(`${topic.label} social: ${err.message}`);
+            }
+          }
+        }
+      }
+      found += socialFound;
 
       const rows = hits.map((h) => ({
         topic_id: topic.id,
