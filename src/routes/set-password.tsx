@@ -50,7 +50,7 @@ function SetPassword() {
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (error) return setErr(error.message);
-    navigate({ to: "/overview", replace: true });
+    navigate({ to: "/home", replace: true });
   }
 
   return (

@@ -120,7 +120,7 @@ function Authenticated() {
   const role = access?.role ?? null;
   return (
     <ConsoleShell>
-      {pathname === "/overview" && homeFor(role) !== "/overview" ? (
+      {pathname === "/home" && homeFor(role) !== "/home" ? (
         <Navigate to={homeFor(role)} replace />
       ) : canOpen(role, pathname) ? (
         <Outlet />

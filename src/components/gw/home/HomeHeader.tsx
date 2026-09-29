@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { ActionButton } from "@/components/gw/briefing/parts";
-import { DemoBadge, ScenarioSwitch } from "@/components/gw/demo/ScenarioSwitch";
+import { SampleTag } from "@/components/gw/home/SectionHead";
 import { daysBetween, ELECTION_DAY } from "@/lib/demo/insights";
 import { spokenBriefing } from "@/lib/demo/spoken";
-import type { Scenario, ScenarioKey } from "@/lib/demo/types";
+import type { Scenario } from "@/lib/demo/types";
+import type { SectionMode } from "@/lib/home";
 
 function longDate(iso: string): string {
   return new Date(`${iso}T09:00:00Z`).toLocaleDateString("en-GB", {
@@ -49,44 +49,45 @@ function useSpeech() {
   return { can, on, play, stop };
 }
 
-export function Masthead({
+/** Whose campaign, the day, and where the race stands, in one line. */
+export function HomeHeader({
   s,
   today,
-  onPick,
+  name,
+  verdict,
+  raceMode,
 }: {
   s: Scenario;
   today: string;
-  onPick: (key: ScenarioKey) => void;
+  name: string;
+  verdict: string;
+  raceMode: SectionMode;
 }) {
   const speech = useSpeech();
   const days = daysBetween(today, ELECTION_DAY);
-
-  // A new candidate means a new briefing: stop reading the old one.
-  const { stop } = speech;
-  useEffect(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window)
-      window.speechSynthesis.cancel();
-  }, [s.key]);
-
   return (
-    <header className="mb-mast">
-      <div className="mb-mast-bar">
-        <DemoBadge fictional={s.candidate.fictional} />
-        <ScenarioSwitch value={s.key} onChange={onPick} />
-      </div>
+    <header className="mb-mast home-mast">
       <div className="mb-mast-main">
         <div>
-          <h1 className="mb-hello">Good morning, {s.candidate.first}.</h1>
+          <span className="eyebrow">
+            {s.candidate.name} · {s.officeLabel}, {s.seat}
+          </span>
+          <h1 className="mb-hello">Good morning, {name}.</h1>
           <p className="mb-mast-sub" suppressHydrationWarning>
-            {longDate(today)} · <b>{days}</b> days to the election · {s.officeLabel}, {s.seat}
+            {longDate(today)} · <b>{days}</b> days to the election
           </p>
+          {verdict ? (
+            <p className="home-verdict">
+              {verdict} {raceMode === "sample" ? <SampleTag /> : null}
+            </p>
+          ) : null}
         </div>
         {speech.can && (
           <button
             type="button"
             className={`mb-listen${speech.on ? " is-on" : ""}`}
             aria-pressed={speech.on}
-            onClick={() => (speech.on ? stop() : speech.play(spokenBriefing(s, today)))}
+            onClick={() => (speech.on ? speech.stop() : speech.play(spokenBriefing(s, today)))}
           >
             <span className="mb-listen-icon" aria-hidden="true">
               {speech.on ? "■" : "▶"}
@@ -96,25 +97,5 @@ export function Masthead({
         )}
       </div>
     </header>
-  );
-}
-
-/** The three decisions that matter today, in order. */
-export function TodayThree({ s }: { s: Scenario }) {
-  return (
-    <section className="mb-three" aria-labelledby="mb-three-h">
-      <h2 id="mb-three-h" className="mb-three-h">
-        Today, in order
-      </h2>
-      <ol>
-        {s.today.map((t) => (
-          <li key={t.title}>
-            <h3>{t.title}</h3>
-            <p>{t.detail}</p>
-            <ActionButton action={t.action} />
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }

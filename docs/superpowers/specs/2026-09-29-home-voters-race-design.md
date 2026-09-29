@@ -26,12 +26,12 @@ questions each morning.
    waiting for a reply), the top issue this week (the issue with the most news and
    social mentions in seven days), and, once race data exists (part 2), the biggest
    rival move (the largest change between a pollster's last two polls, or a rival's
-   post with at least twice their usual engagement). This replaces "today's three",
-   "needs you" and the day plan.
+   post with at least twice their usual engagement). This replaces "today's three"
+   and "needs you". Below it sit the day's story and where to be today.
 3. **The race.** Polls over time, the rivals (party, base, what they posted and how
    it landed), what people are saying (issues by volume, with example lines), and
-   the last election's result. This replaces Race, Polls, Opponent watch, the story
-   block and Last time.
+   the last election's result. This replaces Race, Polls, Opponent watch, Voters and
+   Last time.
 4. **Our campaign.** The six vital signs, path to victory, pace, ground game by
    ward, polling-day readiness and money. This replaces Overview's engine room.
 

@@ -22,6 +22,7 @@ import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedListeningRouteImport } from './routes/_authenticated/listening'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
@@ -114,6 +115,11 @@ const AuthenticatedFoundationsRoute =
     path: '/foundations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -260,6 +266,7 @@ export interface FileRoutesByFullPath {
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByTo {
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
+  '/home': typeof AuthenticatedHomeRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/_authenticated/field': typeof AuthenticatedFieldRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/listening': typeof AuthenticatedListeningRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/field'
     | '/finance'
     | '/foundations'
+    | '/home'
     | '/inbox'
     | '/listening'
     | '/overview'
@@ -424,6 +434,7 @@ export interface FileRouteTypes {
     | '/field'
     | '/finance'
     | '/foundations'
+    | '/home'
     | '/inbox'
     | '/listening'
     | '/overview'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/_authenticated/field'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
+    | '/_authenticated/home'
     | '/_authenticated/inbox'
     | '/_authenticated/listening'
     | '/_authenticated/overview'
@@ -608,6 +620,13 @@ declare module '@tanstack/react-router' {
       path: '/foundations'
       fullPath: '/foundations'
       preLoaderRoute: typeof AuthenticatedFoundationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inbox': {
@@ -804,6 +823,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedListeningRoute: typeof AuthenticatedListeningRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
@@ -825,6 +845,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedListeningRoute: AuthenticatedListeningRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,

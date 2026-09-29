@@ -49,7 +49,7 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/overview", replace: true });
+      if (data.session) navigate({ to: "/home", replace: true });
     });
   }, [navigate]);
 
@@ -70,7 +70,7 @@ function AuthPage() {
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate({ to: "/overview", replace: true });
+      navigate({ to: "/home", replace: true });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -92,7 +92,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/overview", replace: true });
+    navigate({ to: "/home", replace: true });
   }
 
   return (

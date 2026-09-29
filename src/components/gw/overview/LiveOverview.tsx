@@ -6,7 +6,8 @@ import { getOverview } from "@/lib/overview.functions";
 
 const nf = new Intl.NumberFormat("en-KE");
 
-export function LiveOverview() {
+/** `embedded`: inside Home, which has its own header and Today list. */
+export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) {
   const fetchOverview = useServerFn(getOverview);
   const { data, isLoading } = useQuery({
     queryKey: ["overview"],
@@ -21,6 +22,7 @@ export function LiveOverview() {
   });
 
   if (isLoading || !data) {
+    if (embedded) return <p className="meta">Loading the campaign&apos;s numbers…</p>;
     return (
       <section className="view active" aria-label="Overview">
         <div className="vh">
@@ -74,24 +76,26 @@ export function LiveOverview() {
   const last = pts[pts.length - 1]?.split(",") ?? ["540", "45"];
 
   return (
-    <section className="view active" aria-label="Overview">
-      <div className="vh fx">
-        <div>
-          <span className="eyebrow">Command centre</span>
-          <h1>
-            The campaign, <span className="serif">at a glance.</span>
-          </h1>
-          <p className="meta">{today} · live workspace data</p>
+    <section className={embedded ? "home-live" : "view active"} aria-label="Overview">
+      {embedded ? null : (
+        <div className="vh fx">
+          <div>
+            <span className="eyebrow">Command centre</span>
+            <h1>
+              The campaign, <span className="serif">at a glance.</span>
+            </h1>
+            <p className="meta">{today} · live workspace data</p>
+          </div>
+          <div className="vh-side">
+            <span className="chip">
+              <b className="stat">{nf.format(data.wardsTotal)}</b>&nbsp;wards covered
+            </span>
+            <span className="syncline">
+              <span className="dot-live" aria-hidden="true" /> Synced just now
+            </span>
+          </div>
         </div>
-        <div className="vh-side">
-          <span className="chip">
-            <b className="stat">{nf.format(data.wardsTotal)}</b>&nbsp;wards covered
-          </span>
-          <span className="syncline">
-            <span className="dot-live" aria-hidden="true" /> Synced just now
-          </span>
-        </div>
-      </div>
+      )}
 
       <div className="g5 fx2">
         <div className="card kpi">
@@ -260,44 +264,49 @@ export function LiveOverview() {
         </div>
       </div>
 
-      <div className="card-head fx4" style={{ marginTop: 22 }}>
-        <div>
-          <h2>Where to go next</h2>
-          <p className="meta">The four jobs that move numbers today.</p>
-        </div>
-      </div>
-      <div className="quick fx4">
-        <Link to="/people" search={{ person: undefined }} className="qcard">
-          <span className="qcard-k">CRM</span>
-          <span className="qcard-t">Work the list</span>
-          <span className="qcard-s">Search, filter and open any record.</span>
-          <span className="qcard-n">{nf.format(quick.people)} people on file</span>
-        </Link>
-        <Link to="/inbox" className="qcard">
-          <span className="qcard-k">Comms</span>
-          <span className="qcard-t">Clear the inbox</span>
-          <span className="qcard-s">Replies from SMS, USSD and email.</span>
-          <span className="qcard-n">{nf.format(quick.unread)} unread</span>
-        </Link>
-        <Link to="/broadcast" className="qcard">
-          <span className="qcard-k">Send</span>
-          <span className="qcard-t">Build a broadcast</span>
-          <span className="qcard-s">Consent-checked audience, costed before it goes.</span>
-          <span className="qcard-n">
-            {nf.format(quick.activePolls)} {quick.activePolls === 1 ? "poll" : "polls"} live
-          </span>
-        </Link>
-        <Link to="/warroom" className="qcard">
-          <span className="qcard-k">Election day</span>
-          <span className="qcard-t">Cover the stations</span>
-          <span className="qcard-s">Agents, streams and incidents.</span>
-          <span className="qcard-n">
-            {nf.format(quick.unstaffed)} unstaffed · {nf.format(quick.openIncidents)} open incidents
-          </span>
-        </Link>
-      </div>
+      {embedded ? null : (
+        <>
+          <div className="card-head fx4" style={{ marginTop: 22 }}>
+            <div>
+              <h2>Where to go next</h2>
+              <p className="meta">The four jobs that move numbers today.</p>
+            </div>
+          </div>
+          <div className="quick fx4">
+            <Link to="/people" search={{ person: undefined }} className="qcard">
+              <span className="qcard-k">CRM</span>
+              <span className="qcard-t">Work the list</span>
+              <span className="qcard-s">Search, filter and open any record.</span>
+              <span className="qcard-n">{nf.format(quick.people)} people on file</span>
+            </Link>
+            <Link to="/inbox" className="qcard">
+              <span className="qcard-k">Comms</span>
+              <span className="qcard-t">Clear the inbox</span>
+              <span className="qcard-s">Replies from SMS, USSD and email.</span>
+              <span className="qcard-n">{nf.format(quick.unread)} unread</span>
+            </Link>
+            <Link to="/broadcast" className="qcard">
+              <span className="qcard-k">Send</span>
+              <span className="qcard-t">Build a broadcast</span>
+              <span className="qcard-s">Consent-checked audience, costed before it goes.</span>
+              <span className="qcard-n">
+                {nf.format(quick.activePolls)} {quick.activePolls === 1 ? "poll" : "polls"} live
+              </span>
+            </Link>
+            <Link to="/warroom" className="qcard">
+              <span className="qcard-k">Election day</span>
+              <span className="qcard-t">Cover the stations</span>
+              <span className="qcard-s">Agents, streams and incidents.</span>
+              <span className="qcard-n">
+                {nf.format(quick.unstaffed)} unstaffed · {nf.format(quick.openIncidents)} open
+                incidents
+              </span>
+            </Link>
+          </div>
 
-      <p className="x-caption eyebrow fx4">Five numbers · everything else is one click down</p>
+          <p className="x-caption eyebrow fx4">Five numbers · everything else is one click down</p>
+        </>
+      )}
     </section>
   );
 }

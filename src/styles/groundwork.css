@@ -1916,3 +1916,17 @@ figure { margin: 0; }
 .ws-versions .who { flex:1; font-size:12px; color:var(--muted-foreground); }
 .ws-danger { border-color:hsl(0 70% 45% / .4); color:var(--gw-destructive); }
 .ws-danger:hover { border-color:var(--gw-destructive); background:var(--gw-destructive); color:#fff; }
+
+/* ---------------------------------------------------------------- home --- */
+.home .home-sec { display:flex; flex-direction:column; gap:18px; }
+.home [id] { scroll-margin-top:16px; }
+.home-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px; padding-top:22px; border-top:1px solid var(--border); }
+.home-head h2 { font-size:26px; font-weight:700; font-stretch:106%; letter-spacing:-0.02em; }
+.home-head-note { display:inline-flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted-foreground); }
+.home-head-note a { color:var(--foreground); text-decoration:underline; text-underline-offset:3px; }
+.home-sample { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:.02em; vertical-align:middle;
+  color:hsl(38 80% 30%); background:hsl(38 92% 56% / .14); border:1px solid hsl(38 92% 40% / .35); }
+.mb-three .home-sample { color:hsl(38 92% 62%); background:hsl(38 92% 56% / .1); border-color:hsl(38 92% 56% / .3); }
+.home-verdict { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:17px; font-weight:600; }
+.home-note { display:flex; align-items:center; gap:8px; margin:-4px 0; font-size:12.5px; color:var(--muted-foreground); }
+.home-live { display:flex; flex-direction:column; gap:14px; }

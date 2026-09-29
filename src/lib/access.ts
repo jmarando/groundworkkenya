@@ -58,7 +58,7 @@ export function canOpen(role: MyRole, path: string): boolean {
 
 /** The first page a role lands on after signing in. */
 export function homeFor(role: MyRole): string {
-  return role === "agent" ? "/field" : "/overview";
+  return role === "agent" ? "/field" : "/home";
 }
 
 const PICK_KEY = "gw-campaign";
