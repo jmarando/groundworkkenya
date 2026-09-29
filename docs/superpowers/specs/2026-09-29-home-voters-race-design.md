@@ -22,8 +22,9 @@ questions each morning.
    campaign and seat, and one verdict line from the race (for Sakaja: third, behind
    Babu Owino and Agnes Kagure).
 2. **Today.** At most three items, each with one button to where the work is done:
-   decisions waiting (expenses and broadcasts to approve), the top issue this week
-   (the issue with the most news and social mentions in seven days), and the biggest
+   decisions waiting (expenses to approve, for those who can approve them; messages
+   waiting for a reply), the top issue this week (the issue with the most news and
+   social mentions in seven days), and, once race data exists (part 2), the biggest
    rival move (the largest change between a pollster's last two polls, or a rival's
    post with at least twice their usual engagement). This replaces "today's three",
    "needs you" and the day plan.
@@ -39,7 +40,8 @@ support; doors → Voters, doors view; a ward in the ground game → Voters with
 ward selected; readiness → Agents; money → Finance; an issue → Listening filtered to
 it; a poll line → its source.
 
-Gone: the Demo/Live tabs, the scenario switcher and the `?c=` parameter. The menu has
+Gone: the Demo/Live tabs, the scenario switcher and the `?c=` parameter. The war
+room keeps its own views but loses the switcher too: it shows the campaign's race. The menu has
 "Home" first under Operate; Overview and Briefing leave the menu, and `/overview` and
 `/briefing` forward to `/home`. Agents still land on the Field app.
 
