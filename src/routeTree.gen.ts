@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedBriefingRouteImport } from './routes/_authenticated/briefing'
 import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
@@ -58,6 +59,11 @@ const AuthRoute = AuthRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetPasswordRoute = SetPasswordRouteImport.update({
+  id: '/set-password',
+  path: '/set-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/privacy': typeof PrivacyRoute
+  '/set-password': typeof SetPasswordRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/briefing': typeof AuthenticatedBriefingRoute
   '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/privacy'
+    | '/set-password'
     | '/agents'
     | '/briefing'
     | '/broadcast'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/privacy'
+    | '/set-password'
     | '/agents'
     | '/briefing'
     | '/broadcast'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/privacy'
+    | '/set-password'
     | '/_authenticated/agents'
     | '/_authenticated/briefing'
     | '/_authenticated/broadcast'
@@ -401,6 +413,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   PrivacyRoute: typeof PrivacyRoute
+  SetPasswordRoute: typeof SetPasswordRoute
   PCodeRoute: typeof PCodeRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/set-password': {
+      id: '/set-password'
+      path: '/set-password'
+      fullPath: '/set-password'
+      preLoaderRoute: typeof SetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/agents': {
@@ -683,6 +703,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   PrivacyRoute: PrivacyRoute,
+  SetPasswordRoute: SetPasswordRoute,
   PCodeRoute: PCodeRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
