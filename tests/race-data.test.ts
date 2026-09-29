@@ -9,6 +9,7 @@ import {
   cleanRival,
   fieldworkLabel,
   handleOf,
+  labelTicks,
   pollChart,
   pollFromRow,
   pollLabel,
@@ -589,6 +590,14 @@ eq("one poll per pollster, no move", rivalMove(RIVALS, [ISS, CAP], "2026-09-29")
     ["s", "b", "k", "undecided"],
   );
 }
+
+// Month labels under the chart: the latest poll's always shows, and a label
+// that would crowd the one after it is left out.
+eq("Sakaja's polls: July gives way to August", labelTicks([30, 302, 393, 468], 96), [0, 1, 3]);
+eq("two close together: the latest wins", labelTicks([30, 50], 96), [1]);
+eq("well spread: all of them", labelTicks([30, 200, 400], 96), [0, 1, 2]);
+eq("one poll", labelTicks([219], 96), [0]);
+eq("none", labelTicks([], 96), []);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

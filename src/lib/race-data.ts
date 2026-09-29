@@ -521,3 +521,17 @@ export function pollChart(rivals: RaceRival[], polls: RacePoll[]): PollChartMode
     max: Math.max(10, Math.ceil((top + 2) / 10) * 10),
   };
 }
+
+/**
+ * Which polls get a month label under the chart, given where each sits (in
+ * chart units): the latest always does, and a label closer than `minGap` to
+ * the next one kept is left out.
+ */
+export function labelTicks(px: number[], minGap: number): number[] {
+  const kept: number[] = [];
+  for (let i = px.length - 1; i >= 0; i--) {
+    const next = kept[0];
+    if (next === undefined || px[next]! - px[i]! >= minGap) kept.unshift(i);
+  }
+  return kept;
+}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { toneVar } from "@/components/gw/demo/tone";
-import type { PollChartModel } from "@/lib/race-data";
+import { labelTicks, type PollChartModel } from "@/lib/race-data";
 
 const W = 600;
 const H = 240;
@@ -22,12 +22,8 @@ export function PollChart({ model }: { model: PollChartModel }) {
   const y = (v: number) => M.t + (1 - v / max) * (H - M.t - M.b);
   const grid = Array.from({ length: max / 10 + 1 }, (_, i) => i * 10);
 
-  // Month labels under the polls, skipping any that would crowd the one before.
-  const ticks: number[] = [];
-  xs.forEach((f, i) => {
-    const prev = ticks.at(-1);
-    if (prev === undefined || x(f) - x(xs[prev]!) >= 64) ticks.push(i);
-  });
+  // Month labels under the polls: the latest always, none crowding the next.
+  const ticks = labelTicks(xs.map(x), 96);
 
   // Direct labels for the candidates in the latest poll, pushed apart when close.
   const ends = series

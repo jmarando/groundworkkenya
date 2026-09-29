@@ -295,7 +295,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .q-actions { display: flex; gap: 8px; align-items: center; }
 .q-blocknote { grid-column: 1 / -1; font-size: 11.5px; color: var(--status-missed); margin-top: -6px; padding-bottom: 4px; }
 
-.tblwrap { overflow-x: auto; margin: 0 -22px; padding: 0 22px; }
+/* position: relative keeps absolutely placed cells' contents (like sr-only labels) inside the scroll. */
+.tblwrap { position: relative; overflow-x: auto; margin: 0 -22px; padding: 0 22px; }
 /* Tables carry their own color/font — table inheritance breaks in quirks mode
    (the local file has no doctype; the artifact wrapper adds one at publish). */
 table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px;
@@ -1932,6 +1933,7 @@ figure { margin: 0; }
 .card-go:hover { text-decoration:underline; text-underline-offset:3px; }
 /* The real race: polls with their sources, who's running, what people say. */
 .home-poll-tbl td small { display:block; }
+.home-poll-tbl th:first-child, .home-poll-tbl td:first-child { min-width:170px; }
 .home-rival-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
 .home-rival-list li { display:grid; grid-template-columns:12px minmax(0, 1fr) auto; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
 .home-rival-list li:last-child { border-bottom:0; }
@@ -1951,3 +1953,6 @@ figure { margin: 0; }
 .re-check input { width:18px; height:18px; accent-color:var(--gw-accent); }
 .re-shares { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
 .re-problem { color:var(--gw-destructive); font-size:13px; margin:0; }
+/* The race panels fill their width (an older .pb-body rule leaves rows at content width). */
+.re-panel .pb-body { align-items:stretch; }
+.re-panel fieldset > .btn { align-self:flex-start; }

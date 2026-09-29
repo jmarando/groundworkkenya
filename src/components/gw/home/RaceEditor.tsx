@@ -35,7 +35,7 @@ export function EditRivals({ rivals, onClose }: { rivals: RaceRival[]; onClose: 
   const hasUs = rivals.some((r) => r.isUs);
   return (
     <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="er-title">
-      <div className="pb">
+      <div className="pb re-panel">
         <div className="pb-head">
           <div>
             <span className="eyebrow">The race · candidates</span>
@@ -285,7 +285,7 @@ export function AddPoll({ rivals, onClose }: { rivals: RaceRival[]; onClose: () 
   return (
     <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="ap-poll-title">
       <form
-        className="pb"
+        className="pb re-panel"
         onSubmit={(e) => {
           e.preventDefault();
           if (!problem) saving.mutate();
