@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ChannelChecklist } from "@/components/gw/ChannelChecklist";
 import { useAccess } from "@/hooks/useAccess";
 import { createCampaign, focusCampaign, listCampaigns } from "@/lib/campaigns.functions";
 
@@ -26,6 +27,7 @@ function Campaigns() {
   const focus = useServerFn(focusCampaign);
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY);
+  const [channelsFor, setChannelsFor] = useState<string | null>(null);
   const { data } = useQuery({
     queryKey: ["campaigns"],
     queryFn: () => fetchCampaigns(),
@@ -108,11 +110,23 @@ function Campaigns() {
               <button
                 className="btn btn--ghost"
                 type="button"
+                onClick={() => setChannelsFor(channelsFor === c.id ? null : c.id)}
+              >
+                {channelsFor === c.id ? "Hide channels" : "Channels"}
+              </button>
+              <button
+                className="btn btn--ghost"
+                type="button"
                 disabled={c.id === campaign?.id || open.isPending}
                 onClick={() => open.mutate(c.id)}
               >
                 {c.id === campaign?.id ? "Open now" : "Open"}
               </button>
+              {channelsFor === c.id && (
+                <div className="chk-wrap">
+                  <ChannelChecklist campaignId={c.id} slug={c.slug} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
