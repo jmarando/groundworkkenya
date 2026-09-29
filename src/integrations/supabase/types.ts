@@ -1596,6 +1596,7 @@ export type Database = {
       }
       segments: {
         Row: {
+          campaign_id: string
           colour: string | null
           created_at: string
           description: string | null
@@ -1604,6 +1605,7 @@ export type Database = {
           slug: string
         }
         Insert: {
+          campaign_id?: string
           colour?: string | null
           created_at?: string
           description?: string | null
@@ -1612,6 +1614,7 @@ export type Database = {
           slug: string
         }
         Update: {
+          campaign_id?: string
           colour?: string | null
           created_at?: string
           description?: string | null
@@ -1619,7 +1622,15 @@ export type Database = {
           name?: string
           slug?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "segments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_accounts: {
         Row: {
