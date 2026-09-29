@@ -1,14 +1,15 @@
 // A photo on the campaign's website. The browser shrinks it to at most 1,280
-// pixels and saves it as JPEG before uploading, so a 6 MB phone photo becomes
-// a few hundred kilobytes: the site has to open over 2G. Files go to the
-// site-media bucket in the campaign's own folder; the bucket's policies let
-// only the campaign's candidate or manager add them.
+// pixels and saves it as JPEG before sending it, so a 6 MB phone photo becomes
+// a few hundred kilobytes: the site has to open over 2G. The server checks
+// who is sending it and files it in the campaign's own folder.
 
+import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { supabase } from "@/integrations/supabase/client";
 import { mediaUrl } from "@/lib/site/content";
+import { blobToBase64 } from "@/lib/site/photo";
+import { uploadSitePhoto } from "@/lib/site.functions";
 
 import { siteMediaBase } from "./util";
 
@@ -45,18 +46,17 @@ export function PhotoField({
   label,
   value,
   onChange,
-  campaignId,
   disabled,
   hint,
 }: {
   label: string;
   value: string | null;
   onChange: (path: string | null) => void;
-  campaignId: string;
   disabled?: boolean;
   hint?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const send = useServerFn(uploadSitePhoto);
   const [busy, setBusy] = useState(false);
   const src = mediaUrl(siteMediaBase(), value);
 
@@ -68,13 +68,7 @@ export function PhotoField({
     setBusy(true);
     try {
       const blob = await shrink(file);
-      const path = `${campaignId}/${crypto.randomUUID()}.jpg`;
-      const { error } = await supabase.storage.from("site-media").upload(path, blob, {
-        contentType: "image/jpeg",
-        cacheControl: "31536000",
-        upsert: false,
-      });
-      if (error) throw new Error("Could not upload the picture. Try again.");
+      const { path } = await send({ data: { photo: await blobToBase64(blob) } });
       onChange(path);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not upload the picture.");

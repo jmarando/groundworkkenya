@@ -63,9 +63,10 @@ draft.
 - `site_versions`: each published snapshot, newest 20 kept.
 - `publish_site()` and `restore_site_version()` do the copying in the database, staff only.
 - Photos in Storage bucket `site-media`, public to read, path
-  `<campaign id>/<random>.<ext>`; only the campaign's candidate or manager can add or
-  remove files under their campaign's folder. The browser shrinks photos to 1,600 px and
-  JPEG before upload; the bucket refuses anything over 2 MB or not an image.
+  `<campaign id>/<random>.jpg`. The browser shrinks photos to 1,280 px JPEG; the server
+  checks the sender is the campaign's candidate or manager and that the file is a JPEG
+  under 2 MB, then saves it with the service role. No browser writes to the bucket (the
+  database user that applies migrations cannot add storage policies anyway).
 - The public page reads `published` with the server's service role; drafts never leave
   the console.
 

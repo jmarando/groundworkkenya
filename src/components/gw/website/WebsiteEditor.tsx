@@ -461,7 +461,6 @@ export function WebsiteEditor({
             <PhotoField
               label="Photo"
               value={draft.hero.photo}
-              campaignId={campaignId}
               disabled={off}
               hint="A clear photo of the candidate. Portrait photos work best."
               onChange={(p) => edit((d) => void (d.hero.photo = p))}
@@ -497,7 +496,6 @@ export function WebsiteEditor({
             <PhotoField
               label="Photo"
               value={draft.story.photo}
-              campaignId={campaignId}
               disabled={off}
               onChange={(p) => edit((d) => void (d.story.photo = p))}
             />
@@ -740,7 +738,6 @@ export function WebsiteEditor({
                 <PhotoField
                   label="Photo"
                   value={u.photo}
-                  campaignId={campaignId}
                   disabled={off}
                   onChange={(p) => edit((d) => void (d.updates.items[i]!.photo = p))}
                 />
@@ -948,7 +945,6 @@ export function WebsiteEditor({
             <PhotoField
               label="Picture"
               value={draft.seo.image}
-              campaignId={campaignId}
               disabled={off}
               hint="A wide picture works best."
               onChange={(p) => edit((d) => void (d.seo.image = p))}

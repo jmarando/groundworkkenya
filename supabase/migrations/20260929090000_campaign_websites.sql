@@ -177,30 +177,16 @@ grant execute on function public.save_site_draft(jsonb, integer), public.publish
   public.unpublish_site(), public.restore_site_version(uuid) to authenticated, service_role;
 
 -- Photos for the sites: public to read, like the pages they appear on. The
--- campaign's candidate or manager adds and removes them, in a folder named
--- for the campaign; the team can list them.
+-- server adds them with the service role, after checking the caller is the
+-- campaign's candidate or manager, into a folder named for the campaign
+-- (uploadSitePhoto in src/lib/site.functions.ts). No browser writes to the
+-- bucket, so storage.objects needs no policies of ours.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('site-media', 'site-media', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
+values ('site-media', 'site-media', true, 2097152, array['image/jpeg'])
 on conflict (id) do update
    set public             = excluded.public,
        file_size_limit    = excluded.file_size_limit,
        allowed_mime_types = excluded.allowed_mime_types;
-
-create policy "site media added by the campaign's staff" on storage.objects
-  for insert to authenticated
-  with check (bucket_id = 'site-media'
-              and (storage.foldername(name))[1] = public.my_campaign()::text
-              and public.is_staff(auth.uid()));
-create policy "site media listed by the campaign's team" on storage.objects
-  for select to authenticated
-  using (bucket_id = 'site-media'
-         and (storage.foldername(name))[1] = public.my_campaign()::text
-         and public.is_team_member(auth.uid()));
-create policy "site media removed by the campaign's staff" on storage.objects
-  for delete to authenticated
-  using (bucket_id = 'site-media'
-         and (storage.foldername(name))[1] = public.my_campaign()::text
-         and public.is_staff(auth.uid()));
 
 -- Every campaign texts from the same number. A reply belongs to the campaign
 -- that texted that number last, and STOP applies to every campaign: finding

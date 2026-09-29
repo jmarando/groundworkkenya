@@ -149,3 +149,34 @@ export const restoreSiteVersion = createServerFn({ method: "POST" })
       .maybeSingle();
     return { rev: rev as number, draft: cleanContent(site?.draft, campaignId ?? "") };
   });
+
+/**
+ * Save a photo for the site. The server checks the caller may change the
+ * website, checks the file, and chooses where it goes: the campaign's own
+ * folder under a random name. Storage takes it with the service role, so no
+ * browser writes to the bucket directly.
+ */
+export const uploadSitePhoto = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { photo: string }) => ({ photo: String(input?.photo ?? "") }))
+  .handler(async ({ data, context }): Promise<{ path: string }> => {
+    const sb = context.supabase;
+    const [{ data: campaignId }, { data: role }] = await Promise.all([
+      sb.rpc("my_campaign"),
+      sb.rpc("my_campaign_role"),
+    ]);
+    if (!campaignId || !["candidate", "manager", "super"].includes(String(role))) {
+      throw new Error("Only the candidate or campaign manager can add photos.");
+    }
+    const { decodeSitePhoto } = await import("@/lib/site/photo");
+    const bytes = decodeSitePhoto(data.photo);
+    const path = `${campaignId}/${crypto.randomUUID()}.jpg`;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.storage.from("site-media").upload(path, bytes, {
+      contentType: "image/jpeg",
+      cacheControl: "31536000",
+      upsert: false,
+    });
+    if (error) throw new Error("Could not save the picture. Try again.");
+    return { path };
+  });

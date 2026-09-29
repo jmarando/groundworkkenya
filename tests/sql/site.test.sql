@@ -184,7 +184,7 @@ begin
 end $$;
 rollback;
 
--- test: the photo bucket is public and takes only images up to 2 MB
+-- test: the photo bucket is public, takes only JPEGs up to 2 MB, and nobody signed in writes to it
 do $$
 declare
   b storage.buckets;
@@ -192,54 +192,15 @@ begin
   select * into b from storage.buckets where id = 'site-media';
   assert b.public, 'public to read';
   assert b.file_size_limit = 2097152;
-  assert b.allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+  assert b.allowed_mime_types = array['image/jpeg'];
 end $$;
-
--- test: only the campaign's candidate or manager adds photos, in their campaign's folder
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
-insert into storage.objects (bucket_id, name) values ('site-media', 'ca000000-0000-4000-8000-000000000002/a.jpg');
 do $$
 begin
-  begin
-    insert into storage.objects (bucket_id, name) values ('site-media', 'ca000000-0000-4000-8000-000000000003/b.jpg');
-    assert false, 'Sakaja''s candidate added a photo to Mathira''s folder';
-  exception when insufficient_privilege then null;
-  end;
-  begin
-    insert into storage.objects (bucket_id, name) values ('site-media', 'c.jpg');
-    assert false, 'a photo outside any campaign folder';
-  exception when insufficient_privilege then null;
-  end;
-  begin
-    insert into storage.objects (bucket_id, name) values ('other', 'ca000000-0000-4000-8000-000000000002/d.jpg');
-    assert false, 'another bucket';
-  exception when insufficient_privilege or foreign_key_violation then null;
-  end;
+  insert into storage.objects (bucket_id, name) values ('site-media', 'ca000000-0000-4000-8000-000000000002/a.jpg');
+  assert false, 'a browser wrote to the photo bucket';
+exception when insufficient_privilege then null;
 end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b7';
-do $$
-begin
-  assert (select count(*) from storage.objects) = 1, 'the team sees the campaign''s photos';
-  begin
-    insert into storage.objects (bucket_id, name) values ('site-media', 'ca000000-0000-4000-8000-000000000002/e.jpg');
-    assert false, 'an organiser added a photo';
-  exception when insufficient_privilege then null;
-  end;
-  delete from storage.objects;
-end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
-do $$
-begin
-  assert (select count(*) from storage.objects) = 0, 'Mathira sees Sakaja''s photos';
-  delete from storage.objects;
-end $$;
-reset role;
-do $$ begin assert (select count(*) from storage.objects) = 1, 'nobody else removed it'; end $$;
-set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
-delete from storage.objects;
-reset role;
-do $$ begin assert (select count(*) from storage.objects) = 0, 'the manager removed it'; end $$;
 rollback;

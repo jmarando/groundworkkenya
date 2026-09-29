@@ -11,6 +11,7 @@ import {
   type SiteContent,
 } from "@/lib/site/content";
 import { renderPrivacy, renderSite, type SiteView } from "@/lib/site/render";
+import { blobToBase64, decodeSitePhoto, MAX_PHOTO_BYTES } from "@/lib/site/photo";
 
 let pass = 0;
 let fail = 0;
@@ -366,6 +367,35 @@ for (const t of ["bold", "classic", "minimal"] as const) {
     sakaja.includes("Sakaja 2027, the campaign of Johnson Sakaja, decides"),
   );
 }
+
+// ---------------------------------------------------------------- photos
+
+function photoError(b64: string): string {
+  try {
+    decodeSitePhoto(b64);
+    return "";
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+{
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]).toString("base64");
+  eq("a JPEG decodes", Array.from(decodeSitePhoto(jpeg).slice(0, 3)), [0xff, 0xd8, 0xff]);
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2]).toString("base64");
+  eq("anything else is refused", photoError(png), "Send the picture as a JPEG.");
+  eq("nothing at all", photoError(""), "Choose a picture.");
+  eq("not base64", photoError("<script>"), "That picture could not be read.");
+  const big = Buffer.alloc(MAX_PHOTO_BYTES + 1, 0xff).toString("base64");
+  eq("over 2 MB", photoError(big), "That picture is too big. Choose one under 2 MB.");
+}
+
+async function photos() {
+  const bytes = new Uint8Array(70000).map((_, i) => i % 256);
+  const b64 = await blobToBase64(new Blob([bytes]));
+  eq("large photos encode in chunks, byte for byte", b64, Buffer.from(bytes).toString("base64"));
+}
+
+await photos();
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
