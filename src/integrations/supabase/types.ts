@@ -204,6 +204,50 @@ export type Database = {
           },
         ]
       }
+      campaign_channels: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          display: string | null
+          id: string
+          identifier: string | null
+          kind: string
+          note: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          display?: string | null
+          id?: string
+          identifier?: string | null
+          kind: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          display?: string | null
+          id?: string
+          identifier?: string | null
+          kind?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_channels_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_invites: {
         Row: {
           campaign_id: string
@@ -1073,6 +1117,7 @@ export type Database = {
           consent_sms: boolean
           consent_whatsapp: boolean
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           language: string
@@ -1099,6 +1144,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           language?: string
@@ -1125,6 +1171,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           language?: string
@@ -1888,6 +1935,10 @@ export type Database = {
         Returns: string
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
+      campaign_for_channel: {
+        Args: { _identifier: string; _kind: string }
+        Returns: string
+      }
       can_admit: {
         Args: { _campaign: string; _user_id: string }
         Returns: boolean
