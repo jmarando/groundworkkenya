@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { ActionButton } from "@/components/gw/briefing/parts";
 import { nf, pct } from "@/components/gw/overview/format";
 import { readiness, type OpsArea } from "@/lib/demo/ops";
@@ -19,8 +21,13 @@ export function Readiness({ areas }: { areas: OpsArea[] }) {
     <section className="card" aria-labelledby="ov-ready-h">
       <div className="card-head">
         <h2 id="ov-ready-h">Polling day</h2>
-        <span className="mono">
-          {nf.format(r.streams - r.trained)} streams without a trained agent
+        <span className="card-head-r">
+          <span className="mono">
+            {nf.format(r.streams - r.trained)} streams without a trained agent
+          </span>
+          <Link to="/agents" className="card-go">
+            Assign agents ›
+          </Link>
         </span>
       </div>
       <ol className="ov-funnel">

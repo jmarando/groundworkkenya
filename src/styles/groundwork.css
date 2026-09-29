@@ -1930,3 +1930,9 @@ figure { margin: 0; }
 .home-verdict { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:17px; font-weight:600; }
 .home-note { display:flex; align-items:center; gap:8px; margin:-4px 0; font-size:12.5px; color:var(--muted-foreground); }
 .home-live { display:flex; flex-direction:column; gap:14px; }
+.kpi-link { color:inherit; text-decoration:none; transition:border-color .2s ease-in-out; }
+.kpi-link:hover { border-color:var(--foreground); }
+.kpi-link:focus-visible, .card-go:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+.card-head-r { display:inline-flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.card-go { font-size:12px; font-weight:600; color:var(--foreground); text-decoration:none; white-space:nowrap; }
+.card-go:hover { text-decoration:underline; text-underline-offset:3px; }

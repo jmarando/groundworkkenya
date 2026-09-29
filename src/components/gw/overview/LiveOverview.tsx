@@ -98,7 +98,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
       )}
 
       <div className="g5 fx2">
-        <div className="card kpi">
+        <Link to="/people" search={{ person: undefined }} className="card kpi kpi-link">
           <span className="kpi-lbl">Consented supporters</span>
           <span className="kpi-val stat">{nf.format(data.supporters)}</span>
           <div className="kpi-foot">
@@ -113,9 +113,9 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
               {supporterPct.toFixed(1)}% of {nf.format(data.supporterTarget)} target
             </span>
           </div>
-        </div>
+        </Link>
 
-        <div className="card kpi">
+        <Link to="/voters" className="card kpi kpi-link">
           <span className="kpi-lbl">Wards on track</span>
           <span className="kpi-val stat">
             {data.wardsOnTrack}
@@ -133,9 +133,9 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
               {nf.format(data.wardsTotal - data.wardsOnTrack)} behind pace
             </span>
           </div>
-        </div>
+        </Link>
 
-        <div className="card kpi">
+        <Link to="/broadcast" className="card kpi kpi-link">
           <span className="kpi-lbl">Contacts this week</span>
           <span className="kpi-val stat">{nf.format(data.contactsThisWeek)}</span>
           <div className="kpi-foot">
@@ -152,9 +152,9 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
                 : "first week of sends on record"}
             </span>
           </div>
-        </div>
+        </Link>
 
-        <div className="card kpi">
+        <Link to="/finance" className="card kpi kpi-link">
           <span className="kpi-lbl">Spend vs limit</span>
           <span className="kpi-val stat">{spendPct.toFixed(1)}%</span>
           <div className="kpi-foot">
@@ -170,9 +170,9 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
               {(data.statutoryLimit / 1_000_000).toFixed(1)}M statutory
             </span>
           </div>
-        </div>
+        </Link>
 
-        <div className="card kpi">
+        <Link to="/voters" className="card kpi kpi-link">
           <span className="kpi-lbl">Biggest gap</span>
           <span className="kpi-val stat">
             {data.biggestGap ? nf.format(data.biggestGap.gap) : "—"}
@@ -183,7 +183,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
             </div>
             <span className="kpi-sub">{data.biggestGap?.name ?? "—"} · votes vs ward target</span>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="x-row fx3">

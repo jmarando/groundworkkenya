@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Meter } from "@/components/gw/demo/charts";
@@ -6,6 +7,11 @@ import { ours } from "@/lib/demo";
 import { countAtLeast, weightedShares } from "@/lib/demo/insights";
 import { areaOnPace, readiness, runway, type OpsArea, type Pace } from "@/lib/demo/ops";
 import type { Scenario } from "@/lib/demo/types";
+import { LINKS } from "@/lib/home";
+
+type Dest = (typeof LINKS)[keyof typeof LINKS];
+type Anchor = Extract<Dest, `#${string}`>;
+const isAnchor = (d: Dest): d is Anchor => d.startsWith("#");
 
 function Tile({
   label,
@@ -13,9 +19,12 @@ function Tile({
   share,
   flag = false,
   bar,
+  to,
   children,
 }: {
   label: string;
+  /** Where the number comes from: a screen, or a section further down. */
+  to?: Dest;
   value: ReactNode;
   /** 0-1, drawn as the bar under the number. */
   share?: number;
@@ -25,8 +34,8 @@ function Tile({
   bar?: ReactNode;
   children: ReactNode;
 }) {
-  return (
-    <div className="card kpi">
+  const inner = (
+    <>
       <span className="kpi-lbl">{label}</span>
       <span className="kpi-val stat">{value}</span>
       <div className="kpi-foot">
@@ -42,7 +51,20 @@ function Tile({
           ))}
         <span className="kpi-sub">{children}</span>
       </div>
-    </div>
+    </>
+  );
+  if (!to) return <div className="card kpi">{inner}</div>;
+  if (isAnchor(to)) {
+    return (
+      <a className="card kpi kpi-link" href={to}>
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <Link className="card kpi kpi-link" to={to}>
+      {inner}
+    </Link>
   );
 }
 
@@ -57,6 +79,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
   const agents = (
     <Tile
       label="Polling-day agents"
+      to={LINKS.agents}
       value={pct(ready.recruited, ready.streams)}
       share={ready.recruited / ready.streams}
       flag={ready.trained / ready.streams < 0.5}
@@ -67,6 +90,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
   const money = (
     <Tile
       label="Money"
+      to={LINKS.money}
       value={`${Math.round(weeks)} wks`}
       share={Math.min(weeks / Math.max(p.weeksLeft, 1), 1)}
       flag={weeks < p.weeksLeft}
@@ -77,6 +101,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
   const contacts = (
     <Tile
       label="Contact list"
+      to={LINKS.contacts}
       value={compact(ops.contacts.optedIn)}
       share={ops.contacts.optedIn / Math.max(p.found, 1)}
     >
@@ -87,6 +112,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
   const list = (
     <Tile
       label={s.office === "president" ? "Supporter list" : "Supporters found"}
+      to={LINKS.supporters}
       value={pct(p.found, p.target)}
       share={p.found / p.target}
       flag={!p.onPace}
@@ -108,6 +134,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
       <section className="ov-vitals" aria-label="Vital signs">
         <Tile
           label="National share"
+          to={LINKS.race}
           value={`${share.toFixed(1)}%`}
           bar={
             <Meter
@@ -121,6 +148,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
         </Tile>
         <Tile
           label="Counties at 25%+"
+          to={LINKS.race}
           value={
             <>
               {counties}
@@ -145,6 +173,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
       {list}
       <Tile
         label={`${unit} on pace`}
+        to={LINKS.ground}
         value={
           <>
             {onPace}
@@ -158,6 +187,7 @@ export function VitalSigns({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
       </Tile>
       <Tile
         label="Doors this week"
+        to={LINKS.doors}
         value={compact(ops.doors.lastWeek)}
         share={ops.doors.lastWeek / ops.doors.plan}
         flag={ops.doors.lastWeek < ops.doors.plan * 0.85}

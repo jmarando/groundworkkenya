@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { ChoroplethMap } from "@/components/gw/demo/ChoroplethMap";
@@ -44,8 +45,13 @@ export function GroundGame({ s, areas, p }: { s: Scenario; areas: OpsArea[]; p: 
             up furthest short at last week&apos;s rate.
           </p>
         </div>
-        <span className="mono">
-          {areas.length} {s.geo.units} · {s.ops.coordinatorRole.toLowerCase()}s
+        <span className="card-head-r">
+          <span className="mono">
+            {areas.length} {s.geo.units} · {s.ops.coordinatorRole.toLowerCase()}s
+          </span>
+          <Link to="/voters" className="card-go">
+            Open the map ›
+          </Link>
         </span>
       </div>
 

@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { ActionButton } from "@/components/gw/briefing/parts";
 import { Meter } from "@/components/gw/demo/charts";
 import { kes, pct } from "@/components/gw/overview/format";
@@ -17,7 +19,12 @@ export function MoneyCard({ s, p }: { s: Scenario; p: Pace }) {
     <section className="card" aria-labelledby="ov-money-h">
       <div className="card-head">
         <h2 id="ov-money-h">Money</h2>
-        <span className="mono">{kes(m.burnPerWeek)} a week</span>
+        <span className="card-head-r">
+          <span className="mono">{kes(m.burnPerWeek)} a week</span>
+          <Link to="/finance" className="card-go">
+            Open Finance ›
+          </Link>
+        </span>
       </div>
       <dl className="ov-figs">
         <div>
