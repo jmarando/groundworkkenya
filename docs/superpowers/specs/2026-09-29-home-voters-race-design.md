@@ -2,7 +2,8 @@
 
 Status: designed with the user on 2026-09-29. Decisions: one Home page; sample data
 shown with a clear tag; map-first Voters screen; race data kept up to date
-automatically where it can be. Lovable already holds the ScrapeCreators key.
+automatically where it can be; Listening keywords made easy to find, with Google
+Alert feeds. Lovable already holds the ScrapeCreators key.
 
 ## Why
 
@@ -134,12 +135,26 @@ from the IEBC declaration, checked against a second source.
 - News keeps coming from Listening's Firecrawl sweep, with topics for each rival and
   Nairobi's issues (floods, garbage, drainage, water, hawkers, transport, revenue).
 
+### Listening: keywords and Google Alerts
+
+- Keywords were there but hard to find (the Watchlist tab). The tab becomes
+  **Keywords**, and Pulse shows the current keywords at the top with "Add keywords".
+- Google Alerts has no API, but each alert can be delivered as an RSS feed. A keyword
+  can take a Google Alert feed link (`listening_topics.alert_feed_url`); the hourly
+  sweep reads it next to Firecrawl, turns each entry into a mention (source
+  `google_alerts`, the real article link taken out of Google's redirect), and the
+  classifier tags mood and issue. No credits are used.
+- Only `https://www.google.com/alerts/feeds/…` links are accepted, checked in the
+  database and again before fetching, so the server cannot be pointed anywhere else.
+- How to get the link, shown next to the field: google.com/alerts → create the alert
+  → Show options → Deliver to: RSS feed → copy the feed icon's link.
+
 ## Build order
 
 1. **Home** on today's data: the structure, real/sample tags, links, redirects and
    menu, plus the `sample` tag on seeded people.
-2. **Race data**: rivals and polls with their editor, Sakaja's starting data, then
-   the social sweep.
+2. **Race data**: rivals and polls with their editor, Sakaja's starting data, the
+   Keywords tab and Google Alert feeds, then the social sweep.
 3. **Voters**: the map-first screen, forwards and access.
 
 Each ships on its own after the user's OK: tests, a guarded migration where there is
