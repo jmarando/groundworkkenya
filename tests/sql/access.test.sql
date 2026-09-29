@@ -257,6 +257,9 @@ begin
 end $$;
 
 -- test: every campaign table keeps to its own campaign
+-- (The membership tables and campaign_channels are scoped by their own
+-- policies instead: the super admin sees every campaign's, and the next test
+-- checks nobody else does.)
 do $$
 declare
   t text;
@@ -264,13 +267,54 @@ begin
   select string_agg(c.table_name, ', ') into t
     from information_schema.columns c
    where c.table_schema = 'public' and c.column_name = 'campaign_id'
-     and c.table_name not in ('campaign_members', 'campaign_invites', 'admin_focus')
+     and c.table_name not in ('campaign_members', 'campaign_invites', 'admin_focus', 'campaign_channels')
      and not exists (
        select 1 from pg_policies p
         where p.schemaname = 'public' and p.tablename = c.table_name
           and p.permissive = 'RESTRICTIVE' and p.qual like '%my_campaign()%');
   assert t is null, 'campaign tables without the own-campaign policy: ' || t;
 end $$;
+
+-- test: a campaign's channels are its own; the super admin sees them all
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
+do $$
+begin
+  assert (select count(*) from public.campaign_channels
+           where campaign_id = 'ca000000-0000-4000-8000-000000000002') = 0,
+    'Mathira reads Sakaja''s channels';
+  assert (select count(*) from public.campaign_channels) > 0, 'Mathira reads its own';
+  update public.campaign_channels set note = 'x' where campaign_id = 'ca000000-0000-4000-8000-000000000002';
+  begin
+    insert into public.campaign_channels (campaign_id, kind, identifier)
+    values ('ca000000-0000-4000-8000-000000000002', 'sms', '99999');
+    assert false, 'Mathira added a channel to Sakaja';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+do $$
+begin
+  begin
+    update public.campaign_channels set note = 'x';
+    assert not found, 'an agent changed a channel';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000099';
+do $$
+begin
+  assert (select count(distinct campaign_id) from public.campaign_channels) = 3,
+    'the super admin sees every campaign''s channels';
+end $$;
+reset role;
+do $$
+begin
+  assert (select count(*) from public.campaign_channels where note = 'x') = 0,
+    'someone outside the campaign changed its channels';
+end $$;
+rollback;
 
 -- test: tables with no campaign are the platform's own, and known
 do $$

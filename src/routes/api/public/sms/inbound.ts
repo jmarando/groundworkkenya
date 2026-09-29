@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/public/sms/inbound")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { handleInboundSms } = await import("@/lib/inbound.server");
-        const route = await handleInboundSms(supabaseAdmin, from, body["text"] ?? "");
+        const route = await handleInboundSms(supabaseAdmin, from, body["text"] ?? "", body["to"]);
 
         // Any non-2xx makes Africa's Talking retry, which would record an
         // answer twice. Everything understood gets a 200.

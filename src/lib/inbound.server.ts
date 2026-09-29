@@ -393,12 +393,23 @@ export type InboundRoute = "opt_out" | "opt_in" | "poll" | "poll_help" | "inbox"
 const REPLY_WINDOW_MS = 30 * 864e5;
 
 /**
- * Every campaign texts from the same line, so a reply belongs to the campaign
- * that texted this number last, within 30 days; otherwise to the campaign
- * that owns the line. A volunteer confirming a Mathira sign-up must land in
- * Mathira's records, not the line owner's.
+ * Which campaign an inbound text belongs to. A short code registered to a
+ * campaign in campaign_channels is that campaign's line. The shared line is
+ * registered to nobody: there a reply belongs to the campaign that texted this
+ * number last, within 30 days, else to the campaign that owns the channels.
+ * A volunteer confirming a Mathira sign-up must land in Mathira's records.
  */
-export async function replyCampaignId(sb: Sb, phone: string): Promise<string> {
+export async function replyCampaignId(sb: Sb, phone: string, to?: string): Promise<string> {
+  const code = (to ?? "").trim();
+  if (code) {
+    const { data: own } = await sb
+      .from("campaign_channels")
+      .select("campaign_id")
+      .eq("kind", "sms")
+      .eq("identifier", code)
+      .maybeSingle();
+    if (own?.campaign_id) return own.campaign_id;
+  }
   const since = new Date(Date.now() - REPLY_WINDOW_MS).toISOString();
   const { data } = await sb
     .from("messages")
@@ -453,10 +464,12 @@ export async function handleInboundSms(
   sb: Sb,
   rawFrom: string,
   text: string,
+  /** The short code it was sent to. */
+  to?: string,
 ): Promise<InboundRoute> {
   const phone = normalizeKePhone(rawFrom);
   if (!phone) return "ignored";
-  const campaign = await replyCampaignId(sb, phone);
+  const campaign = await replyCampaignId(sb, phone, to);
   const person = await upsertPersonByPhone(sb, phone, "sms", campaign);
   if (!person) return "ignored";
   const signature = await textSignature(sb, campaign);

@@ -94,6 +94,23 @@ async function main() {
     );
   }
   {
+    // Kalonzo has a short code of its own; the shared line is nobody's.
+    const d = db({
+      ...mathiraAsked(),
+      campaign_channels: [{ campaign_id: "camp-kalonzo", kind: "sms", identifier: "22384" }],
+    });
+    eq(
+      "a campaign's own short code gets what is sent to it",
+      await replyCampaignId(d as never, PHONE, "22384"),
+      "camp-kalonzo",
+    );
+    eq(
+      "the shared line still goes to whoever texted last",
+      await replyCampaignId(d as never, PHONE, "40404"),
+      MATHIRA,
+    );
+  }
+  {
     const d = db(mathiraAsked());
     eq("START", await handleInboundSms(d as never, "0712345678", "start"), "opt_in");
     eq("is Mathira's to keep", people(d).find((p) => p["id"] === "pm")?.["consent_sms"], true);
