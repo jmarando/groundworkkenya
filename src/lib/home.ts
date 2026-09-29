@@ -80,7 +80,7 @@ export function realToday(sig: RealSignals): TodayItem[] {
     items.push({
       title: `${t.label} is the loudest issue this week`,
       detail: `${n(t.count, "mention", "mentions")} in seven days${t.angry ? `, ${t.angry} of them angry` : ""}.`,
-      action: { kind: "go", label: "See what's said", to: "/listening" },
+      action: { kind: "issue", label: "See what's said", issue: t.label.toLowerCase() },
       sample: false,
     });
   }

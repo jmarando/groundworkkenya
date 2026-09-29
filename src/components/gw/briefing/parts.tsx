@@ -30,6 +30,13 @@ export function ActionButton({ action, quiet = false }: { action: Action; quiet?
       </a>
     );
   }
+  if (action.kind === "issue") {
+    return (
+      <Link to="/listening" search={{ issue: action.issue }} className={cls}>
+        {action.label}
+      </Link>
+    );
+  }
   if (action.kind === "task") {
     return (
       <button

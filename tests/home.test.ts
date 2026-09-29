@@ -73,7 +73,7 @@ eq(
     [
       "Floods is the loudest issue this week",
       "14 mentions in seven days, 9 of them angry.",
-      { kind: "go", label: "See what's said", to: "/listening" },
+      { kind: "issue", label: "See what's said", issue: "floods" },
     ],
   );
   eq(

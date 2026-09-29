@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -17,8 +17,14 @@ import {
   toggleTopic,
 } from "@/lib/listening.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
+import { filterMentions } from "@/lib/listening-filter";
 
 export const Route = createFileRoute("/_authenticated/listening")({
+  // ?issue=water: a link from Home opens the mentions about that issue.
+  validateSearch: (search: Record<string, unknown>): { issue?: string } => {
+    const v = typeof search["issue"] === "string" ? search["issue"].trim().toLowerCase().slice(0, 40) : "";
+    return v ? { issue: v } : {};
+  },
   component: Listening,
   head: () => ({
     meta: [
@@ -77,7 +83,9 @@ function Listening() {
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["listening"], queryFn: () => fetchData() });
 
-  const [tab, setTab] = useState<Tab>("pulse");
+  const { issue } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const [tab, setTab] = useState<Tab>(issue ? "mentions" : "pulse");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [source, setSource] = useState("all");
@@ -108,16 +116,17 @@ function Listening() {
     return rated ? Math.round((((t?.positive ?? 0) - (t?.negative ?? 0)) / rated) * 100) : 0;
   }, [t]);
 
-  const mentions = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return (data?.mentions ?? []).filter((m) => {
-      if (source !== "all" && m.source !== source) return false;
-      if (mood !== "all" && (m.sentiment ?? "unrated") !== mood) return false;
-      if (topicFilter !== "all" && m.topicId !== topicFilter) return false;
-      if (q && !`${m.title ?? ""} ${m.snippet ?? ""} ${m.domain ?? ""}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [data, source, mood, topicFilter, search]);
+  const mentions = useMemo(
+    () =>
+      filterMentions(data?.mentions ?? [], {
+        source,
+        mood,
+        topic: topicFilter,
+        search,
+        issue: issue ?? null,
+      }),
+    [data, source, mood, topicFilter, search, issue],
+  );
 
   const answerToday = (data?.mentions ?? [])
     .filter((m) => m.sentiment === "negative" && m.status === "new")
@@ -382,6 +391,16 @@ function Listening() {
           </div>
 
           <div className="ibx-f" style={{ gap: 8, flexWrap: "wrap" }}>
+            {issue ? (
+              <button
+                type="button"
+                className="fchip active"
+                aria-label={`Showing ${issue} only. Show every issue`}
+                onClick={() => void navigate({ search: {} })}
+              >
+                Issue: {issue} ×
+              </button>
+            ) : null}
             <input
               className="ibx-search"
               placeholder="Search headlines and text"
