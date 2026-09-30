@@ -77,6 +77,10 @@ export type ListeningData = {
   byDomain: { domain: string; n: number; negative: number }[];
   ownedIssues: { issue: string; n: number }[];
   job: { status: string; lastRunAt: string | null; pausedReason: string | null; detail: string | null } | null;
+  /** The daily read of candidates' own posts; one for every campaign, so it names no one. */
+  rivalJob: { lastRunAt: string | null; detail: string | null } | null;
+  /** This campaign's candidates' own posts from the last 30 days. */
+  rivalPosts: number;
 };
 
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -86,23 +90,38 @@ export const getListening = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<ListeningData> => {
     const sb = context.supabase;
 
-    const [{ data: topics }, { data: mentions }, { data: alerts }, { data: events }, { data: job }, { data: convos }] =
-      await Promise.all([
-        sb.from("listening_topics").select("*").order("label"),
-        sb
-          .from("listening_mentions")
-          .select("*")
-          .order("found_at", { ascending: false })
-          .limit(600),
-        sb.from("listening_alerts").select("*").order("created_at", { ascending: false }),
-        sb
-          .from("listening_alert_events")
-          .select("id, alert_id, channel, destination, subject, status, detail, created_at")
-          .order("created_at", { ascending: false })
-          .limit(40),
-        sb.from("listening_jobs").select("*").eq("key", "listening_scan").maybeSingle(),
-        sb.from("conversations").select("issue").limit(1000),
-      ]);
+    const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
+    const [
+      { data: topics },
+      { data: mentions },
+      { data: alerts },
+      { data: events },
+      { data: job },
+      { data: convos },
+      { data: rivalJob },
+      { count: rivalPosts },
+    ] = await Promise.all([
+      sb.from("listening_topics").select("*").order("label"),
+      sb.from("listening_mentions").select("*").order("found_at", { ascending: false }).limit(600),
+      sb.from("listening_alerts").select("*").order("created_at", { ascending: false }),
+      sb
+        .from("listening_alert_events")
+        .select("id, alert_id, channel, destination, subject, status, detail, created_at")
+        .order("created_at", { ascending: false })
+        .limit(40),
+      sb.from("listening_jobs").select("*").eq("key", "listening_scan").maybeSingle(),
+      sb.from("conversations").select("issue").limit(1000),
+      sb
+        .from("listening_jobs")
+        .select("last_run_at, detail")
+        .eq("key", "race_social")
+        .maybeSingle(),
+      sb
+        .from("listening_mentions")
+        .select("id", { count: "exact", head: true })
+        .not("rival_id", "is", null)
+        .gte("published_at", since30),
+    ]);
 
     const topicById = new Map((topics ?? []).map((t: any) => [t.id, t]));
     const rows = mentions ?? [];
@@ -264,6 +283,8 @@ export const getListening = createServerFn({ method: "GET" })
             detail: job.detail,
           }
         : null,
+      rivalJob: rivalJob ? { lastRunAt: rivalJob.last_run_at, detail: rivalJob.detail } : null,
+      rivalPosts: rivalPosts ?? 0,
     };
   });
 

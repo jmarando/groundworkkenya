@@ -176,6 +176,11 @@ async function main() {
     );
     eq("every request came out of the budget", r.requests, scCalls(calls).length);
     eq("four requests: two feeds, one page of comments, one more feed", r.requests, 4);
+    eq(
+      "a clean read leaves no note for Listening",
+      sb.tables["listening_jobs"]?.[0]?.["detail"],
+      null,
+    );
 
     const before = calls.length;
     eq(
@@ -211,7 +216,7 @@ async function main() {
     const calls = stubFetch((u) =>
       u.includes("/v3/tiktok/profile/videos") ? { status: 500, body: "try later" } : null,
     );
-    await runRivalSweep(sb as never, { now: NOW });
+    const r = await runRivalSweep(sb as never, { now: NOW });
     eq(
       "one platform failing doesn't stop the rest",
       mentions(sb).map((m) => m["source"]),
@@ -220,6 +225,18 @@ async function main() {
     eq(
       "the other rival is still read",
       scCalls(calls).some((c) => c.includes("Other1")),
+      true,
+    );
+    // Every campaign's team can read the job, so its note names no rival.
+    const detail = String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "");
+    eq(
+      "Listening is told an account could not be read, without naming it",
+      [detail, detail.includes("Babu"), detail.includes("babuowino")],
+      ["1 account could not be read.", false, false],
+    );
+    eq(
+      "the scheduler hears which",
+      r.notes.some((n) => n.startsWith("Babu Owino on tiktok")),
       true,
     );
   }

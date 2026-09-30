@@ -221,6 +221,16 @@ function Listening() {
               Add keywords
             </button>
           </div>
+          <p className="meta" style={{ marginTop: 8 }}>
+            Candidates&apos; own posts:{" "}
+            {data?.rivalJob?.lastRunAt
+              ? `last read ${stamp(data.rivalJob.lastRunAt)}; ${
+                  data.rivalPosts
+                    ? `${nf.format(data.rivalPosts)} from the last 30 days are in the feed.`
+                    : "none yet. They are read from the accounts under Who's running on Home."
+                }${data.rivalJob.detail ? ` ${data.rivalJob.detail}` : ""}`
+              : "not read yet; the first read happens with the next hourly sweep."}
+          </p>
           <div className="g5" style={{ marginTop: 14 }}>
             <div className="kpi">
               <span className="kpi-lbl">Mentions tracked</span>

@@ -44,8 +44,11 @@ export type RivalSweep = {
   requests: number;
   posts: number;
   commentsRead: number;
+  /** What went wrong, naming the account: for the scheduler only. */
   notes: string[];
 };
+
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 const LANDING_SCHEMA = {
   type: "object",
@@ -113,10 +116,24 @@ export async function runRivalSweep(
   if (!opts.force && job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
   out.ran = true;
 
+  // Every campaign's team can read the job row, so what it says names no rival
+  // or account: shared notes and counts only. The names go back in out.notes.
+  const shared: string[] = [];
+  const failed = { accounts: 0, stored: 0, comments: 0 };
+  const say = (note: string) => {
+    out.notes.push(note);
+    shared.push(note);
+  };
+
   const finish = async () => {
-    const detail =
-      out.notes.join(" · ").slice(0, 400) ||
-      `Read ${out.posts} posts and ${out.commentsRead} comments.`;
+    const counts = [
+      failed.accounts && `${count(failed.accounts, "account", "accounts")} could not be read.`,
+      failed.stored &&
+        `Posts from ${count(failed.stored, "account", "accounts")} could not be stored.`,
+      failed.comments &&
+        `Comments on ${count(failed.comments, "post", "posts")} could not be read.`,
+    ].filter((c): c is string => Boolean(c));
+    const detail = [...shared, ...counts].join(" · ").slice(0, 400) || null;
     await sb.from("listening_jobs").upsert(
       {
         key: JOB_KEY,
@@ -132,7 +149,7 @@ export async function runRivalSweep(
   };
 
   if (!scConfigured()) {
-    out.notes.push("ScrapeCreators is not connected, so rivals' posts are not being read.");
+    say("ScrapeCreators is not connected, so rivals' posts are not being read.");
     return finish();
   }
   await sb.from("listening_jobs").upsert(
@@ -151,7 +168,7 @@ export async function runRivalSweep(
     if (stop) return false;
     if (!(await takeCredits(sb, "rivals", 1))) {
       stop = true;
-      out.notes.push("Stopped at today's ScrapeCreators limit for rivals.");
+      say("Stopped at today's ScrapeCreators limit for rivals.");
       return false;
     }
     out.requests++;
@@ -159,7 +176,7 @@ export async function runRivalSweep(
   };
   const outOfCredits = () => {
     stop = true;
-    out.notes.push("ScrapeCreators is out of credits.");
+    say("ScrapeCreators is out of credits.");
   };
 
   const since = now.getTime() - NEW_POST_DAYS * 864e5;
@@ -177,7 +194,10 @@ export async function runRivalSweep(
         posts = await scRivalPosts(platform, handle);
       } catch (err) {
         if (err instanceof ScrapeCreatorsCreditError) outOfCredits();
-        else out.notes.push(`${r.name} on ${platform}: ${(err as Error).message}`);
+        else {
+          failed.accounts++;
+          out.notes.push(`${r.name} on ${platform}: ${(err as Error).message}`);
+        }
         continue;
       }
       const fresh = posts.filter((p) => p.publishedAt && Date.parse(p.publishedAt) >= since);
@@ -199,7 +219,10 @@ export async function runRivalSweep(
           { onConflict: "campaign_id,url" },
         )
         .select("id");
-      if (error) out.notes.push(`${r.name}: posts could not be stored (${error.message}).`);
+      if (error) {
+        failed.stored++;
+        out.notes.push(`${r.name}: posts could not be stored (${error.message}).`);
+      }
       out.posts += saved?.length ?? 0;
     }
 
@@ -230,7 +253,10 @@ export async function runRivalSweep(
           cursor = got.next;
         } catch (err) {
           if (err instanceof ScrapeCreatorsCreditError) outOfCredits();
-          else out.notes.push(`${r.name}'s comments: ${(err as Error).message}`);
+          else {
+            failed.comments++;
+            out.notes.push(`${r.name}'s comments: ${(err as Error).message}`);
+          }
           break;
         }
       }
@@ -246,6 +272,7 @@ export async function runRivalSweep(
         try {
           moods = await landing(read, r.name);
         } catch (err) {
+          failed.comments++;
           out.notes.push(
             `${r.name}'s comments could not be read for mood: ${(err as Error).message}`,
           );
