@@ -7,6 +7,7 @@
  * Used by the manual "Sweep now" button and by the hourly cron route.
  */
 
+import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
 import {
   ScrapeCreatorsCreditError,
   scConfigured,
@@ -77,7 +78,14 @@ const sourceOf = (url: string) => {
 
 /* ------------------------------------------------------------- firecrawl */
 
-type Found = { url: string; title: string | null; snippet: string | null; publishedAt: string | null };
+type Found = {
+  url: string;
+  title: string | null;
+  snippet: string | null;
+  publishedAt: string | null;
+  /** Set when the address doesn't say where it came from (Google Alerts). */
+  source?: string;
+};
 
 async function firecrawlSearch(query: string, limit: number, tbs: string): Promise<Found[]> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
@@ -290,6 +298,24 @@ export async function runListeningScan(
       }
       found += hits.length;
 
+      // The keyword's Google Alert feed, when it has one: no credits used.
+      const feed = typeof topic.alert_feed_url === "string" ? topic.alert_feed_url : "";
+      if (feed && !ALERT_FEED.test(feed)) {
+        notes.push(`${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`);
+      } else if (feed) {
+        try {
+          const res = await fetch(feed, {
+            headers: { Accept: "application/atom+xml, application/xml" },
+          });
+          if (!res.ok) throw new Error(`the feed answered ${res.status}`);
+          const entries = parseAlertFeed(await res.text());
+          hits.push(...entries.map((e) => ({ ...e, source: "google_alerts" })));
+          found += entries.length;
+        } catch (err) {
+          notes.push(`${topic.label} Google Alert: ${(err as Error).message}`);
+        }
+      }
+
       // social platforms via ScrapeCreators — best effort, never pauses the sweep
       let socialFound = 0;
       if (scConfigured()) {
@@ -323,7 +349,7 @@ export async function runListeningScan(
 
       const rows = hits.map((h) => ({
         topic_id: topic.id,
-        source: sourceOf(h.url),
+        source: h.source ?? sourceOf(h.url),
         domain: hostOf(h.url),
         title: h.title?.slice(0, 300) ?? null,
         url: h.url,

@@ -3,7 +3,9 @@
 // repository root:
 //   npx tsx --tsconfig tsconfig.json tests/alerts-feed.test.ts
 
-import { cleanAlertFeed } from "@/lib/alerts-feed";
+import { cleanAlertFeed, parseAlertFeed, realLink } from "@/lib/alerts-feed";
+
+import { ALERT_XML } from "./alert-feed-fixture";
 
 let pass = 0;
 let fail = 0;
@@ -38,6 +40,28 @@ refuses("plain http", () => cleanAlertFeed(FEED.replace("https", "http")), HOW);
 refuses("another site", () => cleanAlertFeed("https://evil.test/alerts/feeds/1/2"), HOW);
 refuses("extras after the link", () => cleanAlertFeed(`${FEED}?next=https://evil.test`), HOW);
 refuses("Google's page, not the feed", () => cleanAlertFeed("https://www.google.com/alerts"), HOW);
+
+// ---------------------------------------------------------------- the feed
+
+eq("each entry, with the article behind Google's link", parseAlertFeed(ALERT_XML), [
+  {
+    url: "https://www.the-star.co.ke/news/2026-09-29-water/",
+    title: "Nairobi water rationing extended in Eastlands",
+    snippet: 'Residents of Nairobi will wait "three more weeks".',
+    publishedAt: "2026-09-29T08:00:00.000Z",
+  },
+]);
+eq(
+  "a plain link is kept",
+  realLink("https://www.the-star.co.ke/a"),
+  "https://www.the-star.co.ke/a",
+);
+eq("not a web link, nothing", realLink("javascript:alert(1)"), null);
+eq(
+  "a Google link to something that isn't a web page, nothing",
+  realLink("https://www.google.com/url?url=javascript:alert(1)"),
+  null,
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

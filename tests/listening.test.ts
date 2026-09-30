@@ -5,6 +5,7 @@
 
 import { runListeningScan } from "@/lib/listening.server";
 
+import { ALERT_XML } from "./alert-feed-fixture";
 import { fakeSupabase } from "./fake-supabase";
 
 let pass = 0;
@@ -115,6 +116,43 @@ async function main() {
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq("a story another campaign has is still stored for this one", r.stored, 1);
+  }
+  {
+    const FEED = "https://www.google.com/alerts/feeds/0123/4567";
+    const sb = world({ listening_topics: [{ ...TOPIC, alert_feed_url: FEED }] });
+    const calls = stubFetch((u) =>
+      u === FEED
+        ? { body: ALERT_XML }
+        : u.includes("firecrawl")
+          ? { body: search([]) }
+          : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("the keyword's Google Alert feed is read", calls.includes(FEED), true);
+    eq(
+      "its stories are stored as Google Alerts, at the article's own address",
+      sb.tables["listening_mentions"]?.map((m) => [m["source"], m["url"]]),
+      [["google_alerts", "https://www.the-star.co.ke/news/2026-09-29-water/"]],
+    );
+  }
+  {
+    const sb = world({
+      listening_topics: [{ ...TOPIC, alert_feed_url: "https://evil.test/feed" }],
+    });
+    const calls = stubFetch((u) =>
+      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a feed link that isn't Google's is never fetched",
+      calls.some((c) => c.includes("evil.test")),
+      false,
+    );
+    eq(
+      "and the sweep says so",
+      r.notes.some((n) => n.includes("not a Google Alerts feed")),
+      true,
+    );
   }
 
   console.log(`${pass} passed, ${fail} failed`);
