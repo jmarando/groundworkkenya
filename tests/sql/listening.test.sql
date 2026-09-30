@@ -43,21 +43,27 @@ do $$ begin
 end $$;
 rollback;
 
--- test: staff may spend from the budget, the rest of the team may not
+-- test: only the server counts credits, so no team can spend another's day
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
-do $$ begin assert public.take_social_credits('keywords', 3, 60), 'a manager''s sweep spends'; end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
-do $$ begin assert not public.take_social_credits('keywords', 3, 60), 'an agent spends'; end $$;
+do $$
+begin
+  perform public.take_social_credits('keywords', 60, 1000);
+  assert false, 'a manager moves the count';
+exception when insufficient_privilege then null;
+end $$;
 reset role;
 set local role anon;
 do $$
 begin
   perform public.take_social_credits('keywords', 1, 60);
-  assert false, 'anon spends';
+  assert false, 'anon moves the count';
 exception when insufficient_privilege then null;
 end $$;
+reset role;
+set local role service_role;
+do $$ begin assert public.take_social_credits('keywords', 3, 60), 'the server spends'; end $$;
 rollback;
 
 -- test: a post keeps its rival until the rival is removed

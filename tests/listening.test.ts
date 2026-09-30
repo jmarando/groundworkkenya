@@ -201,6 +201,51 @@ async function main() {
       3,
     );
   }
+  {
+    // "Sweep now" counts credits with the server's own client, not the person's.
+    const personAsked: string[] = [];
+    const sb = world(
+      {},
+      {
+        take_social_credits: () => {
+          personAsked.push("person");
+          return true;
+        },
+      },
+    );
+    const serverAsked: number[] = [];
+    const server = {
+      rpc: async (fn: string, a: Record<string, unknown>) => {
+        serverAsked.push(Number(a["_n"]));
+        return { data: fn === "take_social_credits", error: null };
+      },
+    };
+    const calls = stubFetch((u) =>
+      u.includes("firecrawl")
+        ? { body: search([]) }
+        : u.includes("scrapecreators")
+          ? { body: "{}" }
+          : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40, credits: server });
+    eq(
+      "credits are counted by the server",
+      [serverAsked, personAsked, calls.filter((c) => c.includes("scrapecreators")).length],
+      [[3], [], 3],
+    );
+  }
+  {
+    const sb = world({}, { take_social_credits: () => true });
+    const calls = stubFetch((u) =>
+      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40, credits: null });
+    eq(
+      "a sweep that may not spend credits leaves social search out",
+      calls.some((c) => c.includes("scrapecreators")),
+      false,
+    );
+  }
   delete process.env["SCRAPECREATORS_API_KEY"];
   process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
   eq("the limit comes from the environment", dailyCredits("keywords"), 25);

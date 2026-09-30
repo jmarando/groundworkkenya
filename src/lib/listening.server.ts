@@ -232,7 +232,13 @@ export async function askAiJson<T>(prompt: string, name: string, schema: object)
 
 export async function runListeningScan(
   sb: AnyClient,
-  opts: { topicLimit?: number; classifyLimit?: number; force?: boolean } = {},
+  opts: {
+    topicLimit?: number;
+    classifyLimit?: number;
+    force?: boolean;
+    /** Who counts ScrapeCreators credits: the server's own client (sb when left out); null: none spent. */
+    credits?: Pick<AnyClient, "rpc"> | null;
+  } = {},
 ): Promise<ScanResult> {
   const topicLimit = Math.min(Math.max(opts.topicLimit ?? 4, 1), 8);
   const classifyLimit = Math.min(Math.max(opts.classifyLimit ?? 40, 1), 60);
@@ -323,10 +329,11 @@ export async function runListeningScan(
 
       // social platforms via ScrapeCreators — best effort, never pauses the sweep
       let socialFound = 0;
-      if (scConfigured()) {
+      const counter = opts.credits === undefined ? sb : opts.credits;
+      if (scConfigured() && counter) {
         const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
         // Three searches, three credits, from the day's keyword budget.
-        if (kw && !keywordsSpent && !(await takeCredits(sb, "keywords", 3))) {
+        if (kw && !keywordsSpent && !(await takeCredits(counter, "keywords", 3))) {
           keywordsSpent = true;
           notes.push(
             "Social keyword search stopped: today's ScrapeCreators credits for it are used.",

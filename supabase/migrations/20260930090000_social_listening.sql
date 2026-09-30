@@ -31,7 +31,9 @@ revoke all on public.social_credits from anon, authenticated;
 grant all on public.social_credits to service_role;
 
 -- Take _n credits from today's _budget if that stays within _cap: true when
--- taken. The scheduled sweep (no user) and a manager's "Sweep now" may spend.
+-- taken. Only the server counts (the scheduled sweeps, and a candidate's or
+-- manager's "Sweep now" through the server's own key), so no team can use up
+-- the day for every other campaign.
 create or replace function public.take_social_credits(_budget text, _n integer, _cap integer)
 returns boolean
 language plpgsql
@@ -42,9 +44,6 @@ declare
   _day date := (now() at time zone 'Africa/Nairobi')::date;
   _ok boolean;
 begin
-  if auth.uid() is not null and not public.is_staff(auth.uid()) then
-    return false;
-  end if;
   if _n <= 0 then
     return true;
   end if;
@@ -57,8 +56,8 @@ begin
   return coalesce(_ok, false);
 end $$;
 
-revoke all on function public.take_social_credits(text, integer, integer) from public, anon;
-grant execute on function public.take_social_credits(text, integer, integer) to authenticated, service_role;
+revoke all on function public.take_social_credits(text, integer, integer) from public, anon, authenticated;
+grant execute on function public.take_social_credits(text, integer, integer) to service_role;
 
 create or replace function public.groundwork_schema_version()
 returns integer

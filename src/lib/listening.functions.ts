@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
 
 export type Mention = {
@@ -295,10 +296,15 @@ export const sweepListening = createServerFn({ method: "POST" })
   .inputValidator((input: { force?: boolean } | undefined) => ({ force: input?.force === true }))
   .handler(async ({ data, context }) => {
     const { runListeningScan } = await import("@/lib/listening.server");
+    // ScrapeCreators credits are counted by the server alone, and only the
+    // candidate's or manager's sweep may spend them.
+    const { data: role } = await context.supabase.rpc("my_campaign_role");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return runListeningScan(context.supabase as never, {
       topicLimit: 6,
       classifyLimit: 50,
       force: data.force,
+      credits: PRINCIPAL_ROLES.includes(role as MyRole) ? (supabaseAdmin as never) : null,
     });
   });
 
