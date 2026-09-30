@@ -8,6 +8,7 @@
  */
 
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
+import { takeCredits } from "./social-credits";
 import {
   ScrapeCreatorsCreditError,
   scConfigured,
@@ -18,6 +19,10 @@ import {
 
 type AnyClient = {
   from: (table: string) => any;
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
 const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
@@ -274,6 +279,7 @@ export async function runListeningScan(
   let classified = 0;
   let alertsFired = 0;
   let paused: string | undefined;
+  let keywordsSpent = false;
 
   try {
     const { data: topics } = await sb
@@ -320,7 +326,14 @@ export async function runListeningScan(
       let socialFound = 0;
       if (scConfigured()) {
         const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
-        if (kw) {
+        // Three searches, three credits, from the day's keyword budget.
+        if (kw && !keywordsSpent && !(await takeCredits(sb, "keywords", 3))) {
+          keywordsSpent = true;
+          notes.push(
+            "Social keyword search stopped: today's ScrapeCreators credits for it are used.",
+          );
+        }
+        if (kw && !keywordsSpent) {
           const social = await Promise.allSettled([
             scSearchTikTok(kw, 8),
             scSearchReddit(kw, 8),

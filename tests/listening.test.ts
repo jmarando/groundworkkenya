@@ -4,6 +4,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/listening.test.ts
 
 import { runListeningScan } from "@/lib/listening.server";
+import { dailyCredits } from "@/lib/social-credits";
 
 import { ALERT_XML } from "./alert-feed-fixture";
 import { fakeSupabase } from "./fake-supabase";
@@ -154,6 +155,59 @@ async function main() {
       true,
     );
   }
+
+  // ScrapeCreators keyword search comes out of a daily budget.
+  process.env["SCRAPECREATORS_API_KEY"] = "test-key";
+  {
+    const asked: number[] = [];
+    const sb = world(
+      {},
+      {
+        take_social_credits: (a) => {
+          asked.push(Number(a["_n"]));
+          return false;
+        },
+      },
+    );
+    const calls = stubFetch((u) =>
+      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "no credits left: ScrapeCreators is not asked",
+      calls.some((c) => c.includes("scrapecreators")),
+      false,
+    );
+    eq("the three searches are asked for together", asked, [3]);
+    eq(
+      "and the sweep says why",
+      r.notes.some((n) => n.includes("today's ScrapeCreators credits")),
+      true,
+    );
+  }
+  {
+    const sb = world({}, { take_social_credits: () => true });
+    const calls = stubFetch((u) =>
+      u.includes("firecrawl")
+        ? { body: search([]) }
+        : u.includes("scrapecreators")
+          ? { body: "{}" }
+          : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "with credits: TikTok, Reddit and YouTube",
+      calls.filter((c) => c.includes("scrapecreators")).length,
+      3,
+    );
+  }
+  delete process.env["SCRAPECREATORS_API_KEY"];
+  process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
+  eq("the limit comes from the environment", dailyCredits("keywords"), 25);
+  process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "lots";
+  eq("an unreadable limit falls back to 60", dailyCredits("keywords"), 60);
+  delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  eq("the rivals' limit is its own", dailyCredits("rivals"), 60);
 
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
