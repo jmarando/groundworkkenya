@@ -15,7 +15,7 @@ const NOTHING_YET: HomeData = {
   firstName: null,
   facts: { realPeople: 0, rivals: 0, polls: 0 },
   signals: { pendingExpenses: 0, unread: 0, topIssue: null },
-  race: { rivals: [], polls: [], issues: [] },
+  race: { rivals: [], polls: [], issues: [], posts: [] },
 };
 
 /**

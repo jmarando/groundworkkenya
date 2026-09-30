@@ -15,7 +15,7 @@ import {
   type RaceView,
   type RealSignals,
 } from "@/lib/home";
-import { rivalMove } from "@/lib/race-data";
+import { postFromRow, postSpike, rivalMove, type PostRow, type RivalPost } from "@/lib/race-data";
 import { loadPolls, loadRivals } from "@/lib/race.functions";
 
 type Sb = SupabaseClient<Database>;
@@ -42,23 +42,37 @@ export async function loadHome(
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const canApprove = APPROVERS.includes(String(role));
   // Home still opens if the race can't be read: the race section shows its sample.
-  const [profile, people, expenses, unread, mentions, rivals, polls] = await Promise.all([
+  const [profile, people, expenses, unread, mentions, postRows, rivals, polls] = await Promise.all([
     sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
     sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
     canApprove
       ? sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending")
       : Promise.resolve({ count: 0 }),
     sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
+    // What people say: rivals' own posts are shown apart, not counted as talk.
     sb
       .from("listening_mentions")
       .select("issue, sentiment, title, url, found_at")
+      .is("rival_id", null)
       .gte("found_at", since30)
       .order("found_at", { ascending: false })
       .limit(2000),
+    sb
+      .from("listening_mentions")
+      .select(
+        "rival_id, source, url, title, published_at, reach, comments_read, comments_positive, comments_negative, comments_issue",
+      )
+      .not("rival_id", "is", null)
+      .gte("published_at", since30)
+      .order("published_at", { ascending: false })
+      .limit(300),
     loadRivals(sb).catch(() => []),
     loadPolls(sb).catch(() => []),
   ]);
   const rows = (mentions.data ?? []) as IssueRow[];
+  const posts = ((postRows.data ?? []) as PostRow[])
+    .map(postFromRow)
+    .filter((p): p is RivalPost => p !== null);
   return {
     firstName: profile.data?.full_name?.trim() || null,
     facts: { realPeople: people.count ?? 0, rivals: rivals.length, polls: polls.length },
@@ -66,9 +80,10 @@ export async function loadHome(
       pendingExpenses: expenses.count ?? 0,
       unread: unread.count ?? 0,
       topIssue: topIssue(rows.filter((r) => r.found_at >= since7)),
-      rivalMove: rivalMove(rivals, polls, todayIso),
+      // A fresh post beats a poll change that can be up to 30 days old.
+      rivalMove: postSpike(rivals, posts, new Date()) ?? rivalMove(rivals, polls, todayIso),
     },
-    race: { rivals, polls, issues: issueBoard(rows) },
+    race: { rivals, polls, issues: issueBoard(rows), posts },
   };
 }
 

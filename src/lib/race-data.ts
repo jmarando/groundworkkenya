@@ -464,6 +464,112 @@ export function rivalMove(
   };
 }
 
+// ------------------------------------------------------------------ rivals' posts
+
+export type RivalPost = {
+  rivalId: string;
+  platform: "tiktok" | "x" | "facebook";
+  url: string;
+  text: string | null;
+  publishedAt: string | null;
+  reach: number | null;
+  /** How its comments landed, counted; null until read (never for X). */
+  landed: {
+    read: number;
+    positive: number | null;
+    negative: number | null;
+    issue: string | null;
+  } | null;
+};
+
+export type PostRow = {
+  rival_id: string | null;
+  source: string;
+  url: string;
+  title: string | null;
+  published_at: string | null;
+  reach: number | null;
+  comments_read: number | null;
+  comments_positive: number | null;
+  comments_negative: number | null;
+  comments_issue: string | null;
+};
+
+const PLATFORMS = { tiktok: "TikTok", x: "X", facebook: "Facebook" } as const;
+export const platformName = (p: RivalPost["platform"]) => PLATFORMS[p];
+
+/** A rival's post from its mention row; null for anything else, or a link off the web. */
+export function postFromRow(r: PostRow): RivalPost | null {
+  if (!r.rival_id || !Object.hasOwn(PLATFORMS, r.source) || !/^https?:\/\//i.test(r.url))
+    return null;
+  return {
+    rivalId: r.rival_id,
+    platform: r.source as RivalPost["platform"],
+    url: r.url,
+    text: r.title,
+    publishedAt: r.published_at,
+    reach: r.reach,
+    landed:
+      r.comments_read === null
+        ? null
+        : {
+            read: r.comments_read,
+            positive: r.comments_positive,
+            negative: r.comments_negative,
+            issue: r.comments_issue,
+          },
+  };
+}
+
+const nf = new Intl.NumberFormat("en-KE");
+
+/** A post's reach and, when read, how its comments landed. */
+export function landedLine(p: RivalPost): string {
+  const reach = p.reach === null ? "" : `${nf.format(p.reach)} reactions, comments and shares.`;
+  const l = p.landed;
+  if (!l || !l.read) return reach;
+  const moods =
+    l.negative === null || l.positive === null
+      ? ""
+      : `, ${nf.format(l.negative)} negative and ${nf.format(l.positive)} positive`;
+  const about = l.issue ? `; mostly about ${l.issue}` : "";
+  return `${reach} Of ${nf.format(l.read)} comments read${moods}${about}.`.trim();
+}
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+};
+
+/**
+ * A rival's post from the last two days drawing at least twice the response of
+ * their other posts this month (at least three to compare with).
+ */
+export function postSpike(rivals: RaceRival[], posts: RivalPost[], now: Date): RivalMove | null {
+  const age = (p: RivalPost) => now.getTime() - Date.parse(p.publishedAt ?? "");
+  let best: { r: RaceRival; p: RivalPost; base: number; ratio: number } | null = null;
+  for (const r of rivals) {
+    if (r.isUs) continue;
+    const mine = posts
+      .filter((p) => p.rivalId === r.id && p.reach !== null && Number.isFinite(age(p)))
+      .sort((a, b) => age(a) - age(b));
+    const [latest, ...rest] = mine;
+    if (!latest || age(latest) > 2 * 864e5) continue;
+    const month = rest.filter((p) => age(p) <= 30 * 864e5).map((p) => p.reach!);
+    if (month.length < 3) continue;
+    const base = median(month);
+    if (base <= 0) continue;
+    const ratio = latest.reach! / base;
+    if (ratio >= 2 && (!best || ratio > best.ratio)) best = { r, p: latest, base, ratio };
+  }
+  if (!best) return null;
+  return {
+    title: `${best.r.name}'s ${platformName(best.p.platform)} post is drawing ${best.ratio.toFixed(1)} times the usual response`,
+    detail: `${nf.format(best.p.reach!)} reactions, comments and shares, against about ${nf.format(Math.round(best.base))} usually.`,
+  };
+}
+
 // ------------------------------------------------------------------ the chart
 
 export type ChartSeries = {

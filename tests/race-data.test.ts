@@ -10,15 +10,19 @@ import {
   fieldworkLabel,
   handleOf,
   labelTicks,
+  landedLine,
   pollChart,
   pollFromRow,
   pollLabel,
+  postFromRow,
+  postSpike,
   realVerdict,
   rivalFromRow,
   rivalMove,
   shareOf,
   type RacePoll,
   type RaceRival,
+  type RivalPost,
 } from "@/lib/race-data";
 
 let pass = 0;
@@ -598,6 +602,110 @@ eq("two close together: the latest wins", labelTicks([30, 50], 96), [1]);
 eq("well spread: all of them", labelTicks([30, 200, 400], 96), [0, 1, 2]);
 eq("one poll", labelTicks([219], 96), [0]);
 eq("none", labelTicks([], 96), []);
+
+// Rivals' own posts: the newest with how it landed, and one drawing far more
+// response than their others.
+const post = (
+  rivalId: string,
+  daysAgo: number,
+  reach: number,
+  extra: Partial<RivalPost> = {},
+): RivalPost => ({
+  rivalId,
+  platform: "tiktok",
+  url: `https://www.tiktok.com/@x/video/${rivalId}${daysAgo}`,
+  text: "Post",
+  publishedAt: new Date(Date.UTC(2026, 8, 29) - daysAgo * 864e5).toISOString(),
+  reach,
+  landed: null,
+  ...extra,
+});
+const SEEN = new Date(Date.UTC(2026, 8, 29, 12));
+const usual = (id: string) => [post(id, 5, 8000), post(id, 9, 7900), post(id, 14, 7000)];
+eq(
+  "a post drawing twice the usual",
+  postSpike(RIVALS, [post("b", 0.5, 18400), ...usual("b")], SEEN),
+  {
+    title: "Babu Owino's TikTok post is drawing 2.3 times the usual response",
+    detail: "18,400 reactions, comments and shares, against about 7,900 usually.",
+  },
+);
+eq(
+  "no baseline, no spike",
+  postSpike(RIVALS, [post("b", 0.5, 18400), post("b", 5, 8000)], SEEN),
+  null,
+);
+eq("an old post is not news", postSpike(RIVALS, [post("b", 3, 18400), ...usual("b")], SEEN), null);
+eq(
+  "our own post is not a rival's move",
+  postSpike(RIVALS, [post("s", 0.5, 18400), ...usual("s")], SEEN),
+  null,
+);
+eq(
+  "a usual response is not a spike",
+  postSpike(RIVALS, [post("b", 0.5, 9000), ...usual("b")], SEEN),
+  null,
+);
+eq(
+  "the bigger of two spikes",
+  postSpike(
+    RIVALS,
+    [post("b", 0.5, 18400), ...usual("b"), post("k", 1, 30000), ...usual("k")],
+    SEEN,
+  )?.title,
+  "Agnes Kagure's TikTok post is drawing 3.8 times the usual response",
+);
+eq(
+  "how it landed, in words",
+  landedLine(
+    post("b", 1, 13200, { landed: { read: 50, positive: 12, negative: 31, issue: "water" } }),
+  ),
+  "13,200 reactions, comments and shares. Of 50 comments read, 31 negative and 12 positive; mostly about water.",
+);
+eq("reach only", landedLine(post("b", 1, 13200)), "13,200 reactions, comments and shares.");
+eq(
+  "no comments under it",
+  landedLine(
+    post("b", 1, 13200, { landed: { read: 0, positive: null, negative: null, issue: null } }),
+  ),
+  "13,200 reactions, comments and shares.",
+);
+const ROW = {
+  rival_id: "b",
+  source: "x",
+  url: "https://x.com/a/status/1",
+  title: "Hi",
+  published_at: "2026-09-28T09:30:00Z",
+  reach: 2020,
+  comments_read: null,
+  comments_positive: null,
+  comments_negative: null,
+  comments_issue: null,
+};
+eq("a post row", postFromRow(ROW), {
+  rivalId: "b",
+  platform: "x",
+  url: "https://x.com/a/status/1",
+  text: "Hi",
+  publishedAt: "2026-09-28T09:30:00Z",
+  reach: 2020,
+  landed: null,
+});
+eq(
+  "a read post row",
+  postFromRow({
+    ...ROW,
+    source: "tiktok",
+    comments_read: 40,
+    comments_positive: 10,
+    comments_negative: 20,
+    comments_issue: "roads",
+  })?.landed,
+  { read: 40, positive: 10, negative: 20, issue: "roads" },
+);
+eq("not a rival's post", postFromRow({ ...ROW, rival_id: null, source: "news" }), null);
+eq("a rival's row from an unknown place", postFromRow({ ...ROW, source: "web" }), null);
+eq("a link that is not the web", postFromRow({ ...ROW, url: "javascript:alert(1)" }), null);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

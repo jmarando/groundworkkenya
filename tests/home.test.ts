@@ -305,6 +305,34 @@ function db(extra: Record<string, Record<string, unknown>[]> = {}) {
   });
 }
 
+// Babu Owino's own posts, as the rival sweep keeps them: mood and issue from
+// the classifier, and for the video how its comments landed.
+const babuPost = (n: number, source: string, days: number, reach: number) => ({
+  rival_id: "b",
+  source,
+  url: `https://www.tiktok.com/@he.babuowino/video/${n}`,
+  title: `Post ${n}`,
+  published_at: daysAgo(days),
+  found_at: daysAgo(days),
+  reach,
+  issue: "water",
+  sentiment: "negative",
+  comments_read: null,
+  comments_positive: null,
+  comments_negative: null,
+  comments_issue: null,
+});
+const BABU_POSTS = [
+  { ...babuPost(1, "x", 1, 2020), url: "https://x.com/HEBabuOwino/status/1" },
+  {
+    ...babuPost(2, "tiktok", 2, 13200),
+    comments_read: 50,
+    comments_positive: 12,
+    comments_negative: 31,
+    comments_issue: "water",
+  },
+];
+
 async function main() {
   {
     const h = await loadHome(db() as never, ME, "manager");
@@ -340,6 +368,51 @@ async function main() {
       x: null,
       tiktok: null,
     });
+    const race = {
+      race_rivals: [
+        rival("s", "Johnson Sakaja", "us", 0, true),
+        rival("g", "James Gakuya", "c", 3),
+        rival("b", "Babu Owino", "a", 1),
+      ],
+      race_polls: [
+        {
+          id: "mj",
+          pollster: "Mizani Africa",
+          fieldwork_from: null,
+          fieldwork_to: null,
+          published_on: "2026-07-01",
+          sample_size: null,
+          margin: null,
+          source_url: "https://a.test/mj",
+          shares: [
+            { name: "Babu Owino", share: 27.1, rival_id: "b" },
+            { name: "Johnson Sakaja", share: 19.9, rival_id: "s" },
+            { name: "James Gakuya", share: 11.2, rival_id: "g" },
+          ],
+          undecided: 13.3,
+          approval: null,
+          disapproval: null,
+        },
+        {
+          id: "ma",
+          pollster: "Mizani Africa",
+          fieldwork_from: "2026-08-21",
+          fieldwork_to: "2026-08-28",
+          published_on: "2026-09-10",
+          sample_size: 1820,
+          margin: 2.3,
+          source_url: "https://a.test/ma",
+          shares: [
+            { name: "Babu Owino", share: 28.4, rival_id: "b" },
+            { name: "Johnson Sakaja", share: 17, rival_id: "s" },
+            { name: "James Gakuya", share: 15, rival_id: "g" },
+          ],
+          undecided: 8.1,
+          approval: null,
+          disapproval: null,
+        },
+      ],
+    };
     const h = await loadHome(
       db({
         listening_mentions: [
@@ -378,50 +451,9 @@ async function main() {
             url: "https://a.test/5",
             found_at: daysAgo(40),
           },
+          ...BABU_POSTS,
         ],
-        race_rivals: [
-          rival("s", "Johnson Sakaja", "us", 0, true),
-          rival("g", "James Gakuya", "c", 3),
-          rival("b", "Babu Owino", "a", 1),
-        ],
-        race_polls: [
-          {
-            id: "mj",
-            pollster: "Mizani Africa",
-            fieldwork_from: null,
-            fieldwork_to: null,
-            published_on: "2026-07-01",
-            sample_size: null,
-            margin: null,
-            source_url: "https://a.test/mj",
-            shares: [
-              { name: "Babu Owino", share: 27.1, rival_id: "b" },
-              { name: "Johnson Sakaja", share: 19.9, rival_id: "s" },
-              { name: "James Gakuya", share: 11.2, rival_id: "g" },
-            ],
-            undecided: 13.3,
-            approval: null,
-            disapproval: null,
-          },
-          {
-            id: "ma",
-            pollster: "Mizani Africa",
-            fieldwork_from: "2026-08-21",
-            fieldwork_to: "2026-08-28",
-            published_on: "2026-09-10",
-            sample_size: 1820,
-            margin: 2.3,
-            source_url: "https://a.test/ma",
-            shares: [
-              { name: "Babu Owino", share: 28.4, rival_id: "b" },
-              { name: "Johnson Sakaja", share: 17, rival_id: "s" },
-              { name: "James Gakuya", share: 15, rival_id: "g" },
-            ],
-            undecided: 8.1,
-            approval: null,
-            disapproval: null,
-          },
-        ],
+        ...race,
       }) as never,
       ME,
       "organiser",
@@ -443,14 +475,48 @@ async function main() {
       h.signals.rivalMove?.title,
       "James Gakuya up 3.8 points in Mizani Africa's latest poll",
     );
+    eq(
+      "rivals' own posts, newest first",
+      h.race.posts.map((p) => [p.platform, p.rivalId, p.reach]),
+      [
+        ["x", "b", 2020],
+        ["tiktok", "b", 13200],
+      ],
+    );
+    eq("how the video landed", h.race.posts[1]?.landed, {
+      read: 50,
+      positive: 12,
+      negative: 31,
+      issue: "water",
+    });
     eq("this week's loudest issue", h.signals.topIssue, { label: "Water", count: 3, angry: 2 });
     eq(
-      "thirty days of what people say",
+      "thirty days of what people say, rivals' own posts apart",
       h.race.issues.map((i) => [i.key, i.count]),
       [
         ["water", 3],
         ["floods", 1],
       ],
+    );
+
+    const spiking = await loadHome(
+      db({
+        listening_mentions: [
+          babuPost(3, "tiktok", 0.5, 18400),
+          babuPost(4, "tiktok", 5, 8000),
+          babuPost(5, "tiktok", 9, 7900),
+          babuPost(6, "tiktok", 14, 7000),
+        ],
+        ...race,
+      }) as never,
+      ME,
+      "organiser",
+      "2026-09-29",
+    );
+    eq(
+      "a post drawing far more than usual beats a poll change",
+      spiking.signals.rivalMove?.title,
+      "Babu Owino's TikTok post is drawing 2.3 times the usual response",
     );
   }
   {

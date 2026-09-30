@@ -4,7 +4,7 @@
 
 import { ours } from "@/lib/demo";
 import type { Action, Scenario } from "@/lib/demo/types";
-import type { RacePoll, RaceRival, RivalMove } from "@/lib/race-data";
+import type { RacePoll, RaceRival, RivalMove, RivalPost } from "@/lib/race-data";
 
 export type SectionMode = "real" | "sample";
 
@@ -45,7 +45,13 @@ export type IssueLine = {
   examples: { text: string; url: string | null }[];
 };
 /** The campaign's own race; empty until someone adds it. */
-export type RaceView = { rivals: RaceRival[]; polls: RacePoll[]; issues: IssueLine[] };
+export type RaceView = {
+  rivals: RaceRival[];
+  polls: RacePoll[];
+  issues: IssueLine[];
+  /** Rivals' own posts from the last 30 days, newest first. */
+  posts: RivalPost[];
+};
 
 export function sectionModes(f: HomeFacts): { race: SectionMode; campaign: SectionMode } {
   return {

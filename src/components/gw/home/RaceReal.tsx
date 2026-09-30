@@ -4,7 +4,15 @@ import { useMemo, useState } from "react";
 import { PollChart } from "@/components/gw/home/PollChart";
 import type { Scenario } from "@/lib/demo/types";
 import type { IssueLine, RaceView } from "@/lib/home";
-import { byRecency, fieldworkLabel, pollChart, pollLabel, shareOf } from "@/lib/race-data";
+import {
+  byRecency,
+  fieldworkLabel,
+  landedLine,
+  platformName,
+  pollChart,
+  pollLabel,
+  shareOf,
+} from "@/lib/race-data";
 
 const nf = new Intl.NumberFormat("en-KE");
 
@@ -154,6 +162,14 @@ function PollsCard({
   );
 }
 
+/** "28 Sep", in Nairobi's time so the server and the browser agree. */
+const postDay = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Nairobi",
+  });
+
 function RivalsCard({
   race,
   canEdit,
@@ -178,6 +194,9 @@ function RivalsCard({
         <ul className="home-rival-list">
           {race.rivals.map((r) => {
             const p = newest.find((x) => shareOf(x, r) !== null);
+            // Posts come newest first.
+            const post = race.posts.find((x) => x.rivalId === r.id);
+            const landed = post ? landedLine(post) : "";
             return (
               <li key={r.id}>
                 <span className={`mb-swatch mb-swatch--${r.tone}`} aria-hidden="true" />
@@ -198,6 +217,16 @@ function RivalsCard({
                     <small className="dim">In no poll yet</small>
                   )}
                 </span>
+                {post ? (
+                  <div className="home-rival-post">
+                    <a href={post.url} target="_blank" rel="noopener noreferrer">
+                      Latest on {platformName(post.platform)}
+                      {post.publishedAt ? ` · ${postDay(post.publishedAt)}` : ""}
+                    </a>
+                    {post.text ? <p>{post.text.slice(0, 140)}</p> : null}
+                    {landed ? <small className="dim">{landed}</small> : null}
+                  </div>
+                ) : null}
               </li>
             );
           })}

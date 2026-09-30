@@ -1939,6 +1939,8 @@ figure { margin: 0; }
 .home-rival-list li:last-child { border-bottom:0; }
 .home-rival-list small { display:block; }
 .home-rival-share { text-align:right; }
+.home-rival-post { grid-column:2 / -1; font-size:13px; margin-top:-4px; }
+.home-rival-post p { margin:4px 0; overflow-wrap:anywhere; }
 .home-issues { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
 .home-issue-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap; }
 .home-issue-line { margin:4px 0 0; font-size:13px; color:var(--muted-foreground); overflow-wrap:anywhere; }
