@@ -134,12 +134,29 @@ async function firecrawlSearch(query: string, limit: number, tbs: string): Promi
 
 type Verdict = { id: string; sentiment: "positive" | "neutral" | "negative"; issue: string; score: number };
 
-async function readMoods(
-  items: { id: string; text: string }[],
-): Promise<Verdict[]> {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new PauseError("AI is not configured.");
+const MOOD_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["results"],
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "sentiment", "issue", "score"],
+        properties: {
+          id: { type: "string" },
+          sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+          issue: { type: "string" },
+          score: { type: "number" },
+        },
+      },
+    },
+  },
+};
 
+async function readMoods(items: { id: string; text: string }[]): Promise<Verdict[]> {
   const prompt = [
     "You monitor Kenyan news, blogs and social posts for a county political campaign.",
     "Text may mix English, Kiswahili and Sheng.",
@@ -150,6 +167,14 @@ async function readMoods(
     "",
     JSON.stringify(items),
   ].join("\n");
+  const parsed = await askAiJson<{ results?: Verdict[] }>(prompt, "mood_batch", MOOD_SCHEMA);
+  return parsed.results ?? [];
+}
+
+/** One structured answer from the AI gateway, read from its stream and parsed. */
+export async function askAiJson<T>(prompt: string, name: string, schema: object): Promise<T> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new PauseError("AI is not configured.");
 
   const res = await fetch(AI_GATEWAY, {
     method: "POST",
@@ -164,40 +189,14 @@ async function readMoods(
       stream: true,
       reasoning: { effort: "low", summary: "auto" },
       include: ["reasoning.encrypted_content"],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "mood_batch",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["results"],
-            properties: {
-              results: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["id", "sentiment", "issue", "score"],
-                  properties: {
-                    id: { type: "string" },
-                    sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
-                    issue: { type: "string" },
-                    score: { type: "number" },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+      text: { format: { type: "json_schema", name, strict: true, schema } },
     }),
   });
 
   if (!res.ok || !res.body) {
     const body = await res.text();
-    if (isBlocking(res.status)) throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`);
+    if (isBlocking(res.status))
+      throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`);
     throw new Error(`AI request failed (${res.status}): ${body.slice(0, 180)}`);
   }
 
@@ -218,15 +217,15 @@ async function readMoods(
       if (!payload || payload === "[DONE]") continue;
       try {
         const evt = JSON.parse(payload) as { type?: string; delta?: string };
-        if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") text += evt.delta;
+        if (evt.type === "response.output_text.delta" && typeof evt.delta === "string")
+          text += evt.delta;
       } catch {
         /* skip malformed frame */
       }
     }
   }
 
-  const parsed = JSON.parse(text) as { results?: Verdict[] };
-  return parsed.results ?? [];
+  return JSON.parse(text) as T;
 }
 
 /* ------------------------------------------------------------ the sweep */

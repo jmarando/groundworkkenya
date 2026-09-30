@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
 import { runListeningScan } from "@/lib/listening.server";
+import { runRivalSweep } from "@/lib/race-sweep.server";
 
 /**
  * Hourly listening sweep. Called by the scheduler with the shared cron secret.
@@ -30,7 +31,12 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         );
 
         const result = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
-        return Response.json(result);
+        // Once a day the same call reads rivals' own posts (it keeps its own clock).
+        const rivals = await runRivalSweep(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
+        return Response.json({ ...result, rivals });
       },
     },
   },

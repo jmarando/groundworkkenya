@@ -1,12 +1,22 @@
 /**
  * ScrapeCreators social-platform search (server only).
  *
- * Keyword search across TikTok, Reddit and YouTube for the listening sweep.
+ * Keyword search across TikTok, Reddit and YouTube for the listening sweep,
+ * and each rival's own posts and comment pages for the daily rival sweep.
  * Best effort: a credit failure throws ScrapeCreatorsCreditError so the sweep
  * can note it and keep going instead of pausing everything.
  *
  * Docs: https://docs.scrapecreators.com — auth via the `x-api-key` header.
  */
+
+import {
+  commentTexts,
+  facebookPosts,
+  tiktokPosts,
+  xPosts,
+  type Platform,
+  type SocialPost,
+} from "./rival-posts";
 
 export type Found = {
   url: string;
@@ -106,4 +116,41 @@ export async function scSearchYouTube(query: string, limit = 8): Promise<Found[]
     }))
     .filter((h) => Boolean(h.url))
     .slice(0, limit);
+}
+
+/* -------------------------------------------------------- rivals' posts */
+
+/** A rival's recent posts on one platform. One request, one credit. */
+export async function scRivalPosts(platform: Platform, handle: string): Promise<SocialPost[]> {
+  if (platform === "tiktok") {
+    const json: unknown = await scGet("/v3/tiktok/profile/videos", {
+      handle,
+      sort_by: "latest",
+      trim: "true",
+    });
+    return tiktokPosts(json, handle);
+  }
+  if (platform === "x") {
+    const json: unknown = await scGet("/v1/twitter/user-tweets", { handle, trim: "true" });
+    return xPosts(json, handle);
+  }
+  const json: unknown = await scGet("/v1/facebook/profile/posts", {
+    url: `https://www.facebook.com/${handle}`,
+  });
+  return facebookPosts(json);
+}
+
+/** One page of comments on a TikTok or Facebook post, and where the next page starts. */
+export async function scCommentPage(
+  platform: "tiktok" | "facebook",
+  url: string,
+  cursor?: string,
+): Promise<{ texts: string[]; next: string | null }> {
+  const path = platform === "tiktok" ? "/v1/tiktok/video/comments" : "/v1/facebook/post/comments";
+  const json: unknown = await scGet(path, { url, ...(cursor ? { cursor } : {}) });
+  const page = (json && typeof json === "object" ? json : {}) as Record<string, unknown>;
+  const more = platform === "tiktok" ? Boolean(page["has_more"]) : Boolean(page["has_next_page"]);
+  const c = page["cursor"];
+  const next = more && c !== undefined && c !== null && c !== "" ? String(c) : null;
+  return { texts: commentTexts(page), next };
 }
