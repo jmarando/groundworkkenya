@@ -168,3 +168,39 @@ do $$ begin
   assert public.groundwork_schema_version() = 17, 'schema version';
 end $$;
 rollback;
+
+-- test: Sakaja's candidates' confirmed accounts, and a keyword for each rival and Nairobi issue
+do $$ begin
+  assert (select x from public.race_rivals where name = 'Babu Owino') = 'HEBabuOwino', 'Babu''s X';
+  assert (select tiktok from public.race_rivals where name = 'Babu Owino') = 'he.babuowino', 'Babu''s TikTok';
+  assert (select facebook from public.race_rivals where name = 'Babu Owino') = 'babuowinongili', 'Babu''s Facebook';
+  assert (select x from public.race_rivals where name = 'Johnson Sakaja') = 'SakajaJohnson', 'Sakaja''s X';
+  assert (select facebook from public.race_rivals where name = 'James Gakuya') = 'hon.james.gakuya', 'Gakuya''s Facebook';
+  assert (select x from public.race_rivals where name = 'James Gakuya') is null, 'an unconfirmed X for Gakuya';
+  assert (select count(*) from public.race_rivals where tiktok is not null) = 1, 'an unconfirmed TikTok';
+  assert (select count(*) from public.listening_topics
+           where campaign_id = 'ca000000-0000-4000-8000-000000000002'
+             and label in ('Babu Owino', 'Agnes Kagure', 'James Gakuya', 'Ronald Karauri', 'Floods',
+                           'Drainage', 'Hawkers', 'Transport', 'Revenue')) = 9,
+    'a keyword for each rival and each Nairobi issue';
+  assert (select count(*) from public.listening_topics where label in ('Water', 'Garbage')) = 0,
+    'water and garbage added beside the workspace''s own water and garbage keywords';
+  assert (select count(*) from public.listening_topics where label = 'Floods'
+           and campaign_id <> 'ca000000-0000-4000-8000-000000000002') = 0, 'another campaign got keywords';
+end $$;
+
+-- test: running it again keeps the team's edits and adds nothing twice
+begin;
+update public.race_rivals set x = 'SomeoneElse' where name = 'Babu Owino';
+delete from public.listening_topics where label = 'Water and sanitation';
+\ir ../../supabase/migrations/20260930091000_sakaja_handles.sql
+do $$ begin
+  assert (select x from public.race_rivals where name = 'Babu Owino') = 'SomeoneElse', 'an edit was overwritten';
+  assert (select count(*) from public.listening_topics where label = 'Floods'
+           and campaign_id = 'ca000000-0000-4000-8000-000000000002') = 1, 'a keyword added twice';
+  assert (select count(*) from public.listening_topics where label = 'Water'
+           and campaign_id = 'ca000000-0000-4000-8000-000000000002') = 1,
+    'no water keyword left, and none added';
+  assert public.groundwork_schema_version() = 19, 'schema version';
+end $$;
+rollback;
