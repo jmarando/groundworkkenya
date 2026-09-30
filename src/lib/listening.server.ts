@@ -332,10 +332,13 @@ export async function runListeningScan(
       }));
 
       if (rows.length) {
-        const { data: ins } = await sb
+        // Unique per campaign: the same story can matter to two campaigns.
+        const { data: ins, error: insErr } = await sb
           .from("listening_mentions")
-          .upsert(rows, { onConflict: "url", ignoreDuplicates: true })
+          .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true })
           .select("id");
+        if (insErr)
+          notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
         stored += ins?.length ?? 0;
       }
 

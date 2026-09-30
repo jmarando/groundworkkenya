@@ -2,8 +2,9 @@
 // that runs with the service role. Rows are kept per table and filters are
 // applied for real. Inserts get a campaign the way the database's
 // stamp_campaign trigger gives them one: from the row itself, else from its
-// person, conversation, poll or ward, else the campaign that owns the
-// channels. Nothing leaves this process.
+// person, conversation, poll, ward or topic, else the campaign that owns the
+// channels. An upsert must name a unique key the table has, as Postgres
+// insists. Nothing leaves this process.
 
 type Row = Record<string, unknown>;
 type Filter = (r: Row) => boolean;
@@ -15,11 +16,19 @@ export const CHANNEL_CAMPAIGN = "camp-channel";
 /** Unique keys, as in the database. */
 const UNIQUE: Record<string, string[]> = { people: ["campaign_id", "phone"] };
 
+/** Unique keys an upsert may name in onConflict, as the database has them. */
+const KEYS: Record<string, string[][]> = {
+  people: [["campaign_id", "phone"]],
+  listening_mentions: [["campaign_id", "url"]],
+  listening_jobs: [["key"]],
+};
+
 const PARENTS: [string, string][] = [
   ["person_id", "people"],
   ["conversation_id", "conversations"],
   ["poll_id", "polls"],
   ["ward_id", "wards"],
+  ["topic_id", "listening_topics"],
 ];
 
 let seq = 0;
@@ -44,9 +53,11 @@ export function fakeSupabase(
   };
 
   function from(table: string) {
-    let op: "select" | "insert" | "update" | "delete" = "select";
+    let op: "select" | "insert" | "update" | "delete" | "upsert" = "select";
     let payload: Row[] = [];
     let patch: Row = {};
+    let conflict: string[] = [];
+    let ignoreDup = false;
     const filters: Filter[] = [];
     const orders: { col: string; asc: boolean }[] = [];
     let limit: number | null = null;
@@ -81,6 +92,37 @@ export function fakeSupabase(
         rows(table).push(...out);
         return returning ? shape(out) : { data: null, error: null };
       }
+      if (op === "upsert") {
+        const known = [...(KEYS[table] ?? []), ["id"]];
+        if (
+          !known.some((k) => k.length === conflict.length && k.every((c) => conflict.includes(c)))
+        ) {
+          return {
+            data: null,
+            error: {
+              code: "42P10",
+              message:
+                "there is no unique or exclusion constraint matching the ON CONFLICT specification",
+            },
+          };
+        }
+        const out: Row[] = [];
+        for (const p of payload) {
+          const r: Row = { id: `id-${++seq}`, created_at: new Date().toISOString(), ...p };
+          if (table !== "campaigns") r["campaign_id"] = stamp(r);
+          const same = rows(table).find((x) => conflict.every((c) => x[c] === r[c]));
+          if (same) {
+            if (!ignoreDup) {
+              Object.assign(same, p);
+              out.push(same);
+            }
+            continue;
+          }
+          rows(table).push(r);
+          out.push(r);
+        }
+        return returning ? shape(out) : { data: null, error: null };
+      }
       let hit = rows(table).filter((r) => filters.every((f) => f(r)));
       if (op === "update") {
         for (const r of hit) Object.assign(r, patch);
@@ -92,8 +134,11 @@ export function fakeSupabase(
       }
       for (const o of [...orders].reverse()) {
         hit = [...hit].sort((a, b) => {
-          const x = String(a[o.col] ?? "");
-          const y = String(b[o.col] ?? "");
+          const va = a[o.col];
+          const vb = b[o.col];
+          if (typeof va === "number" && typeof vb === "number") return (va - vb) * (o.asc ? 1 : -1);
+          const x = String(va ?? "");
+          const y = String(vb ?? "");
           return (x < y ? -1 : x > y ? 1 : 0) * (o.asc ? 1 : -1);
         });
       }
@@ -111,6 +156,13 @@ export function fakeSupabase(
       insert(v: Row | Row[]) {
         op = "insert";
         payload = Array.isArray(v) ? v : [v];
+        return q;
+      },
+      upsert(v: Row | Row[], o: { onConflict?: string; ignoreDuplicates?: boolean } = {}) {
+        op = "upsert";
+        payload = Array.isArray(v) ? v : [v];
+        conflict = (o.onConflict ?? "id").split(",").map((c) => c.trim());
+        ignoreDup = o.ignoreDuplicates === true;
         return q;
       },
       update(v: Row) {
@@ -134,9 +186,13 @@ export function fakeSupabase(
         filters.push((r) => vs.includes(r[c]));
         return q;
       },
-      /** Only "cs" (array contains), negated: rows whose array lacks any listed value. */
-      not(c: string, op: string, v: string) {
-        if (op !== "cs") throw new Error(`fake not(): unsupported operator ${op}`);
+      /** "is" (not null), or "cs" (array contains) negated: rows whose array lacks any listed value. */
+      not(c: string, op: string, v: string | null) {
+        if (op === "is") {
+          filters.push((r) => (r[c] ?? null) !== v);
+          return q;
+        }
+        if (op !== "cs" || v === null) throw new Error(`fake not(): unsupported operator ${op}`);
         const want = v
           .replace(/^\{|\}$/g, "")
           .split(",")
