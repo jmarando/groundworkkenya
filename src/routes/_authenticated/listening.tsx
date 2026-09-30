@@ -217,7 +217,11 @@ function Listening() {
                   .join(" · ") || "No keywords yet."}
               </p>
             </div>
-            <button type="button" className="btn btn--sm" onClick={() => setTab("keywords")}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => setTab("keywords")}
+            >
               Add keywords
             </button>
           </div>
@@ -559,7 +563,7 @@ function Keywords({
               Google Alert feed read when it has one.
             </p>
           </div>
-          <span className="mono">{data?.topics.length ?? 0} topics</span>
+          <span className="mono">{data?.topics.length ?? 0} keywords</span>
         </div>
         <div className="f-rows">
           {(data?.topics ?? []).map((tp) => (
@@ -571,9 +575,12 @@ function Keywords({
                   {tp.query} · {tp.kind} · swept {stamp(tp.lastScannedAt)}
                   {tp.alertFeedUrl ? " · Google Alert" : ""}
                 </span>
+                <br />
+                <b>
+                  {tp.mentions} found · {tp.negative} angry
+                </b>
               </span>
-              <b style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                {tp.mentions} found · {tp.negative} angry
+              <span style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                 <button
                   className="btn btn--sm"
                   disabled={busy}
@@ -584,14 +591,14 @@ function Keywords({
                 <button
                   className="btn btn--sm"
                   disabled={busy}
-                  onClick={() => act(() => drop({ data: { id: tp.id } }), "Topic removed.")}
+                  onClick={() => act(() => drop({ data: { id: tp.id } }), "Keyword removed.")}
                 >
                   remove
                 </button>
-              </b>
+              </span>
             </div>
           ))}
-          {(data?.topics ?? []).length === 0 && <p className="f-note">No topics yet.</p>}
+          {(data?.topics ?? []).length === 0 && <p className="f-note">No keywords yet.</p>}
         </div>
       </div>
 

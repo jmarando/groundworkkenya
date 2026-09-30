@@ -14,6 +14,7 @@ import {
   pollChart,
   pollFromRow,
   pollLabel,
+  postDay,
   postFromRow,
   postSpike,
   realVerdict,
@@ -663,6 +664,11 @@ eq(
   "13,200 reactions, comments and shares. Of 50 comments read, 31 negative and 12 positive; mostly about water.",
 );
 eq("reach only", landedLine(post("b", 1, 13200)), "13,200 reactions, comments and shares.");
+eq(
+  "the day a post went up, in Nairobi",
+  [postDay("2026-09-28T09:30:00Z"), postDay("2026-09-28T22:30:00Z"), postDay("not a date")],
+  ["28 Sep", "29 Sep", ""],
+);
 eq(
   "no comments under it",
   landedLine(

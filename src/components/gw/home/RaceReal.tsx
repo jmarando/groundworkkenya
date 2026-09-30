@@ -11,6 +11,7 @@ import {
   platformName,
   pollChart,
   pollLabel,
+  postDay,
   shareOf,
 } from "@/lib/race-data";
 
@@ -162,14 +163,6 @@ function PollsCard({
   );
 }
 
-/** "28 Sep", in Nairobi's time so the server and the browser agree. */
-const postDay = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    timeZone: "Africa/Nairobi",
-  });
-
 function RivalsCard({
   race,
   canEdit,
@@ -221,7 +214,7 @@ function RivalsCard({
                   <div className="home-rival-post">
                     <a href={post.url} target="_blank" rel="noopener noreferrer">
                       Latest on {platformName(post.platform)}
-                      {post.publishedAt ? ` · ${postDay(post.publishedAt)}` : ""}
+                      {post.publishedAt ? ` · ${postDay(post.publishedAt)}` : ""} ›
                     </a>
                     {post.text ? <p>{post.text.slice(0, 140)}</p> : null}
                     {landed ? <small className="dim">{landed}</small> : null}

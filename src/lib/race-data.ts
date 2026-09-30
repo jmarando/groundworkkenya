@@ -523,6 +523,14 @@ export function postFromRow(r: PostRow): RivalPost | null {
 
 const nf = new Intl.NumberFormat("en-KE");
 
+/** "28 Sep": the day a post went up, in Nairobi (UTC+3 all year). */
+export function postDay(iso: string): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  const d = new Date(t + 3 * 3600_000);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+}
+
 /** A post's reach and, when read, how its comments landed. */
 export function landedLine(p: RivalPost): string {
   const reach = p.reach === null ? "" : `${nf.format(p.reach)} reactions, comments and shares.`;
