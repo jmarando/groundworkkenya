@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { cleanAlertFeed } from "@/lib/alerts-feed";
 
 export type Mention = {
   id: string;
@@ -39,6 +40,8 @@ export type ListeningData = {
     query: string;
     keywords: string[];
     excludeTerms: string[];
+    /** The keyword's Google Alert feed, read by the hourly sweep. */
+    alertFeedUrl: string | null;
     kind: string;
     active: boolean;
     lastScannedAt: string | null;
@@ -165,6 +168,7 @@ export const getListening = createServerFn({ method: "GET" })
         query: t.query,
         keywords: t.keywords ?? [],
         excludeTerms: t.exclude_terms ?? [],
+        alertFeedUrl: t.alert_feed_url ?? null,
         kind: t.kind,
         active: t.active,
         lastScannedAt: t.last_scanned_at,
@@ -295,6 +299,7 @@ export const saveTopic = createServerFn({ method: "POST" })
       query: string;
       keywords?: string;
       excludeTerms?: string;
+      alertFeedUrl?: string;
       kind?: string;
       active?: boolean;
     }) => {
@@ -302,7 +307,12 @@ export const saveTopic = createServerFn({ method: "POST" })
       const query = (input.query ?? "").trim();
       if (!label) throw new Error("Give the topic a name.");
       if (!query) throw new Error("Add the words to search for.");
-      return { ...input, label: label.slice(0, 80), query: query.slice(0, 200) };
+      return {
+        ...input,
+        label: label.slice(0, 80),
+        query: query.slice(0, 200),
+        alertFeedUrl: cleanAlertFeed(input.alertFeedUrl),
+      };
     },
   )
   .handler(async ({ data, context }) => {
@@ -311,6 +321,7 @@ export const saveTopic = createServerFn({ method: "POST" })
       query: data.query,
       keywords: words(data.keywords),
       exclude_terms: words(data.excludeTerms),
+      alert_feed_url: data.alertFeedUrl,
       kind: data.kind ?? "issue",
       active: data.active ?? true,
     };

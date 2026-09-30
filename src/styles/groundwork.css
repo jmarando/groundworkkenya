@@ -1956,3 +1956,7 @@ figure { margin: 0; }
 /* The race panels fill their width (an older .pb-body rule leaves rows at content width). */
 .re-panel .pb-body { align-items:stretch; }
 .re-panel fieldset > .btn { align-self:flex-start; }
+
+/* Listening: the keywords at the top of Pulse. */
+.lk-keywords { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px; }
+.lk-keywords p { margin:4px 0 0; }

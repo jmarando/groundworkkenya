@@ -61,7 +61,7 @@ const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", neg
 const TABS = [
   { key: "pulse", label: "Pulse" },
   { key: "mentions", label: "Mentions" },
-  { key: "watchlist", label: "Watchlist" },
+  { key: "keywords", label: "Keywords" },
   { key: "alerts", label: "Alerts" },
 ] as const;
 
@@ -164,8 +164,8 @@ function Listening() {
             Everything said about you, <span className="serif">in one room.</span>
           </h1>
           <p className="meta">
-            News sites, blogs and public posts swept every hour against your watchlist, read for mood and
-            issue, and pushed to whoever needs to know.
+            News sites, blogs and public posts swept every hour against your keywords, read for mood
+            and issue, and pushed to whoever needs to know.
           </p>
         </div>
         <div className="vh-side">
@@ -207,11 +207,25 @@ function Listening() {
 
       {tab === "pulse" && (
         <>
+          <div className="card lk-keywords">
+            <div>
+              <span className="eyebrow">Keywords</span>
+              <p>
+                {(data?.topics ?? [])
+                  .filter((tp) => tp.active)
+                  .map((tp) => tp.label)
+                  .join(" · ") || "No keywords yet."}
+              </p>
+            </div>
+            <button type="button" className="btn btn--sm" onClick={() => setTab("keywords")}>
+              Add keywords
+            </button>
+          </div>
           <div className="g5" style={{ marginTop: 14 }}>
             <div className="kpi">
               <span className="kpi-lbl">Mentions tracked</span>
               <span className="kpi-val">{nf.format(t?.mentions ?? 0)}</span>
-              <span className="kpi-foot">across the whole watchlist</span>
+              <span className="kpi-foot">across all your keywords</span>
             </div>
             <div className="kpi">
               <span className="kpi-lbl">Last 24 hours</span>
@@ -468,7 +482,16 @@ function Listening() {
         </div>
       )}
 
-      {tab === "watchlist" && <Watchlist data={data} busy={busy} act={act} save={upsertTopic} flip={flipTopic} drop={dropTopic} />}
+      {tab === "keywords" && (
+        <Keywords
+          data={data}
+          busy={busy}
+          act={act}
+          save={upsertTopic}
+          flip={flipTopic}
+          drop={dropTopic}
+        />
+      )}
 
       {tab === "alerts" && (
         <Alerts
@@ -485,12 +508,12 @@ function Listening() {
   );
 }
 
-/* --------------------------------------------------------------- watchlist */
+/* ---------------------------------------------------------------- keywords */
 
 type Data = Awaited<ReturnType<typeof getListening>> | undefined;
 type Act = (fn: () => Promise<unknown>, ok: string) => Promise<void>;
 
-function Watchlist({
+function Keywords({
   data,
   busy,
   act,
@@ -505,15 +528,26 @@ function Watchlist({
   flip: (a: { data: any }) => Promise<unknown>;
   drop: (a: { data: any }) => Promise<unknown>;
 }) {
-  const [form, setForm] = useState({ label: "", query: "", keywords: "", excludeTerms: "", kind: "issue" });
+  const empty = {
+    label: "",
+    query: "",
+    keywords: "",
+    excludeTerms: "",
+    alertFeedUrl: "",
+    kind: "issue",
+  };
+  const [form, setForm] = useState(empty);
 
   return (
     <div className="g2" style={{ marginTop: 14 }}>
       <div className="card">
         <div className="card-head">
           <div>
-            <h2>What we watch</h2>
-            <p className="meta">Each topic is searched across news, blogs and public posts every hour.</p>
+            <h2>Keywords</h2>
+            <p className="meta">
+              Each keyword is searched across news, blogs and public posts every hour, and its
+              Google Alert feed read when it has one.
+            </p>
           </div>
           <span className="mono">{data?.topics.length ?? 0} topics</span>
         </div>
@@ -525,6 +559,7 @@ function Watchlist({
                 <br />
                 <span className="meta">
                   {tp.query} · {tp.kind} · swept {stamp(tp.lastScannedAt)}
+                  {tp.alertFeedUrl ? " · Google Alert" : ""}
                 </span>
               </span>
               <b style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -552,8 +587,8 @@ function Watchlist({
 
       <div className="card">
         <div className="card-head">
-          <h2>Add a topic</h2>
-          <span className="mono">watchlist</span>
+          <h2>Add a keyword</h2>
+          <span className="mono">keywords</span>
         </div>
         <div className="auth-form">
           <label className="auth-field">
@@ -573,6 +608,18 @@ function Watchlist({
             <input value={form.excludeTerms} onChange={(e) => setForm({ ...form, excludeTerms: e.target.value })} placeholder="football, betting" />
           </label>
           <label className="auth-field">
+            <span>Google Alert feed (optional)</span>
+            <input
+              value={form.alertFeedUrl}
+              onChange={(e) => setForm({ ...form, alertFeedUrl: e.target.value })}
+              placeholder="https://www.google.com/alerts/feeds/…"
+            />
+          </label>
+          <p className="f-note">
+            On google.com/alerts, create the alert, open Show options and set Deliver to: RSS feed.
+            Copy the feed icon&apos;s link and paste it here. It costs no credits.
+          </p>
+          <label className="auth-field">
             <span>Type</span>
             <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
               <option value="campaign">Us</option>
@@ -586,11 +633,11 @@ function Watchlist({
             onClick={() =>
               act(async () => {
                 await save({ data: form });
-                setForm({ label: "", query: "", keywords: "", excludeTerms: "", kind: "issue" });
-              }, "Topic added.")
+                setForm(empty);
+              }, "Keyword added.")
             }
           >
-            Add to watchlist
+            Add keyword
           </button>
         </div>
       </div>
