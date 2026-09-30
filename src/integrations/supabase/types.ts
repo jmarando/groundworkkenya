@@ -897,6 +897,10 @@ export type Database = {
         Row: {
           author: string | null
           campaign_id: string
+          comments_issue: string | null
+          comments_negative: number | null
+          comments_positive: number | null
+          comments_read: number | null
           created_at: string
           domain: string | null
           found_at: string
@@ -904,6 +908,7 @@ export type Database = {
           issue: string | null
           published_at: string | null
           reach: number | null
+          rival_id: string | null
           sentiment: string | null
           sentiment_score: number | null
           snippet: string | null
@@ -917,6 +922,10 @@ export type Database = {
         Insert: {
           author?: string | null
           campaign_id?: string
+          comments_issue?: string | null
+          comments_negative?: number | null
+          comments_positive?: number | null
+          comments_read?: number | null
           created_at?: string
           domain?: string | null
           found_at?: string
@@ -924,6 +933,7 @@ export type Database = {
           issue?: string | null
           published_at?: string | null
           reach?: number | null
+          rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
           snippet?: string | null
@@ -937,6 +947,10 @@ export type Database = {
         Update: {
           author?: string | null
           campaign_id?: string
+          comments_issue?: string | null
+          comments_negative?: number | null
+          comments_positive?: number | null
+          comments_read?: number | null
           created_at?: string
           domain?: string | null
           found_at?: string
@@ -944,6 +958,7 @@ export type Database = {
           issue?: string | null
           published_at?: string | null
           reach?: number | null
+          rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
           snippet?: string | null
@@ -963,6 +978,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "listening_mentions_rival_id_fkey"
+            columns: ["rival_id"]
+            isOneToOne: false
+            referencedRelation: "race_rivals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "listening_mentions_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
@@ -974,6 +996,7 @@ export type Database = {
       listening_topics: {
         Row: {
           active: boolean
+          alert_feed_url: string | null
           campaign_id: string
           created_at: string
           exclude_terms: string[]
@@ -987,6 +1010,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          alert_feed_url?: string | null
           campaign_id?: string
           created_at?: string
           exclude_terms?: string[]
@@ -1000,6 +1024,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          alert_feed_url?: string | null
           campaign_id?: string
           created_at?: string
           exclude_terms?: string[]
@@ -1929,6 +1954,24 @@ export type Database = {
           },
         ]
       }
+      social_credits: {
+        Row: {
+          budget: string
+          day: string
+          used: number
+        }
+        Insert: {
+          budget: string
+          day: string
+          used?: number
+        }
+        Update: {
+          budget?: string
+          day?: string
+          used?: number
+        }
+        Relationships: []
+      }
       stream_results: {
         Row: {
           campaign_id: string
@@ -2295,6 +2338,10 @@ export type Database = {
       }
       site_editor: { Args: never; Returns: string }
       unpublish_site: { Args: never; Returns: undefined }
+      take_social_credits: {
+        Args: { _budget: string; _cap: number; _n: number }
+        Returns: boolean
+      }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {

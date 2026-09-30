@@ -327,7 +327,9 @@ begin
      and not exists (select 1 from information_schema.columns k
                       where k.table_schema = 'public' and k.table_name = c.relname and k.column_name = 'campaign_id')
      and c.relname not in ('campaigns', 'profiles', 'user_roles', 'demo_leads', 'rate_limits',
-                           'whatsapp_webhook_events', 'listening_jobs');
+                           'whatsapp_webhook_events', 'listening_jobs',
+                           -- ScrapeCreators credits: one key, so one count for every campaign
+                           'social_credits');
   assert t is null, 'new tables with no campaign: decide whether they belong to one: ' || t;
 end $$;
 
