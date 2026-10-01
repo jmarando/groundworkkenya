@@ -1,13 +1,16 @@
-import { kicker, type StoryView } from "@/lib/morning-story";
+import { kicker, noStoryLine, type StoryView } from "@/lib/morning-story";
 
 /** This morning's story: its kicker, the story with its sources, and the morning's other news. */
 export function MorningStoryBlock({
   view,
+  loading,
   time,
   canEdit,
   onEdit,
 }: {
   view: StoryView | null;
+  /** Home's data is still on its way: say so, not that there is no news. */
+  loading: boolean;
   /** Nairobi's time now, HH:MM. */
   time: string;
   canEdit: boolean;
@@ -19,12 +22,8 @@ export function MorningStoryBlock({
         <h2 id="mb-story-h" className="mb-sub">
           This morning&apos;s story
         </h2>
-        <p className="mb-story-sum">
-          {time < "06:00"
-            ? "This morning's story is written at 6:00 from the news Listening finds."
-            : "No news about the race in the last day."}
-        </p>
-        {canEdit ? (
+        <p className="mb-story-sum">{noStoryLine(loading, time)}</p>
+        {canEdit && !loading ? (
           <div className="mb-actions">
             <button type="button" className="btn btn--primary btn--sm" onClick={onEdit}>
               Write today&apos;s story

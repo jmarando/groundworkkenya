@@ -8,6 +8,7 @@ import {
   cleanTeamStory,
   headlinesStory,
   kicker,
+  noStoryLine,
   storyFromRow,
   storyItems,
   type MentionRow,
@@ -195,6 +196,17 @@ eq(
   "a malformed story is not shown",
   storyFromRow({ ...stored, story: { kind: "poem" } }, null),
   null,
+);
+
+// With no story to show: still loading, before six, or a morning without news.
+eq(
+  "what the story block says without a story",
+  [noStoryLine(true, "09:00"), noStoryLine(false, "05:30"), noStoryLine(false, "09:00")],
+  [
+    "Reading this morning's story…",
+    "This morning's story is written at 6:00 from the news Listening finds.",
+    "No news about the race in the last day.",
+  ],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

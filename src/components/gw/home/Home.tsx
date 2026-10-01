@@ -68,6 +68,7 @@ export function Home({
       />
       <TodaySection
         items={items}
+        loading={!data}
         story={d.story}
         time={now}
         plan={dayPlan(d.diary, today)}

@@ -283,3 +283,11 @@ export function kicker(v: StoryView): string {
   if (v.story.kind === "headlines") return `This morning's top stories, gathered at ${at}`;
   return `Written by Groundwork at ${at} from ${v.story.from} ${v.story.from === 1 ? "source" : "sources"}`;
 }
+
+/** What the story block says when there is no story: still loading, before 6:00, or a quiet morning. */
+export function noStoryLine(loading: boolean, time: string): string {
+  if (loading) return "Reading this morning's story…";
+  return time < "06:00"
+    ? "This morning's story is written at 6:00 from the news Listening finds."
+    : "No news about the race in the last day.";
+}

@@ -8,6 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database, Json } from "@/integrations/supabase/types";
+import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { nairobiToday } from "@/lib/demo/insights";
 import {
   cleanTeamStory,
@@ -89,7 +90,37 @@ export const saveStory = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** "Use another story": the morning's story rewritten around one of its items. */
+type StoryServer = Pick<typeof import("@/lib/morning-story.server"), "gather" | "writeStory">;
+
+/**
+ * "Use another story": the morning's story rewritten around one of its items,
+ * for the candidate or manager only. Who may is checked first, because the
+ * rewrite costs an AI request. The server-only code is handed in.
+ */
+export async function reviseAround(
+  sb: Sb,
+  userId: string,
+  day: string,
+  url: string,
+  server: StoryServer,
+): Promise<void> {
+  const { data: role } = await sb.rpc("my_campaign_role");
+  if (!PRINCIPAL_ROLES.includes(role as MyRole)) throw new Error(STORY_DENIED);
+  const [{ data: campaignId }, g] = await Promise.all([
+    sb.rpc("my_campaign"),
+    server.gather(sb as never, null, new Date()),
+  ]);
+  const { data: c } = await sb
+    .from("campaigns")
+    .select("id, name, candidate, seat")
+    .eq("id", String(campaignId ?? ""))
+    .maybeSingle();
+  if (!c) throw new Error("Could not find the campaign.");
+  const story = await server.writeStory(c, g, url);
+  if (!story) throw new Error("Could not write a story around that one. Try another.");
+  await saveStoryAs(sb, userId, day, story);
+}
+
 export const reviseStory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { url: string }) => {
@@ -98,20 +129,7 @@ export const reviseStory = createServerFn({ method: "POST" })
     return { url };
   })
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
-    const { gather, writeStory } = await import("@/lib/morning-story.server");
-    const [{ data: campaignId }, g] = await Promise.all([
-      sb.rpc("my_campaign"),
-      gather(sb as never, null, new Date()),
-    ]);
-    const { data: c } = await sb
-      .from("campaigns")
-      .select("id, name, candidate, seat")
-      .eq("id", String(campaignId ?? ""))
-      .maybeSingle();
-    if (!c) throw new Error("Could not find the campaign.");
-    const story = await writeStory(c, g, data.url);
-    if (!story) throw new Error("Could not write a story around that one. Try another.");
-    await saveStoryAs(sb, context.userId, nairobiToday(), story);
+    const server = await import("@/lib/morning-story.server");
+    await reviseAround(context.supabase, context.userId, nairobiToday(), data.url, server);
     return { ok: true };
   });

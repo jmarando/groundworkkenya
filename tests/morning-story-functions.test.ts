@@ -3,7 +3,13 @@
 // from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/morning-story-functions.test.ts
 
-import { loadStory, saveTeamStory, STORY_DENIED, storyError } from "@/lib/morning-story.functions";
+import {
+  loadStory,
+  reviseAround,
+  saveTeamStory,
+  STORY_DENIED,
+  storyError,
+} from "@/lib/morning-story.functions";
 
 import { fakeSupabase } from "./fake-supabase";
 
@@ -86,6 +92,69 @@ async function main() {
     eq("with no story yet, the team writes one", sb.tables["morning_stories"]?.length, 1);
   }
   eq("no story, nothing to read", await loadStory(fakeSupabase({}) as never, "2026-09-30"), null);
+
+  // "Use this one" costs an AI request: who may change the story is checked first.
+  const rewritten = { ...GROUNDWORK, headline: "Drains before the rains" };
+  const server = (asked: string[]) => ({
+    gather: async () => ({ items: [], said: [], rivals: [] }),
+    writeStory: async (_c: unknown, _g: unknown, lead?: string) => {
+      asked.push(String(lead));
+      return rewritten as never;
+    },
+  });
+  {
+    const asked: string[] = [];
+    const sb = fakeSupabase(
+      {
+        campaigns: [
+          { id: "c2", name: "Sakaja 2027", candidate: "Johnson Sakaja", seat: "Governor" },
+        ],
+      },
+      { my_campaign_role: () => "organiser", my_campaign: () => "c2" },
+    );
+    let refused = "";
+    try {
+      await reviseAround(
+        sb as never,
+        ME,
+        "2026-09-30",
+        "https://the-star.co.ke/drains",
+        server(asked),
+      );
+    } catch (e) {
+      refused = (e as Error).message;
+    }
+    eq(
+      "an organiser can't have the story rewritten, and no AI is asked",
+      [refused, asked],
+      [STORY_DENIED, []],
+    );
+  }
+  {
+    const asked: string[] = [];
+    const sb = fakeSupabase(
+      {
+        campaigns: [
+          { id: "c2", name: "Sakaja 2027", candidate: "Johnson Sakaja", seat: "Governor" },
+        ],
+        morning_stories: [],
+      },
+      { my_campaign_role: () => "manager", my_campaign: () => "c2" },
+    );
+    await reviseAround(
+      sb as never,
+      ME,
+      "2026-09-30",
+      "https://the-star.co.ke/drains",
+      server(asked),
+    );
+    const row = sb.tables["morning_stories"]?.[0];
+    eq(
+      "the manager's rewrite is saved as the team's",
+      [asked, row?.["written_by"], (row?.["story"] as { headline: string }).headline],
+      [["https://the-star.co.ke/drains"], "team", "Drains before the rains"],
+    );
+  }
   eq(
     "what the database's refusals mean",
     [storyError({ code: "42501" }), storyError({ code: "23505" })],

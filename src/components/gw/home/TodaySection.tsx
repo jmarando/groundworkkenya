@@ -9,6 +9,7 @@ import type { StoryView } from "@/lib/morning-story";
 /** What to do today, the day's story, and where to be. */
 export function TodaySection({
   items,
+  loading,
   story,
   time,
   plan,
@@ -17,6 +18,8 @@ export function TodaySection({
   onEditStory,
 }: {
   items: TodayItem[];
+  /** Home's data is still on its way. */
+  loading: boolean;
   /** This morning's story, or null before it is written or on a morning with no news. */
   story: StoryView | null;
   /** Nairobi's time now, HH:MM. */
@@ -46,9 +49,15 @@ export function TodaySection({
         </ol>
       </div>
       <div className="mb-grid">
-        <MorningStoryBlock view={story} time={time} canEdit={canEdit} onEdit={onEditStory} />
+        <MorningStoryBlock
+          view={story}
+          loading={loading}
+          time={time}
+          canEdit={canEdit}
+          onEdit={onEditStory}
+        />
         <aside className="mb-side" aria-label="Today's plan">
-          <DiaryPlan plan={plan} watch={watch} canEdit={canEdit} />
+          <DiaryPlan plan={plan} watch={watch} loading={loading} canEdit={canEdit} />
         </aside>
       </div>
     </section>

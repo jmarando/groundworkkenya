@@ -6,9 +6,12 @@ import { dayName, KIND_NAMES, timeName, type DiaryEntry } from "@/lib/diary";
 export function DiaryPlan({
   plan,
   watch,
+  loading,
   canEdit,
 }: {
   plan: DiaryEntry[];
+  /** Home's data is still on its way. */
+  loading: boolean;
   watch: DiaryEntry[];
   canEdit: boolean;
 }) {
@@ -40,7 +43,9 @@ export function DiaryPlan({
             ))}
           </ol>
         ) : (
-          <p className="meta">Nothing in the diary for today.</p>
+          <p className="meta">
+            {loading ? "Reading the diary…" : "Nothing in the diary for today."}
+          </p>
         )}
       </section>
       {watch.length ? (
