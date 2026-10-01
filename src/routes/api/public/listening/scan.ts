@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
 import { runListeningScan } from "@/lib/listening.server";
+import { runMorningStory } from "@/lib/morning-story.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
 
 /**
@@ -36,7 +37,12 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
-        return Response.json({ ...result, rivals });
+        // And once a morning, each campaign's story from its day of news.
+        const story = await runMorningStory(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
+        return Response.json({ ...result, rivals, story });
       },
     },
   },

@@ -21,6 +21,7 @@ const KEYS: Record<string, string[][]> = {
   people: [["campaign_id", "phone"]],
   listening_mentions: [["campaign_id", "url"]],
   listening_jobs: [["key"]],
+  morning_stories: [["campaign_id", "day"]],
 };
 
 const PARENTS: [string, string][] = [
