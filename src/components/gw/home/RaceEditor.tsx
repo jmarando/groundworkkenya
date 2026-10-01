@@ -78,6 +78,7 @@ function RivalForm({
   const [x, setX] = useState(rival?.x ?? "");
   const [tiktok, setTiktok] = useState(rival?.tiktok ?? "");
   const [facebook, setFacebook] = useState(rival?.facebook ?? "");
+  const [searchAs, setSearchAs] = useState(rival?.searchAs ?? "");
   const [sure, setSure] = useState(false);
   const save = useServerFn(saveRival);
   const remove = useServerFn(removeRival);
@@ -97,6 +98,7 @@ function RivalForm({
           x,
           tiktok,
           facebook,
+          searchAs,
         },
       }),
     onSuccess: async () => {
@@ -206,6 +208,16 @@ function RivalForm({
           />
         </label>
       </div>
+      <label className="pb-field">
+        <span>Searched as on Google (blank: the full name)</span>
+        <input
+          value={searchAs}
+          maxLength={60}
+          placeholder={name.trim() || "Sakaja"}
+          autoComplete="off"
+          onChange={(e) => setSearchAs(e.target.value)}
+        />
+      </label>
       <div className="re-actions">
         {rival && (
           <button

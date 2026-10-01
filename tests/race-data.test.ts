@@ -177,6 +177,7 @@ eq(
     facebook: null,
     x: "HEBabuOwino",
     tiktok: null,
+    searchAs: null,
   },
 );
 eq(
@@ -286,12 +287,45 @@ eq(
     facebook: null,
     x: "HEBabuOwino",
     tiktok: null,
+    searchAs: null,
   },
 );
 eq(
   "ours wears our colour",
   cleanRival({ name: "Johnson Sakaja", isUs: true, tone: "b" }).tone,
   "us",
+);
+eq(
+  "searched as the name people use",
+  cleanRival({ name: "Johnson Sakaja", tone: "a", searchAs: "  Sakaja " }).searchAs,
+  "Sakaja",
+);
+eq(
+  "blank: the full name",
+  cleanRival({ name: "Babu Owino", tone: "a", searchAs: " " }).searchAs,
+  null,
+);
+refuses(
+  "one letter is no search",
+  () => cleanRival({ name: "Babu Owino", tone: "a", searchAs: "B" }),
+  "Give at least two letters to search for, or leave it blank.",
+);
+eq(
+  "a row's search name",
+  rivalFromRow({
+    id: "s",
+    name: "Johnson Sakaja",
+    party: null,
+    office: null,
+    is_us: true,
+    tone: "us",
+    sort: 0,
+    facebook: null,
+    x: null,
+    tiktok: null,
+    search_as: "Sakaja",
+  }).searchAs,
+  "Sakaja",
 );
 refuses(
   "a rival in our colour",

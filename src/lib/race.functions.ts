@@ -28,7 +28,7 @@ type Sb = SupabaseClient<Database>;
 
 export const RACE_DENIED = "Only the candidate or campaign manager can change the race.";
 
-const RIVAL_COLS = "id, name, party, office, is_us, tone, sort, facebook, x, tiktok";
+const RIVAL_COLS = "id, name, party, office, is_us, tone, sort, facebook, x, tiktok, search_as";
 const POLL_COLS =
   "id, pollster, fieldwork_from, fieldwork_to, published_on, sample_size, margin, source_url, shares, undecided, approval, disapproval";
 
@@ -72,6 +72,7 @@ export async function writeRival(sb: Sb, r: CleanRival): Promise<string> {
     facebook: r.facebook,
     x: r.x,
     tiktok: r.tiktok,
+    search_as: r.searchAs,
   };
   const { data, error } = r.id
     ? await sb.from("race_rivals").update(row).eq("id", r.id).select("id")

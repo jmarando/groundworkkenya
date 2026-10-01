@@ -16,6 +16,8 @@ export type RaceRival = {
   facebook: string | null;
   x: string | null;
   tiktok: string | null;
+  /** The name searched for on Google ("Sakaja"); null: the full name. */
+  searchAs: string | null;
 };
 
 export type PollShare = { name: string; share: number; rivalId: string | null };
@@ -57,6 +59,7 @@ export type RivalRow = {
   facebook: string | null;
   x: string | null;
   tiktok: string | null;
+  search_as?: string | null;
 };
 
 export type PollRow = {
@@ -93,6 +96,7 @@ export function rivalFromRow(r: RivalRow): RaceRival {
     facebook: r.facebook,
     x: r.x,
     tiktok: r.tiktok,
+    searchAs: r.search_as ?? null,
   };
 }
 
@@ -180,6 +184,7 @@ export type RivalInput = {
   facebook?: string | null;
   x?: string | null;
   tiktok?: string | null;
+  searchAs?: string | null;
 };
 
 export function cleanRival(input: RivalInput): CleanRival {
@@ -193,6 +198,9 @@ export function cleanRival(input: RivalInput): CleanRival {
       : null;
   if (!tone) throw new Error("Pick a colour for them.");
   const sort = Math.round(Number(input.sort ?? 0));
+  const searchAs = text(input.searchAs, 60);
+  if (searchAs !== null && searchAs.length < 2)
+    throw new Error("Give at least two letters to search for, or leave it blank.");
   return {
     id: typeof input.id === "string" && input.id ? input.id : null,
     name,
@@ -204,6 +212,7 @@ export function cleanRival(input: RivalInput): CleanRival {
     facebook: handleOf("facebook", input.facebook),
     x: handleOf("x", input.x),
     tiktok: handleOf("tiktok", input.tiktok),
+    searchAs,
   };
 }
 
