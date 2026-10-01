@@ -1,9 +1,9 @@
-import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { PollChart } from "@/components/gw/home/PollChart";
+import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
 import type { Scenario } from "@/lib/demo/types";
-import type { IssueLine, RaceView } from "@/lib/home";
+import type { RaceView } from "@/lib/home";
 import {
   byRecency,
   fieldworkLabel,
@@ -14,19 +14,22 @@ import {
   postDay,
   shareOf,
 } from "@/lib/race-data";
+import type { TopOfMind } from "@/lib/top-of-mind";
 
 const nf = new Intl.NumberFormat("en-KE");
 
-/** The race as it stands: published polls, who's running, what people say, last time. */
+/** The race as it stands: published polls, who's running, the week's issues, last time. */
 export function RaceReal({
   s,
   race,
+  mind,
   canEdit,
   onEdit,
   onRemovePoll,
 }: {
   s: Scenario;
   race: RaceView;
+  mind: TopOfMind;
   canEdit: boolean;
   onEdit: (what: "rivals" | "poll") => void;
   onRemovePoll: (id: string) => void;
@@ -41,7 +44,7 @@ export function RaceReal({
       />
       <div className="mb-two">
         <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
-        <SayingCard issues={race.issues} />
+        <TopOfMindCard mind={mind} />
       </div>
       {s.lastTime.official ? <OfficialResult s={s} /> : null}
     </>
@@ -226,52 +229,6 @@ function RivalsCard({
         </ul>
       ) : (
         <p className="meta">No candidates on record yet.</p>
-      )}
-    </section>
-  );
-}
-
-function SayingCard({ issues }: { issues: IssueLine[] }) {
-  return (
-    <section className="card home-saying" aria-labelledby="home-saying-h">
-      <div className="card-head">
-        <div>
-          <h2 id="home-saying-h">What people are saying</h2>
-          <p className="meta">News and social posts from Listening, last 30 days.</p>
-        </div>
-      </div>
-      {issues.length ? (
-        <ol className="home-issues">
-          {issues.map((i) => (
-            <li key={i.key}>
-              <div className="home-issue-head">
-                <Link to="/listening" search={{ issue: i.key }}>
-                  <b>{i.label}</b>
-                </Link>
-                <span className="dim">
-                  {nf.format(i.count)} {i.count === 1 ? "mention" : "mentions"}
-                  {i.angry ? `, ${nf.format(i.angry)} angry` : ""}
-                </span>
-              </div>
-              {i.examples.map((e) => (
-                <p key={e.text} className="home-issue-line">
-                  {e.url ? (
-                    <a href={e.url} target="_blank" rel="noopener noreferrer">
-                      {e.text}
-                    </a>
-                  ) : (
-                    e.text
-                  )}
-                </p>
-              ))}
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="meta">
-          Nothing picked up in the last 30 days.{" "}
-          <Link to="/listening">Add keywords in Listening</Link>.
-        </p>
       )}
     </section>
   );

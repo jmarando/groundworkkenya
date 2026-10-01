@@ -5,6 +5,7 @@ import { RaceReal } from "@/components/gw/home/RaceReal";
 import { SectionHead } from "@/components/gw/home/SectionHead";
 import type { Scenario } from "@/lib/demo/types";
 import type { RaceView, SectionMode } from "@/lib/home";
+import type { TopOfMind } from "@/lib/top-of-mind";
 
 /**
  * Where the race stands: the campaign's own rivals and published polls when it
@@ -14,6 +15,7 @@ export function RaceSection({
   s,
   mode,
   race,
+  mind,
   canEdit,
   onEdit,
   onRemovePoll,
@@ -21,6 +23,7 @@ export function RaceSection({
   s: Scenario;
   mode: SectionMode;
   race: RaceView;
+  mind: TopOfMind;
   canEdit: boolean;
   onEdit: (what: "rivals" | "poll") => void;
   onRemovePoll: (id: string) => void;
@@ -37,7 +40,14 @@ export function RaceSection({
         {...(canEdit ? { onHint: () => onEdit("rivals") } : {})}
       />
       {mode === "real" ? (
-        <RaceReal s={s} race={race} canEdit={canEdit} onEdit={onEdit} onRemovePoll={onRemovePoll} />
+        <RaceReal
+          s={s}
+          race={race}
+          mind={mind}
+          canEdit={canEdit}
+          onEdit={onEdit}
+          onRemovePoll={onRemovePoll}
+        />
       ) : (
         <>
           <Race s={s} />

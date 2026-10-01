@@ -6,6 +6,7 @@ import { ours } from "@/lib/demo";
 import type { Action, Scenario } from "@/lib/demo/types";
 import { KIND_NAMES, type DiaryEntry } from "@/lib/diary";
 import type { RacePoll, RaceRival, RivalMove, RivalPost } from "@/lib/race-data";
+import { pct, sourcesOf, type MindLine } from "@/lib/top-of-mind";
 
 export type SectionMode = "real" | "sample";
 
@@ -22,34 +23,18 @@ export type RealSignals = {
   pendingExpenses: number;
   /** Conversations nobody has answered. */
   unread: number;
-  topIssue: { label: string; count: number; angry: number } | null;
+  /** The week's top issue across news and social, messages, the door and searches. */
+  mind: MindLine | null;
   /** The biggest recent change for a rival in one pollster's polls. */
   rivalMove?: RivalMove | null;
 };
 
 export type TodayItem = { title: string; detail: string; action: Action; sample: boolean };
 
-/** One mention from Listening, as Home reads it. */
-export type IssueRow = {
-  issue: string | null;
-  sentiment: string | null;
-  title: string | null;
-  url: string | null;
-  found_at: string;
-};
-/** An issue people raised, with how often and its latest lines. */
-export type IssueLine = {
-  key: string;
-  label: string;
-  count: number;
-  angry: number;
-  examples: { text: string; url: string | null }[];
-};
 /** The campaign's own race; empty until someone adds it. */
 export type RaceView = {
   rivals: RaceRival[];
   polls: RacePoll[];
-  issues: IssueLine[];
   /** Rivals' own posts from the last 30 days, newest first. */
   posts: RivalPost[];
 };
@@ -82,15 +67,7 @@ export function realToday(sig: RealSignals): TodayItem[] {
       sample: false,
     });
   }
-  if (sig.topIssue) {
-    const t = sig.topIssue;
-    items.push({
-      title: `${t.label} is the loudest issue this week`,
-      detail: `${n(t.count, "mention", "mentions")} in seven days${t.angry ? `, ${t.angry} of them angry` : ""}.`,
-      action: { kind: "issue", label: "See what's said", issue: t.label.toLowerCase() },
-      sample: false,
-    });
-  }
+  if (sig.mind) items.push(mindItem(sig.mind));
   if (sig.rivalMove) {
     items.push({
       title: sig.rivalMove.title,
@@ -102,7 +79,16 @@ export function realToday(sig: RealSignals): TodayItem[] {
   return items;
 }
 
-/** Real items first, then the race's sample items, never more than `max`. */
+/** The week's top issue as a Today item. */
+export function mindItem(l: MindLine): TodayItem {
+  return {
+    title: `${l.label} is top of mind this week`,
+    detail: `${pct(l.score)} of what was raised across ${sourcesOf(l)}.`,
+    action: { kind: "issue", label: "See what's said", issue: l.key },
+    sample: false,
+  };
+}
+
 /** The diary's next stop today, first on Today's list. */
 export function nextStopItem(e: DiaryEntry): TodayItem {
   return {
@@ -113,64 +99,9 @@ export function nextStopItem(e: DiaryEntry): TodayItem {
   };
 }
 
+/** Real items first, then the race's sample items, never more than `max`. */
 export function todayItems(real: TodayItem[], sample: Scenario["today"], max = 3): TodayItem[] {
   return [...real, ...sample.map((t) => ({ ...t, sample: true }))].slice(0, max);
-}
-
-/** The listening classifier's labels for "no issue": what it cannot place, and the campaign itself. */
-const NOT_ISSUES = new Set(["general", "campaign"]);
-
-const labelOf = (issue: string) => issue.charAt(0).toUpperCase() + issue.slice(1).toLowerCase();
-
-/** The issue mentioned most, if it was mentioned at least `min` times. */
-export function topIssue(
-  rows: { issue: string | null; sentiment: string | null }[],
-  min = 3,
-): RealSignals["topIssue"] {
-  const tally = new Map<string, { label: string; count: number; angry: number }>();
-  for (const r of rows) {
-    const label = (r.issue ?? "").trim();
-    const key = label.toLowerCase();
-    if (!label || NOT_ISSUES.has(key)) continue;
-    const t = tally.get(key) ?? { label: labelOf(label), count: 0, angry: 0 };
-    t.count++;
-    if (r.sentiment === "negative") t.angry++;
-    tally.set(key, t);
-  }
-  const best = [...tally.values()].sort((a, b) => b.count - a.count)[0];
-  return best && best.count >= min ? best : null;
-}
-
-/** Issues by how often they came up, loudest first, each with its latest lines. */
-export function issueBoard(rows: IssueRow[], max = 5, examples = 2): IssueLine[] {
-  const tally = new Map<string, IssueLine & { lines: IssueRow[] }>();
-  for (const r of rows) {
-    const label = (r.issue ?? "").trim();
-    const key = label.toLowerCase();
-    if (!label || NOT_ISSUES.has(key)) continue;
-    const t = tally.get(key) ?? {
-      key,
-      label: labelOf(label),
-      count: 0,
-      angry: 0,
-      examples: [],
-      lines: [],
-    };
-    t.count++;
-    if (r.sentiment === "negative") t.angry++;
-    if (r.title?.trim()) t.lines.push(r);
-    tally.set(key, t);
-  }
-  return [...tally.values()]
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-    .slice(0, max)
-    .map(({ lines, ...t }) => ({
-      ...t,
-      examples: lines
-        .sort((a, b) => b.found_at.localeCompare(a.found_at))
-        .slice(0, examples)
-        .map((r) => ({ text: r.title!.trim().slice(0, 160), url: r.url })),
-    }));
 }
 
 /** "Njeri Kamau" → "Njeri"; nothing usable → the fallback. */

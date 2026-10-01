@@ -9,13 +9,12 @@ import type { Scenario } from "@/lib/demo/types";
 import { addDays } from "@/lib/diary";
 import {
   greetingName,
-  issueBoard,
+  mindItem,
   nextStopItem,
   raceVerdict,
   realToday,
   sectionModes,
   todayItems,
-  topIssue,
 } from "@/lib/home";
 import { loadHome } from "@/lib/home.functions";
 
@@ -33,6 +32,15 @@ function eq(name: string, got: unknown, want: unknown) {
     console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
   }
 }
+
+/** The week's top issue, as top of mind gives it. */
+const MIND_LINE = {
+  key: "floods",
+  label: "Floods",
+  score: 0.31,
+  shares: { news: 0.4, messages: 0.22, door: null, searches: null },
+  examples: [],
+};
 
 // ---------------------------------------------------------------- sections
 
@@ -58,7 +66,7 @@ eq(
   const items = realToday({
     pendingExpenses: 2,
     unread: 1,
-    topIssue: { label: "Floods", count: 14, angry: 9 },
+    mind: MIND_LINE,
   });
   eq(
     "expenses to approve",
@@ -71,11 +79,11 @@ eq(
     ["1 person waiting for a reply", { kind: "go", label: "Open the inbox", to: "/inbox" }],
   );
   eq(
-    "the loudest issue",
+    "the week's top issue",
     [items[2]?.title, items[2]?.detail, items[2]?.action],
     [
-      "Floods is the loudest issue this week",
-      "14 mentions in seven days, 9 of them angry.",
+      "Floods is top of mind this week",
+      "31% of what was raised across news and social and messages to us.",
       { kind: "issue", label: "See what's said", issue: "floods" },
     ],
   );
@@ -86,12 +94,12 @@ eq(
   );
   eq(
     "nothing waiting, nothing listed",
-    realToday({ pendingExpenses: 0, unread: 0, topIssue: null }),
+    realToday({ pendingExpenses: 0, unread: 0, mind: null }),
     [],
   );
   eq(
     "one expense, several people",
-    realToday({ pendingExpenses: 1, unread: 3, topIssue: null }).map((i) => i.title),
+    realToday({ pendingExpenses: 1, unread: 3, mind: null }).map((i) => i.title),
     ["1 expense to approve", "3 people waiting for a reply"],
   );
 }
@@ -116,7 +124,7 @@ eq(
 );
 {
   const sample: Scenario["today"] = getScenario("sakaja").today;
-  const real = realToday({ pendingExpenses: 1, unread: 0, topIssue: null });
+  const real = realToday({ pendingExpenses: 1, unread: 0, mind: null });
   const items = todayItems(real, sample);
   eq("at most three", items.length, 3);
   eq("real first", [items[0]?.title, items[0]?.sample], ["1 expense to approve", false]);
@@ -132,7 +140,7 @@ eq(
       realToday({
         pendingExpenses: 1,
         unread: 2,
-        topIssue: { label: "Water", count: 5, angry: 0 },
+        mind: { ...MIND_LINE, key: "water", label: "Water" },
       }),
       sample,
     ).every((i) => !i.sample),
@@ -143,7 +151,7 @@ eq(
   const items = realToday({
     pendingExpenses: 0,
     unread: 0,
-    topIssue: null,
+    mind: null,
     rivalMove: {
       title: "James Gakuya up 3.8 points in Mizani Africa's latest poll",
       detail: "From 11.2% in Jul 2026 to 15% in Aug 2026.",
@@ -162,117 +170,7 @@ eq(
 
 // ---------------------------------------------------------------- issues
 
-eq(
-  "counts by issue, ignoring case and blanks",
-  topIssue([
-    { issue: "Floods", sentiment: "negative" },
-    { issue: "floods", sentiment: "neutral" },
-    { issue: " FLOODS ", sentiment: "negative" },
-    { issue: "Water", sentiment: "negative" },
-    { issue: null, sentiment: "negative" },
-    { issue: "", sentiment: "negative" },
-  ]),
-  { label: "Floods", count: 3, angry: 2 },
-);
-eq(
-  "below three mentions, nothing",
-  topIssue([
-    { issue: "Water", sentiment: null },
-    { issue: "Water", sentiment: null },
-  ]),
-  null,
-);
-// The listening classifier files what it cannot place as "general", and news
-// about the campaign itself as "campaign": neither is an issue voters raise.
-eq(
-  "the classifier's catch-alls are not issues",
-  topIssue([
-    ...Array.from({ length: 5 }, () => ({ issue: "general", sentiment: "negative" })),
-    ...Array.from({ length: 4 }, () => ({ issue: "campaign", sentiment: null })),
-    { issue: "water", sentiment: "negative" },
-    { issue: "water", sentiment: null },
-    { issue: "water", sentiment: null },
-  ]),
-  { label: "Water", count: 3, angry: 1 },
-);
-eq(
-  "only catch-alls, nothing",
-  topIssue(Array.from({ length: 6 }, () => ({ issue: "General", sentiment: null }))),
-  null,
-);
-{
-  const at = (d: number) => new Date(Date.UTC(2026, 8, 29 - d)).toISOString();
-  const board = issueBoard([
-    {
-      issue: "water",
-      sentiment: "negative",
-      title: "Taps dry in Kayole",
-      url: "https://a.test/1",
-      found_at: at(1),
-    },
-    {
-      issue: "Water",
-      sentiment: null,
-      title: "Bowser timetable out",
-      url: "https://a.test/2",
-      found_at: at(3),
-    },
-    {
-      issue: "water",
-      sentiment: "negative",
-      title: " Rationing extended in 14 wards ",
-      url: null,
-      found_at: at(0),
-    },
-    {
-      issue: "floods",
-      sentiment: "negative",
-      title: "Drains blocked on Jogoo Road",
-      url: "https://a.test/4",
-      found_at: at(2),
-    },
-    {
-      issue: "general",
-      sentiment: null,
-      title: "Weekend roundup",
-      url: "https://a.test/5",
-      found_at: at(1),
-    },
-    {
-      issue: "campaign",
-      sentiment: null,
-      title: "Rally on Saturday",
-      url: "https://a.test/6",
-      found_at: at(1),
-    },
-    { issue: "floods", sentiment: null, title: null, url: "https://a.test/7", found_at: at(4) },
-  ]);
-  eq(
-    "issues by volume, catch-alls left out",
-    board.map((b) => [b.key, b.label, b.count, b.angry]),
-    [
-      ["water", "Water", 3, 2],
-      ["floods", "Floods", 2, 1],
-    ],
-  );
-  eq("the latest two lines, trimmed", board[0]?.examples, [
-    { text: "Rationing extended in 14 wards", url: null },
-    { text: "Taps dry in Kayole", url: "https://a.test/1" },
-  ]);
-  eq(
-    "at most five",
-    issueBoard(
-      ["a1", "b1", "c1", "d1", "e1", "f1"].map((i) => ({
-        issue: i,
-        sentiment: null,
-        title: null,
-        url: null,
-        found_at: at(0),
-      })),
-    ).length,
-    5,
-  );
-}
+eq("the week's top issue on Today", mindItem(MIND_LINE).title, "Floods is top of mind this week");
 
 // ---------------------------------------------------------------- names
 
@@ -363,11 +261,7 @@ async function main() {
     eq("no race on record, no race facts", [h.facts.rivals, h.facts.polls], [0, 0]);
     eq("a manager sees expenses to approve", h.signals.pendingExpenses, 2);
     eq("unread conversations", h.signals.unread, 1);
-    eq("the week's loudest issue, older mentions ignored", h.signals.topIssue, {
-      label: "Floods",
-      count: 3,
-      angry: 2,
-    });
+    eq("too little this week to name a top issue", h.signals.mind, null);
   }
   {
     const h = await loadHome(db() as never, ME, "organiser");
@@ -589,15 +483,7 @@ async function main() {
       negative: 31,
       issue: "water",
     });
-    eq("this week's loudest issue", h.signals.topIssue, { label: "Water", count: 3, angry: 2 });
-    eq(
-      "thirty days of what people say, rivals' own posts apart",
-      h.race.issues.map((i) => [i.key, i.count]),
-      [
-        ["water", 3],
-        ["floods", 1],
-      ],
-    );
+    eq("rivals' own posts are not counted as what people raise", h.mind.sizes.news, 3);
 
     const spiking = await loadHome(
       db({
@@ -618,6 +504,48 @@ async function main() {
       spiking.signals.rivalMove?.title,
       "Babu Owino's TikTok post is drawing 2.3 times the usual response",
     );
+  }
+  {
+    const h = await loadHome(
+      db({
+        listening_mentions: Array.from({ length: 6 }, (_, i) => ({
+          id: `w${i}`,
+          issue: i < 4 ? "water" : "floods",
+          sentiment: null,
+          title: `Story ${i}`,
+          url: `https://n.test/${i}`,
+          found_at: daysAgo(1),
+        })),
+        conversations: [
+          ...Array.from({ length: 3 }, (_, i) => ({
+            id: `cw${i}`,
+            issue: "water",
+            last_message_at: daysAgo(1),
+            unread: false,
+          })),
+          ...Array.from({ length: 2 }, (_, i) => ({
+            id: `cg${i}`,
+            issue: "garbage",
+            last_message_at: daysAgo(1),
+            unread: false,
+          })),
+        ],
+        person_events: Array.from({ length: 5 }, (_, i) => ({
+          id: `e${i}`,
+          kind: "door_spoke",
+          detail: "Water",
+          created_at: daysAgo(2),
+        })),
+      }) as never,
+      ME,
+      "manager",
+    );
+    eq(
+      "the week's top of mind, across news, messages and the door",
+      h.mind.lines.map((l) => l.key),
+      ["water", "garbage", "floods"],
+    );
+    eq("and it is on Today", h.signals.mind?.key, "water");
   }
   {
     const sb = db();

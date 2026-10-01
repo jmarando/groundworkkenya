@@ -23,10 +23,11 @@ import { realVerdict } from "@/lib/race-data";
 const NOTHING_YET: HomeData = {
   firstName: null,
   facts: { realPeople: 0, rivals: 0, polls: 0 },
-  signals: { pendingExpenses: 0, unread: 0, topIssue: null },
-  race: { rivals: [], polls: [], issues: [], posts: [] },
+  signals: { pendingExpenses: 0, unread: 0, mind: null },
+  race: { rivals: [], polls: [], posts: [] },
   diary: [],
   story: null,
+  mind: { lines: [], sizes: { news: 0, messages: 0, door: 0, searches: 0 } },
 };
 
 /**
@@ -81,6 +82,7 @@ export function Home({
         s={s}
         mode={modes.race}
         race={d.race}
+        mind={d.mind}
         canEdit={canEdit}
         onEdit={setEditing}
         onRemovePoll={removePollNow}
