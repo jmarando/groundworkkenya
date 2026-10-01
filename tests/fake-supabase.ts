@@ -211,6 +211,10 @@ export function fakeSupabase(
         filters.push((r) => String(r[c] ?? "") >= String(v));
         return q;
       },
+      lte(c: string, v: unknown) {
+        filters.push((r) => String(r[c] ?? "") <= String(v));
+        return q;
+      },
       lt(c: string, v: unknown) {
         filters.push((r) => String(r[c] ?? "") < String(v));
         return q;
