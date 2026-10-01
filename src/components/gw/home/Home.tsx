@@ -28,6 +28,7 @@ const NOTHING_YET: HomeData = {
   diary: [],
   story: null,
   mind: { lines: [], sizes: { news: 0, messages: 0, door: 0, searches: 0 } },
+  search: null,
 };
 
 /**
@@ -83,6 +84,7 @@ export function Home({
         mode={modes.race}
         race={d.race}
         mind={d.mind}
+        search={d.search}
         canEdit={canEdit}
         onEdit={setEditing}
         onRemovePoll={removePollNow}

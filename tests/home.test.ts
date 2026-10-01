@@ -548,6 +548,83 @@ async function main() {
     eq("and it is on Today", h.signals.mind?.key, "water");
   }
   {
+    const today = nairobiToday();
+    const points = (before: number, week: number) =>
+      Array.from({ length: 28 }, (_, i) => ({
+        day: addDays(today, i - 27),
+        value: i >= 21 ? week : before,
+      }));
+    const h = await loadHome(
+      db({
+        race_rivals: [
+          {
+            id: "s",
+            name: "Johnson Sakaja",
+            party: null,
+            office: null,
+            is_us: true,
+            tone: "us",
+            sort: 0,
+            facebook: null,
+            x: null,
+            tiktok: null,
+            search_as: "Sakaja",
+          },
+          {
+            id: "b",
+            name: "Babu Owino",
+            party: null,
+            office: null,
+            is_us: false,
+            tone: "a",
+            sort: 1,
+            facebook: null,
+            x: null,
+            tiktok: null,
+            search_as: null,
+          },
+        ],
+        search_interest: [
+          {
+            id: "c",
+            campaign_id: "c2",
+            day: today,
+            kind: "candidates",
+            geo: "KE-110",
+            created_at: `${today}T03:05:00Z`,
+            series: [
+              { term: "Sakaja", ref: "s", points: points(10, 10) },
+              { term: "Babu Owino", ref: "b", points: points(12, 30) },
+            ],
+          },
+          {
+            id: "i",
+            campaign_id: "c2",
+            day: today,
+            kind: "issues",
+            geo: "KE",
+            created_at: `${today}T03:05:00Z`,
+            series: [{ term: "water shortage", ref: "water", points: points(5, 40) }],
+          },
+        ],
+      }) as never,
+      ME,
+      "manager",
+      today,
+    );
+    eq(
+      "the latest read of search interest",
+      [h.search?.geo, h.search?.series.length],
+      ["KE-110", 2],
+    );
+    eq(
+      "a rival searched twice as much is the rival's move, with no post or poll to beat it",
+      h.signals.rivalMove?.title,
+      "Searches for Babu Owino doubled this week",
+    );
+    eq("the week's issue searches count toward top of mind", h.mind.sizes.searches, 1);
+  }
+  {
     const sb = db();
     const broken = {
       ...sb,

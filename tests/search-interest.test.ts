@@ -8,6 +8,7 @@ import {
   ISSUE_SEARCH,
   isThin,
   issueAverages,
+  monthAverages,
   parseTrends,
   searchChart,
   searchFromRow,
@@ -237,6 +238,12 @@ eq(
   searchFromRow({ day: TODAY, kind: "candidates", geo: "US", created_at: "x", series: [] }),
   null,
 );
+
+eq("each candidate's month, for the table under the chart", monthAverages(READ, R), [
+  { name: "Johnson Sakaja", average: 18 },
+  { name: "Babu Owino", average: 17 },
+  { name: "Agnes Kagure", average: 8 },
+]);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

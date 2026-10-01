@@ -1992,3 +1992,7 @@ figure { margin: 0; }
 .home-mind-bars dd { margin:0; display:flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums; }
 .home-mind-bar { display:inline-block; width:56px; height:6px; border-radius:3px; background:var(--muted); overflow:hidden; }
 .home-mind-bar i { display:block; height:100%; border-radius:3px; background:var(--foreground); opacity:.7; }
+
+/* Search interest: each candidate's month, under the chart. */
+.home-search-avg { font-size:12.5px; color:var(--muted-foreground); margin-top:8px; }
+.home-search-avg b { color:var(--foreground); font-variant-numeric:tabular-nums; }

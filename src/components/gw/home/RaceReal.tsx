@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { PollChart } from "@/components/gw/home/PollChart";
+import { SearchCard } from "@/components/gw/home/SearchCard";
 import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
 import type { Scenario } from "@/lib/demo/types";
 import type { RaceView } from "@/lib/home";
@@ -14,6 +15,7 @@ import {
   postDay,
   shareOf,
 } from "@/lib/race-data";
+import type { SearchRead } from "@/lib/search-interest";
 import type { TopOfMind } from "@/lib/top-of-mind";
 
 const nf = new Intl.NumberFormat("en-KE");
@@ -23,6 +25,7 @@ export function RaceReal({
   s,
   race,
   mind,
+  search,
   canEdit,
   onEdit,
   onRemovePoll,
@@ -30,6 +33,7 @@ export function RaceReal({
   s: Scenario;
   race: RaceView;
   mind: TopOfMind;
+  search: SearchRead | null;
   canEdit: boolean;
   onEdit: (what: "rivals" | "poll") => void;
   onRemovePoll: (id: string) => void;
@@ -42,6 +46,7 @@ export function RaceReal({
         onAdd={() => onEdit("poll")}
         onRemove={onRemovePoll}
       />
+      <SearchCard read={search} rivals={race.rivals} />
       <div className="mb-two">
         <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
         <TopOfMindCard mind={mind} />

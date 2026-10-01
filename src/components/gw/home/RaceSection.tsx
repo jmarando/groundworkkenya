@@ -5,6 +5,7 @@ import { RaceReal } from "@/components/gw/home/RaceReal";
 import { SectionHead } from "@/components/gw/home/SectionHead";
 import type { Scenario } from "@/lib/demo/types";
 import type { RaceView, SectionMode } from "@/lib/home";
+import type { SearchRead } from "@/lib/search-interest";
 import type { TopOfMind } from "@/lib/top-of-mind";
 
 /**
@@ -16,6 +17,7 @@ export function RaceSection({
   mode,
   race,
   mind,
+  search,
   canEdit,
   onEdit,
   onRemovePoll,
@@ -24,6 +26,7 @@ export function RaceSection({
   mode: SectionMode;
   race: RaceView;
   mind: TopOfMind;
+  search: SearchRead | null;
   canEdit: boolean;
   onEdit: (what: "rivals" | "poll") => void;
   onRemovePoll: (id: string) => void;
@@ -44,6 +47,7 @@ export function RaceSection({
           s={s}
           race={race}
           mind={mind}
+          search={search}
           canEdit={canEdit}
           onEdit={onEdit}
           onRemovePoll={onRemovePoll}

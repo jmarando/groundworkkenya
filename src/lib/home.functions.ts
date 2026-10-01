@@ -14,7 +14,8 @@ import type { StoryView } from "@/lib/morning-story";
 import { loadStory } from "@/lib/morning-story.functions";
 import { postFromRow, postSpike, rivalMove, type PostRow, type RivalPost } from "@/lib/race-data";
 import { loadPolls, loadRivals } from "@/lib/race.functions";
-import { loadMindInputs } from "@/lib/search-interest.functions";
+import { issueAverages, searchSpike, type SearchRead } from "@/lib/search-interest";
+import { loadMindInputs, loadSearch } from "@/lib/search-interest.functions";
 import { topOfMind, type TopOfMind } from "@/lib/top-of-mind";
 
 type Sb = SupabaseClient<Database>;
@@ -32,6 +33,8 @@ export type HomeData = {
   story: StoryView | null;
   /** The week's top issues across news and social, messages, the door and searches. */
   mind: TopOfMind;
+  /** The newest read of how much each candidate is searched for, or null. */
+  search: SearchRead | null;
 };
 
 /** Roles that can approve expenses, so only they are asked to. */
@@ -47,31 +50,45 @@ export async function loadHome(
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const canApprove = APPROVERS.includes(String(role));
   // Home still opens if the race can't be read: the race section shows its sample.
-  const [profile, people, expenses, unread, mindIn, postRows, rivals, polls, diary, story] =
-    await Promise.all([
-      sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
-      sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
-      canApprove
-        ? sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending")
-        : Promise.resolve({ count: 0 }),
-      sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
-      // What was raised this week; rivals' own posts are shown apart, not counted.
-      loadMindInputs(sb as never, null, since7).catch(() => ({ news: [], messages: [], door: [] })),
-      sb
-        .from("listening_mentions")
-        .select(
-          "rival_id, source, url, title, published_at, reach, comments_read, comments_positive, comments_negative, comments_issue",
-        )
-        .not("rival_id", "is", null)
-        .gte("published_at", since30)
-        .order("published_at", { ascending: false })
-        .limit(300),
-      loadRivals(sb).catch(() => []),
-      loadPolls(sb).catch(() => []),
-      loadDiary(sb, todayIso, addDays(todayIso, 2)).catch(() => []),
-      loadStory(sb, todayIso).catch(() => null),
-    ]);
-  const mind = topOfMind({ ...mindIn, searches: [] });
+  const [
+    profile,
+    people,
+    expenses,
+    unread,
+    mindIn,
+    postRows,
+    rivals,
+    polls,
+    diary,
+    story,
+    search,
+    issueSearch,
+  ] = await Promise.all([
+    sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
+    sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
+    canApprove
+      ? sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending")
+      : Promise.resolve({ count: 0 }),
+    sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
+    // What was raised this week; rivals' own posts are shown apart, not counted.
+    loadMindInputs(sb as never, null, since7).catch(() => ({ news: [], messages: [], door: [] })),
+    sb
+      .from("listening_mentions")
+      .select(
+        "rival_id, source, url, title, published_at, reach, comments_read, comments_positive, comments_negative, comments_issue",
+      )
+      .not("rival_id", "is", null)
+      .gte("published_at", since30)
+      .order("published_at", { ascending: false })
+      .limit(300),
+    loadRivals(sb).catch(() => []),
+    loadPolls(sb).catch(() => []),
+    loadDiary(sb, todayIso, addDays(todayIso, 2)).catch(() => []),
+    loadStory(sb, todayIso).catch(() => null),
+    loadSearch(sb as never, "candidates").catch(() => null),
+    loadSearch(sb as never, "issues").catch(() => null),
+  ]);
+  const mind = topOfMind({ ...mindIn, searches: issueAverages(issueSearch, todayIso) });
   const posts = ((postRows.data ?? []) as PostRow[])
     .map(postFromRow)
     .filter((p): p is RivalPost => p !== null);
@@ -82,13 +99,17 @@ export async function loadHome(
       pendingExpenses: expenses.count ?? 0,
       unread: unread.count ?? 0,
       mind: mind.lines[0] ?? null,
-      // A fresh post beats a poll change that can be up to 30 days old.
-      rivalMove: postSpike(rivals, posts, new Date()) ?? rivalMove(rivals, polls, todayIso),
+      // A fresh post beats a poll change that can be up to 30 days old, and both beat searches.
+      rivalMove:
+        postSpike(rivals, posts, new Date()) ??
+        rivalMove(rivals, polls, todayIso) ??
+        searchSpike(search, rivals, todayIso),
     },
     race: { rivals, polls, posts },
     diary,
     story,
     mind,
+    search,
   };
 }
 

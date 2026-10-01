@@ -145,6 +145,20 @@ export function searchSummary(read: SearchRead | null, rivals: RaceRival[]): str
     : `${ranked[0].name} drew searches in ${place} this month.`;
 }
 
+/** Each candidate's average over the read, most searched first, for the table under the chart. */
+export function monthAverages(
+  read: SearchRead | null,
+  rivals: RaceRival[],
+): { name: string; average: number }[] {
+  if (!read || read.kind !== "candidates") return [];
+  return read.series
+    .map((t) => ({
+      name: rivals.find((r) => r.id === t.ref)?.name ?? t.term,
+      average: Math.round(mean(t.points.map((p) => p.value))),
+    }))
+    .sort((a, b) => b.average - a.average);
+}
+
 export type SearchChartModel = {
   days: string[];
   series: { key: string; label: string; tone: Tone; values: (number | null)[] }[];
