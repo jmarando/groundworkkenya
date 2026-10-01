@@ -1868,6 +1868,7 @@ export type Database = {
           name: string
           office: string | null
           party: string | null
+          search_as: string | null
           sort: number
           tiktok: string | null
           tone: string
@@ -1883,6 +1884,7 @@ export type Database = {
           name: string
           office?: string | null
           party?: string | null
+          search_as?: string | null
           sort?: number
           tiktok?: string | null
           tone?: string
@@ -1898,6 +1900,7 @@ export type Database = {
           name?: string
           office?: string | null
           party?: string | null
+          search_as?: string | null
           sort?: number
           tiktok?: string | null
           tone?: string
@@ -1931,6 +1934,44 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      search_interest: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          day: string
+          geo: string
+          id: string
+          kind: string
+          series: Json
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          day: string
+          geo: string
+          id?: string
+          kind: string
+          series: Json
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          day?: string
+          geo?: string
+          id?: string
+          kind?: string
+          series?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_interest_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       segments: {
         Row: {
