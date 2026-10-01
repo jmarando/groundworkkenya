@@ -562,6 +562,63 @@ export type Database = {
         }
         Relationships: []
       }
+      diary_entries: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          day: string
+          id: string
+          kind: string
+          note: string | null
+          starts_at: string | null
+          title: string
+          updated_at: string
+          ward_id: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          day: string
+          id?: string
+          kind?: string
+          note?: string | null
+          starts_at?: string | null
+          title: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          starts_at?: string | null
+          title?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diary_entries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diary_entries_ward_fkey"
+            columns: ["ward_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id", "campaign_id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount_kes: number
@@ -1177,6 +1234,50 @@ export type Database = {
             columns: ["poll_id"]
             isOneToOne: false
             referencedRelation: "polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      morning_stories: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          day: string
+          edited_at: string | null
+          edited_by: string | null
+          id: string
+          story: Json
+          updated_at: string
+          written_by: string
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          day: string
+          edited_at?: string | null
+          edited_by?: string | null
+          id?: string
+          story: Json
+          updated_at?: string
+          written_by?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          day?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          id?: string
+          story?: Json
+          updated_at?: string
+          written_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "morning_stories_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
         ]
