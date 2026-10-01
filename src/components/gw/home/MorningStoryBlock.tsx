@@ -99,9 +99,7 @@ export function MorningStoryBlock({
       )}
       {st.also.length ? (
         <>
-          <h3 className="mb-sub">
-            {st.kind === "written" ? "Also this morning" : "The morning's news"}
-          </h3>
+          {st.kind === "written" ? <h3 className="mb-sub">Also this morning</h3> : null}
           <ul className="mb-news">
             {st.also.map((n) => (
               <li key={n.url}>

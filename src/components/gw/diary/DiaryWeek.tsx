@@ -96,7 +96,7 @@ function DiaryDay({
                     <div className="diary-actions">
                       <button
                         type="button"
-                        className="btn btn--sm"
+                        className="btn btn--ghost btn--sm"
                         onClick={() => setEditing(e.id)}
                       >
                         Edit
