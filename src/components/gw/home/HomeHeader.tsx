@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { SampleTag } from "@/components/gw/home/SectionHead";
 import { daysBetween, ELECTION_DAY } from "@/lib/demo/insights";
-import { spokenBriefing } from "@/lib/demo/spoken";
 import type { Scenario } from "@/lib/demo/types";
-import type { SectionMode, TodayItem } from "@/lib/home";
 
 function longDate(iso: string): string {
   return new Date(`${iso}T09:00:00Z`).toLocaleDateString("en-GB", {
@@ -55,16 +52,14 @@ export function HomeHeader({
   today,
   name,
   verdict,
-  raceMode,
-  items,
+  script,
 }: {
   s: Scenario;
   today: string;
   name: string;
   verdict: string;
-  raceMode: SectionMode;
-  /** The Today list as shown, so Listen reads out the same list. */
-  items: TodayItem[];
+  /** Home read out, from what it shows: the Listen button plays it. */
+  script: string;
 }) {
   const speech = useSpeech();
   const days = daysBetween(today, ELECTION_DAY);
@@ -79,28 +74,14 @@ export function HomeHeader({
           <p className="mb-mast-sub" suppressHydrationWarning>
             {longDate(today)} · <b>{days}</b> days to the election
           </p>
-          {verdict ? (
-            <p className="home-verdict">
-              {verdict} {raceMode === "sample" ? <SampleTag /> : null}
-            </p>
-          ) : null}
+          {verdict ? <p className="home-verdict">{verdict}</p> : null}
         </div>
         {speech.can && (
           <button
             type="button"
             className={`mb-listen${speech.on ? " is-on" : ""}`}
             aria-pressed={speech.on}
-            onClick={() =>
-              speech.on
-                ? speech.stop()
-                : speech.play(
-                    spokenBriefing(s, today, {
-                      name,
-                      today: items,
-                      ...(raceMode === "real" && verdict ? { race: verdict } : {}),
-                    }),
-                  )
-            }
+            onClick={() => (speech.on ? speech.stop() : speech.play(script))}
           >
             <span className="mb-listen-icon" aria-hidden="true">
               {speech.on ? "■" : "▶"}

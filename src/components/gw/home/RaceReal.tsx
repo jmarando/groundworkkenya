@@ -240,7 +240,7 @@ function RivalsCard({
 }
 
 /** The last election's official result; the sample's lessons and what-if stay out. */
-function OfficialResult({ s }: { s: Scenario }) {
+export function OfficialResult({ s }: { s: Scenario }) {
   const lt = s.lastTime;
   const top = Math.max(...lt.results.map((r) => r.votes));
   const total = lt.results.reduce((t, r) => t + r.votes, 0);

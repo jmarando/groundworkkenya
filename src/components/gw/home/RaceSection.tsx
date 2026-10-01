@@ -1,16 +1,15 @@
-import { OpponentWatch, Voters } from "@/components/gw/briefing/People";
-import { LastTime, Polls } from "@/components/gw/briefing/Polls";
-import { Race } from "@/components/gw/briefing/Race";
-import { RaceReal } from "@/components/gw/home/RaceReal";
+import { OfficialResult, RaceReal } from "@/components/gw/home/RaceReal";
 import { SectionHead } from "@/components/gw/home/SectionHead";
+import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
 import type { Scenario } from "@/lib/demo/types";
 import type { RaceView, SectionMode } from "@/lib/home";
 import type { SearchRead } from "@/lib/search-interest";
 import type { TopOfMind } from "@/lib/top-of-mind";
 
 /**
- * Where the race stands: the campaign's own rivals and published polls when it
- * has any on record, otherwise the sample for a race like it.
+ * Where the race stands: the campaign's own candidates, polls and search
+ * interest when it has them on record; otherwise what's missing and who adds
+ * it. The week's issues and the last election's result show either way.
  */
 export function RaceSection({
   s,
@@ -33,15 +32,7 @@ export function RaceSection({
 }) {
   return (
     <section className="home-sec" id="race" aria-labelledby="home-race">
-      <SectionHead
-        id="home-race"
-        title="The race"
-        mode={mode}
-        hint={
-          canEdit ? "Add your rivals and polls" : "The candidate or manager can add the real race."
-        }
-        {...(canEdit ? { onHint: () => onEdit("rivals") } : {})}
-      />
+      <SectionHead id="home-race" title="The race" />
       {mode === "real" ? (
         <RaceReal
           s={s}
@@ -54,15 +45,33 @@ export function RaceSection({
         />
       ) : (
         <>
-          <Race s={s} />
-          <div className="mb-two">
-            <OpponentWatch s={s} />
-            <Voters s={s} />
-          </div>
-          <div className="mb-two">
-            <Polls s={s} />
-            <LastTime s={s} />
-          </div>
+          <section className="card home-empty" aria-label="The race">
+            <p>No race on record yet.</p>
+            {canEdit ? (
+              <div className="mb-actions">
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={() => onEdit("rivals")}
+                >
+                  Add the candidates
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => onEdit("poll")}
+                >
+                  Add a poll
+                </button>
+              </div>
+            ) : (
+              <p className="meta">
+                The candidate or campaign manager adds the candidates and published polls.
+              </p>
+            )}
+          </section>
+          <TopOfMindCard mind={mind} />
+          {s.lastTime.official ? <OfficialResult s={s} /> : null}
         </>
       )}
     </section>

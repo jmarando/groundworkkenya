@@ -1,7 +1,6 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
 import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
 import { MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
-import { SampleTag } from "@/components/gw/home/SectionHead";
 import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
 import type { StoryView } from "@/lib/morning-story";
@@ -39,9 +38,7 @@ export function TodaySection({
         <ol>
           {items.map((t) => (
             <li key={t.title}>
-              <h3>
-                {t.title} {t.sample ? <SampleTag /> : null}
-              </h3>
+              <h3>{t.title}</h3>
               <p>{t.detail}</p>
               <ActionButton action={t.action} />
             </li>

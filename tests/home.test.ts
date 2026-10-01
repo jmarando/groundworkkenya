@@ -3,15 +3,12 @@
 // database; nothing leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/home.test.ts
 
-import { getScenario } from "@/lib/demo";
 import { nairobiToday } from "@/lib/demo/insights";
-import type { Scenario } from "@/lib/demo/types";
 import { addDays } from "@/lib/diary";
 import {
   greetingName,
   mindItem,
   nextStopItem,
-  raceVerdict,
   realToday,
   sectionModes,
   todayItems,
@@ -44,9 +41,9 @@ const MIND_LINE = {
 
 // ---------------------------------------------------------------- sections
 
-eq("no data: both sample", sectionModes({ realPeople: 0, rivals: 0, polls: 0 }), {
-  race: "sample",
-  campaign: "sample",
+eq("no data: both empty", sectionModes({ realPeople: 0, rivals: 0, polls: 0 }), {
+  race: "empty",
+  campaign: "empty",
 });
 eq(
   "a poll on record makes the race real",
@@ -88,11 +85,6 @@ eq(
     ],
   );
   eq(
-    "real items are not samples",
-    items.every((i) => !i.sample),
-    true,
-  );
-  eq(
     "nothing waiting, nothing listed",
     realToday({ pendingExpenses: 0, unread: 0, mind: null }),
     [],
@@ -119,32 +111,18 @@ eq(
     title: "Next: Kayole water point, 10:30",
     detail: "Visit · Kayole North",
     action: { kind: "go", label: "Open the diary", to: "/diary" },
-    sample: false,
   },
 );
 {
-  const sample: Scenario["today"] = getScenario("sakaja").today;
-  const real = realToday({ pendingExpenses: 1, unread: 0, mind: null });
-  const items = todayItems(real, sample);
-  eq("at most three", items.length, 3);
-  eq("real first", [items[0]?.title, items[0]?.sample], ["1 expense to approve", false]);
-  eq("then samples, marked", [items[1]?.title, items[1]?.sample], [sample[0]?.title, true]);
+  const four = [1, 2, 3, 4].map((n) => ({
+    title: `Item ${n}`,
+    detail: "",
+    action: { kind: "go" as const, label: "Open", to: "/inbox" as const },
+  }));
   eq(
-    "all sample when nothing is real",
-    todayItems([], sample).every((i) => i.sample),
-    true,
-  );
-  eq(
-    "real items can fill it",
-    todayItems(
-      realToday({
-        pendingExpenses: 1,
-        unread: 2,
-        mind: { ...MIND_LINE, key: "water", label: "Water" },
-      }),
-      sample,
-    ).every((i) => !i.sample),
-    true,
+    "Today: at most three, all real",
+    todayItems(four).map((i) => i.title),
+    ["Item 1", "Item 2", "Item 3"],
   );
 }
 {
@@ -159,11 +137,10 @@ eq(
   });
   eq(
     "a rival's move, with a jump to the race",
-    [items[0]?.title, items[0]?.action, items[0]?.sample],
+    [items[0]?.title, items[0]?.action],
     [
       "James Gakuya up 3.8 points in Mizani Africa's latest poll",
       { kind: "jump", label: "See the race", to: "#race" },
-      false,
     ],
   );
 }
@@ -177,19 +154,6 @@ eq("the week's top issue on Today", mindItem(MIND_LINE).title, "Floods is top of
 eq("first name", greetingName("Njeri Kamau", "Johnson"), "Njeri");
 eq("blank falls back", greetingName("  ", "Johnson"), "Johnson");
 eq("missing falls back", greetingName(null, "Johnson"), "Johnson");
-
-// ---------------------------------------------------------------- verdict
-
-eq("leading", raceVerdict(getScenario("sakaja")), "Leading Challenger A by 3.0 points.");
-{
-  const s = structuredClone(getScenario("mathira"));
-  s.polls.average.push({ week: "2 Oct", shares: { us: 30, a: 34.5, b: 9, undecided: 26.5 } });
-  eq("second", raceVerdict(s), "Second, 4.5 points behind Challenger A.");
-  s.polls.average.push({ week: "9 Oct", shares: { us: 8, a: 34, b: 30 } });
-  eq("third", raceVerdict(s), "Third, 26.0 points behind Challenger A.");
-  s.polls.average = [];
-  eq("no polls, no verdict", raceVerdict(s), "");
-}
 
 // ---------------------------------------------------------------- loading
 
@@ -640,7 +604,7 @@ async function main() {
     };
     const h = await loadHome(broken as never, ME, "manager", "2026-09-29");
     eq(
-      "no race tables yet: the sample, not an error",
+      "no race tables yet: an empty race, not an error",
       [h.facts.rivals, h.facts.polls, h.race.rivals.length],
       [0, 0, 0],
     );

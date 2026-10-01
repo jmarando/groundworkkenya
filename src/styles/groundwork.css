@@ -1917,13 +1917,7 @@ figure { margin: 0; }
 @media (max-width:1100px) { .home [id] { scroll-margin-top:80px; } }
 .home-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px; padding-top:22px; border-top:1px solid var(--border); }
 .home-head h2 { font-size:26px; font-weight:700; font-stretch:106%; letter-spacing:-0.02em; }
-.home-head-note { display:inline-flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted-foreground); }
-.home-head-note a { color:var(--foreground); text-decoration:underline; text-underline-offset:3px; }
-.home-sample { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:.02em; vertical-align:middle;
-  color:hsl(38 80% 30%); background:hsl(38 92% 56% / .14); border:1px solid hsl(38 92% 40% / .35); }
-.mb-three .home-sample { color:hsl(38 92% 62%); background:hsl(38 92% 56% / .1); border-color:hsl(38 92% 56% / .3); }
 .home-verdict { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; font-size:17px; font-weight:600; }
-.home-note { display:flex; align-items:center; gap:8px; margin:-4px 0; font-size:12.5px; color:var(--muted-foreground); }
 .home-live { display:flex; flex-direction:column; gap:14px; }
 .kpi-link { color:inherit; text-decoration:none; transition:border-color .2s ease-in-out; }
 .kpi-link:hover { border-color:var(--foreground); }
@@ -1945,7 +1939,6 @@ figure { margin: 0; }
 .home-issue-head { display:flex; justify-content:space-between; gap:12px; align-items:baseline; flex-wrap:wrap; }
 .home-issue-line { margin:4px 0 0; font-size:13px; color:var(--muted-foreground); overflow-wrap:anywhere; }
 .home-issue-line a { color:inherit; }
-.home-head-link { font:inherit; color:var(--foreground); text-decoration:underline; text-underline-offset:3px; background:none; border:0; padding:0; cursor:pointer; }
 .home-remove.is-sure { color:var(--gw-destructive); border-color:var(--gw-destructive); }
 /* Editing the race: who's running, and adding a poll. */
 .re-list { display:flex; flex-direction:column; gap:14px; }
@@ -1996,3 +1989,7 @@ figure { margin: 0; }
 /* Search interest: each candidate's month, under the chart. */
 .home-search-avg { font-size:12.5px; color:var(--muted-foreground); margin-top:8px; }
 .home-search-avg b { color:var(--foreground); font-variant-numeric:tabular-nums; }
+
+/* A section with nothing on record yet: what's missing and how to fill it. */
+.home-empty { padding:18px 20px; }
+.home-empty > p { margin:0 0 10px; }

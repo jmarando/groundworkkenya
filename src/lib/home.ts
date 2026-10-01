@@ -1,14 +1,13 @@
-// Home's rules: which sections show real data, what goes on the Today list,
-// the verdict line, and where each number leads. Pure, so they can be checked
-// without a browser or a database.
+// Home's rules: which sections have real data, what goes on the Today list,
+// and where each number leads. Pure, so they can be checked without a browser
+// or a database.
 
-import { ours } from "@/lib/demo";
-import type { Action, Scenario } from "@/lib/demo/types";
+import type { Action } from "@/lib/demo/types";
 import { KIND_NAMES, type DiaryEntry } from "@/lib/diary";
 import type { RacePoll, RaceRival, RivalMove, RivalPost } from "@/lib/race-data";
 import { pct, sourcesOf, type MindLine } from "@/lib/top-of-mind";
 
-export type SectionMode = "real" | "sample";
+export type SectionMode = "real" | "empty";
 
 export type HomeFacts = {
   /** People on file that are not seeded samples. */
@@ -29,7 +28,7 @@ export type RealSignals = {
   rivalMove?: RivalMove | null;
 };
 
-export type TodayItem = { title: string; detail: string; action: Action; sample: boolean };
+export type TodayItem = { title: string; detail: string; action: Action };
 
 /** The campaign's own race; empty until someone adds it. */
 export type RaceView = {
@@ -41,8 +40,8 @@ export type RaceView = {
 
 export function sectionModes(f: HomeFacts): { race: SectionMode; campaign: SectionMode } {
   return {
-    race: f.rivals > 0 || f.polls > 0 ? "real" : "sample",
-    campaign: f.realPeople > 0 ? "real" : "sample",
+    race: f.rivals > 0 || f.polls > 0 ? "real" : "empty",
+    campaign: f.realPeople > 0 ? "real" : "empty",
   };
 }
 
@@ -56,7 +55,6 @@ export function realToday(sig: RealSignals): TodayItem[] {
       title: `${n(sig.pendingExpenses, "expense", "expenses")} to approve`,
       detail: "Approval needs the supporting document on file.",
       action: { kind: "go", label: "Open Finance", to: "/finance" },
-      sample: false,
     });
   }
   if (sig.unread > 0) {
@@ -64,7 +62,6 @@ export function realToday(sig: RealSignals): TodayItem[] {
       title: `${n(sig.unread, "person", "people")} waiting for a reply`,
       detail: "Messages in the inbox nobody has answered yet.",
       action: { kind: "go", label: "Open the inbox", to: "/inbox" },
-      sample: false,
     });
   }
   if (sig.mind) items.push(mindItem(sig.mind));
@@ -73,7 +70,6 @@ export function realToday(sig: RealSignals): TodayItem[] {
       title: sig.rivalMove.title,
       detail: sig.rivalMove.detail,
       action: { kind: "jump", label: "See the race", to: "#race" },
-      sample: false,
     });
   }
   return items;
@@ -85,7 +81,6 @@ export function mindItem(l: MindLine): TodayItem {
     title: `${l.label} is top of mind this week`,
     detail: `${pct(l.score)} of what was raised across ${sourcesOf(l)}.`,
     action: { kind: "issue", label: "See what's said", issue: l.key },
-    sample: false,
   };
 }
 
@@ -95,37 +90,15 @@ export function nextStopItem(e: DiaryEntry): TodayItem {
     title: `Next: ${e.title}, ${e.startsAt}`,
     detail: e.note ?? [KIND_NAMES[e.kind], e.wardName].filter(Boolean).join(" · "),
     action: { kind: "go", label: "Open the diary", to: "/diary" },
-    sample: false,
   };
 }
 
-/** Real items first, then the race's sample items, never more than `max`. */
-export function todayItems(real: TodayItem[], sample: Scenario["today"], max = 3): TodayItem[] {
-  return [...real, ...sample.map((t) => ({ ...t, sample: true }))].slice(0, max);
-}
+/** Today's list: the real items, at most three. */
+export const todayItems = (real: TodayItem[], max = 3): TodayItem[] => real.slice(0, max);
 
 /** "Njeri Kamau" → "Njeri"; nothing usable → the fallback. */
 export function greetingName(fullName: string | null | undefined, fallback: string): string {
   return fullName?.trim().split(/\s+/)[0] || fallback;
-}
-
-const PLACE = ["", "First", "Second", "Third", "Fourth", "Fifth", "Sixth"];
-
-/** Where the latest poll puts us, in one line. */
-export function raceVerdict(s: Scenario): string {
-  const latest = s.polls.average[s.polls.average.length - 1];
-  if (!latest) return "";
-  const share = (key: string) => latest.shares[key] ?? 0;
-  const us = ours(s);
-  const ranked = [...s.contenders].sort((a, b) => share(b.key) - share(a.key));
-  const place = ranked.findIndex((c) => c.key === us.key) + 1;
-  if (place === 1) {
-    const next = ranked[1];
-    if (!next) return "";
-    return `Leading ${next.short} by ${(share(us.key) - share(next.key)).toFixed(1)} points.`;
-  }
-  const leader = ranked[0]!;
-  return `${PLACE[place] ?? `No. ${place}`}, ${(share(leader.key) - share(us.key)).toFixed(1)} points behind ${leader.short}.`;
 }
 
 /**

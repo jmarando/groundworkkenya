@@ -9,15 +9,9 @@ import { TodaySection } from "@/components/gw/home/TodaySection";
 import { nairobiToday } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
 import { dayPlan, nairobiTime, nextStop, watchList } from "@/lib/diary";
-import {
-  greetingName,
-  nextStopItem,
-  raceVerdict,
-  realToday,
-  sectionModes,
-  todayItems,
-} from "@/lib/home";
+import { greetingName, nextStopItem, realToday, sectionModes, todayItems } from "@/lib/home";
 import type { HomeData } from "@/lib/home.functions";
+import { spokenHome } from "@/lib/home-spoken";
 import { realVerdict } from "@/lib/race-data";
 
 const NOTHING_YET: HomeData = {
@@ -33,9 +27,9 @@ const NOTHING_YET: HomeData = {
 
 /**
  * The campaign's morning, top to bottom: what to do today, where the race
- * stands, and whether the campaign's own work is on course. Each section says
- * whether it is real or a sample of a race like this one. `canEdit`: the
- * candidate or manager, who can change the race.
+ * stands, and whether the campaign's own work is on course. Everything is the
+ * campaign's own; a section with nothing yet says what fills it. `canEdit`:
+ * the candidate or manager, who can change the race, the story and the diary.
  */
 export function Home({
   s,
@@ -53,27 +47,28 @@ export function Home({
   const modes = sectionModes(d.facts);
   const now = nairobiTime();
   const next = nextStop(d.diary, today, now);
-  const items = todayItems(
-    [...(next ? [nextStopItem(next)] : []), ...realToday(d.signals)],
-    s.today,
-  );
-  const verdict = modes.race === "real" ? realVerdict(d.race.rivals, d.race.polls) : raceVerdict(s);
+  const items = todayItems([...(next ? [nextStopItem(next)] : []), ...realToday(d.signals)]);
+  const verdict = modes.race === "real" ? realVerdict(d.race.rivals, d.race.polls) : "";
+  const plan = dayPlan(d.diary, today);
+  const name = greetingName(d.firstName, s.candidate.first);
+  const script = spokenHome({
+    name,
+    today,
+    verdict,
+    items,
+    story: d.story,
+    plan,
+    mind: d.signals.mind,
+  });
   return (
     <div className="mb ov home">
-      <HomeHeader
-        s={s}
-        today={today}
-        name={greetingName(d.firstName, s.candidate.first)}
-        verdict={verdict}
-        raceMode={modes.race}
-        items={items}
-      />
+      <HomeHeader s={s} today={today} name={name} verdict={verdict} script={script} />
       <TodaySection
         items={items}
         loading={!data}
         story={d.story}
         time={now}
-        plan={dayPlan(d.diary, today)}
+        plan={plan}
         watch={watchList(d.diary, today)}
         canEdit={canEdit}
         onEditStory={() => setEditing("story")}
@@ -93,11 +88,7 @@ export function Home({
         <EditRivals rivals={d.race.rivals} onClose={() => setEditing(null)} />
       )}
       {editing === "poll" && <AddPoll rivals={d.race.rivals} onClose={() => setEditing(null)} />}
-      <CampaignSection s={s} today={today} mode={modes.campaign} />
-      <p className="mb-foot">
-        Sections marked Sample show invented figures for a race like yours
-        {s.candidate.fictional ? ", with a fictional candidate" : ""}. Results marked IEBC are real.
-      </p>
+      <CampaignSection mode={modes.campaign} />
     </div>
   );
 }
