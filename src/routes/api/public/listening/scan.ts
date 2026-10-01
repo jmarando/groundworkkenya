@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { runListeningScan } from "@/lib/listening.server";
 import { runMorningStory } from "@/lib/morning-story.server";
+import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
 
 /**
@@ -42,7 +43,12 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
-        return Response.json({ ...result, rivals, story });
+        // And once a morning, each campaign's search interest.
+        const search = await runSearchInterest(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
+        return Response.json({ ...result, rivals, story, search });
       },
     },
   },
