@@ -1561,7 +1561,7 @@ figure { margin: 0; }
 .mb-tag--economy { background:hsl(15 77% 48% / .1); color:hsl(15 75% 34%); }
 
 .mb-time { list-style:none; margin:0; padding:0; }
-.mb-time li { display:grid; grid-template-columns:48px 1fr; gap:10px; padding:10px 0; border-top:1px solid var(--border); }
+.mb-time li { display:grid; grid-template-columns:56px 1fr; gap:10px; padding:10px 0; border-top:1px solid var(--border); }
 .mb-time li:first-child { border-top:0; padding-top:0; }
 .mb-time-at { font-family:var(--font-mono); font-size:12px; font-variant-numeric:tabular-nums; padding-top:2px; }
 .mb-time-place { font-size:13.5px; font-weight:600; }
@@ -1962,3 +1962,15 @@ figure { margin: 0; }
 /* Listening: the keywords at the top of Pulse. */
 .lk-keywords { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-top:14px; }
 .lk-keywords p { margin:4px 0 0; }
+
+/* The diary: a week of days, each a card, today marked. */
+.diary { display:flex; flex-direction:column; gap:18px; }
+.diary-head { display:flex; justify-content:space-between; align-items:flex-end; gap:14px; flex-wrap:wrap; }
+.diary-head h1 { font-size:clamp(24px, 2.6vw, 32px); font-weight:700; margin-top:6px; }
+.diary-nav { display:flex; gap:8px; flex-wrap:wrap; }
+.diary-days { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:14px; align-items:start; }
+.diary-day.is-today { border-color:var(--gw-accent); }
+.diary-today { color:var(--gw-accent); font-weight:600; }
+.diary-actions { display:flex; gap:6px; margin-top:6px; }
+.mb-time li.diary-editing { display:block; }
+.diary-form { display:flex; flex-direction:column; gap:10px; margin-top:8px; }

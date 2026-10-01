@@ -18,7 +18,8 @@ export type ActionRoute =
   | "/finance"
   | "/agents"
   | "/inbox"
-  | "/warroom";
+  | "/warroom"
+  | "/diary";
 
 /** One tap from the briefing to doing something about it. */
 export type Action =
