@@ -156,6 +156,25 @@ async function main() {
     );
   }
 
+  {
+    // Every campaign's team can read the sweep's job row, so it names no keyword.
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("firecrawl") ? { status: 500, body: "try later" } : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "the shared note says what failed, without the keyword",
+      sb.tables["listening_jobs"]?.[0]?.["detail"],
+      "1 keyword could not be searched.",
+    );
+    eq(
+      "the one who swept hears which",
+      r.notes.some((n) => n.startsWith("Water:")),
+      true,
+    );
+  }
+
   // ScrapeCreators keyword search comes out of a daily budget.
   process.env["SCRAPECREATORS_API_KEY"] = "test-key";
   {

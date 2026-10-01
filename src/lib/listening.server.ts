@@ -243,6 +243,14 @@ export async function runListeningScan(
   const topicLimit = Math.min(Math.max(opts.topicLimit ?? 4, 1), 8);
   const classifyLimit = Math.min(Math.max(opts.classifyLimit ?? 40, 1), 60);
   const notes: string[] = [];
+  // Every campaign's team can read the job row, so what it says names no keyword:
+  // shared notes and counts only. The names go back to whoever swept in notes.
+  const shared: string[] = [];
+  const failed = { searches: 0, feeds: 0, social: 0, stored: 0 };
+  const say = (note: string) => {
+    notes.push(note);
+    shared.push(note);
+  };
   const now = new Date();
 
   const { data: job } = await sb.from("listening_jobs").select("*").eq("key", JOB_KEY).maybeSingle();
@@ -304,6 +312,7 @@ export async function runListeningScan(
         hits = await firecrawlSearch(query, 10, "qdr:w");
       } catch (err) {
         if (err instanceof PauseError) throw err;
+        failed.searches++;
         notes.push(`${topic.label}: ${(err as Error).message}`);
         continue;
       }
@@ -312,6 +321,7 @@ export async function runListeningScan(
       // The keyword's Google Alert feed, when it has one: no credits used.
       const feed = typeof topic.alert_feed_url === "string" ? topic.alert_feed_url : "";
       if (feed && !ALERT_FEED.test(feed)) {
+        failed.feeds++;
         notes.push(`${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`);
       } else if (feed) {
         try {
@@ -323,6 +333,7 @@ export async function runListeningScan(
           hits.push(...entries.map((e) => ({ ...e, source: "google_alerts" })));
           found += entries.length;
         } catch (err) {
+          failed.feeds++;
           notes.push(`${topic.label} Google Alert: ${(err as Error).message}`);
         }
       }
@@ -335,9 +346,7 @@ export async function runListeningScan(
         // Three searches, three credits, from the day's keyword budget.
         if (kw && !keywordsSpent && !(await takeCredits(counter, "keywords", 3))) {
           keywordsSpent = true;
-          notes.push(
-            "Social keyword search stopped: today's ScrapeCreators credits for it are used.",
-          );
+          say("Social keyword search stopped: today's ScrapeCreators credits for it are used.");
         }
         if (kw && !keywordsSpent) {
           const social = await Promise.allSettled([
@@ -355,10 +364,11 @@ export async function runListeningScan(
             const err = r.reason instanceof Error ? r.reason : new Error(String(r.reason));
             if (err instanceof ScrapeCreatorsCreditError) {
               if (!creditNoted) {
-                notes.push("Social search skipped — ScrapeCreators is out of credits.");
+                say("Social search skipped — ScrapeCreators is out of credits.");
                 creditNoted = true;
               }
             } else {
+              failed.social++;
               notes.push(`${topic.label} social: ${err.message}`);
             }
           }
@@ -382,8 +392,10 @@ export async function runListeningScan(
           .from("listening_mentions")
           .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true })
           .select("id");
-        if (insErr)
+        if (insErr) {
+          failed.stored++;
           notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
+        }
         stored += ins?.length ?? 0;
       }
 
@@ -438,15 +450,25 @@ export async function runListeningScan(
       return { ran: true, topics: 0, found, stored, classified, alertsFired, paused, notes };
     }
     notes.push((err as Error).message);
+    shared.push("The sweep stopped early on an error.");
   }
 
+  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const counts = [
+    failed.searches && `${count(failed.searches, "keyword", "keywords")} could not be searched.`,
+    failed.feeds &&
+      `${count(failed.feeds, "Google Alert feed", "Google Alert feeds")} could not be read.`,
+    failed.social && `${count(failed.social, "social search", "social searches")} failed.`,
+    failed.stored &&
+      `What ${count(failed.stored, "keyword", "keywords")} found could not be stored.`,
+  ].filter((c): c is string => Boolean(c));
   await sb
     .from("listening_jobs")
     .update({
       status: "idle",
       locked_until: null,
       last_run_at: new Date().toISOString(),
-      detail: notes.join(" · ").slice(0, 400) || null,
+      detail: [...shared, ...counts].join(" · ").slice(0, 400) || null,
       updated_at: new Date().toISOString(),
     })
     .eq("key", JOB_KEY);
