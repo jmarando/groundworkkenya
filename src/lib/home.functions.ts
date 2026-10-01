@@ -7,6 +7,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { nairobiToday } from "@/lib/demo/insights";
+import { addDays, type DiaryEntry } from "@/lib/diary";
+import { loadDiary } from "@/lib/diary.functions";
 import {
   issueBoard,
   topIssue,
@@ -27,6 +29,8 @@ export type HomeData = {
   signals: RealSignals;
   /** The campaign's own race; empty until someone adds it. */
   race: RaceView;
+  /** The diary from today through the next two days. */
+  diary: DiaryEntry[];
 };
 
 /** Roles that can approve expenses, so only they are asked to. */
@@ -42,33 +46,35 @@ export async function loadHome(
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const canApprove = APPROVERS.includes(String(role));
   // Home still opens if the race can't be read: the race section shows its sample.
-  const [profile, people, expenses, unread, mentions, postRows, rivals, polls] = await Promise.all([
-    sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
-    sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
-    canApprove
-      ? sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending")
-      : Promise.resolve({ count: 0 }),
-    sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
-    // What people say: rivals' own posts are shown apart, not counted as talk.
-    sb
-      .from("listening_mentions")
-      .select("issue, sentiment, title, url, found_at")
-      .is("rival_id", null)
-      .gte("found_at", since30)
-      .order("found_at", { ascending: false })
-      .limit(2000),
-    sb
-      .from("listening_mentions")
-      .select(
-        "rival_id, source, url, title, published_at, reach, comments_read, comments_positive, comments_negative, comments_issue",
-      )
-      .not("rival_id", "is", null)
-      .gte("published_at", since30)
-      .order("published_at", { ascending: false })
-      .limit(300),
-    loadRivals(sb).catch(() => []),
-    loadPolls(sb).catch(() => []),
-  ]);
+  const [profile, people, expenses, unread, mentions, postRows, rivals, polls, diary] =
+    await Promise.all([
+      sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
+      sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
+      canApprove
+        ? sb.from("expenses").select("id", { count: "exact", head: true }).eq("status", "pending")
+        : Promise.resolve({ count: 0 }),
+      sb.from("conversations").select("id", { count: "exact", head: true }).eq("unread", true),
+      // What people say: rivals' own posts are shown apart, not counted as talk.
+      sb
+        .from("listening_mentions")
+        .select("issue, sentiment, title, url, found_at")
+        .is("rival_id", null)
+        .gte("found_at", since30)
+        .order("found_at", { ascending: false })
+        .limit(2000),
+      sb
+        .from("listening_mentions")
+        .select(
+          "rival_id, source, url, title, published_at, reach, comments_read, comments_positive, comments_negative, comments_issue",
+        )
+        .not("rival_id", "is", null)
+        .gte("published_at", since30)
+        .order("published_at", { ascending: false })
+        .limit(300),
+      loadRivals(sb).catch(() => []),
+      loadPolls(sb).catch(() => []),
+      loadDiary(sb, todayIso, addDays(todayIso, 2)).catch(() => []),
+    ]);
   const rows = (mentions.data ?? []) as IssueRow[];
   const posts = ((postRows.data ?? []) as PostRow[])
     .map(postFromRow)
@@ -84,6 +90,7 @@ export async function loadHome(
       rivalMove: postSpike(rivals, posts, new Date()) ?? rivalMove(rivals, polls, todayIso),
     },
     race: { rivals, polls, issues: issueBoard(rows), posts },
+    diary,
   };
 }
 

@@ -1,11 +1,26 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
-import { DayPlan, StoryBlock } from "@/components/gw/briefing/Story";
+import { StoryBlock } from "@/components/gw/briefing/Story";
+import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
 import { SampleTag } from "@/components/gw/home/SectionHead";
 import type { Scenario } from "@/lib/demo/types";
+import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
 
 /** What to do today, the day's story, and where to be. */
-export function TodaySection({ s, items }: { s: Scenario; items: TodayItem[] }) {
+export function TodaySection({
+  s,
+  items,
+  plan,
+  watch,
+  canEdit,
+}: {
+  s: Scenario;
+  items: TodayItem[];
+  /** Today's stops from the diary, and what to watch over the next three days. */
+  plan: DiaryEntry[];
+  watch: DiaryEntry[];
+  canEdit: boolean;
+}) {
   return (
     <section className="home-sec" aria-labelledby="home-today">
       <div className="mb-three">
@@ -25,12 +40,12 @@ export function TodaySection({ s, items }: { s: Scenario; items: TodayItem[] }) 
         </ol>
       </div>
       <p className="home-note">
-        <SampleTag /> The story and the day&apos;s plan below are invented for a race like yours.
+        <SampleTag /> The story below is invented for a race like yours.
       </p>
       <div className="mb-grid">
         <StoryBlock s={s} />
         <aside className="mb-side" aria-label="Today's plan">
-          <DayPlan s={s} />
+          <DiaryPlan plan={plan} watch={watch} canEdit={canEdit} />
         </aside>
       </div>
     </section>

@@ -7,7 +7,15 @@ import { RaceSection } from "@/components/gw/home/RaceSection";
 import { TodaySection } from "@/components/gw/home/TodaySection";
 import { nairobiToday } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
-import { greetingName, raceVerdict, realToday, sectionModes, todayItems } from "@/lib/home";
+import { dayPlan, nairobiTime, nextStop, watchList } from "@/lib/diary";
+import {
+  greetingName,
+  nextStopItem,
+  raceVerdict,
+  realToday,
+  sectionModes,
+  todayItems,
+} from "@/lib/home";
 import type { HomeData } from "@/lib/home.functions";
 import { realVerdict } from "@/lib/race-data";
 
@@ -16,6 +24,7 @@ const NOTHING_YET: HomeData = {
   facts: { realPeople: 0, rivals: 0, polls: 0 },
   signals: { pendingExpenses: 0, unread: 0, topIssue: null },
   race: { rivals: [], polls: [], issues: [], posts: [] },
+  diary: [],
 };
 
 /**
@@ -38,7 +47,12 @@ export function Home({
   const today = nairobiToday();
   const d = data ?? NOTHING_YET;
   const modes = sectionModes(d.facts);
-  const items = todayItems(realToday(d.signals), s.today);
+  const now = nairobiTime();
+  const next = nextStop(d.diary, today, now);
+  const items = todayItems(
+    [...(next ? [nextStopItem(next)] : []), ...realToday(d.signals)],
+    s.today,
+  );
   const verdict = modes.race === "real" ? realVerdict(d.race.rivals, d.race.polls) : raceVerdict(s);
   return (
     <div className="mb ov home">
@@ -50,7 +64,13 @@ export function Home({
         raceMode={modes.race}
         items={items}
       />
-      <TodaySection s={s} items={items} />
+      <TodaySection
+        s={s}
+        items={items}
+        plan={dayPlan(d.diary, today)}
+        watch={watchList(d.diary, today)}
+        canEdit={canEdit}
+      />
       <RaceSection
         s={s}
         mode={modes.race}

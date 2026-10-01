@@ -4,10 +4,13 @@
 //   npx tsx --tsconfig tsconfig.json tests/home.test.ts
 
 import { getScenario } from "@/lib/demo";
+import { nairobiToday } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
+import { addDays } from "@/lib/diary";
 import {
   greetingName,
   issueBoard,
+  nextStopItem,
   raceVerdict,
   realToday,
   sectionModes,
@@ -92,6 +95,25 @@ eq(
     ["1 expense to approve", "3 people waiting for a reply"],
   );
 }
+eq(
+  "the next stop leads Today",
+  nextStopItem({
+    id: "d1",
+    day: "2026-10-05",
+    startsAt: "10:30",
+    title: "Kayole water point",
+    kind: "visit",
+    wardId: "w1",
+    wardName: "Kayole North",
+    note: null,
+  }),
+  {
+    title: "Next: Kayole water point, 10:30",
+    detail: "Visit · Kayole North",
+    action: { kind: "go", label: "Open the diary", to: "/diary" },
+    sample: false,
+  },
+);
 {
   const sample: Scenario["today"] = getScenario("sakaja").today;
   const real = realToday({ pendingExpenses: 1, unread: 0, topIssue: null });
@@ -354,6 +376,37 @@ async function main() {
   {
     const h = await loadHome(db({ profiles: [] }) as never, ME, "candidate");
     eq("no profile, no name", h.firstName, null);
+  }
+  {
+    const today = nairobiToday();
+    const diaryRow = (id: string, day: string, kind = "visit") => ({
+      id,
+      campaign_id: "c2",
+      day,
+      starts_at: "10:30:00",
+      title: id,
+      kind,
+      ward_id: null,
+      note: null,
+    });
+    const h = await loadHome(
+      db({
+        diary_entries: [
+          diaryRow("today", today),
+          diaryRow("in-two-days", addDays(today, 2), "watch"),
+          diaryRow("too-far", addDays(today, 5)),
+          diaryRow("yesterday", addDays(today, -1)),
+        ],
+      }) as never,
+      ME,
+      "manager",
+      today,
+    );
+    eq(
+      "the diary from today through the next two days",
+      h.diary.map((e) => e.id),
+      ["today", "in-two-days"],
+    );
   }
   {
     const rival = (id: string, name: string, tone: string, sort: number, isUs = false) => ({

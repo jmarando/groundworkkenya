@@ -4,6 +4,7 @@
 
 import { ours } from "@/lib/demo";
 import type { Action, Scenario } from "@/lib/demo/types";
+import { KIND_NAMES, type DiaryEntry } from "@/lib/diary";
 import type { RacePoll, RaceRival, RivalMove, RivalPost } from "@/lib/race-data";
 
 export type SectionMode = "real" | "sample";
@@ -102,6 +103,16 @@ export function realToday(sig: RealSignals): TodayItem[] {
 }
 
 /** Real items first, then the race's sample items, never more than `max`. */
+/** The diary's next stop today, first on Today's list. */
+export function nextStopItem(e: DiaryEntry): TodayItem {
+  return {
+    title: `Next: ${e.title}, ${e.startsAt}`,
+    detail: e.note ?? [KIND_NAMES[e.kind], e.wardName].filter(Boolean).join(" · "),
+    action: { kind: "go", label: "Open the diary", to: "/diary" },
+    sample: false,
+  };
+}
+
 export function todayItems(real: TodayItem[], sample: Scenario["today"], max = 3): TodayItem[] {
   return [...real, ...sample.map((t) => ({ ...t, sample: true }))].slice(0, max);
 }
