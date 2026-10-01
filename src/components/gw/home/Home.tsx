@@ -4,6 +4,7 @@ import { CampaignSection } from "@/components/gw/home/CampaignSection";
 import { HomeHeader } from "@/components/gw/home/HomeHeader";
 import { AddPoll, EditRivals, useRemovePoll } from "@/components/gw/home/RaceEditor";
 import { RaceSection } from "@/components/gw/home/RaceSection";
+import { StoryEditor } from "@/components/gw/home/StoryEditor";
 import { TodaySection } from "@/components/gw/home/TodaySection";
 import { nairobiToday } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
@@ -25,6 +26,7 @@ const NOTHING_YET: HomeData = {
   signals: { pendingExpenses: 0, unread: 0, topIssue: null },
   race: { rivals: [], polls: [], issues: [], posts: [] },
   diary: [],
+  story: null,
 };
 
 /**
@@ -42,7 +44,7 @@ export function Home({
   data?: HomeData;
   canEdit?: boolean;
 }) {
-  const [editing, setEditing] = useState<null | "rivals" | "poll">(null);
+  const [editing, setEditing] = useState<null | "rivals" | "poll" | "story">(null);
   const removePollNow = useRemovePoll();
   const today = nairobiToday();
   const d = data ?? NOTHING_YET;
@@ -65,12 +67,15 @@ export function Home({
         items={items}
       />
       <TodaySection
-        s={s}
         items={items}
+        story={d.story}
+        time={now}
         plan={dayPlan(d.diary, today)}
         watch={watchList(d.diary, today)}
         canEdit={canEdit}
+        onEditStory={() => setEditing("story")}
       />
+      {editing === "story" && <StoryEditor view={d.story} onClose={() => setEditing(null)} />}
       <RaceSection
         s={s}
         mode={modes.race}

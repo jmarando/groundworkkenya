@@ -409,6 +409,53 @@ async function main() {
     );
   }
   {
+    const today = nairobiToday();
+    const h = await loadHome(
+      db({
+        morning_stories: [
+          {
+            id: "s1",
+            campaign_id: "c2",
+            day: today,
+            story: {
+              kind: "written",
+              headline: "Rationing extended",
+              summary: "Water rationing now covers 14 wards.",
+              sources: [
+                {
+                  title: "Nation",
+                  url: "https://nation.africa/x",
+                  source: "nation.africa",
+                  publishedAt: null,
+                },
+              ],
+              figures: [],
+              also: [],
+              picks: [],
+              from: 12,
+            },
+            written_by: "team",
+            edited_by: ME,
+            edited_at: `${today}T04:10:00Z`,
+            created_at: `${today}T03:04:00Z`,
+          },
+        ],
+      }) as never,
+      ME,
+      "manager",
+      today,
+    );
+    eq(
+      "this morning's story, and who edited it",
+      [h.story?.story.headline, h.story?.writtenBy, h.story?.editedBy],
+      ["Rationing extended", "team", "Njeri Kamau"],
+    );
+  }
+  {
+    const h = await loadHome(db() as never, ME, "manager");
+    eq("no story yet", h.story, null);
+  }
+  {
     const rival = (id: string, name: string, tone: string, sort: number, isUs = false) => ({
       id,
       name,

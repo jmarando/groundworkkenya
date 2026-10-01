@@ -17,6 +17,8 @@ import {
   type RaceView,
   type RealSignals,
 } from "@/lib/home";
+import type { StoryView } from "@/lib/morning-story";
+import { loadStory } from "@/lib/morning-story.functions";
 import { postFromRow, postSpike, rivalMove, type PostRow, type RivalPost } from "@/lib/race-data";
 import { loadPolls, loadRivals } from "@/lib/race.functions";
 
@@ -31,6 +33,8 @@ export type HomeData = {
   race: RaceView;
   /** The diary from today through the next two days. */
   diary: DiaryEntry[];
+  /** This morning's story: written at 06:00 from the news, or by the team. */
+  story: StoryView | null;
 };
 
 /** Roles that can approve expenses, so only they are asked to. */
@@ -46,7 +50,7 @@ export async function loadHome(
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const canApprove = APPROVERS.includes(String(role));
   // Home still opens if the race can't be read: the race section shows its sample.
-  const [profile, people, expenses, unread, mentions, postRows, rivals, polls, diary] =
+  const [profile, people, expenses, unread, mentions, postRows, rivals, polls, diary, story] =
     await Promise.all([
       sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
       sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
@@ -74,6 +78,7 @@ export async function loadHome(
       loadRivals(sb).catch(() => []),
       loadPolls(sb).catch(() => []),
       loadDiary(sb, todayIso, addDays(todayIso, 2)).catch(() => []),
+      loadStory(sb, todayIso).catch(() => null),
     ]);
   const rows = (mentions.data ?? []) as IssueRow[];
   const posts = ((postRows.data ?? []) as PostRow[])
@@ -91,6 +96,7 @@ export async function loadHome(
     },
     race: { rivals, polls, issues: issueBoard(rows), posts },
     diary,
+    story,
   };
 }
 

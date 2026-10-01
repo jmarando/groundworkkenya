@@ -1,25 +1,31 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
-import { StoryBlock } from "@/components/gw/briefing/Story";
 import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
+import { MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
 import { SampleTag } from "@/components/gw/home/SectionHead";
-import type { Scenario } from "@/lib/demo/types";
 import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
+import type { StoryView } from "@/lib/morning-story";
 
 /** What to do today, the day's story, and where to be. */
 export function TodaySection({
-  s,
   items,
+  story,
+  time,
   plan,
   watch,
   canEdit,
+  onEditStory,
 }: {
-  s: Scenario;
   items: TodayItem[];
+  /** This morning's story, or null before it is written or on a morning with no news. */
+  story: StoryView | null;
+  /** Nairobi's time now, HH:MM. */
+  time: string;
   /** Today's stops from the diary, and what to watch over the next three days. */
   plan: DiaryEntry[];
   watch: DiaryEntry[];
   canEdit: boolean;
+  onEditStory: () => void;
 }) {
   return (
     <section className="home-sec" aria-labelledby="home-today">
@@ -39,11 +45,8 @@ export function TodaySection({
           ))}
         </ol>
       </div>
-      <p className="home-note">
-        <SampleTag /> The story below is invented for a race like yours.
-      </p>
       <div className="mb-grid">
-        <StoryBlock s={s} />
+        <MorningStoryBlock view={story} time={time} canEdit={canEdit} onEdit={onEditStory} />
         <aside className="mb-side" aria-label="Today's plan">
           <DiaryPlan plan={plan} watch={watch} canEdit={canEdit} />
         </aside>
