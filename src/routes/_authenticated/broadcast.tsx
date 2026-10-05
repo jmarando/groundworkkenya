@@ -8,9 +8,19 @@ import { useAccess } from "@/hooks/useAccess";
 import type { SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
+import { parseBroadcastSearch, type BroadcastSearch } from "@/lib/voters-view";
 
 export const Route = createFileRoute("/_authenticated/broadcast")({
   component: Broadcast,
+  // ?wards=a,b&support=strong: the audience Voters chose ("Message these people").
+  validateSearch: (search: Record<string, unknown>): BroadcastSearch => ({
+    ...(typeof search["wards"] === "string" ? { wards: search["wards"] } : {}),
+    ...(search["support"] === "strong" ||
+    search["support"] === "persuadable" ||
+    search["support"] === "both"
+      ? { support: search["support"] }
+      : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Broadcast · Groundwork" },
@@ -64,10 +74,13 @@ function Broadcast() {
   const fetchBroadcast = useServerFn(getBroadcast);
   const { data } = useQuery({ queryKey: ["broadcast"], queryFn: () => fetchBroadcast() });
 
-  const [support45, setSupport45] = useState(true);
-  const [undecided, setUndecided] = useState(true);
+  const start = parseBroadcastSearch(Route.useSearch());
+  const [support45, setSupport45] = useState(start.strong);
+  const [undecided, setUndecided] = useState(start.persuadable);
   const [segs, setSegs] = useState<string[]>([]);
-  const [ward, setWard] = useState<string>("");
+  const [wardIds, setWardIds] = useState<string[]>(start.wardIds);
+  /** One ward: rally mode, addressed to it. */
+  const ward = wardIds.length === 1 ? wardIds[0]! : "";
   const [lang, setLang] = useState<"sw" | "en">("sw");
   const [composing, setComposing] = useState(false);
   const { isPrincipal } = useAccess();
@@ -76,7 +89,7 @@ function Broadcast() {
   const matched = useMemo(
     () =>
       contacts.filter((c) => {
-        if (ward && c.wardId !== ward) return false;
+        if (wardIds.length && !(c.wardId && wardIds.includes(c.wardId))) return false;
         if (segs.length && !(c.segment && segs.includes(c.segment))) return false;
         if (support45 || undecided) {
           const strong = c.support >= 70;
@@ -85,7 +98,7 @@ function Broadcast() {
         }
         return true;
       }),
-    [contacts, ward, segs, support45, undecided],
+    [contacts, wardIds, segs, support45, undecided],
   );
   const reachable = useMemo(() => matched.filter((c) => c.sms && !c.optedOut), [matched]);
   const toggleSeg = (slug: string) =>
@@ -112,6 +125,7 @@ function Broadcast() {
   const sendable = reachable.length;
   const cost = sendable * data.smsRate;
   const wardName = data.wardList.find((w) => w.id === ward)?.name ?? null;
+  const place = wardName ?? (wardIds.length > 1 ? `${wardIds.length} wards` : null);
   const segNames = data.segments.filter((s) => segs.includes(s.slug)).map((s) => s.name);
 
   const body = wardName
@@ -162,7 +176,7 @@ function Broadcast() {
       {composing && (
         <BroadcastComposer
           audience={{
-            wardIds: ward ? [ward] : [],
+            wardIds,
             segments: segs,
             support: [
               ...(support45 ? (["strong"] as SupportBand[]) : []),
@@ -171,7 +185,7 @@ function Broadcast() {
           }}
           describe={[
             segNames.length ? segNames.join(", ") : "Everyone",
-            wardName ? `in ${wardName}` : "in every ward",
+            place ? `in ${place}` : "in every ward",
             support45 && undecided
               ? "· strong and undecided supporters"
               : support45
@@ -272,21 +286,26 @@ function Broadcast() {
               <span className="kpi-lbl">Where · pick a ward for a rally</span>
               <div className="pbar" style={{ marginTop: 6 }}>
                 <select
-                  value={ward}
-                  onChange={(e) => setWard(e.target.value)}
+                  value={wardIds.length > 1 ? "many" : ward}
+                  onChange={(e) =>
+                    setWardIds(e.target.value && e.target.value !== "many" ? [e.target.value] : [])
+                  }
                   aria-label="Ward"
                   style={{ minWidth: 220 }}
                 >
                   <option value="">Everywhere · all wards</option>
+                  {wardIds.length > 1 ? (
+                    <option value="many">These {wardIds.length} wards, from Voters</option>
+                  ) : null}
                   {data.wardList.map((w) => (
                     <option value={w.id} key={w.id}>
                       {w.name} · {w.constituency} · {nf.format(w.consented)} consented
                     </option>
                   ))}
                 </select>
-                {ward ? (
-                  <button type="button" className="fchip" onClick={() => setWard("")}>
-                    Clear ward
+                {wardIds.length ? (
+                  <button type="button" className="fchip" onClick={() => setWardIds([])}>
+                    {wardIds.length > 1 ? "Clear wards" : "Clear ward"}
                   </button>
                 ) : null}
               </div>
