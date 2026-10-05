@@ -137,7 +137,7 @@ function Voters() {
   const title = areaTitle(area, wards);
   const crumbs = crumbsOf(area, wards);
   const inside = wardsIn(area, wards);
-  const n = areaNumbers(area, wards, canvass?.wards ?? []);
+  const n = areaNumbers(area, wards, canvass?.wards ?? [], canvass?.unplaced);
   const record = search.person ? (people?.rows.find((r) => r.id === search.person) ?? null) : null;
   const toWard = (slug: string) => setArea({ level: "ward", slug });
 
@@ -320,6 +320,7 @@ function Voters() {
             search={search}
             onSearch={go}
             placeName={title}
+            segments={people?.segments ?? []}
           />
         ) : view === "doors" ? (
           <DoorsView

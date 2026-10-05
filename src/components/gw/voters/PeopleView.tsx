@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 
 import type { PersonRow } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
-import type {
-  ConsentFilter,
-  ContactFilter,
-  SearchChanges,
-  SupportFilter,
-  VotersSearch,
+import {
+  pageWithin,
+  type ConsentFilter,
+  type ContactFilter,
+  type SearchChanges,
+  type SupportFilter,
+  type VotersSearch,
 } from "@/lib/voters-view";
 
 const nf = new Intl.NumberFormat("en-KE");
@@ -41,6 +42,7 @@ export function PeopleView({
   search,
   onSearch,
   placeName,
+  segments,
 }: {
   /** In the area and matching the address's filters. */
   rows: PersonRow[];
@@ -50,6 +52,8 @@ export function PeopleView({
   search: VotersSearch;
   onSearch: (changes: SearchChanges) => void;
   placeName: string;
+  /** The campaign's groups, for the group chips. */
+  segments: { slug: string; name: string }[];
 }) {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState("recent");
@@ -75,11 +79,13 @@ export function PeopleView({
   if (loading) return <p className="meta">Reading the records…</p>;
 
   const pages = Math.max(Math.ceil(shown.length / PAGE), 1);
-  const pageRows = shown.slice(page * PAGE, page * PAGE + PAGE);
+  // The list can shrink under the page (a new area or filter from outside the list).
+  const current = pageWithin(page, shown.length, PAGE);
+  const pageRows = shown.slice(current * PAGE, current * PAGE + PAGE);
   const person = record ?? pageRows[0] ?? null;
 
   const group = <T extends string>(
-    key: "support" | "consent" | "contact",
+    key: "support" | "consent" | "contact" | "segment",
     label: string,
     options: [T, string][],
   ) => (
@@ -118,6 +124,13 @@ export function PeopleView({
           {group("support", "Support", SUPPORT)}
           {group("consent", "Consent", CONSENT)}
           {group("contact", "Contacted", CONTACT)}
+          {segments.length
+            ? group(
+                "segment",
+                "Group",
+                segments.map((g): [string, string] => [g.slug, g.name]),
+              )
+            : null}
         </div>
         <div className="pbar">
           <label className="sr" htmlFor="vtQ">
@@ -227,20 +240,20 @@ export function PeopleView({
         </div>
         <div className="pager">
           <span className="meta">
-            Page {page + 1} of {pages} · {nf.format(shown.length)} people
+            Page {current + 1} of {pages} · {nf.format(shown.length)} people
           </span>
           <span className="spacer" />
           <button
             type="button"
             className="btn btn--ghost btn--sm"
-            onClick={() => setPage((p) => Math.max(p - 1, 0))}
+            onClick={() => setPage(Math.max(current - 1, 0))}
           >
             Previous
           </button>
           <button
             type="button"
             className="btn btn--ghost btn--sm"
-            onClick={() => setPage((p) => Math.min(p + 1, pages - 1))}
+            onClick={() => setPage(Math.min(current + 1, pages - 1))}
           >
             Next
           </button>

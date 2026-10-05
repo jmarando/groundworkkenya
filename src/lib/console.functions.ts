@@ -1122,6 +1122,8 @@ export type CanvassData = {
     issues: { name: string; count: number }[];
   }[];
   issues: { name: string; count: number }[];
+  /** People not yet placed in a ward: the county's numbers count them. */
+  unplaced: { people: number; knocked: number; doors30: number };
   walkList: {
     id: string;
     name: string;
@@ -1270,6 +1272,11 @@ export const getCanvassing = createServerFn({ method: "GET" })
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8),
+      unplaced: {
+        people: byWard.get("none")?.people ?? 0,
+        knocked: byWard.get("none")?.knocked ?? 0,
+        doors30: byWard.get("none")?.doors30 ?? 0,
+      },
       walkList,
       recent: events.slice(0, 200).map((e) => {
         const p = personById.get(e.person_id);

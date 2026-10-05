@@ -16,6 +16,8 @@ export type VotersSearch = {
   support?: SupportFilter;
   consent?: ConsentFilter;
   contact?: ContactFilter;
+  /** A group (segment) slug. */
+  segment?: string;
   person?: string;
   manage?: true;
 };
@@ -41,6 +43,8 @@ export function validateVotersSearch(raw: Record<string, unknown>): VotersSearch
   if (consent) out.consent = consent;
   const contact = pick(raw["contact"], CONTACT);
   if (contact) out.contact = contact;
+  const segment = raw["segment"];
+  if (typeof segment === "string" && /^[a-z0-9-]{1,40}$/.test(segment)) out.segment = segment;
   const person = raw["person"];
   if (typeof person === "string" && /^[A-Za-z0-9-]{1,64}$/.test(person)) out.person = person;
   if (raw["manage"] === true || raw["manage"] === 1 || raw["manage"] === "1") out.manage = true;
@@ -113,6 +117,8 @@ export function areaNumbers(
   a: Area,
   wards: WardInfo[],
   doors: DoorWard[],
+  /** People not yet placed in a ward: only the county counts them. */
+  unplaced?: { people: number; knocked: number; doors30: number },
 ): {
   registered: number;
   target: number;
@@ -125,14 +131,19 @@ export function areaNumbers(
   const ids = new Set(inside.map((w) => w.id));
   const d = doors.filter((x) => ids.has(x.id));
   const sum = <T>(xs: T[], f: (x: T) => number) => xs.reduce((t, x) => t + f(x), 0);
-  const people = sum(d, (x) => x.people);
+  const extra = a.level === "county" && unplaced ? unplaced : { people: 0, knocked: 0, doors30: 0 };
+  const people = sum(d, (x) => x.people) + extra.people;
   return {
     registered: sum(inside, (w) => w.registered),
     target: sum(inside, (w) => w.target),
-    onFile: sum(inside, (w) => w.people),
+    onFile: sum(inside, (w) => w.people) + extra.people,
     supporters: sum(inside, (w) => w.supporters),
-    doors: sum(d, (x) => x.doors30),
-    coverage: people ? sum(d, (x) => x.knocked) / people : inside.length ? 0 : null,
+    doors: sum(d, (x) => x.doors30) + extra.doors30,
+    coverage: people
+      ? (sum(d, (x) => x.knocked) + extra.knocked) / people
+      : inside.length
+        ? 0
+        : null,
   };
 }
 
@@ -154,6 +165,7 @@ export type PersonLike = {
   channels: string[];
   optedOut: boolean;
   lastTouch: string | null;
+  segment: string | null;
 };
 
 /** Whether a ward, by name, is in the area. */
@@ -172,10 +184,16 @@ export function matchPerson(
   r: PersonLike,
   a: Area,
   wards: WardInfo[],
-  f: { support?: SupportFilter; consent?: ConsentFilter; contact?: ContactFilter },
+  f: {
+    support?: SupportFilter;
+    consent?: ConsentFilter;
+    contact?: ContactFilter;
+    segment?: string;
+  },
   now: number,
 ): boolean {
   if (!inArea(r.ward, a, wards)) return false;
+  if (f.segment && r.segment !== f.segment) return false;
   if (f.support === "strong" && r.support < 70) return false;
   if (f.support === "persuadable" && (r.support < 40 || r.support >= 70)) return false;
   if (f.support === "against" && (r.support <= 0 || r.support >= 40)) return false;
@@ -275,3 +293,13 @@ export function stepFor(changes: SearchChanges): { replace: boolean; resetScroll
   const area = "area" in changes;
   return { replace: !(area || "view" in changes), resetScroll: area };
 }
+
+/** The page to show: a list that got shorter brings a page past its end back to its last page. */
+export const pageWithin = (page: number, count: number, size: number): number =>
+  Math.min(page, Math.max(Math.ceil(count / size), 1) - 1);
+
+/** The note under a walk list cut to its first `shown`; none when nothing was cut. */
+export const walkNote = (total: number, shown = 60): string | null =>
+  total > shown
+    ? `Showing the first ${shown} of ${new Intl.NumberFormat("en-KE").format(total)}. "Walk list · CSV" above hands the whole list to a canvasser.`
+    : null;

@@ -1,5 +1,5 @@
 import type { CanvassData } from "@/lib/console.functions";
-import { doorIssues, inArea, type Area, type WardInfo } from "@/lib/voters-view";
+import { doorIssues, inArea, walkNote, type Area, type WardInfo } from "@/lib/voters-view";
 
 const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string | null) =>
@@ -157,10 +157,11 @@ export function DoorsView({
           </table>
           {walk.length === 0 ? <p className="f-note">Nothing outstanding here.</p> : null}
         </div>
-        <p className="f-note" style={{ marginTop: 10 }}>
-          Showing the first 60 of {nf.format(walk.length)}. "Walk list · CSV" above hands the whole
-          list to a canvasser.
-        </p>
+        {walkNote(walk.length) ? (
+          <p className="f-note" style={{ marginTop: 10 }}>
+            {walkNote(walk.length)}
+          </p>
+        ) : null}
       </div>
     </>
   );

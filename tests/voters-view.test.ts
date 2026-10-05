@@ -18,6 +18,8 @@ import {
   peopleForward,
   share,
   stepFor,
+  pageWithin,
+  walkNote,
   validateVotersSearch,
   viewOf,
   viewsFor,
@@ -274,6 +276,42 @@ eq(
     { replace: false, resetScroll: false },
     { replace: true, resetScroll: false },
   ],
+);
+
+eq(
+  "a page past the end of a shorter list comes back to the last page",
+  [pageWithin(3, 5, 12), pageWithin(1, 30, 12), pageWithin(4, 30, 12), pageWithin(2, 0, 12)],
+  [0, 1, 2, 0],
+);
+eq(
+  "the county counts people not yet placed in a ward",
+  areaNumbers({ level: "county" }, WARDS, DOORS, { people: 50, knocked: 10, doors30: 7 }),
+  { registered: 6000, target: 600, onFile: 350, supporters: 240, doors: 132, coverage: 110 / 300 },
+);
+eq(
+  "a constituency doesn't",
+  areaNumbers(DN, WARDS, DOORS, { people: 50, knocked: 10, doors30: 7 }).onFile,
+  250,
+);
+eq(
+  "the walk-list note only when the list is cut",
+  [walkNote(6), walkNote(60), walkNote(61)],
+  [
+    null,
+    null,
+    'Showing the first 60 of 61. "Walk list · CSV" above hands the whole list to a canvasser.',
+  ],
+);
+eq("a group in the address", validateVotersSearch({ segment: "boda" }).segment, "boda");
+eq("a group that isn't a slug is dropped", validateVotersSearch({ segment: "Boda Riders!" }), {});
+eq(
+  "the group filter",
+  [
+    matchPerson(person({ segment: "boda" }), DN, WARDS, { segment: "boda" }, NOW),
+    matchPerson(person({ segment: "youth" }), DN, WARDS, { segment: "boda" }, NOW),
+    matchPerson(person({ segment: null }), DN, WARDS, { segment: "boda" }, NOW),
+  ],
+  [true, false, false],
 );
 
 console.log(`${pass} passed, ${fail} failed`);
