@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { myRoles } from "@/lib/access";
+import { doorsByWard } from "@/lib/canvass";
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -1115,6 +1116,10 @@ export type CanvassData = {
     spoke: number;
     stale: number;
     never: number;
+    /** Door events in the last 30 days. */
+    doors30: number;
+    /** What was raised at the door here, most first. */
+    issues: { name: string; count: number }[];
   }[];
   issues: { name: string; count: number }[];
   walkList: {
@@ -1183,21 +1188,7 @@ export const getCanvassing = createServerFn({ method: "GET" })
     const personById = new Map(people.map((p) => [p.id, p]));
     const wardById = new Map((wards ?? []).map((w) => [w.id, w]));
 
-    const wardStats = new Map<
-      string,
-      { people: number; knocked: number; spoke: number; stale: number; never: number }
-    >();
-    for (const p of people) {
-      const key = p.ward_id ?? "none";
-      const cur =
-        wardStats.get(key) ?? { people: 0, knocked: 0, spoke: 0, stale: 0, never: 0 };
-      cur.people += 1;
-      const d = days(p.last_contacted_at);
-      if (d === Infinity) cur.never += 1;
-      else if (d <= 30) cur.knocked += 1;
-      else cur.stale += 1;
-      wardStats.set(key, cur);
-    }
+    const byWard = doorsByWard(people, events, now);
 
     const issueMap = new Map<string, number>();
     let doors30 = 0;
@@ -1214,11 +1205,6 @@ export const getCanvassing = createServerFn({ method: "GET" })
       else refused += 1;
       if (e.kind === "door_spoke" && e.detail) {
         issueMap.set(e.detail, (issueMap.get(e.detail) ?? 0) + 1);
-      }
-      const p = personById.get(e.person_id);
-      if (p?.ward_id && e.kind === "door_spoke") {
-        const cur = wardStats.get(p.ward_id);
-        if (cur) cur.spoke += 1;
       }
     }
 
@@ -1269,7 +1255,15 @@ export const getCanvassing = createServerFn({ method: "GET" })
           id: w.id,
           name: w.name,
           constituency: w.constituency,
-          ...(wardStats.get(w.id) ?? { people: 0, knocked: 0, spoke: 0, stale: 0, never: 0 }),
+          ...(byWard.get(w.id) ?? {
+            people: 0,
+            knocked: 0,
+            spoke: 0,
+            stale: 0,
+            never: 0,
+            doors30: 0,
+            issues: [],
+          }),
         }))
         .sort((a, b) => b.people - a.people),
       issues: [...issueMap.entries()]
@@ -1277,7 +1271,7 @@ export const getCanvassing = createServerFn({ method: "GET" })
         .sort((a, b) => b.count - a.count)
         .slice(0, 8),
       walkList,
-      recent: events.slice(0, 25).map((e) => {
+      recent: events.slice(0, 200).map((e) => {
         const p = personById.get(e.person_id);
         return {
           id: e.id,
