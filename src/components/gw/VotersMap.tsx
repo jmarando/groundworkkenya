@@ -66,9 +66,17 @@ function pinColour(layer: Layer, r: WardMapRow): string {
 export function VotersMap({
   wards,
   totals,
+  slug: shownSlug,
+  onSlug,
+  bare = false,
 }: {
   wards: VotersData["wards"];
   totals: VotersData["totals"];
+  /** The ward on show; with onSlug the caller (the address) holds it. */
+  slug?: string | null;
+  onSlug?: (slug: string | null) => void;
+  /** Leave out the map's own breadcrumb and numbers, where the screen shows its own. */
+  bare?: boolean;
 }) {
   const fetchConfig = useServerFn(getMapConfig);
   const fetchWardMap = useServerFn(getWardMap);
@@ -85,7 +93,9 @@ export function VotersMap({
   });
   const { data: index } = useQuery(buildingsIndexQuery);
 
-  const [slug, setSlug] = useState<string | null>(null);
+  const [ownSlug, setOwnSlug] = useState<string | null>(null);
+  const slug = shownSlug !== undefined ? shownSlug : ownSlug;
+  const setSlug = (s: string | null) => (onSlug ? onSlug(s) : setOwnSlug(s));
   const [basemap, setBasemap] = useState<Basemap>("satellite");
   const [tilesRefused, setTilesRefused] = useState(false);
   const [layer, setLayer] = useState<Layer>("status");
@@ -227,93 +237,101 @@ export function VotersMap({
 
   return (
     <>
-      <div className="card fx2" style={{ padding: "16px 20px" }}>
-        <nav className="crumbs" aria-label="Geography">
-          {ward ? (
-            <>
-              <button type="button" onClick={() => setSlug(null)}>
-                Nairobi County
-              </button>
-              <span className="sep">/</span>
-              <span className="dim">{ward.constituency}</span>
-              <span className="sep">/</span>
-              <b>{ward.name} ward</b>
-            </>
-          ) : (
-            <b>Nairobi County</b>
-          )}
-          <span className="mono dim" style={{ marginLeft: "auto" }}>
-            {ward
-              ? wardBuildings
-                ? `${nf.format(buildingList.length)} structures · outlines from Google Open Buildings`
-                : buildingsLoading
-                  ? "loading building outlines…"
-                  : "building outlines not loaded for this ward yet"
-              : `${wards.length} wards · tap one to drop in`}
-          </span>
-        </nav>
-      </div>
+      {bare ? null : (
+        <>
+          <div className="card fx2" style={{ padding: "16px 20px" }}>
+            <nav className="crumbs" aria-label="Geography">
+              {ward ? (
+                <>
+                  <button type="button" onClick={() => setSlug(null)}>
+                    Nairobi County
+                  </button>
+                  <span className="sep">/</span>
+                  <span className="dim">{ward.constituency}</span>
+                  <span className="sep">/</span>
+                  <b>{ward.name} ward</b>
+                </>
+              ) : (
+                <b>Nairobi County</b>
+              )}
+              <span className="mono dim" style={{ marginLeft: "auto" }}>
+                {ward
+                  ? wardBuildings
+                    ? `${nf.format(buildingList.length)} structures · outlines from Google Open Buildings`
+                    : buildingsLoading
+                      ? "loading building outlines…"
+                      : "building outlines not loaded for this ward yet"
+                  : `${wards.length} wards · tap one to drop in`}
+              </span>
+            </nav>
+          </div>
 
-      {ward ? (
-        <div className="ladder fx2" style={{ marginTop: 14 }}>
-          <div>
-            <span className="l">Structures</span>
-            <span className="n stat">{wardBuildings ? nf.format(buildingList.length) : "—"}</span>
-            <span className="s">
-              {wardBuildings ? "rooftops mapped from imagery" : "outlines not loaded yet"}
-            </span>
-          </div>
-          <div>
-            <span className="l">Households pinned</span>
-            <span className="n stat">{nf.format(rows.length)}</span>
-            <span className="s">of {nf.format(ward.people)} people on file here</span>
-          </div>
-          <div>
-            <span className="l">Doors knocked</span>
-            <span className="n stat">{nf.format(knocked.length)}</span>
-            <span className="s">{pct(knocked.length, rows.length)} of pinned households</span>
-          </div>
-          <div>
-            <span className="l">Supporters 4–5</span>
-            <span className="n stat">{nf.format(supporters.length)}</span>
-            <span className="s">{pct(supporters.length, answered.length)} of doors answered</span>
-          </div>
-          <div>
-            <span className="l">Contacted this week</span>
-            <span className="n stat">{nf.format(ward.contacted)}</span>
-            <span className="s">SMS · calls · doors</span>
-          </div>
-        </div>
-      ) : (
-        <div className="ladder fx2" style={{ marginTop: 14 }}>
-          <div>
-            <span className="l">Wards</span>
-            <span className="n stat">{nf.format(wards.length)}</span>
-            <span className="s">
-              {nf.format(wards.filter((w) => w.pinned > 0).length)} with households pinned
-            </span>
-          </div>
-          <div>
-            <span className="l">Registered voters</span>
-            <span className="n stat">{nf.format(totals.registered)}</span>
-            <span className="s">across the county</span>
-          </div>
-          <div>
-            <span className="l">Supporters found</span>
-            <span className="n stat">{nf.format(totals.supporters)}</span>
-            <span className="s">{pct(totals.supporters, totals.target)} of the win number</span>
-          </div>
-          <div>
-            <span className="l">People on file</span>
-            <span className="n stat">{nf.format(totals.people)}</span>
-            <span className="s">{nf.format(pinnedTotal)} pinned on the map</span>
-          </div>
-          <div>
-            <span className="l">Contacted this week</span>
-            <span className="n stat">{nf.format(totals.contactedWeek)}</span>
-            <span className="s">SMS · calls · doors</span>
-          </div>
-        </div>
+          {ward ? (
+            <div className="ladder fx2" style={{ marginTop: 14 }}>
+              <div>
+                <span className="l">Structures</span>
+                <span className="n stat">
+                  {wardBuildings ? nf.format(buildingList.length) : "—"}
+                </span>
+                <span className="s">
+                  {wardBuildings ? "rooftops mapped from imagery" : "outlines not loaded yet"}
+                </span>
+              </div>
+              <div>
+                <span className="l">Households pinned</span>
+                <span className="n stat">{nf.format(rows.length)}</span>
+                <span className="s">of {nf.format(ward.people)} people on file here</span>
+              </div>
+              <div>
+                <span className="l">Doors knocked</span>
+                <span className="n stat">{nf.format(knocked.length)}</span>
+                <span className="s">{pct(knocked.length, rows.length)} of pinned households</span>
+              </div>
+              <div>
+                <span className="l">Supporters 4–5</span>
+                <span className="n stat">{nf.format(supporters.length)}</span>
+                <span className="s">
+                  {pct(supporters.length, answered.length)} of doors answered
+                </span>
+              </div>
+              <div>
+                <span className="l">Contacted this week</span>
+                <span className="n stat">{nf.format(ward.contacted)}</span>
+                <span className="s">SMS · calls · doors</span>
+              </div>
+            </div>
+          ) : (
+            <div className="ladder fx2" style={{ marginTop: 14 }}>
+              <div>
+                <span className="l">Wards</span>
+                <span className="n stat">{nf.format(wards.length)}</span>
+                <span className="s">
+                  {nf.format(wards.filter((w) => w.pinned > 0).length)} with households pinned
+                </span>
+              </div>
+              <div>
+                <span className="l">Registered voters</span>
+                <span className="n stat">{nf.format(totals.registered)}</span>
+                <span className="s">across the county</span>
+              </div>
+              <div>
+                <span className="l">Supporters found</span>
+                <span className="n stat">{nf.format(totals.supporters)}</span>
+                <span className="s">{pct(totals.supporters, totals.target)} of the win number</span>
+              </div>
+              <div>
+                <span className="l">People on file</span>
+                <span className="n stat">{nf.format(totals.people)}</span>
+                <span className="s">{nf.format(pinnedTotal)} pinned on the map</span>
+              </div>
+              <div>
+                <span className="l">Contacted this week</span>
+                <span className="n stat">{nf.format(totals.contactedWeek)}</span>
+                <span className="s">SMS · calls · doors</span>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {!satelliteOk && config && (
