@@ -651,8 +651,12 @@ export function VotersMap({
                             </span>
                             <span className="acts">
                               <Link
-                                to="/people"
-                                search={{ person: h.id }}
+                                to="/voters"
+                                search={{
+                                  view: "people",
+                                  person: h.id,
+                                  ...(slug ? { area: `w:${slug}` } : {}),
+                                }}
                                 className="icon-btn"
                                 aria-label={`Open ${h.name}'s record`}
                               >

@@ -25,10 +25,8 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     items: [
       { to: "/home", label: "Home" },
       { to: "/diary", label: "Diary" },
-      { to: "/people", label: "People", faint: "CRM" },
-      { to: "/voters", label: "Know your voters", faint: "MAP" },
+      { to: "/voters", label: "Voters", faint: "MAP" },
       { to: "/polling", label: "Polling", faint: "LIVE" },
-      { to: "/canvassing", label: "Canvassing", faint: "§3.3" },
       { to: "/agents", label: "Agents & stipends", faint: "§3.4" },
     ],
   },

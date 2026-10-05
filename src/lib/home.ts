@@ -101,16 +101,13 @@ export function greetingName(fullName: string | null | undefined, fallback: stri
   return fullName?.trim().split(/\s+/)[0] || fallback;
 }
 
-/**
- * Where each number on Home leads. Part 3 moves the people and doors links to
- * the Voters screen.
- */
+/** Where each number on Home leads. */
 export const LINKS = {
   agents: "/agents",
   money: "/finance",
-  contacts: "/people",
-  supporters: "/people",
-  doors: "/canvassing",
+  contacts: "/voters",
+  supporters: "/voters",
+  doors: "/voters",
   ground: "#ground",
   race: "#race",
 } as const;

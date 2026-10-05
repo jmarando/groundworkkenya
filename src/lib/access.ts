@@ -46,7 +46,7 @@ const PAGE_ROLES: Record<string, MyRole[]> = {
   "/campaigns": ["super"],
 };
 /** Field agents get field work only. */
-const AGENT_PAGES = ["/canvassing", "/field", "/voters", "/foundations"];
+const AGENT_PAGES = ["/field", "/voters", "/foundations"];
 
 export function canOpen(role: MyRole, path: string): boolean {
   const page = "/" + (path.split("/")[1] ?? "");

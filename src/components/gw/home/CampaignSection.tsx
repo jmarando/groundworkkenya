@@ -15,7 +15,7 @@ export function CampaignSection({ mode }: { mode: SectionMode }) {
         <section className="card home-empty" aria-label="Our campaign">
           <p>No supporters on record yet.</p>
           <div className="mb-actions">
-            <Link to="/people" search={{ person: undefined }} className="btn btn--primary btn--sm">
+            <Link to="/voters" search={{ manage: true }} className="btn btn--primary btn--sm">
               Import people
             </Link>
           </div>
