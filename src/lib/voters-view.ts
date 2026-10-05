@@ -232,3 +232,33 @@ export const peopleForward = (raw: Record<string, unknown>): VotersSearch => {
   const person = validateVotersSearch({ person: raw["person"] }).person;
   return person ? { view: "people", person } : { view: "people" };
 };
+
+export type SearchChanges = { [K in keyof VotersSearch]?: VotersSearch[K] | undefined };
+
+/** The address with `changes` applied; an undefined change removes its key. */
+export function nextSearch(prev: VotersSearch, changes: SearchChanges): VotersSearch {
+  const out: Record<string, unknown> = { ...prev };
+  for (const [k, v] of Object.entries(changes)) {
+    if (v === undefined) delete out[k];
+    else out[k] = v;
+  }
+  return validateVotersSearch(out);
+}
+
+/** What came up at the door across the area's wards, most first. */
+export function doorIssues(
+  canvassWards: { name: string; issues: { name: string; count: number }[] }[],
+  a: Area,
+  wards: WardInfo[],
+  max = 8,
+): { name: string; count: number }[] {
+  const m = new Map<string, number>();
+  for (const w of canvassWards) {
+    if (!inArea(w.name, a, wards)) continue;
+    for (const i of w.issues) m.set(i.name, (m.get(i.name) ?? 0) + i.count);
+  }
+  return [...m.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((x, y) => y.count - x.count || x.name.localeCompare(y.name))
+    .slice(0, max);
+}

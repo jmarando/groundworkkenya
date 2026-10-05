@@ -1994,3 +1994,20 @@ figure { margin: 0; }
 /* A section with nothing on record yet: what's missing and how to fill it. */
 .home-empty { padding:18px 20px; }
 .home-empty > p { margin:0 0 10px; }
+
+/* Voters: the area's actions, numbers that open what they count, and one panel of views */
+.vt-actions { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+.vt-numbers > button { padding:14px 14px 12px; border:0; border-left:1px solid var(--border); display:flex; flex-direction:column; gap:4px; text-align:left; background:none; font:inherit; color:inherit; cursor:pointer; }
+.vt-numbers > :first-child { border-left:0; }
+.vt-numbers > button:hover, .vt-numbers > button:focus-visible { background:var(--muted); }
+.vt-panel { margin-top:26px; display:flex; flex-direction:column; gap:14px; }
+.vt-panel > .seg { align-self:flex-start; }
+.vt-filters { display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:12px; }
+.vt-filters > div { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.vt-filters > div > span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-foreground); margin-right:2px; }
+.vt-link { padding:0; border:0; background:none; font:inherit; font-weight:600; color:inherit; text-align:left; cursor:pointer; }
+.vt-link:hover, .vt-link:focus-visible { text-decoration:underline; }
+@media (max-width:1100px) {
+  .vt-numbers > button { border-top:1px solid var(--border); }
+  .vt-actions { justify-content:flex-start; }
+}

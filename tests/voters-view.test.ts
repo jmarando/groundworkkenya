@@ -9,8 +9,10 @@ import {
   areaTitle,
   broadcastSearch,
   crumbsOf,
+  doorIssues,
   inArea,
   matchPerson,
+  nextSearch,
   parseArea,
   parseBroadcastSearch,
   peopleForward,
@@ -213,6 +215,44 @@ eq("an old People link keeps its person", peopleForward({ person: "p-9" }), {
   person: "p-9",
 });
 eq("an old People link without one", peopleForward({}), { view: "people" });
+
+eq(
+  "a change to the address; undefined removes",
+  nextSearch(
+    { area: "w:kileleshwa", view: "people", person: "p-1" },
+    { area: "c:Mathare", person: undefined },
+  ),
+  { area: "c:Mathare", view: "people" },
+);
+eq(
+  "what came up at the door across an area",
+  doorIssues(
+    [
+      {
+        name: "Kileleshwa",
+        issues: [
+          { name: "Water", count: 3 },
+          { name: "Roads", count: 1 },
+        ],
+      },
+      {
+        name: "Kawangware",
+        issues: [
+          { name: "Water", count: 2 },
+          { name: "Jobs", count: 2 },
+        ],
+      },
+      { name: "Mabatini", issues: [{ name: "Roads", count: 9 }] },
+    ],
+    DN,
+    WARDS,
+  ),
+  [
+    { name: "Water", count: 5 },
+    { name: "Jobs", count: 2 },
+    { name: "Roads", count: 1 },
+  ],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
