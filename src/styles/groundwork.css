@@ -2009,5 +2009,8 @@ figure { margin: 0; }
 .vt-link:hover, .vt-link:focus-visible { text-decoration:underline; }
 @media (max-width:1100px) {
   .vt-numbers > button { border-top:1px solid var(--border); }
+  /* Two to a row: no inner line on the left edge, none above the first row. */
+  .vt-numbers > :nth-child(odd) { border-left:0; }
+  .vt-numbers > :nth-child(-n+2) { border-top:0; }
   .vt-actions { justify-content:flex-start; }
 }

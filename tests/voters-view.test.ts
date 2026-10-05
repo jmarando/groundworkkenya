@@ -16,6 +16,8 @@ import {
   parseArea,
   parseBroadcastSearch,
   peopleForward,
+  share,
+  stepFor,
   validateVotersSearch,
   viewOf,
   viewsFor,
@@ -251,6 +253,26 @@ eq(
     { name: "Water", count: 5 },
     { name: "Jobs", count: 2 },
     { name: "Roads", count: 1 },
+  ],
+);
+
+eq(
+  "a share too small to round is not 0%",
+  [share(0.0002), share(0), share(0.336), share(1)],
+  ["under 1%", "0%", "34%", "100%"],
+);
+
+eq(
+  "only a new area goes back to the top; a filter stays put and replaces the step",
+  [
+    stepFor({ area: "c:Mathare", person: undefined }),
+    stepFor({ view: "doors" }),
+    stepFor({ support: "strong" }),
+  ],
+  [
+    { replace: false, resetScroll: true },
+    { replace: false, resetScroll: false },
+    { replace: true, resetScroll: false },
   ],
 );
 

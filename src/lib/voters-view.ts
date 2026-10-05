@@ -262,3 +262,16 @@ export function doorIssues(
     .sort((x, y) => y.count - x.count || x.name.localeCompare(y.name))
     .slice(0, max);
 }
+
+/** A share as a whole percentage; one too small to round up reads "under 1%", not "0%". */
+export const share = (x: number): string =>
+  x > 0 && x < 0.005 ? "under 1%" : `${Math.round(x * 100)}%`;
+
+/**
+ * How a change moves the page: a new area or view is a step Back can undo,
+ * and only a new area goes back to the top, where its title and numbers are.
+ */
+export function stepFor(changes: SearchChanges): { replace: boolean; resetScroll: boolean } {
+  const area = "area" in changes;
+  return { replace: !(area || "view" in changes), resetScroll: area };
+}

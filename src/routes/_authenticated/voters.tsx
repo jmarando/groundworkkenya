@@ -22,6 +22,8 @@ import {
   matchPerson,
   nextSearch,
   parseArea,
+  share,
+  stepFor,
   validateVotersSearch,
   viewOf,
   viewsFor,
@@ -52,7 +54,6 @@ export const Route = createFileRoute("/_authenticated/voters")({
 });
 
 const nf = new Intl.NumberFormat("en-KE");
-const pct = (x: number) => `${Math.round(x * 100)}%`;
 const VIEW_NAMES: Record<VotersView, string> = { people: "People", doors: "Doors", wards: "Wards" };
 
 /** The area's walk list as a CSV for a canvasser. */
@@ -113,11 +114,7 @@ function Voters() {
   }, [people, wards, search]);
 
   const go = (changes: SearchChanges) =>
-    void navigate({
-      search: (prev) => nextSearch(prev, changes),
-      // A new area or view is a step Back can undo; a filter or a record is not.
-      replace: !("area" in changes || "view" in changes),
-    });
+    void navigate({ search: (prev) => nextSearch(prev, changes), ...stepFor(changes) });
   const setArea = (a: Area) => go({ area: areaParam(a), person: undefined });
 
   if (!data) {
@@ -155,7 +152,7 @@ function Voters() {
       label: "People on file",
       value: nf.format(n.onFile),
       note: n.registered
-        ? `${pct(n.onFile / n.registered)} of the register`
+        ? `${share(n.onFile / n.registered)} of the register`
         : "on the campaign's records",
       ...(views.includes("people")
         ? {
@@ -168,7 +165,7 @@ function Voters() {
       label: "Supporters found",
       value: nf.format(n.supporters),
       note: n.target
-        ? `${pct(n.supporters / n.target)} of the ${nf.format(n.target)} needed`
+        ? `${share(n.supporters / n.target)} of the ${nf.format(n.target)} needed`
         : "no target set",
       ...(views.includes("people")
         ? { open: () => go({ view: "people", support: "strong" }) }
@@ -182,7 +179,7 @@ function Voters() {
     },
     {
       label: "Coverage",
-      value: canvass && n.coverage !== null ? pct(n.coverage) : "—",
+      value: canvass && n.coverage !== null ? share(n.coverage) : "—",
       note: "of people on file seen in 30 days",
       open: () => go({ view: "doors" }),
     },

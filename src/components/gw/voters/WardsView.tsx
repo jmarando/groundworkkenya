@@ -52,13 +52,13 @@ export function WardsView({
                 <td className="num">{nf.format(w.target)}</td>
                 <td className="num">{nf.format(w.supporters)}</td>
                 <td style={{ minWidth: 120 }}>
-                  <span className="cov-bar">
+                  <div className="minibar">
                     <i
                       style={{
                         width: `${w.target ? Math.min((w.supporters / w.target) * 100, 100) : 0}%`,
                       }}
                     />
-                  </span>
+                  </div>
                 </td>
                 <td className="num">{nf.format(w.contacted)}</td>
                 <td className="num">{nf.format(doorsOf.get(w.id)?.doors30 ?? 0)}</td>
