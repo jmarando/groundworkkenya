@@ -2436,6 +2436,8 @@ export type Database = {
         Args: { _audience: Json; _body: string; _client_key: string }
         Returns: Json
       }
+      race_share_total: { Args: { _shares: Json }; Returns: number }
+      race_shares_ok: { Args: { _shares: Json }; Returns: boolean }
       rate_limit_hit: {
         Args: { _key: string; _limit: number; _window_seconds: number }
         Returns: boolean
@@ -2479,11 +2481,11 @@ export type Database = {
         Returns: undefined
       }
       site_editor: { Args: never; Returns: string }
-      unpublish_site: { Args: never; Returns: undefined }
       take_social_credits: {
         Args: { _budget: string; _cap: number; _n: number }
         Returns: boolean
       }
+      unpublish_site: { Args: never; Returns: undefined }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {
