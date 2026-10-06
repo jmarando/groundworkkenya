@@ -12,9 +12,11 @@ import type { AtBatchResult, AtRecipient } from "@/lib/at.server";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/twilio";
 
+/** SMS via Twilio only when TWILIO_SMS_ENABLED=true (number may be voice-only). */
 export function twilioConfigured(): boolean {
   return Boolean(
-    process.env["LOVABLE_API_KEY"] &&
+    process.env["TWILIO_SMS_ENABLED"] === "true" &&
+      process.env["LOVABLE_API_KEY"] &&
       process.env["TWILIO_API_KEY"] &&
       (process.env["TWILIO_FROM_NUMBER"] || process.env["TWILIO_MESSAGING_SERVICE_SID"]),
   );
