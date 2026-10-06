@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/integrations/supabase/types";
 import { phoneKey, sendSmsBatch, type AtBatchResult } from "@/lib/at.server";
+import { sendSmsBatchTwilio, twilioConfigured } from "@/lib/twilio.server";
 
 type Sb = SupabaseClient<Database>;
 
@@ -35,7 +36,7 @@ export type QueueItem = {
 export function channelsAreLive(): boolean {
   return (
     process.env["CHANNELS_LIVE"] === "true" &&
-    Boolean(process.env["AT_USERNAME"] && process.env["AT_API_KEY"])
+    (twilioConfigured() || Boolean(process.env["AT_USERNAME"] && process.env["AT_API_KEY"]))
   );
 }
 
@@ -235,7 +236,13 @@ export async function processOutbox(
   await record(admin, claim, unsendable);
   out.failed += unsendable.length;
 
-  const batches = planSmsBatches(claimed.filter((m) => m.channel === "sms" && phoneKey(m.phone)));
+  // Twilio is primary once its number is set; it takes one request per
+  // number, so its batches are smaller.
+  const viaTwilio = twilioConfigured();
+  const batches = planSmsBatches(
+    claimed.filter((m) => m.channel === "sms" && phoneKey(m.phone)),
+    viaTwilio ? 20 : SMS_PER_REQUEST,
+  );
   const leftover: string[] = [];
   let stopped = false;
   let requests = 0;
@@ -263,7 +270,7 @@ export async function processOutbox(
     if (!items.length) continue;
 
     requests++;
-    const reply = await sendSmsBatch(
+    const reply = await (viaTwilio ? sendSmsBatchTwilio : sendSmsBatch)(
       items.map((i) => i.key),
       batch.body,
     );
