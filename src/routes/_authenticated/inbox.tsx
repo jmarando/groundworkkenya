@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { callFromInbox } from "@/lib/voice.functions";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -78,6 +79,22 @@ function Inbox() {
   const sendReply = useServerFn(replyToConversation);
   const searchPeople = useServerFn(searchPeopleForMessage);
   const startConvo = useServerFn(startConversation);
+  const placeCall = useServerFn(callFromInbox);
+  const [myPhone, setMyPhone] = useState("");
+  const [callNote, setCallNote] = useState<string | null>(null);
+  const [calling, setCalling] = useState(false);
+  async function call(conversationId: string) {
+    setCalling(true);
+    setCallNote(null);
+    try {
+      const r = await placeCall({ data: { conversationId, myPhone } });
+      setCallNote(r.ok ? "Your phone will ring now. Pick up to be connected." : r.error);
+    } catch {
+      setCallNote("Could not place the call.");
+    } finally {
+      setCalling(false);
+    }
+  }
   const queryClient = useQueryClient();
   const { data } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
   const [draft, setDraft] = useState("");
@@ -463,6 +480,29 @@ function Inbox() {
                   {open.status}
                 </span>
               </div>
+              {open.phone && (
+                <div className="th-compose" style={{ borderTop: 0 }}>
+                  <label className="th-compose-label" htmlFor="myPhone">
+                    Call {open.name}: we ring your phone first
+                  </label>
+                  <input
+                    id="myPhone"
+                    className="input"
+                    inputMode="tel"
+                    placeholder="Your phone, e.g. 0712 345678"
+                    value={myPhone}
+                    onChange={(e) => setMyPhone(e.target.value)}
+                  />
+                  <button
+                    className="btn btn--sm"
+                    disabled={calling || !myPhone.trim()}
+                    onClick={() => void call(open.id)}
+                  >
+                    {calling ? "Calling…" : "Call"}
+                  </button>
+                  {callNote && <p className="f-note">{callNote}</p>}
+                </div>
+              )}
               <div className="th-body">
                 {open.thread.length === 0 && open.snippet && (
                   <div className="msg msg--in">{open.snippet}</div>
