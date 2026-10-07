@@ -1,6 +1,6 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
 import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
-import { MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
+import { MorningNews, MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
 import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
 import type { StoryView } from "@/lib/morning-story";
@@ -57,6 +57,7 @@ export function TodaySection({
           <DiaryPlan plan={plan} watch={watch} loading={loading} canEdit={canEdit} />
         </aside>
       </div>
+      <MorningNews view={story} />
     </section>
   );
 }
