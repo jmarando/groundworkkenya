@@ -23,3 +23,4 @@ Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above 
 - Individual poll invitations use campaign-scoped contacts, the sender's explicit permission confirmation, approved WhatsApp templates and the existing managed email sender; reserve each recipient before sending and always honor opt-outs without changing stored consent. Why: demos must preserve isolation, recipient choices and retry safety.
 
 - Inbox filters are grouped by queue, channel/sentiment and topic; message metadata is a separate block, with a two-pane tablet layout and stacked phone layout. Why: filters stay scannable and timestamps never run into message text.
+- The voters map uses MapLibre's native pan, wheel/pinch and bounded animated zoom; ward/building actions stay explained in-map. Why: field users need predictable spatial controls and one clear next step.
