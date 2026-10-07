@@ -278,6 +278,8 @@ begin
   assert pg_temp.state_of(head || $q$('kenya/x-test', 'constituency', 'X Test', 'kenya')$q$) = '23514', 'a constituency straight under Kenya';
   assert pg_temp.state_of(head || $q$('testland/other-test', 'constituency', 'Other Test', 'testland/none')$q$) = '23514', 'a key not under its parent';
   assert pg_temp.state_of(head || $q$('testland/a-test/b-test', 'constituency', 'B Test', 'testland/a-test')$q$) = '23514', 'a constituency at ward depth';
+  assert pg_temp.state_of(head || $q$('kenya/x-test/y-test', 'ward', 'Y Test', 'kenya')$q$) = '23514', 'a ward straight under Kenya';
+  assert pg_temp.state_of(head || $q$('testland/x-test/y-test', 'ward', 'Y Test', 'testland')$q$) = '23514', 'a ward under a county, skipping its constituency';
   assert pg_temp.state_of(head || $q$('nowhere/some-test', 'constituency', 'Some Test', 'nowhere')$q$) = '23503', 'a parent that is not there';
   assert pg_temp.state_of(head || $q$('testland', 'county', 'Testland', 'kenya')$q$) = '23505', 'the same key twice';
   assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', 'testland')$q$) is null, 'a good constituency is refused';
@@ -533,15 +535,15 @@ create table public.atlas_areas (
   parent    text references public.atlas_areas(key),
   iebc_code text check (iebc_code is null or iebc_code ~ '^[0-9]{1,4}$'),
   -- A county sits under Kenya; below that a key is its parent's key and one more
-  -- part. CASE returns null for a case it forgot, which a check lets through, so
-  -- the whole answer must be true.
+  -- part, so a ward's parent is its constituency and a constituency's its county.
+  -- CASE returns null for a case it forgot, which a check lets through, so the
+  -- whole answer must be true.
   constraint atlas_areas_shape check ((case level
     when 'country' then key = 'kenya' and parent is null
     when 'county' then parent = 'kenya' and key !~ '/'
-    when 'constituency' then parent is not null and parent <> 'kenya'
-                         and key ~ '^[^/]+/[^/]+$' and left(key, length(parent) + 1) = parent || '/'
-    else parent is not null
-                         and key ~ '^[^/]+/[^/]+/[^/]+$' and left(key, length(parent) + 1) = parent || '/'
+    when 'constituency' then parent <> 'kenya' and key ~ '^[^/]+/[^/]+$'
+                         and parent = regexp_replace(key, '/[^/]+$', '')
+    else key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
   end) is true)
 );
 create index atlas_areas_parent_idx on public.atlas_areas (parent);
@@ -852,9 +854,11 @@ runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash 
 rm -rf /tmp/gw-atlas-mut
 ```
 
-Expected: `FAIL tests/sql/atlas.test.sql` and `ERROR:  a candidate adds to atlas_areas`. (With the grant
-alone and no policy the test still passes, correctly: row level security refuses the write by
-itself. The two layers are both there.)
+Expected: `FAIL tests/sql/atlas.test.sql` and `ERROR:  a candidate adds to atlas_areas`. (The two
+layers are both there. A grant that no policy backs is caught only for `update` and `delete`: they
+raise nothing and change no rows, so the test fails on `a candidate edits atlas_areas`. A grant of
+`insert` alone slips past, because row level security then refuses the insert with the same
+SQLSTATE, 42501, that a missing privilege gives, and the test cannot tell the two layers apart.)
 
 - [ ] **Step 8: Add the ten tables to the generated types**
 
