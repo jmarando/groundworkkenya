@@ -129,6 +129,8 @@ export function ConstituencyView({
         </div>
       </section>
       <NoteBox
+        // A fresh box for each place, so one place's draft never lands on another.
+        key={area.key}
         area={area.key}
         name={area.name}
         note={d.notes[area.key] ?? null}
