@@ -13,6 +13,10 @@ export const Route = createFileRoute("/_authenticated/campaigns")({
   head: () => ({
     meta: [
       { title: "Campaigns · Groundwork" },
+      { property: "og:title", content: "Campaigns · Groundwork" },
+      { property: "og:description", content: "Every campaign on Groundwork, each with its own team and data." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       { name: "description", content: "Every campaign on Groundwork, each with its own team and data." },
     ],
   }),
