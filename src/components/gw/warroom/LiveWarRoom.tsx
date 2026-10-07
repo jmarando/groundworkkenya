@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 
 import { BallotCard } from "@/components/gw/warroom/BallotCard";
 import { FormsCard } from "@/components/gw/warroom/FormsCard";
+import { turnout2022, wardKey } from "@/lib/atlas-app";
+import { getAtlas } from "@/lib/atlas.functions";
+import { RACE_NAMES, whole } from "@/lib/atlas-view";
 import { getWarRoom } from "@/lib/console.functions";
+import { defaultRace } from "@/lib/elections-view";
 import { raceArea } from "@/lib/race";
 
 const nf = new Intl.NumberFormat("en-KE");
@@ -43,6 +47,13 @@ export function LiveWarRoom() {
     queryKey: ["warroom"],
     queryFn: () => fetchWarRoom(),
     refetchInterval: 60_000,
+  });
+  // The 2022 turnout beside each constituency's count, from the election atlas.
+  const fetchAtlas = useServerFn(getAtlas);
+  const { data: atlas } = useQuery({
+    queryKey: ["atlas"],
+    queryFn: () => fetchAtlas(),
+    staleTime: 5 * 60_000,
   });
 
   if (!data) {
@@ -323,24 +334,48 @@ export function LiveWarRoom() {
                 <tr>
                   <th>Constituency</th>
                   <th>Reporting</th>
+                  <th style={{ textAlign: "right" }}>Turnout</th>
+                  <th style={{ textAlign: "right" }}>2022</th>
                   <th style={{ textAlign: "right" }}>Margin</th>
                 </tr>
               </thead>
               <tbody>
-                {data.constituencies.map((c) => (
-                  <tr key={c.name}>
-                    <td>{c.name}</td>
-                    <td className="num">
-                      {c.reportingPct.toFixed(0)}%
-                      <span className="repbar">
-                        <i style={{ width: `${c.reportingPct}%` }} />
-                      </span>
-                    </td>
-                    <td className="num">
-                      {c.leader ? `${c.leader.slice(0, 1)} +${nf.format(c.margin)}` : "—"}
-                    </td>
-                  </tr>
-                ))}
+                {data.constituencies.map((c) => {
+                  const race = defaultRace(data.race.level);
+                  const then = atlas
+                    ? turnout2022(atlas, wardKey(atlas, c.name, null), race)
+                    : null;
+                  return (
+                    <tr key={c.name}>
+                      <td>{c.name}</td>
+                      <td className="num">
+                        {c.reportingPct.toFixed(0)}%
+                        <span className="repbar">
+                          <i style={{ width: `${c.reportingPct}%` }} />
+                        </span>
+                      </td>
+                      <td
+                        className="num"
+                        title="Votes cast over the register at the stations reported so far"
+                      >
+                        {c.turnout === null ? "—" : whole(c.turnout)}
+                      </td>
+                      <td
+                        className="num"
+                        title={
+                          then && then.race !== race
+                            ? `The ${RACE_NAMES[then.race].toLowerCase()} race's: the ${RACE_NAMES[race].toLowerCase()} race's 2022 turnout isn't in the atlas`
+                            : "2022 turnout, from the election atlas"
+                        }
+                      >
+                        {then ? `${whole(then.turnout)}${then.race !== race ? "*" : ""}` : "—"}
+                      </td>
+                      <td className="num">
+                        {c.leader ? `${c.leader.slice(0, 1)} +${nf.format(c.margin)}` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

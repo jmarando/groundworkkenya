@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { myRoles } from "@/lib/access";
+import { reportedTurnout } from "@/lib/atlas-app";
 import { doorsByWard } from "@/lib/canvass";
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -777,6 +778,8 @@ export type WarRoomData = {
     reported: number;
     reportingPct: number;
     registered: number;
+    /** Votes cast over the register at the stations reported so far; null before any. */
+    turnout: number | null;
     leader: string | null;
     margin: number;
   }[];
@@ -883,6 +886,8 @@ export const getWarRoom = createServerFn({ method: "GET" })
         reported: number;
         registered: number;
         votes: Map<string, number>;
+        /** Each station's register and votes cast, for turnout so far. */
+        counted: { registered: number; cast: number; reported: boolean }[];
       }
     >();
     const flags: WarRoomData["flags"] = [];
@@ -907,6 +912,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         reported: 0,
         registered: 0,
         votes: new Map<string, number>(),
+        counted: [],
       };
       cur.stations += 1;
       if (s.status === "confirmed") cur.confirmed += 1;
@@ -916,9 +922,10 @@ export const getWarRoom = createServerFn({ method: "GET" })
         cur.votes.set(name, (cur.votes.get(name) ?? 0) + n);
         totals.set(name, (totals.get(name) ?? 0) + n);
       }
+      const cast = Object.values(votes).reduce((a, b) => a + b, 0);
+      cur.counted.push({ registered: reg, cast: s.turnout_reported ?? cast, reported: hasResults });
       byConst.set(c, cur);
 
-      const cast = Object.values(votes).reduce((a, b) => a + b, 0);
       if (reg > 0 && s.turnout_reported && s.turnout_reported > reg) {
         flags.push({
           id: `${s.id}-turnout`,
@@ -1032,6 +1039,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
             reported: v.reported,
             reportingPct: v.stations ? (v.reported / v.stations) * 100 : 0,
             registered: v.registered,
+            turnout: reportedTurnout(v.counted),
             leader: r[0]?.[0] ?? null,
             margin: r[0] && r[1] ? r[0][1] - r[1][1] : (r[0]?.[1] ?? 0),
           };
