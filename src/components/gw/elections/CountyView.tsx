@@ -5,6 +5,7 @@ import { TODO_NAMES, type Race } from "@/lib/atlas";
 import {
   RACE_NAMES,
   figuresFor,
+  raceInText,
   rankChildren,
   resultBlocks,
   shadeOf,
@@ -60,7 +61,7 @@ export function CountyView({
       <AreaNumbers
         f={own}
         year={year}
-        raceName={RACE_NAMES[race]}
+        raceText={raceInText(race)}
         canSetSides={canEdit}
         onSetup={onSetup}
       />
@@ -75,8 +76,8 @@ export function CountyView({
             <ResultList block={block} />
           ) : (
             <p className="f-note">
-              No {area.level === "country" ? "national" : "county"} {RACE_NAMES[race].toLowerCase()}{" "}
-              result found for {year} yet.
+              No {area.level === "country" ? "national" : "county"} {raceInText(race)} result found
+              for {year} yet.
             </p>
           )}
         </section>

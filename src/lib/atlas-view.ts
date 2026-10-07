@@ -78,6 +78,8 @@ export const RACE_NAMES: Record<Race, string> = {
   governor: "Governor",
   mp: "MP",
 };
+/** A race inside a sentence: "governor", "president", but "MP". */
+export const raceInText = (race: Race) => (race === "mp" ? "MP" : RACE_NAMES[race].toLowerCase());
 
 export const share1 = (x: number) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
 export const whole = (x: number) => `${Math.round(x * 100)}%`;
@@ -137,6 +139,8 @@ export type AreaFigures = {
   registered: number | null;
   growth: { change: number; rate: number | null } | null;
   population: AtlasPopulation | null;
+  /** How many parts' estimates were added up for `population`; null when it is the area's own. */
+  populationParts: number | null;
   /** Null where there's no estimate, or where it's below the register. */
   notRegistered: { adults: number; youngShare: number | null } | null;
   estimateBelowRegister: boolean;
@@ -147,6 +151,37 @@ const latestBefore = (d: AtlasData, race: Race, year: number, key: string): numb
   [...YEARS]
     .reverse()
     .find((y) => y < year && countAt(d, electionOf(race, y), key)?.candidates.length) ?? null;
+
+/**
+ * An area's population estimate: its own, else the sum of its parts' when every
+ * part has one, from the same year and source. A sum with a part missing stays
+ * missing. WorldPop's figures are sums of grid squares, so adding wards is exact.
+ */
+function populationOf(
+  d: AtlasData,
+  key: string,
+): { estimate: AtlasPopulation; parts: number | null } | null {
+  const own = d.population.filter((p) => p.area === key).sort((a, b) => b.year - a.year)[0];
+  if (own) return { estimate: own, parts: null };
+  const kids = d.areas.filter((a) => a.parent === key);
+  const sums = kids.map((k) => populationOf(d, k.key)?.estimate ?? null);
+  const first = sums[0];
+  if (!first || sums.some((s) => !s || s.year !== first.year || s.source !== first.source))
+    return null;
+  const add = (pick: (p: AtlasPopulation) => number) =>
+    sums.reduce((n, s) => n + pick(s as AtlasPopulation), 0);
+  return {
+    estimate: {
+      area: key,
+      year: first.year,
+      total: add((p) => p.total),
+      adults: add((p) => p.adults),
+      youngAdults: add((p) => p.youngAdults),
+      source: first.source,
+    },
+    parts: kids.length,
+  };
+}
 
 /** One area's figures in a race and year. */
 export function figuresFor(d: AtlasData, key: string, race: Race, year: number): AreaFigures {
@@ -173,9 +208,13 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
     .filter((t): t is number => t !== null);
   const reg = (y: number) =>
     d.register.find((r) => r.year === y && r.area === key)?.registered ?? null;
-  const registered = reg(2022) ?? count?.registered ?? null;
-  const population =
-    d.population.filter((p) => p.area === key).sort((a, b) => b.year - a.year)[0] ?? null;
+  // Every race on one election day uses the same register, so another race's count gives it.
+  const sameDay = (y: number) =>
+    d.turnout.find((t) => t.area === key && t.election.startsWith(`${y}-`) && t.registered !== null)
+      ?.registered ?? null;
+  const registered = reg(2022) ?? sameDay(2022) ?? count?.registered ?? null;
+  const people = populationOf(d, key);
+  const population = people?.estimate ?? null;
   const below = Boolean(population && registered !== null && registered > population.adults);
   const source = sourceAt(d, election, key);
   const counted = Boolean(count?.candidates.length);
@@ -203,8 +242,9 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
         : null,
     reach: count && counted ? votesWithinReach(count, side, siblingTurnouts) : null,
     registered,
-    growth: registerGrowth(reg(2022), reg(2017)),
+    growth: registerGrowth(reg(2022) ?? sameDay(2022), reg(2017) ?? sameDay(2017)),
     population,
+    populationParts: people?.parts ?? null,
     notRegistered:
       population && !below
         ? notRegistered(

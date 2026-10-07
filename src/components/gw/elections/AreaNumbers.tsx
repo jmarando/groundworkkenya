@@ -15,13 +15,14 @@ const growth = (rate: number) => `${rate >= 0 ? "+" : "−"}${whole(Math.abs(rat
 export function AreaNumbers({
   f,
   year,
-  raceName,
+  raceText,
   canSetSides,
   onSetup,
 }: {
   f: AreaFigures;
   year: number;
-  raceName: string;
+  /** The race as it reads inside a sentence: "governor", "MP". */
+  raceText: string;
   canSetSides: boolean;
   onSetup: () => void;
 }) {
@@ -45,7 +46,7 @@ export function AreaNumbers({
         </div>
       ) : (
         <p className="f-note">
-          No {raceName.toLowerCase()} result found here for {year} yet.
+          No {raceText} result found here for {year} yet.
         </p>
       )}
       <div className="ladder fx2">
@@ -53,11 +54,13 @@ export function AreaNumbers({
           <span className="l">Our share</span>
           <span className="n stat">{f.ourShare === null ? DASH : share1(f.ourShare)}</span>
           <span className="s">
-            {f.listedOnly
-              ? "of the candidates listed"
-              : f.margin === null
-                ? DASH
-                : `margin ${signedPoints(f.margin)}`}
+            {f.ourShare === null
+              ? DASH
+              : f.listedOnly
+                ? "of the candidates listed"
+                : f.margin === null
+                  ? DASH
+                  : `margin ${signedPoints(f.margin)}`}
           </span>
         </div>
         <div>
@@ -76,16 +79,22 @@ export function AreaNumbers({
           <span className="l">Votes within reach</span>
           <span className="n stat">{f.reach ? votes(f.reach.total) : DASH}</span>
           <span className="s">
-            {f.reach
-              ? `${votes(f.reach.turnout)} from turnout, ${votes(f.reach.persuasion)} from a 5-point swing`
-              : "needs a result and a side"}
+            {!f.reach
+              ? "needs a result and a side"
+              : f.turnout === null
+                ? "all from a 5-point swing; turnout not found yet"
+                : `${votes(f.reach.turnout)} from turnout, ${votes(f.reach.persuasion)} from a 5-point swing`}
           </span>
         </div>
         <div>
           <span className="l">Registered</span>
           <span className="n stat">{f.registered === null ? DASH : votes(f.registered)}</span>
           <span className="s">
-            {f.growth && f.growth.rate !== null ? growth(f.growth.rate) : "the 2022 register"}
+            {f.registered === null
+              ? "not found yet"
+              : f.growth && f.growth.rate !== null
+                ? growth(f.growth.rate)
+                : "the 2022 register"}
           </span>
         </div>
       </div>

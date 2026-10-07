@@ -8,6 +8,7 @@ import {
   blocsIn,
   countAt,
   figuresFor,
+  raceInText,
   rankChildren,
   resultBlocks,
   shadeOf,
@@ -262,6 +263,51 @@ eq(
   "signed points",
   [signedPoints(0.052), signedPoints(-0.12), signedPoints(0)],
   ["+5.2 points", "−12 points", "0 points"],
+);
+
+const P: AtlasData = {
+  ...D,
+  areas: [
+    ...D.areas,
+    { key: "nyeri", level: "county", name: "Nyeri", parent: "kenya" },
+    { key: "nyeri/m", level: "constituency", name: "Mathira", parent: "nyeri" },
+    { key: "nyeri/x", level: "constituency", name: "Kieni", parent: "nyeri" },
+    { key: "nyeri/m/w1", level: "ward", name: "One", parent: "nyeri/m" },
+    { key: "nyeri/m/w2", level: "ward", name: "Two", parent: "nyeri/m" },
+  ],
+  population: [
+    ...D.population,
+    { area: "nyeri/m/w1", year: 2020, total: 100, adults: 60, youngAdults: 30, source: "worldpop" },
+    { area: "nyeri/m/w2", year: 2020, total: 50, adults: 40, youngAdults: 10, source: "worldpop" },
+  ],
+};
+const M = figuresFor(P, "nyeri/m", "mp", 2022);
+eq(
+  "a constituency's people: the sum of its wards' estimates",
+  [M.population, M.populationParts],
+  [
+    { area: "nyeri/m", year: 2020, total: 150, adults: 100, youngAdults: 40, source: "worldpop" },
+    2,
+  ],
+);
+eq(
+  "a sum with a part missing stays missing",
+  [
+    figuresFor(P, "nyeri", "mp", 2022).population,
+    figuresFor(D, "nairobi", "governor", 2022).population,
+  ],
+  [null, null],
+);
+eq("an area's own estimate comes first", [A.population?.total, A.populationParts], [2000, null]);
+eq(
+  "the register from the same day's other race",
+  figuresFor(D, "nairobi", "president", 2022).registered,
+  3000,
+);
+eq(
+  "races in a sentence",
+  [raceInText("mp"), raceInText("governor"), raceInText("president")],
+  ["MP", "governor", "president"],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

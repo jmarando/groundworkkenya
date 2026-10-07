@@ -41,7 +41,7 @@ export function SetupPanel({
   const elections = [...ATLAS_ELECTIONS].reverse().filter((e) => blocsIn(d, e).length);
   return (
     <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="el-setup-title">
-      <div className="pb re-panel">
+      <div className="pb re-panel el-setup">
         <div className="pb-head">
           <div>
             <span className="eyebrow">Elections · setup</span>

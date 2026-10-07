@@ -2025,7 +2025,7 @@ figure { margin: 0; }
 .el-src { font-size:11.5px; color:var(--muted-foreground); margin:8px 0 0; }
 .el-result + .el-result { margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
 .el-result-h { margin:0 0 8px; }
-.el-map { width:100%; height:auto; display:block; }
+.el-map { width:100%; height:auto; max-height:440px; display:block; }
 .el-note textarea { width:100%; font:inherit; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:inherit; }
 .el-note-body { white-space:pre-wrap; margin:0 0 6px; }
 .el-print-only { display:none; }
@@ -2039,3 +2039,4 @@ figure { margin: 0; }
   .el-print-only { display:block; font-size:11px; color:#555; }
   .card { break-inside:avoid; box-shadow:none; }
 }
+.el-setup .f-row select { width:14rem; max-width:55%; }

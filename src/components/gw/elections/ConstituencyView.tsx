@@ -6,6 +6,7 @@ import { ResultList } from "@/components/gw/elections/ResultList";
 import { RACES, type Race } from "@/lib/atlas";
 import {
   RACE_NAMES,
+  raceInText,
   figuresFor,
   resultBlocks,
   votes,
@@ -45,7 +46,7 @@ export function ConstituencyView({
       <AreaNumbers
         f={f}
         year={year}
-        raceName={RACE_NAMES[race]}
+        raceText={raceInText(race)}
         canSetSides={canEdit}
         onSetup={onSetup}
       />
@@ -85,7 +86,8 @@ export function ConstituencyView({
           <h2>Its wards</h2>
           <span className="mono">{wards.length} wards</span>
         </div>
-        <div className="tblwrap">
+        {wards.length ? null : <p className="f-note">{area.name}'s wards aren't loaded yet.</p>}
+        <div className="tblwrap" hidden={!wards.length}>
           <table className="tbl">
             <thead>
               <tr>

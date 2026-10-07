@@ -5,6 +5,7 @@ import { ResultList } from "@/components/gw/elections/ResultList";
 import type { Race } from "@/lib/atlas";
 import {
   RACE_NAMES,
+  raceInText,
   figuresFor,
   resultBlocks,
   type AtlasArea,
@@ -45,8 +46,7 @@ export function WardView({
           ))}
           {blocks.length ? null : (
             <p className="f-note">
-              No {RACE_NAMES[race].toLowerCase()} result found for{" "}
-              {parent?.name ?? "its constituency"} yet.
+              No {raceInText(race)} result found for {parent?.name ?? "its constituency"} yet.
             </p>
           )}
           <p className="meta">Results for the ward itself come with the station data.</p>
@@ -55,6 +55,7 @@ export function WardView({
       <section className="card">
         <AreaMap
           county={county}
+          within={area.parent ?? undefined}
           focus={area.key}
           colourOf={(k) => (k === area.key ? "hsl(158 40% 40%)" : null)}
           label={`${area.name} ward`}

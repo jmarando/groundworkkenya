@@ -1,5 +1,12 @@
 import { votes, whole, type AreaFigures } from "@/lib/atlas-view";
 
+/** What an area's parts are called, for "its 6 wards added up". */
+const PARTS: Partial<Record<AreaFigures["level"], string>> = {
+  constituency: "wards",
+  county: "constituencies",
+  country: "counties",
+};
+
 /** Who lives here (estimates) against the register. */
 export function PeopleCard({ f }: { f: AreaFigures }) {
   const p = f.population;
@@ -14,7 +21,14 @@ export function PeopleCard({ f }: { f: AreaFigures }) {
     <section className="card">
       <div className="card-head">
         <h2>Who lives here</h2>
-        {p ? <span className="mono">WorldPop estimate · {p.year}</span> : null}
+        {p ? (
+          <span className="mono">
+            WorldPop estimate · {p.year}
+            {f.populationParts
+              ? ` · its ${f.populationParts} ${PARTS[f.level] ?? "parts"} added up`
+              : ""}
+          </span>
+        ) : null}
       </div>
       <div className="f-rows">
         {rows.map(([k, v]) => (
