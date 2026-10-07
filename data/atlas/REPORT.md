@@ -18,6 +18,7 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 
 Registered voters by ward: 2013: 0 of 85 · 2017: 0 of 85 · 2022: 85 of 85.
 Population estimates: 85 of 85 wards.
+Population estimate below the 2022 register in 29 of 85 wards: Kabiro, Mutu-ini, Ngando, Kayole South, Upper Savannah, Utawala, Dandora Area I, Imara Daima, Kwa Njenga, Pipeline, Eastleigh South, Pumwani, Clay City, Laini Saba, Sarangombe, Mugumo-ini, Nyayo Highrise, South C, Harambee, Maringo/Hamza, Mabatini, Mlango Kubwa, Kahawa, Zimmerman, Nairobi Central, Nairobi South, Ngara, Ziwani/Kariokor, Parklands/Highridge.
 
 Missing:
 - 2013 president: results for 17 of 17 constituencies
@@ -49,6 +50,7 @@ Missing:
 
 Registered voters by ward: 2013: 0 of 6 · 2017: 0 of 6 · 2022: 6 of 6.
 Population estimates: 6 of 6 wards.
+Population estimate below the 2022 register in 1 of 6 wards: Karatina Town.
 
 Missing:
 - 2013 president: results for 6 of 6 constituencies
@@ -67,7 +69,7 @@ Missing:
 
 ## Sources
 
-- `electionskenya-2013-president`: 2013 presidential results by county, electionskenya.org, http://www.electionskenya.org/results/PR/2013/. A third-party election observation site; its 2013 national totals match IEBC's declaration. County rows list only the four leading candidates and no votes cast.
+- `electionskenya-2013-president`: 2013 presidential results by county, electionskenya.org, http://www.electionskenya.org/results/PR/2013/. A third-party election observation site; its 2013 national totals match IEBC's declaration. County rows list only the four leading candidates and no votes cast. Parties and coalitions come from the candidates' widely reported 2013 tickets
 - `electionskenya-2022-register`: Registered voters per county assembly ward, 2022, electionskenya.org, http://www.electionskenya.org/county/047/. Ward pages of a third-party site carrying IEBC's 2022 register. Nairobi's wards add up to 2,415,310 against IEBC's declared 2,416,551. Mugumo-ini is spelt Mugumu-ini there.
 - `iebc-2022-form-34c`: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022, IEBC, https://www.iebc.or.ke/uploads/resources/QLTlLJx0Vr.pdf. County and national totals as printed. Votes cast is valid plus rejected. The national valid total (14,213,137) is 110 more than the four candidates' votes added up (14,213,027), as printed.
 - `star-2022-mathira-president`: Mathira gives Ruto massive win over Raila, The Star, https://www.the-star.co.ke/news/2022-08-14-mathira-gives-ruto-massive-win-over-raila. Mathira's presidential result as printed. Its 'votes cast' (73,439) equals the four candidates' votes added up, so it is probably the valid total; entered as printed.

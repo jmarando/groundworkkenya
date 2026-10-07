@@ -230,5 +230,21 @@ eq(
   [true, true, true, true],
 );
 
+const below = emptyFiles();
+for (const [table, text] of Object.entries({
+  ...BASE,
+  register: "year,area,registered,source\n2022,nairobi/kibra/sarangombe,200,iebc-test",
+  population:
+    "area,year,total,adults,young_adults,source\nnairobi/kibra/sarangombe,2020,150,100,60,iebc-test",
+}) as [TableName, string][])
+  readTable(table, text, table, below);
+eq(
+  "the report names wards whose estimate is below the register",
+  atlasReport(below).includes(
+    "Population estimate below the 2022 register in 1 of 1 wards: Sarangombe.",
+  ),
+  true,
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

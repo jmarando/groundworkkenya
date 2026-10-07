@@ -504,8 +504,20 @@ export function atlasReport(f: AtlasFiles): string {
       "",
       `Registered voters by ward: ${reg.join(" · ")}.`,
       `Population estimates: ${pop} of ${wards.length} wards.`,
-      "",
     );
+    // Where more are registered than the estimate has adults, it can't say who isn't registered.
+    const below = wards.filter((w) => {
+      const adults = f.population
+        .filter((p) => p.area === w)
+        .sort((a, b) => b.year - a.year)[0]?.adults;
+      const registered = f.register.find((r) => r.year === 2022 && r.area === w)?.registered;
+      return adults !== undefined && registered !== undefined && registered > adults;
+    });
+    if (below.length)
+      lines.push(
+        `Population estimate below the 2022 register in ${below.length} of ${wards.length} wards: ${below.map((w) => name.get(w) ?? w).join(", ")}.`,
+      );
+    lines.push("");
     if (missing.length) lines.push("Missing:", ...missing.map((m) => `- ${m}`), "");
   }
   lines.push(
