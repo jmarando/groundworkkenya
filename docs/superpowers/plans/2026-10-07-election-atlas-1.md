@@ -2711,6 +2711,15 @@ class Literals(unittest.TestCase):
     def test_text_that_looks_like_a_number_stays_text(self):
         self.assertEqual(build_sql.literal("iebc_code", "047"), "'047'")
 
+    def test_a_number_must_be_ascii_digits(self):
+        for value in ("٣٠٠", "１２３", "1٣"):
+            with self.assertRaises(ValueError):
+                build_sql.literal("votes", value)
+
+    def test_a_backslash_is_refused(self):
+        with self.assertRaises(ValueError):
+            build_sql.literal("name", "Wa\\Test")
+
 
 class Build(unittest.TestCase):
     def test_the_fixture_builds_the_golden_file(self):
@@ -2749,6 +2758,12 @@ class Build(unittest.TestCase):
             sql = build_sql.build(copy, "Testland")
             self.assertEqual(sql.count("insert into public.atlas_results "), 3)
 
+    def test_main_writes_the_golden_file_as_utf8_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "testland.sql"
+            build_sql.main(["build_sql.py", str(FIXTURE), "Testland", str(out)])
+            self.assertEqual(out.read_bytes(), GOLDEN.read_bytes())
+
 
 class Refusals(unittest.TestCase):
     def copy_fixture(self, tmp):
@@ -2786,6 +2801,19 @@ class Refusals(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "results.csv row 2"):
                 build_sql.build(copy, "Testland")
 
+    def test_a_row_listed_twice_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = self.copy_fixture(tmp)
+            (copy / "results.csv").write_text(
+                "candidate_id,area_key,votes\n"
+                "2022-governor/testland/a-test,testland,600\n"
+                "2022-governor/testland/a-test,testland,601\n"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "results.csv row 3: the same candidate_id, area_key as row 2"
+            ):
+                build_sql.build(copy, "Testland")
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -2800,9 +2828,9 @@ Expected: `ModuleNotFoundError: No module named 'build_sql'` and `FAILED (errors
 - [ ] **Step 4: Write the loader**
 
 Create `scripts/atlas/build_sql.py`. It checks only that the files can be read (the right columns,
-whole numbers where numbers belong); that they add up is Task 8's job. Areas load a depth at a time,
-so a parent is always in before its children; rows go in key order, so the same files always build
-the same text.
+whole numbers in ASCII digits where numbers belong, no backslash in a text cell, no row listed
+twice); that they add up is Task 8's job. Areas load a depth at a time, so a parent is always in
+before its children; rows go in key order, so the same files always build the same text.
 
 ```python
 """Turns one county's atlas files into a migration of idempotent upserts.
@@ -2815,8 +2843,9 @@ population.csv (the columns of each are in FILES below). The SQL goes to OUT_SQL
 screen. Every statement upserts, so running the migration again changes nothing, and each
 county is one more migration, applied before the code that needs it.
 
-This only checks that the files can be read: the right columns, and whole numbers where
-numbers belong. That what they say adds up is tests/atlas-data.test.ts's job.
+This only checks that the files can be read: the right columns, whole numbers (ASCII digits)
+where numbers belong, no backslash in a text cell, and no row listed twice. That what they say
+adds up is tests/atlas-data.test.ts's job.
 """
 import csv
 import re
@@ -2874,14 +2903,20 @@ def literal(column, value):
     if value == "":
         return "null"
     if column in NUMBERS:
-        if not re.fullmatch(r"\d+", value):
+        # [0-9], not \d: \d also matches Arabic-Indic and full-width digits, which Postgres rejects.
+        if not re.fullmatch(r"[0-9]+", value):
             raise ValueError(f"{column} must be a whole number, not {value!r}")
         return value
+    # The quoting below is only right while the server's standard_conforming_strings is on (its
+    # default), and a data cell has no business holding a backslash.
+    if "\\" in value:
+        raise ValueError(f"{column} must not contain a backslash, not {value!r}")
     return "'" + value.replace("'", "''") + "'"
 
 
 def read(directory, name):
-    """A file's rows as dicts, each with the line it came from in "_row"."""
+    """A file's rows as dicts, each with the row number it came from in "_row": the header is
+    row 1, so the first data row is row 2."""
     path = Path(directory) / f"{name}.csv"
     if not path.exists():
         raise ValueError(f"{path.name} is missing")
@@ -2891,6 +2926,8 @@ def read(directory, name):
     if not rows or rows[0] != want:
         found = ",".join(rows[0]) if rows else "nothing"
         raise ValueError(f"{path.name}: the columns must be {','.join(want)}; found {found}")
+    key = TABLES[name][1]
+    seen = {}  # each row's key cells, as read -> the row number they first appeared on
     out = []
     for n, cells in enumerate(rows[1:], start=2):
         if not any(cell.strip() for cell in cells):
@@ -2898,6 +2935,13 @@ def read(directory, name):
         if len(cells) != len(want):
             raise ValueError(f"{path.name} row {n}: {len(cells)} cells, expected {len(want)}")
         row = dict(zip(want, cells))
+        # A repeated row would load silently, the last one winning, when the two fall in different
+        # CHUNKs, and Postgres would refuse it when they fall in the same one.
+        pair = tuple(row[c] for c in key)
+        if pair in seen:
+            first = seen[pair]
+            raise ValueError(f"{path.name} row {n}: the same {', '.join(key)} as row {first}")
+        seen[pair] = n
         row["_row"] = n
         out.append(row)
     return out
@@ -2977,12 +3021,13 @@ if __name__ == "__main__":
     main(sys.argv)
 ```
 
-- [ ] **Step 5: Run the tests: only the golden-file test fails**
+- [ ] **Step 5: Run the tests: only the two golden-file tests fail**
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_build_sql.py" 2>&1 | tail -5`
 
-Expected: `Ran 14 tests` and `FAILED (errors=1)`, the error being
-`FileNotFoundError: ... tests/fixtures/atlas/testland.sql`. Every other test passes.
+Expected: `Ran 18 tests` and `FAILED (errors=2)`, both errors being
+`FileNotFoundError: ... tests/fixtures/atlas/testland.sql`: `test_the_fixture_builds_the_golden_file`
+and `test_main_writes_the_golden_file_as_utf8_bytes`. Every other test passes.
 
 - [ ] **Step 6: Generate the golden file, and read it**
 
@@ -3020,7 +3065,7 @@ Expected: `298ac28e9540600339b9af5ef3e2e374e66e31369b38e307741451b705e83044`
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -4`
 
-Expected: `Ran 14 tests` and `OK`.
+Expected: `Ran 18 tests` and `OK`.
 
 - [ ] **Step 8: Write the SQL load test, and run the suite**
 
@@ -3055,6 +3100,12 @@ do $$ begin
   assert (select votes from public.atlas_results where candidate_id = '2022-mp/testland/north-test/otest') = 0, 'a real zero is kept';
   assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing figure stays missing';
   assert (select registered from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') = 1000, 'and the one given is kept';
+  assert (select rejected_votes from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing rejected count stays missing';
+  assert (select valid_votes from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing valid count stays missing';
+  assert (select source_url from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a blank link is null';
   assert (select sum(r.votes) from public.atlas_results r
             join public.atlas_candidates c on c.id = r.candidate_id
            where c.election_id = '2022-governor' and r.area_key like 'testland/%') = 1000,
@@ -3084,15 +3135,23 @@ rollback;
 -- test: loading it again puts back a figure that was changed
 begin;
 \ir ../fixtures/atlas/testland.sql
+update public.atlas_areas set name = 'Changed' where key = 'testland';
+update public.atlas_candidates set party = 'Changed' where id = '2022-governor/testland/a-test';
 update public.atlas_results set votes = 1 where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland';
 update public.atlas_turnout set source = 'Someone, changed it' where election_id = '2022-governor' and area_key = 'testland';
+update public.atlas_register set registered = 1 where year = 2022 and area_key = 'testland';
+update public.atlas_population set total = 2000 where area_key = 'testland/north-test/ward-one';
 \ir ../fixtures/atlas/testland.sql
 do $$ begin
+  assert (select name from public.atlas_areas where key = 'testland') = 'Testland', 'a changed area name was kept';
+  assert (select party from public.atlas_candidates where id = '2022-governor/testland/a-test') = 'Party A', 'a changed party was kept';
   assert (select votes from public.atlas_results
            where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland') = 600, 'a changed result was kept';
   assert (select source from public.atlas_turnout
            where election_id = '2022-governor' and area_key = 'testland') = 'IEBC, Governor results by constituency 2022',
     'a changed source was kept';
+  assert (select registered from public.atlas_register where year = 2022 and area_key = 'testland') = 2000, 'a changed register was kept';
+  assert (select total from public.atlas_population where area_key = 'testland/north-test/ward-one') = 1500, 'a changed population was kept';
 end $$;
 rollback;
 ```
@@ -3108,13 +3167,14 @@ Create `tests/atlas-scripts.test.ts`:
 ```ts
 // Runs the Python unit tests for the atlas scripts (scripts/atlas/test_*.py) as part of
 // `npm test`. Skips, as the SQL tests do, when there is no python3. ATLAS_PYTHON names another
-// interpreter: the ward population test needs one with rasterio and numpy installed,
-// and skips itself without. Run from the repository root:
+// interpreter (empty counts as unset): the ward population test needs one with rasterio and numpy
+// installed, and skips itself without. Fails if no test ran at all, so a stand-in that exits 0
+// cannot pass, and reports how many ran. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/atlas-scripts.test.ts
 
 import { spawnSync } from "node:child_process";
 
-const python = process.env["ATLAS_PYTHON"] ?? "python3";
+const python = process.env["ATLAS_PYTHON"] || "python3";
 const probe = spawnSync(python, ["--version"], { encoding: "utf8" });
 if (probe.error) {
   console.log(`SKIP: ${python} not found. Install Python 3 to run the atlas script tests.`);
@@ -3128,13 +3188,24 @@ const run = spawnSync(
 );
 process.stdout.write(run.stdout);
 process.stderr.write(run.stderr);
-console.log(run.status === 0 ? "atlas script tests passed" : "atlas script tests failed");
+
+// unittest ends its stderr with "Ran 18 tests in 0.3s". Exit 0 without that line, or with
+// "Ran 0 tests", means nothing was tested, and that must not pass.
+const summary = /^Ran (\d+) tests?/m.exec(run.stderr);
+const count = summary ? Number(summary[1]) : 0;
+if (run.status === 0 && count === 0) {
+  console.log("atlas script tests failed: no test ran");
+  process.exit(1);
+}
+console.log(
+  run.status === 0 ? `atlas script tests passed (${count} tests)` : "atlas script tests failed",
+);
 process.exit(run.status ?? 1);
 ```
 
 Run: `npx prettier --write tests/atlas-scripts.test.ts && npx eslint tests/atlas-scripts.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-scripts.test.ts | tail -3`
 
-Expected: ESLint prints nothing; the last lines are `OK` and `atlas script tests passed`.
+Expected: ESLint prints nothing; the last lines are `OK` and `atlas script tests passed (18 tests)`.
 
 Running Python's tests leaves `scripts/atlas/__pycache__/` behind. Keep it out of git with a nested
 ignore file (the root `.gitignore` is edited by a later task), `scripts/atlas/.gitignore`, one line:
@@ -3279,7 +3350,7 @@ def slugify(name):
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 17 tests` and `OK`.
+Expected: `Ran 21 tests` and `OK`.
 
 - [ ] **Step 5: Write the fixture's blocs, and the failing data tests**
 
@@ -4483,7 +4554,7 @@ if __name__ == "__main__":
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 27 tests` and `OK`.
+Expected: `Ran 31 tests` and `OK`.
 
 Look at what it makes for Nyeri (Mathira is the one constituency with a ward map):
 
@@ -4916,11 +4987,11 @@ if __name__ == "__main__":
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 46 tests` and `OK (skipped=5)`: the five grid tests skip without rasterio.
+Expected: `Ran 50 tests` and `OK (skipped=5)`: the five grid tests skip without rasterio.
 
 Run: `python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy && /tmp/gwvenv/bin/python -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 46 tests` and `OK`: nothing skipped.
+Expected: `Ran 50 tests` and `OK`: nothing skipped.
 
 - [ ] **Step 5: Commit**
 
