@@ -65,15 +65,16 @@ doesn't, so `areas.csv` is what says which constituency a ward is in.
   (`president`, `governor`, `mp`), `held_on`, `note`. The 2017 presidential note says it is the
   8 August vote, annulled by the Supreme Court; the 26 October re-run was boycotted in
   opposition areas, so it says little about lean and is not loaded.
-- `atlas_candidates`: `id`, `election_id`, `seat` (the area contested: `kenya`, a county or a
-  constituency), `name`, `party`, `bloc` (the coalition, or the party where there was none:
-  e.g. 2013 Jubilee and CORD, 2017 Jubilee and NASA, 2022 Kenya Kwanza and Azimio). Unique by
-  election, seat and name.
+- `atlas_candidates`: `id` (election, seat and the name's slug, as in
+  `2022-governor/nairobi/johnson-sakaja`), `election_id`, `seat` (the area contested: `kenya`, a
+  county or a constituency), `name`, `party`, `bloc` (the coalition the party stood in, or the
+  party where there was none: e.g. 2013 Jubilee and CORD, 2017 Jubilee and NASA, 2022 Kenya Kwanza
+  and Azimio; `data/atlas/blocs.csv` records it). Unique by election, seat and name.
 - `atlas_results`: `candidate_id`, `area_key` (where the votes were counted: a county or a
   constituency now; wards and polling centres later), `votes`. Primary key: candidate and area.
-- `atlas_turnout`: `election_id`, `area_key`, `registered`, `cast`, `rejected`, `valid` (each
-  may be missing), `source` (the document), `source_url`. Checks: cast ≤ registered, valid ≤
-  cast.
+- `atlas_turnout`: `election_id`, `area_key`, `registered`, `cast_votes`, `rejected_votes`,
+  `valid_votes` (each may be missing; `cast` itself is a reserved word in SQL), `source` (the
+  document, written "Publisher, title"), `source_url`. Checks: cast ≤ registered, valid ≤ cast.
 - `atlas_register`: `year`, `area_key`, `registered`, `source`, `source_url`: registered voters
   by ward (and above) for each election year, where IEBC published them.
 - `atlas_population`: `area_key`, `year`, `total`, `adults` (18+), `young_adults` (18–34),
@@ -101,9 +102,11 @@ the candidate or manager sets the home area and sides; staff write notes.
 ## 3. Data: sources, files and loading
 
 - **Files.** `data/atlas/<county>/` holds `areas.csv`, `candidates.csv`, `results.csv`,
-  `turnout.csv`, `register.csv` and `population.csv`. `data/atlas/SOURCES.md` lists every
-  document used (title, publisher, URL, what was taken from it) and every gap. The repository
-  is public: only public figures go in.
+  `turnout.csv`, `register.csv` and `population.csv`. `data/atlas/blocs.csv` records which
+  coalition each party stood in, election by election, with its source, so a coalition has one
+  name in every county. `data/atlas/SOURCES.md` lists every document used (title, publisher,
+  URL, what was taken from it) and every gap. The repository is public: only public figures go
+  in.
 - **Loading.** `scripts/atlas/build_sql.py` turns a county's files into a migration of
   idempotent upserts, so each new county is one more migration, applied before the code that
   needs it, with the user's OK.
@@ -123,9 +126,10 @@ the candidate or manager sets the home area and sides; staff write notes.
   county for 2013, 2017 and 2022; registered voters by ward for each year IEBC published
   them; population estimates per ward. Groundwork gathers the figures from IEBC's published
   results documents and the Kenya Gazette. What isn't found stays missing and is listed in
-  `SOURCES.md`; before any screen work, the user gets a report of what was found and where.
+  `SOURCES.md`; before any screen work, the user gets a report of what was found and where
+  (`scripts/atlas/report.ts` writes it).
 
-## 4. Calculations (`src/lib/atlas.ts`)
+## 4. Calculations (`src/lib/atlas/`, one import: `@/lib/atlas`)
 
 Pure and tested. For an area, an election and the campaign's side:
 
@@ -240,8 +244,9 @@ version bump. Each county's figures are a separate migration produced by the scr
 
 ## Testing
 
-- `tests/atlas.test.ts`: every calculation, every what-to-do rule and its precedence, missing
-  data, and the reason lines.
+- `tests/atlas-measures.test.ts`, `atlas-register`, `atlas-format`, `atlas-advice` and
+  `atlas-scope`: every calculation, every what-to-do rule and its precedence, missing data, and
+  the reason lines.
 - `tests/atlas-data.test.ts`: the data checks in section 3.
 - `tests/sql/atlas.test.sql`: teams read the atlas but can't write it; notes, settings and
   sides stay inside their campaign; only the candidate or manager sets the home area and
@@ -260,8 +265,8 @@ version bump. Each county's figures are a separate migration produced by the scr
 5. Across the app: Voters, Home, the diary, the War room.
 6. A look at it.
 
-Two plans: the first covers steps 1–3 and ends with the data report; the second covers steps
-4–6, once the user has seen what was found.
+Two plans: the first (`docs/superpowers/plans/2026-10-07-election-atlas-1.md`) covers steps 1–3
+and ends with the data report; the second covers steps 4–6, once the user has seen what was found.
 
 ## Not now
 
