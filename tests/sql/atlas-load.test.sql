@@ -8,11 +8,11 @@ begin;
 \ir ../fixtures/atlas/testland.sql
 do $$ begin
   assert (select count(*) from public.atlas_areas where key like 'testland%') = 5, 'areas';
-  assert (select count(*) from public.atlas_candidates where seat like 'testland%' or seat = 'kenya') = 8, 'candidates';
-  assert (select count(*) from public.atlas_results) = 18, 'results';
-  assert (select count(*) from public.atlas_turnout) = 8, 'turnout';
-  assert (select count(*) from public.atlas_register) = 6, 'registers';
-  assert (select count(*) from public.atlas_population) = 2, 'population';
+  assert (select count(*) from public.atlas_candidates where id like '%/testland/%' or id like '2022-president/kenya/p-%-test') = 8, 'candidates';
+  assert (select count(*) from public.atlas_results where area_key like 'testland%') = 18, 'results';
+  assert (select count(*) from public.atlas_turnout where area_key like 'testland%') = 8, 'turnout';
+  assert (select count(*) from public.atlas_register where area_key like 'testland%') = 6, 'registers';
+  assert (select count(*) from public.atlas_population where area_key like 'testland%') = 2, 'population';
   assert (select parent from public.atlas_areas where key = 'testland/north-test/ward-one') = 'testland/north-test', 'a ward''s parent';
   assert (select iebc_code from public.atlas_areas where key = 'testland') = '901', 'a code is kept as text';
   assert (select iebc_code from public.atlas_areas where key = 'testland/south-test') is null, 'a blank code is null';
@@ -21,8 +21,8 @@ do $$ begin
   assert (select name from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') = 'O''Test', 'an apostrophe in a name';
   assert (select party from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') is null, 'a blank party is null';
   assert (select votes from public.atlas_results where candidate_id = '2022-mp/testland/north-test/otest') = 0, 'a real zero is kept';
-  assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp') is null, 'a missing figure stays missing';
-  assert (select registered from public.atlas_turnout where election_id = '2017-mp') = 1000, 'and the one given is kept';
+  assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing figure stays missing';
+  assert (select registered from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') = 1000, 'and the one given is kept';
   assert (select sum(r.votes) from public.atlas_results r
             join public.atlas_candidates c on c.id = r.candidate_id
            where c.election_id = '2022-governor' and r.area_key like 'testland/%') = 1000,

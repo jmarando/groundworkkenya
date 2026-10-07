@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 # The files, in the order they load, with their columns. scripts/atlas/checks.ts has the same
-# lists; tests/atlas-scripts.test.ts fails if the two ever differ.
+# lists; tests/atlas-data.test.ts fails if the two ever differ.
 FILES = {
     "areas": ["key", "level", "name", "parent", "iebc_code"],
     "candidates": ["id", "election_id", "seat", "name", "party", "bloc"],
@@ -160,7 +160,8 @@ def main(argv):
     except ValueError as e:
         raise SystemExit(f"{argv[1]}: {e}")
     if len(argv) == 4:
-        Path(argv[3]).write_text(sql)
+        with Path(argv[3]).open("w", encoding="utf-8", newline="\n") as f:
+            f.write(sql)
     else:
         sys.stdout.write(sql)
 

@@ -37,7 +37,7 @@ class Literals(unittest.TestCase):
 
 class Build(unittest.TestCase):
     def test_the_fixture_builds_the_golden_file(self):
-        self.assertEqual(build_sql.build(FIXTURE, "Testland"), GOLDEN.read_text())
+        self.assertEqual(build_sql.build(FIXTURE, "Testland"), GOLDEN.read_text(encoding="utf-8"))
 
     def test_building_twice_gives_the_same_text(self):
         self.assertEqual(build_sql.build(FIXTURE, "Testland"), build_sql.build(FIXTURE, "Testland"))
