@@ -2564,6 +2564,7 @@ git commit -m "Atlas: where a figure comes from, and one import for the rules" -
 - Create: `tests/fixtures/atlas/testland.sql` (generated, then committed as the golden file)
 - Create: `tests/sql/atlas-load.test.sql`
 - Create: `tests/atlas-scripts.test.ts`
+- Create: `scripts/atlas/.gitignore` (Python's bytecode caches stay out of git)
 
 **Interfaces:** Produces `build_sql.FILES` (each file's columns), `build_sql.literal(column, value)`
 (blank is `null`, a number is bare, anything else is quoted text with apostrophes doubled),
@@ -2713,7 +2714,7 @@ class Literals(unittest.TestCase):
 
 class Build(unittest.TestCase):
     def test_the_fixture_builds_the_golden_file(self):
-        self.assertEqual(build_sql.build(FIXTURE, "Testland"), GOLDEN.read_text())
+        self.assertEqual(build_sql.build(FIXTURE, "Testland"), GOLDEN.read_text(encoding="utf-8"))
 
     def test_building_twice_gives_the_same_text(self):
         self.assertEqual(build_sql.build(FIXTURE, "Testland"), build_sql.build(FIXTURE, "Testland"))
@@ -2823,7 +2824,7 @@ import sys
 from pathlib import Path
 
 # The files, in the order they load, with their columns. scripts/atlas/checks.ts has the same
-# lists; tests/atlas-scripts.test.ts fails if the two ever differ.
+# lists; tests/atlas-data.test.ts fails if the two ever differ.
 FILES = {
     "areas": ["key", "level", "name", "parent", "iebc_code"],
     "candidates": ["id", "election_id", "seat", "name", "party", "bloc"],
@@ -2966,7 +2967,8 @@ def main(argv):
     except ValueError as e:
         raise SystemExit(f"{argv[1]}: {e}")
     if len(argv) == 4:
-        Path(argv[3]).write_text(sql)
+        with Path(argv[3]).open("w", encoding="utf-8", newline="\n") as f:
+            f.write(sql)
     else:
         sys.stdout.write(sql)
 
@@ -3038,11 +3040,12 @@ begin;
 \ir ../fixtures/atlas/testland.sql
 do $$ begin
   assert (select count(*) from public.atlas_areas where key like 'testland%') = 5, 'areas';
-  assert (select count(*) from public.atlas_candidates where seat like 'testland%' or seat = 'kenya') = 8, 'candidates';
-  assert (select count(*) from public.atlas_results) = 18, 'results';
-  assert (select count(*) from public.atlas_turnout) = 8, 'turnout';
-  assert (select count(*) from public.atlas_register) = 6, 'registers';
-  assert (select count(*) from public.atlas_population) = 2, 'population';
+  assert (select count(*) from public.atlas_candidates
+           where id like '%/testland/%' or id like '2022-president/kenya/p-%-test') = 8, 'candidates';
+  assert (select count(*) from public.atlas_results where area_key like 'testland%') = 18, 'results';
+  assert (select count(*) from public.atlas_turnout where area_key like 'testland%') = 8, 'turnout';
+  assert (select count(*) from public.atlas_register where area_key like 'testland%') = 6, 'registers';
+  assert (select count(*) from public.atlas_population where area_key like 'testland%') = 2, 'population';
   assert (select parent from public.atlas_areas where key = 'testland/north-test/ward-one') = 'testland/north-test', 'a ward''s parent';
   assert (select iebc_code from public.atlas_areas where key = 'testland') = '901', 'a code is kept as text';
   assert (select iebc_code from public.atlas_areas where key = 'testland/south-test') is null, 'a blank code is null';
@@ -3051,8 +3054,10 @@ do $$ begin
   assert (select name from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') = 'O''Test', 'an apostrophe in a name';
   assert (select party from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') is null, 'a blank party is null';
   assert (select votes from public.atlas_results where candidate_id = '2022-mp/testland/north-test/otest') = 0, 'a real zero is kept';
-  assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp') is null, 'a missing figure stays missing';
-  assert (select registered from public.atlas_turnout where election_id = '2017-mp') = 1000, 'and the one given is kept';
+  assert (select cast_votes from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing figure stays missing';
+  assert (select registered from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') = 1000, 'and the one given is kept';
   assert (select sum(r.votes) from public.atlas_results r
             join public.atlas_candidates c on c.id = r.candidate_id
            where c.election_id = '2022-governor' and r.area_key like 'testland/%') = 1000,
@@ -3134,10 +3139,17 @@ Run: `npx prettier --write tests/atlas-scripts.test.ts && npx eslint tests/atlas
 
 Expected: ESLint prints nothing; the last lines are `OK` and `atlas script tests passed`.
 
+Running Python's tests leaves `scripts/atlas/__pycache__/` behind. Keep it out of git with a nested
+ignore file (the root `.gitignore` is edited by a later task), `scripts/atlas/.gitignore`, one line:
+
+```
+__pycache__/
+```
+
 - [ ] **Step 10: Commit**
 
 ```bash
-git add tests/fixtures/atlas scripts/atlas/build_sql.py scripts/atlas/test_build_sql.py tests/sql/atlas-load.test.sql tests/atlas-scripts.test.ts
+git add tests/fixtures/atlas scripts/atlas/build_sql.py scripts/atlas/test_build_sql.py scripts/atlas/.gitignore tests/sql/atlas-load.test.sql tests/atlas-scripts.test.ts
 git commit -m "Atlas: load a county's files as an idempotent migration" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
