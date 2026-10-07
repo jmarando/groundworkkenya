@@ -28,6 +28,8 @@ type Props = {
   wards: WardsGeo;
   /** Share of each ward's win number already found, 0-1, by ward slug. */
   coverage: Record<string, number>;
+  /** A fill colour per ward slug that takes the place of coverage (how places voted). */
+  wardColours?: Record<string, string> | undefined;
   selectedWard: string | null;
   wardBox: Box | null;
   buildings: BuildingCollection | null;
@@ -92,15 +94,20 @@ function addOverlays(map: MlMap, basemap: Basemap): void {
     source: "gw-wards",
     paint: {
       "fill-color": [
-        "interpolate",
-        ["linear"],
-        ["coalesce", ["feature-state", "cov"], 0],
-        0,
-        "hsl(0, 72%, 52%)",
-        0.5,
-        "hsl(40, 92%, 52%)",
-        1,
-        "hsl(142, 62%, 40%)",
+        "case",
+        ["!=", ["coalesce", ["feature-state", "fill"], ""], ""],
+        ["to-color", ["feature-state", "fill"]],
+        [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["feature-state", "cov"], 0],
+          0,
+          "hsl(0, 72%, 52%)",
+          0.5,
+          "hsl(40, 92%, 52%)",
+          1,
+          "hsl(142, 62%, 40%)",
+        ],
       ],
       "fill-opacity": [
         "case",
@@ -108,6 +115,8 @@ function addOverlays(map: MlMap, basemap: Basemap): void {
         0,
         ["boolean", ["feature-state", "dim"], false],
         0.1,
+        ["!=", ["coalesce", ["feature-state", "fill"], ""], ""],
+        0.6,
         0.36,
       ],
     },
@@ -305,12 +314,13 @@ export function WardMap(props: Props) {
         { source: "gw-wards", id: slug },
         {
           cov: props.coverage[slug] ?? 0,
+          fill: props.wardColours?.[slug] ?? "",
           sel: slug === props.selectedWard,
           dim: Boolean(props.selectedWard) && slug !== props.selectedWard,
         },
       );
     }
-  }, [styleRev, props.wards, props.coverage, props.selectedWard]);
+  }, [styleRev, props.wards, props.coverage, props.wardColours, props.selectedWard]);
 
   useEffect(() => {
     const map = mapRef.current;

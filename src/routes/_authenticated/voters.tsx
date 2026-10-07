@@ -6,6 +6,7 @@ import { Fragment, useMemo, useState } from "react";
 import { AddPerson } from "@/components/gw/AddPerson";
 import { VotersMap } from "@/components/gw/VotersMap";
 import { DoorsView } from "@/components/gw/voters/DoorsView";
+import { LastTimeHere } from "@/components/gw/voters/LastTimeHere";
 import { ManageRecords } from "@/components/gw/voters/ManageRecords";
 import { PeopleView } from "@/components/gw/voters/PeopleView";
 import { WardsView } from "@/components/gw/voters/WardsView";
@@ -283,6 +284,8 @@ function Voters() {
           );
         })}
       </div>
+
+      {isAgent ? null : <LastTimeHere area={area} wards={wards} />}
 
       <div style={{ marginTop: 14 }}>
         <VotersMap

@@ -2045,3 +2045,5 @@ figure { margin: 0; }
 .home-moves-h { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .home-moves-h b { margin-left:auto; font-variant-numeric:tabular-nums; }
 .home-moves .meta { margin:4px 0 0; }
+.vt-last { margin:10px 2px 0; font-size:13px; line-height:1.8; }
+.vt-last-l { font-weight:600; margin-right:8px; }

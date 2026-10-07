@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 
 import { WardMap, type Basemap, type Pin, type Tool, type WardsGeo } from "@/components/gw/WardMap";
+import { useAccess } from "@/hooks/useAccess";
+import { wardKey } from "@/lib/atlas-app";
+import { getAtlas } from "@/lib/atlas.functions";
+import { figuresFor, RACE_NAMES, shadeLegend, shadeOf } from "@/lib/atlas-view";
 import type { VotersData } from "@/lib/console.functions";
+import { defaultRace, SHADES, type Shade } from "@/lib/elections-view";
 import { boundsOf, toBuildings } from "@/lib/geo";
 import { buildingsIndexQuery, getJson, wardBuildingsQuery } from "@/lib/geo-files";
 import { getMapConfig, getWardMap } from "@/lib/map.functions";
@@ -35,6 +40,15 @@ const OUTCOME: Record<string, string> = {
   not_home: "Not home",
   refused: "Refused",
 };
+
+const SHADE_NAMES: Record<Shade, string> = {
+  todo: "What to do",
+  lean: "Lean",
+  turnout: "Turnout",
+  swing: "Swing",
+};
+/** A ward whose constituency has no figure for the shade. */
+const NOT_FOUND = "hsl(0 0% 80%)";
 
 const nf = new Intl.NumberFormat("en-KE");
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "—");
@@ -103,6 +117,27 @@ export function VotersMap({
   const [selection, setSelection] = useState<Set<string>>(() => new Set());
   const [focus, setFocus] = useState<string | null>(null);
   const [houses, setHouses] = useState<HouseFilter>("all");
+  // The county map's shading: the campaign's progress, or how each ward's constituency voted.
+  const [shadeBy, setShadeBy] = useState<"progress" | Shade>("progress");
+  const { campaign } = useAccess();
+  const race = defaultRace(campaign?.level);
+  const fetchAtlas = useServerFn(getAtlas);
+  const { data: atlas } = useQuery({
+    queryKey: ["atlas"],
+    queryFn: () => fetchAtlas(),
+    enabled: shadeBy !== "progress",
+    staleTime: 5 * 60_000,
+  });
+  const wardColours = useMemo(() => {
+    if (shadeBy === "progress" || !atlas) return undefined;
+    return Object.fromEntries(
+      wards.map((w) => {
+        const key = wardKey(atlas, w.constituency, null);
+        const shade = key ? shadeOf(figuresFor(atlas, key, race, 2022), shadeBy) : null;
+        return [w.slug, shade?.colour ?? NOT_FOUND];
+      }),
+    );
+  }, [shadeBy, atlas, wards, race]);
 
   const ward = wards.find((w) => w.slug === slug) ?? null;
   const hasBuildings = Boolean(slug && index?.wards[slug]);
@@ -197,11 +232,13 @@ export function VotersMap({
   );
 
   const legend: { label: string; colour: string; round?: boolean }[] = !ward
-    ? [
-        { label: "Far from win number", colour: "hsl(0, 72%, 52%)" },
-        { label: "Halfway", colour: "hsl(40, 92%, 52%)" },
-        { label: "At the win number", colour: "hsl(142, 62%, 40%)" },
-      ]
+    ? shadeBy !== "progress"
+      ? [...shadeLegend(shadeBy), { label: "Not found yet", colour: NOT_FOUND }]
+      : [
+          { label: "Far from win number", colour: "hsl(0, 72%, 52%)" },
+          { label: "Halfway", colour: "hsl(40, 92%, 52%)" },
+          { label: "At the win number", colour: "hsl(142, 62%, 40%)" },
+        ]
     : layer === "status"
       ? (Object.keys(STATUS) as Status[]).map((k) => ({
           label: STATUS[k].label,
@@ -350,6 +387,7 @@ export function VotersMap({
               basemap={shown}
               wards={wardsGeo}
               coverage={coverage}
+              wardColours={ward ? undefined : wardColours}
               selectedWard={slug}
               wardBox={wardBox}
               buildings={wardBuildings}
@@ -384,6 +422,28 @@ export function VotersMap({
                     Streets
                   </button>
                 </div>
+                {!ward && (
+                  <div className="vglass vseg" role="group" aria-label="Shade wards by">
+                    <button
+                      type="button"
+                      aria-pressed={shadeBy === "progress"}
+                      onClick={() => setShadeBy("progress")}
+                    >
+                      Progress
+                    </button>
+                    {SHADES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        aria-pressed={shadeBy === s}
+                        title={`How each ward's constituency voted in 2022: ${SHADE_NAMES[s].toLowerCase()}`}
+                        onClick={() => setShadeBy(s)}
+                      >
+                        {SHADE_NAMES[s]}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {ward && (
                   <div className="vglass vseg" role="group" aria-label="Colour buildings by">
                     {LAYERS.map((l) => (
@@ -501,7 +561,11 @@ export function VotersMap({
                     </span>
                   </button>
                 ))}
-                <p className="f-note">Shaded by supporters found against each ward's win number.</p>
+                <p className="f-note">
+                  {shadeBy === "progress"
+                    ? "Shaded by supporters found against each ward's win number."
+                    : `Shaded by how each ward's constituency voted in 2022 (${RACE_NAMES[race]}), from the atlas: ${SHADE_NAMES[shadeBy].toLowerCase()}.`}
+                </p>
               </>
             )}
 
