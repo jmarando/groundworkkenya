@@ -6279,7 +6279,7 @@ tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
 tests/atlas-report.test.ts        5 passed, 0 failed
 tests/atlas-scope.test.ts         12 passed, 0 failed
-tests/atlas-scripts.test.ts       atlas script tests passed
+tests/atlas-scripts.test.ts       atlas script tests passed (67 tests)
 ```
 
 - [ ] **Step 7: Commit**
