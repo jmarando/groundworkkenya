@@ -66,10 +66,35 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** A CSV file's rows as objects, refusing the wrong columns or a row of the wrong length. */
+/**
+ * A CSV file's text, read as scripts/atlas/build_sql.py reads it: as UTF-8, and bytes that are not
+ * UTF-8 are refused, not decoded into replacement characters. A byte-order mark is kept, for
+ * parseCSV to drop exactly one, as build_sql.py's utf-8-sig does: a doubled mark stays in the
+ * first header cell and the columns are refused.
+ */
+function readText(path: string): string {
+  const bytes = readFileSync(path);
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    throw new Error(
+      `${basename(path)}: the file must be UTF-8 text; save it as UTF-8, not a legacy code page`,
+    );
+  }
+}
+
+/**
+ * A CSV file's rows as objects, refusing what build_sql.py refuses: the wrong columns, a header
+ * separated by semicolons (src/lib/csv.ts reads one, build_sql.py reads commas only), a row of the
+ * wrong length, and a backslash in a cell.
+ */
 function readRows(path: string, want: readonly string[]): Row[] {
   const label = basename(path);
-  const [head, ...body] = parseCSV(readFileSync(path, "utf8"));
+  const text = readText(path);
+  if ((text.split(/\r\n|\r|\n/, 1)[0] ?? "").includes(";")) {
+    throw new Error(`${label}: the header must be separated by commas, not semicolons`);
+  }
+  const [head, ...body] = parseCSV(text);
   if (!head || head.join(",") !== want.join(",")) {
     throw new Error(
       `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
@@ -78,6 +103,13 @@ function readRows(path: string, want: readonly string[]): Row[] {
   return body.map((cells, i) => {
     if (cells.length !== want.length) {
       throw new Error(`${label} row ${i + 2}: ${cells.length} cells, expected ${want.length}`);
+    }
+    const slash = cells.findIndex((cell) => cell.includes("\\"));
+    if (slash !== -1) {
+      throw new Error(
+        `${label} row ${i + 2}: the ${want[slash]} cell has a backslash, ` +
+          "which build_sql.py refuses",
+      );
     }
     return Object.fromEntries(want.map((column, j) => [column, cells[j] ?? ""]));
   });

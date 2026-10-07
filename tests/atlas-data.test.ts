@@ -88,6 +88,24 @@ const lowNorth = (c: County) =>
 eq("constituencies short of the county", broken(lowNorth), [
   `${P1}: its constituencies add up to 549 but testland says 550`,
 ]);
+const A_GOV = "2022-governor/testland/a-test";
+eq(
+  "constituencies short of the county, for a governor",
+  broken((c) =>
+    set(c.results, { candidate_id: A_GOV, area_key: "testland/north-test" }, "votes", "349"),
+  ),
+  [`${A_GOV}: its constituencies add up to 599 but testland says 600`],
+);
+eq(
+  "a county total with no constituency rows to add up is left alone",
+  broken((c) => {
+    c.results = c.results.filter(
+      (r) =>
+        r["candidate_id"] !== "2022-governor/testland/wa-test-jr" || r["area_key"] === "testland",
+    );
+  }),
+  [],
+);
 const closes = {
   check: "county_sum",
   election_id: "",
@@ -113,6 +131,14 @@ flags(
   "the recorded difference of 2 does not close it",
 );
 flags(
+  "a recorded difference of the wrong sign does not close the gap",
+  broken((c) => {
+    lowNorth(c);
+    c.knownDifferences.push({ ...closes, difference: "-1" });
+  }),
+  "the recorded difference of -1 does not close it",
+);
+flags(
   "a recorded difference nothing needs is stale",
   broken((c) => c.knownDifferences.push({ ...closes })),
   "no longer matches anything",
@@ -121,6 +147,19 @@ flags(
   "a recorded difference with no reason is refused",
   broken((c) => c.knownDifferences.push({ ...closes, reason: "" })),
   "say why",
+);
+flags(
+  "a recorded difference with a nine-character reason is refused",
+  broken((c) => c.knownDifferences.push({ ...closes, reason: "IEBC typo" })),
+  "the reason must say why the figures differ",
+);
+eq(
+  "a recorded difference with a ten-character reason is accepted",
+  broken((c) => {
+    lowNorth(c);
+    c.knownDifferences.push({ ...closes, reason: "IEBC typos" });
+  }),
+  [],
 );
 flags(
   "a recorded difference with an unknown check is refused",
@@ -154,6 +193,32 @@ flags(
   broken((c) => set(c.turnout, SOUTH_GOV, "valid_votes", "521")),
   "more valid votes than votes cast (521 against 520)",
 );
+// A blank figure is skipped, never read as 0. Each case blanks one figure of a row that has them
+// all (the fixture's one row with blanks has cast, rejected and valid all blank, which reads the
+// same as 0).
+eq(
+  "a blank rejected figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "rejected_votes", "")),
+  [],
+);
+eq(
+  "a blank cast figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "cast_votes", "")),
+  [],
+);
+eq(
+  "a blank registered figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "registered", "")),
+  [],
+);
+eq(
+  "cast equal to registered is fine",
+  broken((c) => {
+    set(c.turnout, SOUTH_GOV, "cast_votes", "900");
+    set(c.turnout, SOUTH_GOV, "valid_votes", "890");
+  }),
+  [],
+);
 const extraRejected = (c: County) => set(c.turnout, NORTH_GOV, "rejected_votes", "11");
 flags(
   "valid plus rejected differs from cast",
@@ -186,6 +251,27 @@ eq(
     "known-differences.csv row 3: cast_split for 2022-governor at testland/north-test " +
       "is listed twice",
   ],
+);
+flags(
+  "a recorded cast difference of the wrong size does not close it",
+  broken((c) => {
+    extraRejected(c);
+    c.knownDifferences.push({ ...castGap, difference: "-2" });
+  }),
+  "the recorded difference of -2 does not close it",
+);
+flags(
+  "a recorded cast difference of the wrong sign does not close it",
+  broken((c) => {
+    extraRejected(c);
+    c.knownDifferences.push({ ...castGap, difference: "1" });
+  }),
+  "the recorded difference of 1 does not close it",
+);
+flags(
+  "a recorded cast difference nothing needs is stale",
+  broken((c) => c.knownDifferences.push({ ...castGap })),
+  "no longer matches anything",
 );
 flags(
   "a share over 100%",
@@ -231,6 +317,11 @@ flags(
   "a turnout row for an area that is not there",
   broken((c) => set(c.turnout, SOUTH_GOV, "area_key", "testland/ghost-test")),
   "testland/ghost-test is not in the files",
+);
+flags(
+  "a turnout row listed twice",
+  broken((c) => c.turnout.push({ ...find(c.turnout, SOUTH_GOV) })),
+  "2022-governor at testland/south-test is listed twice",
 );
 
 // Areas, parents and ward maps.
@@ -313,6 +404,11 @@ flags(
   "an IEBC code that is not one to four digits",
   broken((c) => set(c.areas, { key: "testland" }, "iebc_code", "12345")),
   "the IEBC code 12345 must be one to four digits",
+);
+flags(
+  "an area listed twice",
+  broken((c) => c.areas.push({ ...find(c.areas, { key: "testland/south-test" }) })),
+  "testland/south-test is listed twice",
 );
 
 // Blocs: one party, one bloc, in an election, as blocs.csv records it. A party with none recorded
@@ -397,6 +493,11 @@ flags(
   "2022-governor/testland/a-test needs a name with no stray spaces",
 );
 flags(
+  "a candidate name that is too short",
+  broken((c) => set(c.candidates, { name: "B Test" }, "name", "B")),
+  "2022-governor/testland/b needs a name with no stray spaces",
+);
+flags(
   "votes in an area outside the seat",
   broken((c) =>
     set(
@@ -442,6 +543,11 @@ flags(
   broken((c) => c.results.push({ ...find(c.results, { candidate_id: P1, area_key: "testland" }) })),
   "is listed twice",
 );
+flags(
+  "a candidate listed twice",
+  broken((c) => c.candidates.push({ ...find(c.candidates, { name: "A Test" }) })),
+  "2022-governor/testland/a-test is listed twice",
+);
 
 // Registers and population.
 flags(
@@ -463,6 +569,11 @@ flags(
   "a register source with no publisher",
   broken((c) => set(c.register, { year: "2017" }, "source", "no publisher here")),
   'must read "Publisher, document title"',
+);
+flags(
+  "a register row listed twice",
+  broken((c) => c.register.push({ ...find(c.register, { year: "2017" }) })),
+  "2017 at testland/north-test/ward-one is listed twice",
 );
 const WARD_ONE = { area_key: "testland/north-test/ward-one" };
 const WARD_TWO = { area_key: "testland/north-test/ward-two" };
@@ -489,6 +600,14 @@ eq(
   }),
   ["population.csv row 2: 1989 is not a year", "population.csv row 3: 2101 is not a year"],
 );
+eq(
+  "population years 1990 and 2100 are accepted",
+  broken((c) => {
+    set(c.population, WARD_ONE, "year", "1990");
+    set(c.population, WARD_TWO, "year", "2100");
+  }),
+  [],
+);
 flags(
   "a population method that says nothing",
   broken((c) => set(c.population, WARD_ONE, "method", "short")),
@@ -498,6 +617,11 @@ flags(
   "a population source with no publisher",
   broken((c) => set(c.population, WARD_ONE, "source", "no publisher here")),
   'must read "Publisher, document title"',
+);
+flags(
+  "a population row listed twice",
+  broken((c) => c.population.push({ ...find(c.population, WARD_ONE) })),
+  "testland/north-test/ward-one in 2025 is listed twice",
 );
 
 // Reading the files.
@@ -532,6 +656,81 @@ try {
     "a short row is refused",
     refusal(short).includes("results.csv row 2: 2 cells, expected 3"),
     true,
+  );
+  // The reader refuses what build_sql.py refuses, so that a county the checker passes can become a
+  // migration: a header separated by semicolons (src/lib/csv.ts would read it), a file that is not
+  // UTF-8 (it would decode with replacement characters) and a backslash in a cell.
+  const semicolons = copy("semicolons");
+  writeFileSync(
+    join(semicolons, "results.csv"),
+    "candidate_id;area_key;votes\n2022-governor/testland/a-test;testland;600\n",
+  );
+  eq(
+    "a semicolon-separated file is refused",
+    refusal(semicolons).includes(
+      "results.csv: the header must be separated by commas, not semicolons",
+    ),
+    true,
+  );
+  const areasCsv = readFileSync(join(FIXTURE, "areas.csv"), "utf8");
+  // Characters built from code points, so that this file stays plain ASCII.
+  const BOM = String.fromCharCode(0xfeff);
+  const O_UMLAUT = String.fromCharCode(0xf6); // one byte in Latin-1, not valid UTF-8 alone
+  const legacy = copy("legacy");
+  writeFileSync(
+    join(legacy, "areas.csv"),
+    Buffer.from(areasCsv.replace("North Test", `N${O_UMLAUT}rth Test`), "latin1"),
+  );
+  eq(
+    "a file that is not UTF-8 is refused",
+    refusal(legacy).includes("areas.csv: the file must be UTF-8 text"),
+    true,
+  );
+  const backslash = copy("backslash");
+  writeFileSync(join(backslash, "areas.csv"), areasCsv.replace("North Test", "North\\Test"));
+  eq(
+    "a backslash in a cell is refused",
+    refusal(backslash).includes("areas.csv row 3: the name cell has a backslash"),
+    true,
+  );
+  // ... and takes what build_sql.py takes: a byte-order mark, CRLF line endings, blank rows, and a
+  // semicolon anywhere but the header.
+  const areasRead = (name: string, text: string) => {
+    const dir = copy(name);
+    writeFileSync(join(dir, "areas.csv"), text);
+    try {
+      return loadCounty(dir).areas;
+    } catch (e) {
+      return String(e);
+    }
+  };
+  eq("a byte-order mark is accepted", areasRead("bom", `${BOM}${areasCsv}`), good.areas);
+  eq(
+    "a doubled byte-order mark is refused",
+    String(areasRead("bom2", `${BOM}${BOM}${areasCsv}`)).includes(
+      "areas.csv: the columns must be key,level,name,parent,iebc_code",
+    ),
+    true,
+  );
+  eq(
+    "CRLF line endings are accepted",
+    areasRead("crlf", areasCsv.replace(/\n/g, "\r\n")),
+    good.areas,
+  );
+  eq("blank rows are accepted", areasRead("blank", areasCsv.replace(/\n/g, "\n\n")), good.areas);
+  const semicell = areasCsv.replace("North Test", "North;Test");
+  const northSemicolon = good.areas.map((a) =>
+    a["key"] === "testland/north-test" ? { ...a, name: "North;Test" } : a,
+  );
+  eq(
+    "a semicolon in a cell, not the header, is accepted",
+    areasRead("semicell", semicell),
+    northSemicolon,
+  );
+  eq(
+    "CR line endings and a semicolon in a cell are accepted",
+    areasRead("cr", semicell.replace(/\n/g, "\r")),
+    northSemicolon,
   );
   const missing = copy("missing");
   rmSync(join(missing, "register.csv"));
@@ -685,8 +884,17 @@ const asked = spawnSync(
   ],
   { encoding: "utf8" },
 );
-if (asked.error || asked.status !== 0) {
+if (asked.error) {
+  // There is no such interpreter, so there is nothing to compare with.
   console.log(`SKIP: ${python} could not say which columns build_sql.py loads.`);
+} else if (asked.status !== 0) {
+  // The interpreter ran and build_sql.py did not load (a syntax error, a renamed FILES): that is a
+  // failure, not a skip, and the interpreter says why.
+  fail++;
+  const how = asked.status ?? asked.signal;
+  console.log(
+    `FAIL the columns match build_sql.py's\n  ${python} exited with ${how}\n${asked.stderr}`,
+  );
 } else {
   const loaded = Object.fromEntries(
     Object.entries(COLUMNS).filter(([file]) => file !== "known-differences"),
