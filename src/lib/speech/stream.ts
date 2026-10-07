@@ -11,7 +11,7 @@ export function decodePCM(pending: Uint8Array, incoming: Uint8Array) {
   return { samples, pending: bytes.slice(usable) };
 }
 
-export async function streamSpeech(endpoint: string, text: string, signal?: AbortSignal): Promise<void> {
+export async function streamSpeech(endpoint: string, text: string, token: string, signal?: AbortSignal, onPlaying?: () => void): Promise<void> {
   signal?.throwIfAborted();
   const context = new AudioContext({ sampleRate: 24000 });
   const sources = new Set<AudioBufferSourceNode>();
@@ -30,11 +30,19 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
     if (context.state === "suspended") await context.resume();
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ text }),
       signal: controller.signal,
     });
-    if (!response.ok || !response.body) throw new Error(`TTS failed: ${response.status} ${await response.text()}`);
+    if (!response.ok || !response.body) {
+      const raw = await response.text();
+      let message = raw;
+      try {
+        const error = JSON.parse(raw);
+        message = error.message ?? error.error?.message ?? raw;
+      } catch { /* plain-text error */ }
+      throw new Error(message || `Speech unavailable (${response.status}).`);
+    }
     const parser = createParser({
       onEvent(event) {
         const payload = JSON.parse(event.data) as { type: string; audio?: string; error?: unknown };
@@ -52,6 +60,7 @@ export async function streamSpeech(endpoint: string, text: string, signal?: Abor
         pending = new Uint8Array(decoded.pending);
         if (!decoded.samples.length) return;
         samplesPlayed += decoded.samples.length;
+        if (samplesPlayed === decoded.samples.length) onPlaying?.();
         const buffer = context.createBuffer(1, decoded.samples.length, 24000);
         buffer.copyToChannel(decoded.samples, 0);
         const source = context.createBufferSource();
