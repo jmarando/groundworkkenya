@@ -73,9 +73,11 @@ export function slugify(name: string): string {
  * first header cell and the columns are refused.
  */
 function readText(path: string): string {
+  // Built outside the try: a runtime that cannot build it should say so, not blame every file.
+  const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
   const bytes = readFileSync(path);
   try {
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    return utf8.decode(bytes);
   } catch {
     throw new Error(
       `${basename(path)}: the file must be UTF-8 text; save it as UTF-8, not a legacy code page`,
@@ -96,7 +98,9 @@ function readRows(path: string, want: readonly string[]): Row[] {
     throw new Error(`${label}: the header must be separated by commas, not semicolons`);
   }
   const [head, ...body] = parseCSV(text);
-  if (!head || head.join(",") !== want.join(",")) {
+  // Cell by cell, as build_sql.py compares it: joined with commas, one quoted cell "key,level"
+  // would pass for the two columns key and level.
+  if (!head || head.length !== want.length || head.some((h, j) => h !== want[j])) {
     throw new Error(
       `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
     );

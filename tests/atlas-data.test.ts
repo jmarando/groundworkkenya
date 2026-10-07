@@ -207,6 +207,11 @@ eq(
   [],
 );
 eq(
+  "a blank valid figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "valid_votes", "")),
+  [],
+);
+eq(
   "a blank registered figure is skipped, not read as 0",
   broken((c) => set(c.turnout, NORTH_GOV, "registered", "")),
   [],
@@ -659,7 +664,8 @@ try {
   );
   // The reader refuses what build_sql.py refuses, so that a county the checker passes can become a
   // migration: a header separated by semicolons (src/lib/csv.ts would read it), a file that is not
-  // UTF-8 (it would decode with replacement characters) and a backslash in a cell.
+  // UTF-8 (it would decode with replacement characters), a backslash in a cell and a header whose
+  // quoted cells only join to the columns.
   const semicolons = copy("semicolons");
   writeFileSync(
     join(semicolons, "results.csv"),
@@ -691,6 +697,15 @@ try {
   eq(
     "a backslash in a cell is refused",
     refusal(backslash).includes("areas.csv row 3: the name cell has a backslash"),
+    true,
+  );
+  // build_sql.py compares the header cell by cell: a quoted "key,level" is one cell there, so the
+  // header is four cells over five-cell rows. Joined with commas it reads as the five columns.
+  const merged = copy("merged");
+  writeFileSync(join(merged, "areas.csv"), areasCsv.replace("key,level,", '"key,level",'));
+  eq(
+    "a header whose quoted cells join to the columns is refused",
+    refusal(merged).includes("areas.csv: the columns must be key,level,name,parent,iebc_code"),
     true,
   );
   // ... and takes what build_sql.py takes: a byte-order mark, CRLF line endings, blank rows, and a
@@ -915,9 +930,17 @@ const asked = spawnSync(
   ],
   { encoding: "utf8" },
 );
-if (asked.error) {
+const spawnError = asked.error as NodeJS.ErrnoException | undefined;
+if (spawnError?.code === "ENOENT") {
   // There is no such interpreter, so there is nothing to compare with.
   console.log(`SKIP: ${python} could not say which columns build_sql.py loads.`);
+} else if (spawnError) {
+  // The interpreter is there and could not be run (not executable, say): that is a failure, not a
+  // skip, and the error says why.
+  fail++;
+  console.log(
+    `FAIL the columns match build_sql.py's\n  ${python} could not be run: ${spawnError.message}`,
+  );
 } else if (asked.status !== 0) {
   // The interpreter ran and build_sql.py did not load (a syntax error, a renamed FILES): that is a
   // failure, not a skip, and the interpreter says why.
