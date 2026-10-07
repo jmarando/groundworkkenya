@@ -2,25 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { myRoles } from "@/lib/access";
 import { reportedTurnout } from "@/lib/atlas-app";
 import { doorsByWard } from "@/lib/canvass";
+import { pageAll } from "@/lib/page-all";
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const STATUTORY_LIMIT = 433_800_000;
-
-const PAGE = 1000;
-/** PostgREST caps a response at 1000 rows, so walk pages until the table is exhausted. */
-async function pageAll<T>(
-  build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>,
-): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; from < 20000; from += PAGE) {
-    const { data } = await build(from, from + PAGE - 1);
-    const rows = data ?? [];
-    out.push(...rows);
-    if (rows.length < PAGE) break;
-  }
-  return out;
-}
 
 /* ------------------------------------------------------------------ finance */
 

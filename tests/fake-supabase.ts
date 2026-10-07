@@ -66,6 +66,7 @@ export function fakeSupabase(
     const filters: Filter[] = [];
     const orders: { col: string; asc: boolean }[] = [];
     let limit: number | null = null;
+    let offset = 0;
     let single: "one" | "maybe" | null = null;
     let returning = false;
     let head = false;
@@ -147,7 +148,7 @@ export function fakeSupabase(
           return (x < y ? -1 : x > y ? 1 : 0) * (o.asc ? 1 : -1);
         });
       }
-      if (limit !== null) hit = hit.slice(0, limit);
+      if (limit !== null) hit = hit.slice(offset, offset + limit);
       return shape(hit);
     };
 
@@ -230,6 +231,11 @@ export function fakeSupabase(
       },
       limit(n: number) {
         limit = n;
+        return q;
+      },
+      range(from: number, to: number) {
+        offset = from;
+        limit = to - from + 1;
         return q;
       },
       maybeSingle() {
