@@ -205,6 +205,7 @@ function hasLayer(map: MlMap, id: string): boolean {
 export function WardMap(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
+  const initialCameraSet = useRef(false);
   const latest = useRef(props);
   latest.current = props;
   // loaded: the first style is up (camera may move); styleRev: bumps after every
@@ -226,11 +227,17 @@ export function WardMap(props: Props) {
     void import("maplibre-gl").then((ml) => {
       if (dead || !host.current) return;
       ml.setWorkerUrl(maplibreWorker);
+      const initialWard = latest.current.wardBox;
       map = new ml.Map({
         container: host.current,
         style: styleUrl(latest.current.basemap, latest.current.maptilerKey),
-        bounds: NAIROBI,
-        fitBoundsOptions: { padding: 24 },
+        bounds: initialWard
+          ? [
+              [initialWard.west, initialWard.south],
+              [initialWard.east, initialWard.north],
+            ]
+          : NAIROBI,
+        fitBoundsOptions: { padding: initialWard ? 36 : 24, maxZoom: 16.5 },
         attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,
@@ -257,14 +264,14 @@ export function WardMap(props: Props) {
       map.on("click", (e) => {
         if (!map) return;
         const p = latest.current;
+        if (p.tool === "select") return;
         const b = hasLayer(map, "gw-buildings-fill")
           ? map.queryRenderedFeatures(e.point, { layers: ["gw-buildings-fill"] })[0]
           : undefined;
         if (b) {
           const id = String(b.properties?.["pc"] ?? "");
           if (!id) return;
-          if (p.tool === "select") p.onToggle(id);
-          else p.onBuilding(id);
+          p.onBuilding(id);
           return;
         }
         const w = hasLayer(map, "gw-wards-fill")
@@ -359,6 +366,10 @@ export function WardMap(props: Props) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
+    if (!initialCameraSet.current) {
+      initialCameraSet.current = true;
+      return;
+    }
     const b = props.wardBox;
     if (b) {
       map.fitBounds(
@@ -443,28 +454,24 @@ export function WardMap(props: Props) {
   }
 
   return (
-    <div className={`vmap${props.tool === "select" ? " is-select" : ""}`}>
+    <div
+      className={`vmap${props.tool === "select" ? " is-select" : ""}`}
+      onPointerDown={props.tool === "select" ? boxDown : undefined}
+      onPointerMove={props.tool === "select" ? boxMove : undefined}
+      onPointerUp={props.tool === "select" ? boxUp : undefined}
+      onPointerCancel={props.tool === "select" ? () => setDrag(null) : undefined}
+    >
       <div ref={host} className="vmap-canvas" aria-label="Map of Nairobi's wards and buildings" />
-      {props.tool === "select" && (
-        <div
-          className="vmap-select"
-          onPointerDown={boxDown}
-          onPointerMove={boxMove}
-          onPointerUp={boxUp}
-          onPointerCancel={() => setDrag(null)}
-        >
-          {drag && (
-            <span
-              className="vmap-selbox"
-              style={{
-                left: Math.min(drag.x0, drag.x1),
-                top: Math.min(drag.y0, drag.y1),
-                width: Math.abs(drag.x1 - drag.x0),
-                height: Math.abs(drag.y1 - drag.y0),
-              }}
-            />
-          )}
-        </div>
+      {drag && (
+        <span
+          className="vmap-selbox"
+          style={{
+            left: Math.min(drag.x0, drag.x1),
+            top: Math.min(drag.y0, drag.y1),
+            width: Math.abs(drag.x1 - drag.x0),
+            height: Math.abs(drag.y1 - drag.y0),
+          }}
+        />
       )}
       {!loaded && <div className="vmap-loading meta">Loading the map…</div>}
       {props.children}
