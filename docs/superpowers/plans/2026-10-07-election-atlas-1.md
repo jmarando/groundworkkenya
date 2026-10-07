@@ -3584,6 +3584,11 @@ eq(
   [],
 );
 eq(
+  "a blank valid figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "valid_votes", "")),
+  [],
+);
+eq(
   "a blank registered figure is skipped, not read as 0",
   broken((c) => set(c.turnout, NORTH_GOV, "registered", "")),
   [],
@@ -4036,7 +4041,8 @@ try {
   );
   // The reader refuses what build_sql.py refuses, so that a county the checker passes can become a
   // migration: a header separated by semicolons (src/lib/csv.ts would read it), a file that is not
-  // UTF-8 (it would decode with replacement characters) and a backslash in a cell.
+  // UTF-8 (it would decode with replacement characters), a backslash in a cell and a header whose
+  // quoted cells only join to the columns.
   const semicolons = copy("semicolons");
   writeFileSync(
     join(semicolons, "results.csv"),
@@ -4068,6 +4074,15 @@ try {
   eq(
     "a backslash in a cell is refused",
     refusal(backslash).includes("areas.csv row 3: the name cell has a backslash"),
+    true,
+  );
+  // build_sql.py compares the header cell by cell: a quoted "key,level" is one cell there, so the
+  // header is four cells over five-cell rows. Joined with commas it reads as the five columns.
+  const merged = copy("merged");
+  writeFileSync(join(merged, "areas.csv"), areasCsv.replace("key,level,", '"key,level",'));
+  eq(
+    "a header whose quoted cells join to the columns is refused",
+    refusal(merged).includes("areas.csv: the columns must be key,level,name,parent,iebc_code"),
     true,
   );
   // ... and takes what build_sql.py takes: a byte-order mark, CRLF line endings, blank rows, and a
@@ -4292,9 +4307,17 @@ const asked = spawnSync(
   ],
   { encoding: "utf8" },
 );
-if (asked.error) {
+const spawnError = asked.error as NodeJS.ErrnoException | undefined;
+if (spawnError?.code === "ENOENT") {
   // There is no such interpreter, so there is nothing to compare with.
   console.log(`SKIP: ${python} could not say which columns build_sql.py loads.`);
+} else if (spawnError) {
+  // The interpreter is there and could not be run (not executable, say): that is a failure, not a
+  // skip, and the error says why.
+  fail++;
+  console.log(
+    `FAIL the columns match build_sql.py's\n  ${python} could not be run: ${spawnError.message}`,
+  );
 } else if (asked.status !== 0) {
   // The interpreter ran and build_sql.py did not load (a syntax error, a renamed FILES): that is a
   // failure, not a skip, and the interpreter says why.
@@ -4402,9 +4425,11 @@ export function slugify(name: string): string {
  * first header cell and the columns are refused.
  */
 function readText(path: string): string {
+  // Built outside the try: a runtime that cannot build it should say so, not blame every file.
+  const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
   const bytes = readFileSync(path);
   try {
-    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    return utf8.decode(bytes);
   } catch {
     throw new Error(
       `${basename(path)}: the file must be UTF-8 text; save it as UTF-8, not a legacy code page`,
@@ -4425,7 +4450,9 @@ function readRows(path: string, want: readonly string[]): Row[] {
     throw new Error(`${label}: the header must be separated by commas, not semicolons`);
   }
   const [head, ...body] = parseCSV(text);
-  if (!head || head.join(",") !== want.join(",")) {
+  // Cell by cell, as build_sql.py compares it: joined with commas, one quoted cell "key,level"
+  // would pass for the two columns key and level.
+  if (!head || head.length !== want.length || head.some((h, j) => h !== want[j])) {
     throw new Error(
       `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
     );
@@ -4878,7 +4905,7 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
 
 Run: `npx prettier --write scripts/atlas/checks.ts tests/atlas-data.test.ts && npx eslint scripts/atlas/checks.ts tests/atlas-data.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts | tail -3`
 
-Expected: ESLint prints nothing, then `125 passed, 0 failed`.
+Expected: ESLint prints nothing, then `127 passed, 0 failed`.
 
 - [ ] **Step 9: Commit**
 
@@ -5964,8 +5991,8 @@ elections, candidates and blocs, blanks, sources, recorded differences), and the
 # Election atlas data
 
 Public facts about elections, loaded once into the shared atlas tables (schema 22). This
-repository is public: only public figures go here, and nothing about any person, least of all
-their ethnicity or tribe.
+repository is public: only public figures go here, and no personal detail beyond a candidate's
+name, party and votes. Nothing records anyone's ethnicity or tribe.
 
 ```
 data/atlas/
@@ -6013,8 +6040,14 @@ data/atlas/
 - **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
   backslash; no row is listed twice (the key columns of a file are unique). The checker and
   `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
+- **Also required**: `level` and `parent` follow the key (one part is a county, under `kenya`; two
+  parts a constituency; three a ward; the parent is the key less its last part); every turnout,
+  register and population row has a `source`; a known difference's `reason` and a population row's
+  `method` are at least 10 characters; the figures in `population.csv` are WorldPop estimates,
+  never counts.
 - **`source`** is written "Publisher, document title" (`IEBC, Presidential results by
-  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file.
+  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file, and is blank only where
+  the document has no web address.
 - **Known differences**: `check` is `county_sum` (`difference` is what the county says minus what
   its constituencies add up to; give `candidate_id` and the county in `area_key`) or `cast_split`
   (`difference` is cast minus valid minus rejected; give `election_id` and `area_key`). A reason is
@@ -6028,6 +6061,10 @@ data/atlas/
 npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts            # checks every county
 npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi      # what was found, and the checks
 python3 scripts/atlas/areas_from_map.py public/geo/nairobi-wards.json Nairobi data/atlas/nairobi/areas.csv
+# a ward map that names no constituency (Mathira's) needs one named, and the others listed bare
+python3 scripts/atlas/areas_from_map.py public/geo/mathira-wards.json Nyeri data/atlas/nyeri/areas.csv \
+  --constituency Mathira --also Kieni --also Mukurweini --also "Nyeri Town" --also Othaya --also Tetu
+# needs rasterio and numpy (pip install rasterio numpy, in a virtual environment)
 python3 scripts/atlas/ward_population.py public/geo/nairobi-wards.json data/atlas/nairobi/areas.csv \
   data/atlas/_sources/worldpop-<year> <year> "WorldPop, <dataset title and version>" data/atlas/nairobi/population.csv
 python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migrations/<stamp>_atlas_nairobi.sql
@@ -6040,19 +6077,28 @@ python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migration
 # Sources
 
 Every document the atlas's figures come from, and everything that was looked for and not found.
-A figure is loaded only from the publisher's own document (IEBC, the Kenya Gazette, WorldPop); a
-news report or a summary is not a source here. Downloaded files live in `_sources/` (not
-committed), so each is listed with its SHA-256, to let anyone check they have the same file.
+A figure is loaded only from the publisher's own document: IEBC, the Kenya Gazette, WorldPop and,
+for which coalition a party stood in, the Registrar of Political Parties. A news report or a
+summary is not a source here. Downloaded files live in `_sources/` (not committed), so each is
+listed with its SHA-256, to let anyone check they have the same file. A product made of many files
+(WorldPop's grids) gets one row, whose SHA-256 is that of a manifest: the output of `sha256sum`
+over its files, saved as `data/atlas/<product>.sha256` and committed.
 
 ## Documents used
 
-| Document | Publisher | Published | URL | Taken from it | Level | SHA-256 |
-|----------|-----------|-----------|-----|---------------|-------|---------|
+| Document | Publisher | Published | URL | Saved as | Retrieved | Taken from it | Level | SHA-256 |
+|----------|-----------|-----------|-----|----------|-----------|---------------|-------|---------|
 
 ## Gaps
 
-| What | Where it was looked for | Why it is missing |
-|------|-------------------------|-------------------|
+| County | What | Where it was looked for | Why it is missing |
+|--------|------|-------------------------|-------------------|
+
+## Notes
+
+Judgment calls and facts about the sources that a later reader needs: which WorldPop product was
+chosen and why, the declared nodata value of its grids, a figure a document gives two ways, a name
+spelt two ways, and anything the user should know before relying on a number.
 ```
 
 The downloaded documents are public but large, so they live in `data/atlas/_sources/` and stay out
@@ -6279,7 +6325,7 @@ Expected:
 
 ```
 tests/atlas-advice.test.ts        48 passed, 0 failed
-tests/atlas-data.test.ts          125 passed, 0 failed
+tests/atlas-data.test.ts          127 passed, 0 failed
 tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
@@ -6388,8 +6434,9 @@ Gazette's own site), the Registrar of Political Parties, or WorldPop. Anything e
 if only a secondary report can be found, the figure is a gap.
 
 For each document, add a row to the "Documents used" table in `data/atlas/SOURCES.md` before
-extracting anything: its title, publisher, publication date, URL, what is taken from it, the level of
-detail it gives (constituency, ward, county), and (after Step 4) its SHA-256. The title is what goes
+extracting anything: its title, publisher, publication date, URL, the file name it will be saved as
+under `data/atlas/_sources/nairobi/`, the date you retrieve it (YYYY-MM-DD), what is taken from it,
+the level of detail it gives (constituency, ward, county), and (after Step 4) its SHA-256. The title is what goes
 in the CSVs' `source` column, written "Publisher, title" and nothing else, so the screens can tag a
 figure with its publisher.
 
@@ -6404,7 +6451,8 @@ file "data/atlas/_sources/nairobi/<short-name>.<ext>"
 ```
 
 `-f` makes an HTTP error a failure instead of saving an error page; `file` confirms it is the
-PDF, spreadsheet or page it should be. Put the checksum in `SOURCES.md`.
+PDF, spreadsheet or page it should be. Put the checksum, and the date you downloaded it, in
+`SOURCES.md`.
 
 - [ ] **Step 5: Read each document**
 
@@ -6450,9 +6498,12 @@ Run them, then `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi
 
 On WorldPop's hub find the age-and-sex structures for Kenya at 100 m for the latest year offered
 (if both a constrained and an unconstrained product are offered, pick one and say which and why in
-`SOURCES.md`). Download every GeoTIFF, one for each sex and age band (in the older series that is 36
+the Notes section of `SOURCES.md`). Download every GeoTIFF, one for each sex and age band (in the older series that is 36
 files: under 1, 1 to 4, then every five years up to 80 and over), into
-`data/atlas/_sources/worldpop-<year>/`, checksum them as in Step 4, and check the disk first
+`data/atlas/_sources/worldpop-<year>/`, checksum them as one product
+(`sha256sum data/atlas/_sources/worldpop-<year>/*.tif > data/atlas/worldpop-<year>.sha256`, committed;
+the one row in `SOURCES.md` carries the SHA-256 of that manifest, `sha256sum data/atlas/worldpop-<year>.sha256`),
+and check the disk first
 (`df -h /home/user` should show several GB free). The script finds a grid by a file name like
 `ken_f_15_2025_....tif` (sex `f` or `m`, the band's first age, the year). It needs both sexes for age 0,
 age 1 and every fifth age after that up to 80 (or the series' top band if it goes further), and it
@@ -6460,7 +6511,7 @@ refuses a set with any of them missing, naming the missing grids: count the file
 publisher's listing before you run it. If the names differ from the pattern, rename copies and leave
 the originals alone; if a complete set from another layout is refused, say so rather than editing the
 script. Look at the declared nodata value of the first grid (`rasterio.open(path).nodata`) and note it
-in `SOURCES.md`; the script leaves out pixels equal to it. Then:
+in the Notes section of `SOURCES.md`; the script leaves out pixels equal to it. Then:
 
 ```bash
 python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy
@@ -6487,8 +6538,8 @@ Run: `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi`
 
 For every gap the report shows (an election with no results, a year with no register, a constituency
 missing, a race whose candidates' votes fall short of the valid votes), add a row to the "Gaps" table
-in `SOURCES.md`: what is missing, where it was looked for, and why it is missing (not published,
-published only as an image, behind a host that was blocked, not found).
+in `SOURCES.md`: the county, what is missing, where it was looked for, and why it is missing (not
+published, published only as an image, behind a host that was blocked, not found).
 
 - [ ] **Step 11: Commit**
 
@@ -6608,8 +6659,9 @@ Expected: `0 failed`.
 
 - [ ] **Step 2: Read `data/atlas/SOURCES.md`**
 
-Every document has a row with its URL and checksum; every gap has a row with where it was looked for
-and why it is missing. A document used in a CSV and absent from `SOURCES.md`, or a blank figure with
+Every document has a row with its URL, saved file name, retrieval date and checksum; every gap has a
+row with its county, where it was looked for and why it is missing; the Notes section records the
+judgment calls. A document used in a CSV and absent from `SOURCES.md`, or a blank figure with
 no gap row, is a defect: fix it before reporting.
 
 - [ ] **Step 3: Write the message**
@@ -6625,7 +6677,7 @@ Where it is from: <N documents; list their titles and publishers; data/atlas/SOU
 Not found: <each gap, one line: what, where it was looked for, why it is missing>
 IEBC's own inconsistencies, kept as published: <the recorded differences, or "none">
 Coalitions: <which parties are in which coalition for each election, from data/atlas/blocs.csv; anything uncertain>
-Judgment calls: <for example which WorldPop product and version, and why; any name spelt two ways>
+Judgment calls: <from the Notes section of SOURCES.md: for example which WorldPop product and version, and why; any name spelt two ways>
 Question: Is this enough to build the Elections section on, or is there something to chase first?
 ```
 

@@ -1,8 +1,8 @@
 # Election atlas data
 
 Public facts about elections, loaded once into the shared atlas tables (schema 22). This
-repository is public: only public figures go here, and nothing about any person, least of all
-their ethnicity or tribe.
+repository is public: only public figures go here, and no personal detail beyond a candidate's
+name, party and votes. Nothing records anyone's ethnicity or tribe.
 
 ```
 data/atlas/
@@ -50,8 +50,14 @@ data/atlas/
 - **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
   backslash; no row is listed twice (the key columns of a file are unique). The checker and
   `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
+- **Also required**: `level` and `parent` follow the key (one part is a county, under `kenya`; two
+  parts a constituency; three a ward; the parent is the key less its last part); every turnout,
+  register and population row has a `source`; a known difference's `reason` and a population row's
+  `method` are at least 10 characters; the figures in `population.csv` are WorldPop estimates,
+  never counts.
 - **`source`** is written "Publisher, document title" (`IEBC, Presidential results by
-  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file.
+  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file, and is blank only where
+  the document has no web address.
 - **Known differences**: `check` is `county_sum` (`difference` is what the county says minus what
   its constituencies add up to; give `candidate_id` and the county in `area_key`) or `cast_split`
   (`difference` is cast minus valid minus rejected; give `election_id` and `area_key`). A reason is
@@ -65,6 +71,10 @@ data/atlas/
 npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts            # checks every county
 npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi      # what was found, and the checks
 python3 scripts/atlas/areas_from_map.py public/geo/nairobi-wards.json Nairobi data/atlas/nairobi/areas.csv
+# a ward map that names no constituency (Mathira's) needs one named, and the others listed bare
+python3 scripts/atlas/areas_from_map.py public/geo/mathira-wards.json Nyeri data/atlas/nyeri/areas.csv \
+  --constituency Mathira --also Kieni --also Mukurweini --also "Nyeri Town" --also Othaya --also Tetu
+# needs rasterio and numpy (pip install rasterio numpy, in a virtual environment)
 python3 scripts/atlas/ward_population.py public/geo/nairobi-wards.json data/atlas/nairobi/areas.csv \
   data/atlas/_sources/worldpop-<year> <year> "WorldPop, <dataset title and version>" data/atlas/nairobi/population.csv
 python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migrations/<stamp>_atlas_nairobi.sql
