@@ -6010,6 +6010,9 @@ data/atlas/
 - **Results** are votes where they were counted: a county or a constituency. A candidate's county
   row and constituency rows must agree (president and governor).
 - **A blank is "not found"**, never a zero. Write `0` only where the document says 0.
+- **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
+  backslash; no row is listed twice (the key columns of a file are unique). The checker and
+  `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
 - **`source`** is written "Publisher, document title" (`IEBC, Presidential results by
   constituency 2022`); the screens keep the publisher. `source_url` is the https page or file.
 - **Known differences**: `check` is `county_sum` (`difference` is what the county says minus what
@@ -6024,6 +6027,9 @@ data/atlas/
 ```
 npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts            # checks every county
 npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi      # what was found, and the checks
+python3 scripts/atlas/areas_from_map.py public/geo/nairobi-wards.json Nairobi data/atlas/nairobi/areas.csv
+python3 scripts/atlas/ward_population.py public/geo/nairobi-wards.json data/atlas/nairobi/areas.csv \
+  data/atlas/_sources/worldpop-<year> <year> "WorldPop, <dataset title and version>" data/atlas/nairobi/population.csv
 python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migrations/<stamp>_atlas_nairobi.sql
 ```
 ````
