@@ -352,6 +352,20 @@ function ramp(x: number, stops: [number, Hsl][]): string {
 const RED: Hsl = [0, 70, 52];
 const AMBER: Hsl = [40, 90, 52];
 const GREEN: Hsl = [142, 60, 38];
+const LEAN: [number, Hsl][] = [
+  [0.3, RED],
+  [0.5, AMBER],
+  [0.7, GREEN],
+];
+const TURNOUT: [number, Hsl][] = [
+  [0.3, [210, 30, 86]],
+  [0.75, [210, 80, 34]],
+];
+const SWING: [number, Hsl][] = [
+  [-0.15, RED],
+  [0, [0, 0, 80]],
+  [0.15, GREEN],
+];
 
 /** How the map shades an area by the chosen measure; null where there's nothing to show. */
 export function shadeOf(
@@ -364,31 +378,35 @@ export function shadeOf(
     return f.ourShare === null
       ? null
       : {
-          colour: ramp(f.ourShare, [
-            [0.3, RED],
-            [0.5, AMBER],
-            [0.7, GREEN],
-          ]),
+          colour: ramp(f.ourShare, LEAN),
           label: `${share1(f.ourShare)} to us`,
         };
   if (shade === "turnout")
     return f.turnout === null
       ? null
       : {
-          colour: ramp(f.turnout, [
-            [0.3, [210, 30, 86]],
-            [0.75, [210, 80, 34]],
-          ]),
+          colour: ramp(f.turnout, TURNOUT),
           label: `${whole(f.turnout)} turnout`,
         };
   return f.swing === null
     ? null
     : {
-        colour: ramp(f.swing, [
-          [-0.15, RED],
-          [0, [0, 0, 80]],
-          [0.15, GREEN],
-        ]),
+        colour: ramp(f.swing, SWING),
         label: signedPoints(f.swing),
       };
+}
+
+/** The key under a map shaded by `shade`, in the same colours. */
+export function shadeLegend(
+  shade: "todo" | "lean" | "turnout" | "swing",
+): { label: string; colour: string }[] {
+  if (shade === "todo")
+    return (["mobilise", "hold", "persuade", "cut", "lean-ours", "lean-theirs"] as Todo[]).map(
+      (t) => ({ label: TODO_NAMES[t], colour: TODO_COLOURS[t] }),
+    );
+  const key = (stops: [number, Hsl][], labels: string[]) =>
+    stops.map(([x], i) => ({ label: labels[i]!, colour: ramp(x, stops) }));
+  if (shade === "lean") return key(LEAN, ["30% or less to us", "Even", "70% or more to us"]);
+  if (shade === "turnout") return key(TURNOUT, ["30% turnout", "75% turnout"]);
+  return key(SWING, ["15 points or more away", "No change", "15 points or more our way"]);
 }
