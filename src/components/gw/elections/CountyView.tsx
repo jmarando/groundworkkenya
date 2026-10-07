@@ -8,6 +8,7 @@ import {
   raceInText,
   rankChildren,
   resultBlocks,
+  shadeLegend,
   shadeOf,
   share1,
   signedPoints,
@@ -94,6 +95,18 @@ export function CountyView({
               onPick={(wardKey) => onArea(constituencyOf(wardKey))}
               label={`${area.name} by constituency, shaded by ${SHADE_NAMES[shade]}`}
             />
+            <div className="el-key" aria-label="Key">
+              {shadeLegend(shade).map((k) => (
+                <span key={k.label}>
+                  <i style={{ background: k.colour }} />
+                  {k.label}
+                </span>
+              ))}
+              <span>
+                <i style={{ background: "var(--muted)" }} />
+                Not found yet, or no side set
+              </span>
+            </div>
             <p className="meta">Tap a constituency to open it.</p>
           </section>
         ) : null}
