@@ -87,3 +87,11 @@ do $$ begin
   assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2019-governor', 'X')$q$) = '23503', 'an election that never was';
 end $$;
 rollback;
+
+-- test: the first counties' figures are loaded
+do $$ begin
+  assert (select count(*) from public.atlas_areas where level = 'constituency' and parent in ('nairobi', 'nyeri')) = 23,
+    'Nairobi''s 17 and Nyeri''s 6 constituencies';
+  assert (select count(*) from public.atlas_areas where level = 'ward' and parent like 'nairobi/%') = 85, 'Nairobi''s 85 wards';
+  assert exists (select 1 from public.atlas_results), 'and some results';
+end $$;
