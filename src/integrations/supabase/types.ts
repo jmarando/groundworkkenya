@@ -404,6 +404,57 @@ export type Database = {
         }
         Relationships: []
       }
+      canvass_streets: {
+        Row: {
+          agent_name: string | null
+          agent_phone: string | null
+          campaign_id: string
+          created_at: string
+          id: string
+          name: string
+          sort: number
+          updated_at: string
+          ward_id: string
+        }
+        Insert: {
+          agent_name?: string | null
+          agent_phone?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort?: number
+          updated_at?: string
+          ward_id: string
+        }
+        Update: {
+          agent_name?: string | null
+          agent_phone?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort?: number
+          updated_at?: string
+          ward_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvass_streets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvass_streets_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contributions: {
         Row: {
           amount_kes: number
@@ -1290,6 +1341,7 @@ export type Database = {
           consent_sms: boolean
           consent_whatsapp: boolean
           created_at: string
+          door_no: number | null
           email: string | null
           full_name: string | null
           id: string
@@ -1305,6 +1357,7 @@ export type Database = {
           placed_at: string | null
           segment: string | null
           source: string
+          street_id: string | null
           support_score: number
           tags: string[]
           updated_at: string
@@ -1317,6 +1370,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          door_no?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -1332,6 +1386,7 @@ export type Database = {
           placed_at?: string | null
           segment?: string | null
           source?: string
+          street_id?: string | null
           support_score?: number
           tags?: string[]
           updated_at?: string
@@ -1344,6 +1399,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          door_no?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -1359,6 +1415,7 @@ export type Database = {
           placed_at?: string | null
           segment?: string | null
           source?: string
+          street_id?: string | null
           support_score?: number
           tags?: string[]
           updated_at?: string
@@ -1370,6 +1427,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_street_id_fkey"
+            columns: ["street_id"]
+            isOneToOne: false
+            referencedRelation: "canvass_streets"
             referencedColumns: ["id"]
           },
           {
@@ -2481,6 +2545,20 @@ export type Database = {
         Returns: undefined
       }
       site_editor: { Args: never; Returns: string }
+      street_walk: {
+        Args: { _street_id: string }
+        Returns: {
+          door_no: number
+          full_name: string
+          id: string
+          last_contacted_at: string
+          last_outcome: string
+          last_visit_at: string
+          phone_masked: string
+          segment: string
+          support_score: number
+        }[]
+      }
       take_social_credits: {
         Args: { _budget: string; _cap: number; _n: number }
         Returns: boolean
