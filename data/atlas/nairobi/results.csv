@@ -1,0 +1,37 @@
+election,seat,candidate,area,votes,source
+2022-president,kenya,Raila Odinga,nairobi,767395,iebc-2022-form-34c
+2022-president,kenya,William Ruto,nairobi,561775,iebc-2022-form-34c
+2022-president,kenya,David Mwaure Waihiga,nairobi,4390,iebc-2022-form-34c
+2022-president,kenya,George Wajackoyah,nairobi,5807,iebc-2022-form-34c
+2013-president,kenya,Uhuru Kenyatta,nairobi,659490,electionskenya-2013-president
+2013-president,kenya,Raila Odinga,nairobi,691156,electionskenya-2013-president
+2013-president,kenya,Musalia Mudavadi,nairobi,22061,electionskenya-2013-president
+2013-president,kenya,Peter Kenneth,nairobi,15662,electionskenya-2013-president
+2022-governor,nairobi,Johnson Sakaja,nairobi,699392,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi,573518,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/dagoretti-north,39756,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/dagoretti-north,39027,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/dagoretti-south,44789,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/dagoretti-south,20124,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/embakasi-west,43220,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/embakasi-west,36026,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/kamukunji,32239,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/kamukunji,23836,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/kasarani,60578,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/kasarani,27862,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/kibra,30451,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/kibra,40492,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/langata,38064,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/langata,37336,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/makadara,37097,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/makadara,33021,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/mathare,31564,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/mathare,30230,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/roysambu,63175,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/roysambu,24981,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/ruaraka,23229,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/ruaraka,46236,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/starehe,49405,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/starehe,35223,star-2022-nairobi-governor
+2022-governor,nairobi,Johnson Sakaja,nairobi/westlands,40024,star-2022-nairobi-governor
+2022-governor,nairobi,Polycarp Igathe,nairobi/westlands,38635,star-2022-nairobi-governor

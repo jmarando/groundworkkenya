@@ -35,7 +35,11 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
   registers; post-election reports) and the Kenya Gazette. A media tally or open dataset is
   used only to fill a gap, with its own publisher, and the report flags it.
 - List every candidate the document lists. When a document lists only the leaders, enter
-  them and the document's valid votes, so shares stay right.
+  them and the document's valid votes, so shares stay right. When it gives no valid total
+  either (press reports often give only the top two), enter what it lists and leave valid
+  empty: the screens then call those shares "of the candidates listed".
+- Votes cast may be entered as valid plus rejected when a document gives those two, since
+  that is how IEBC's forms define it; say so in the source's note.
 - The bloc is the coalition the candidate's party stood in, else the party. An independent
   is a bloc of their own: `Independent: <name>`. The main coalitions: 2013 Jubilee (TNA, URP
   and partners), CORD (ODM, Wiper, Ford-K and partners), Amani (UDF, KANU and partners); 2017
