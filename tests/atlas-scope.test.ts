@@ -65,6 +65,11 @@ eq(
     inherited: false,
   },
 );
+eq(
+  "a ward's own results come before its constituency's",
+  resultsArea("nairobi/kibra/sarangombe", () => true),
+  { key: "nairobi/kibra/sarangombe", inherited: false },
+);
 eq("a ward whose constituency has none", resultsArea("nairobi/langata/karen", has), null);
 eq(
   "a constituency with none does not borrow the county's",
