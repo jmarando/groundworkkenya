@@ -1753,6 +1753,7 @@ eq("votes missing", fmtVotes(null), MISSING);
 
 // Shares to one decimal place.
 eq("a share", fmtShare(48.25), "48.3%");
+eq("a share on a tie rounds up", fmtShare(12.35), "12.4%");
 eq("a share that is whole", fmtShare(50), "50.0%");
 eq("a real zero share is a zero", fmtShare(0), "0.0%");
 eq("a share missing", fmtShare(null), MISSING);
@@ -1760,11 +1761,14 @@ eq("a share missing", fmtShare(null), MISSING);
 // Turnout as a whole percentage.
 eq("turnout", fmtTurnout(41.2), "41%");
 eq("turnout rounds half up", fmtTurnout(41.5), "42%");
+eq("a real zero turnout is a zero", fmtTurnout(0), "0%");
 eq("turnout missing", fmtTurnout(null), MISSING);
 
 // Points are a size; the words around them say which way.
 eq("points", fmtPoints(6.04), "6.0 points");
 eq("points ignore their sign", fmtPoints(-15.5), "15.5 points");
+eq("points on a tie round up", fmtPoints(-0.35), "0.4 points");
+eq("a real zero gap is a zero", fmtPoints(0), "0.0 points");
 eq("points missing", fmtPoints(null), MISSING);
 
 // A source reads "Publisher, document title"; the tag keeps the publisher.
@@ -1821,18 +1825,20 @@ import type { Level } from "./types";
 export const MISSING = "not found yet";
 
 const nf = new Intl.NumberFormat("en-KE");
+// toFixed rounds the binary value, so 12.35 comes out as 12.3. Intl rounds the decimal, half up.
+const nf1 = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export const fmtVotes = (n: number | null): string =>
   n === null ? MISSING : nf.format(Math.round(n));
 
-export const fmtShare = (n: number | null): string => (n === null ? MISSING : `${n.toFixed(1)}%`);
+export const fmtShare = (n: number | null): string => (n === null ? MISSING : `${nf1.format(n)}%`);
 
 export const fmtTurnout = (n: number | null): string =>
   n === null ? MISSING : `${Math.round(n)}%`;
 
 /** Points are a size: the words around them say which way. */
 export const fmtPoints = (n: number | null): string =>
-  n === null ? MISSING : `${Math.abs(n).toFixed(1)} points`;
+  n === null ? MISSING : `${nf1.format(Math.abs(n))} points`;
 
 /** A source reads "Publisher, document title"; the tag keeps the publisher. */
 const publisher = (source: string): string => source.split(",")[0]?.trim() || source.trim();
@@ -1860,7 +1866,7 @@ Expected: ESLint prints nothing.
 
 Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-format.test.ts`
 
-Expected: `21 passed, 0 failed`
+Expected: `25 passed, 0 failed`
 
 - [ ] **Step 6: Commit**
 
@@ -2495,7 +2501,7 @@ Expected:
 ```
 tests/atlas-measures        35 passed, 0 failed
 tests/atlas-register        20 passed, 0 failed
-tests/atlas-format          21 passed, 0 failed
+tests/atlas-format          25 passed, 0 failed
 tests/atlas-advice          41 passed, 0 failed
 tests/atlas-scope           11 passed, 0 failed
 ```
@@ -5336,7 +5342,7 @@ Expected:
 ```
 tests/atlas-advice.test.ts        41 passed, 0 failed
 tests/atlas-data.test.ts          63 passed, 0 failed
-tests/atlas-format.test.ts        21 passed, 0 failed
+tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
 tests/atlas-report.test.ts        5 passed, 0 failed
