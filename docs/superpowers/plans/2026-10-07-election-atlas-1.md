@@ -1478,7 +1478,10 @@ export function blocShares(votes: Vote[], valid: number | null): BlocShare[] {
     .sort((a, b) => b.votes - a.votes || a.bloc.localeCompare(b.bloc));
 }
 
-/** The campaign's side's share in percent; 0 when it did not stand; null with no side or no shares. */
+/**
+ * The campaign's side's share in percent; 0 when it did not stand; null with no side or no
+ * shares.
+ */
 export function ourShare(shares: BlocShare[], ourBloc: string | null): number | null {
   if (ourBloc === null || shares.length === 0) return null;
   return shares.find((s) => s.bloc === ourBloc)?.share ?? 0;
@@ -1635,7 +1638,10 @@ export function notYetRegistered(adults: number | null, registered: number | nul
   return Math.max(0, adults - registered);
 }
 
-/** 18 to 34 as a share of the area's adults, in percent. It says who lives there, not who is unregistered. */
+/**
+ * 18 to 34 as a share of the area's adults, in percent. It says who lives there, not who is
+ * unregistered.
+ */
 export function youngShare(young: number | null, adults: number | null): number | null {
   if (young === null || adults === null || adults <= 0) return null;
   return settle((young / adults) * 100);
@@ -2394,7 +2400,10 @@ Create `src/lib/atlas/scope.ts`:
 
 import type { Level } from "./types";
 
-/** The key above an area: its path less the last part. A county's is the country's; the country has none. */
+/**
+ * The key above an area: its path less the last part. A county's is the country's; the country
+ * has none.
+ */
 export function parentKey(key: string): string | null {
   if (key === "kenya") return null;
   const i = key.lastIndexOf("/");
@@ -2424,7 +2433,10 @@ export function resultsArea(
   return null;
 }
 
-/** "constituency figure" when an area shows the figures of the area above it; null when they are its own. */
+/**
+ * "constituency figure" when an area shows the figures of the area above it; null when they are
+ * its own.
+ */
 export function figureLabel(found: { key: string; inherited: boolean } | null): string | null {
   return found && found.inherited ? `${levelOfKey(found.key)} figure` : null;
 }
@@ -3287,7 +3299,8 @@ const flags = (name: string, problems: string[], text: string) =>
 
 eq("the fixture county passes", check(good), []);
 
-// Constituencies add up to the county's, for president and governor; an MP race has no county total.
+// Constituencies add up to the county's, for president and governor; an MP race has no county
+// total.
 const P1 = "2022-president/kenya/p-one-test";
 const lowNorth = (c: County) =>
   set(c.results, { candidate_id: P1, area_key: "testland/north-test" }, "votes", "299");
@@ -3843,7 +3856,10 @@ function sourceProblems(r: Row): string[] {
   return out;
 }
 
-/** What is wrong with blocs.csv: a year with no election, a party twice, a bloc unnamed or unsourced. */
+/**
+ * What is wrong with blocs.csv: a year with no election, a party twice, a bloc unnamed or
+ * unsourced.
+ */
 export function checkBlocs(rows: Row[]): string[] {
   const problems: string[] = [];
   const seen = new Set<string>();
@@ -5111,7 +5127,10 @@ const ELECTIONS = YEARS.flatMap((y) =>
 const cell = (r: Row, column: string): string => r[column] ?? "";
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-/** Where the candidates' votes fall short of the valid votes, which means a candidate is missing. */
+/**
+ * Where the candidates' votes fall short of the valid votes, which means a candidate is
+ * missing.
+ */
 export function shortfalls(c: County): string[] {
   const election = new Map(c.candidates.map((r) => [cell(r, "id"), cell(r, "election_id")]));
   const counted = new Map<string, number>();
