@@ -8,8 +8,9 @@ population.csv (the columns of each are in FILES below). The SQL goes to OUT_SQL
 screen. Every statement upserts, so running the migration again changes nothing, and each
 county is one more migration, applied before the code that needs it.
 
-This only checks that the files can be read: the right columns, and whole numbers where
-numbers belong. That what they say adds up is tests/atlas-data.test.ts's job.
+This only checks that the files can be read: the right columns, whole numbers (ASCII digits)
+where numbers belong, no backslash in a text cell, and no row listed twice. That what they say
+adds up is tests/atlas-data.test.ts's job.
 """
 import csv
 import re
