@@ -24,6 +24,44 @@ except ImportError:
 # WorldPop's bands by their first age: under 1, 1 to 4, then every five years to 80 and over.
 STARTS = [0, 1] + list(range(5, 85, 5))
 
+# An areas.csv with one ward in it, and one with only a county.
+ONE_WARD = "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
+NO_WARDS = "key,level,name,parent,iebc_code\ntestland,county,Testland,kenya,\n"
+
+# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each holding nothing.
+EMPTY_WARD_PIXELS = {(row, column): 0 for row in range(2, 6) for column in range(2, 6)}
+
+# Wards over the ten by ten grid, as (left, top, right, bottom) in pixels from its top left corner.
+# Four columns or rows against each edge, the outline 0.9 of a pixel past that edge: still on the
+# grid, as a border ward's outline can be a hair outside it. Each holds sixteen pixel centres.
+AT_THE_EDGE = {
+    "the right edge": (6.1, 2.1, 10.9, 5.9),
+    "the left edge": (-0.9, 2.1, 3.9, 5.9),
+    "the top edge": (2.1, -0.9, 5.9, 3.9),
+    "the bottom edge": (2.1, 6.1, 5.9, 10.9),
+}
+# Wards that run past an edge by more than a pixel: half off (columns 8 to 11 of ten, and so on),
+# and 1.1 pixels past.
+PAST_THE_EDGE = {
+    "half off the right edge": (8.1, 2.1, 11.9, 5.9),
+    "half off the left edge": (-1.9, 2.1, 1.9, 5.9),
+    "half off the top edge": (2.1, -1.9, 5.9, 1.9),
+    "half off the bottom edge": (2.1, 8.1, 5.9, 11.9),
+    "1.1 pixels past the right edge": (6.1, 2.1, 11.1, 5.9),
+    "1.1 pixels past the left edge": (-1.1, 2.1, 3.9, 5.9),
+    "1.1 pixels past the top edge": (2.1, -1.1, 5.9, 3.9),
+    "1.1 pixels past the bottom edge": (2.1, 6.1, 5.9, 11.1),
+}
+
+
+def ward_map(*features):
+    """The text of a ward map holding these features."""
+    return json.dumps({"type": "FeatureCollection", "features": list(features)})
+
+
+def ward_feature(slug, geometry):
+    return {"type": "Feature", "properties": {"slug": slug}, "geometry": geometry}
+
 
 class Names(unittest.TestCase):
     def test_a_worldpop_file_name(self):
@@ -141,6 +179,40 @@ class Rasters(unittest.TestCase):
         wp.check_complete(self.grids(STARTS + [85, 90]), 2025)
 
 
+class Method(unittest.TestCase):
+    def test_it_says_the_figures_are_estimates(self):
+        self.assertIn("estimate", wp.METHOD)
+        self.assertTrue(wp.METHOD.endswith("These are estimates, not counts."))
+        self.assertGreaterEqual(len(wp.METHOD), 10)
+        self.assertLessEqual(len(wp.METHOD), 500)
+
+
+class Inputs(unittest.TestCase):
+    """What build_rows refuses in the ward map and areas.csv, before it looks at a single grid."""
+
+    def files(self, features, areas):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        folder = Path(tmp.name)
+        (folder / "wards.json").write_text(ward_map(*features))
+        (folder / "areas.csv").write_text(areas)
+        return folder / "wards.json", folder / "areas.csv", folder
+
+    def test_a_repeated_slug_in_the_ward_map_is_refused(self):
+        # Two different outlines under one slug: the second would quietly replace the first.
+        first = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
+        second = {"type": "Polygon", "coordinates": [[[37.0, -2.0], [37.1, -2.0], [37.1, -2.1], [37.0, -2.0]]]}
+        geo, areas, folder = self.files([ward_feature("ward-one", first), ward_feature("ward-one", second)], ONE_WARD)
+        with self.assertRaisesRegex(ValueError, "ward-one is listed twice in the ward map"):
+            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
+
+    def test_an_areas_file_with_no_ward_rows_is_refused(self):
+        shape = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
+        geo, areas, folder = self.files([ward_feature("ward-one", shape)], NO_WARDS)
+        with self.assertRaisesRegex(ValueError, "no ward rows in areas.csv"):
+            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
+
+
 @unittest.skipUnless(HAVE_RASTERIO, "needs rasterio and numpy")
 class Grids(unittest.TestCase):
     def write_grids(self, nodata=-99999, pixels=None):
@@ -173,6 +245,24 @@ class Grids(unittest.TestCase):
         sums = wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
         self.assertEqual(len(sums), 36)
         return sums
+
+    def write_inputs(self, ward=None):
+        """wards.json and areas.csv beside the grids, for the one ward, ward-one; returns their paths."""
+        geo = self.dir / "wards.json"
+        geo.write_text(ward_map(ward_feature("ward-one", ward or self.ward)))
+        areas = self.dir / "areas.csv"
+        areas.write_text(ONE_WARD)
+        return geo, areas
+
+    def ward_over(self, left, top, right, bottom):
+        """A ward from pixel column left to right and row top to bottom of the ten by ten grid,
+        counted from its top left corner (fractions allowed)."""
+
+        def corner(column, row):
+            return [round(36.0 + 0.001 * column, 6), round(-1.0 - 0.001 * row, 6)]
+
+        ring = [corner(left, top), corner(right, top), corner(right, bottom), corner(left, bottom), corner(left, top)]
+        return {"type": "Polygon", "coordinates": [ring]}
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
@@ -289,6 +379,53 @@ class Grids(unittest.TestCase):
                 sums = self.sums_over(self.ward)
                 self.assertTrue(all(v == 15 for v in sums.values()))
                 self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
+
+    def test_a_ward_with_no_people_is_refused_not_written_as_zero(self):
+        self.write_grids(pixels=EMPTY_WARD_PIXELS)
+        geo, areas = self.write_inputs()
+        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the grids hold no people"):
+            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
+
+    def test_main_stops_for_a_ward_with_no_people_and_writes_no_file(self):
+        self.write_grids(pixels=EMPTY_WARD_PIXELS)
+        geo, areas = self.write_inputs()
+        out = self.dir / "population.csv"
+        with self.assertRaisesRegex(SystemExit, "hold no people"):
+            wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
+        self.assertFalse(out.exists())
+
+    def test_a_ward_that_runs_past_the_grid_is_refused(self):
+        rasters = wp.find_rasters(self.dir, 2025)
+        for what, edges in PAST_THE_EDGE.items():
+            with self.subTest(what):
+                with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
+                    wp.ward_sums(self.ward_over(*edges), rasters)
+
+    def test_a_bbox_in_the_geometry_does_not_hide_a_ward_that_runs_past_the_grid(self):
+        # The coordinates run off the grid while the bbox member says the ward fits inside it.
+        ward = dict(self.ward_over(*PAST_THE_EDGE["half off the right edge"]), bbox=[36.002, -1.006, 36.006, -1.002])
+        with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
+            wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
+
+    def test_a_ward_that_runs_past_the_grid_is_named_by_its_key(self):
+        geo, areas = self.write_inputs(self.ward_over(*PAST_THE_EDGE["half off the right edge"]))
+        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the ward runs past the grid"):
+            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
+
+    def test_a_ward_at_the_edge_of_the_grid_still_works(self):
+        for what, edges in AT_THE_EDGE.items():
+            with self.subTest(what):
+                sums = self.sums_over(self.ward_over(*edges))
+                self.assertTrue(all(v == 16 for v in sums.values()))
+                self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
+
+    def test_the_file_is_written_with_unix_line_ends(self):
+        geo, areas = self.write_inputs()
+        out = self.dir / "population.csv"
+        wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
+        raw = out.read_bytes()
+        self.assertNotIn(b"\r", raw)
+        self.assertTrue(raw.endswith(b"\n"))
 
 
 if __name__ == "__main__":

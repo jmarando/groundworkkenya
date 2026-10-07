@@ -29,7 +29,7 @@ from pathlib import Path
 METHOD = (
     "WorldPop age-and-sex grid at 100 m: the people in the pixels whose centres fall inside the "
     "ward. Five-year bands are split evenly, so 18-34 is two fifths of 15-19 plus 20-24, 25-29 and "
-    "30-34; adults likewise."
+    "30-34; adults likewise. These are estimates, not counts."
 )
 
 RASTER_NAME = re.compile(r"(?:^|_)(f|m)_(\d{1,2})_(\d{4})(?:_|\.|$)", re.IGNORECASE)
@@ -107,14 +107,26 @@ def ward_sums(geometry, rasters):
     """{(sex, first age): people inside the ward}: the pixels whose centres fall within it.
 
     A pixel counts only if it holds more than zero and is not the file's declared no-data value,
-    so a positive sentinel such as 9999 is not taken for people.
+    so a positive sentinel such as 9999 is not taken for people. A ward that runs more than a
+    pixel past the edge of a grid is refused: the part off the grid would quietly be left out.
     """
     import rasterio
+    from rasterio.features import bounds
     from rasterio.mask import mask
 
+    # The outline's own coordinates: a bbox member, if the map has one, is not taken on trust.
+    left, bottom, right, top = bounds({k: v for k, v in geometry.items() if k != "bbox"})
     sums = {}
     for key, path in rasters.items():
         with rasterio.open(path) as src:
+            width, height = src.res
+            if (
+                left < src.bounds.left - width
+                or right > src.bounds.right + width
+                or bottom < src.bounds.bottom - height
+                or top > src.bounds.top + height
+            ):
+                raise ValueError(f"the ward runs past the grid ({path.name})")
             data, _ = mask(src, [geometry], crop=True, all_touched=False, filled=True)
             band = data[0]
             people = band > 0
@@ -126,10 +138,17 @@ def ward_sums(geometry, rasters):
 
 def build_rows(wards_geojson, areas_csv, raster_dir, year, source):
     """population.csv's rows: one for each ward in areas.csv."""
+    shapes = {}
     with open(wards_geojson, encoding="utf-8") as f:
-        shapes = {ft["properties"]["slug"]: ft["geometry"] for ft in json.load(f)["features"]}
+        for ft in json.load(f)["features"]:
+            slug = ft["properties"]["slug"]
+            if slug in shapes:
+                raise ValueError(f"{slug} is listed twice in the ward map")
+            shapes[slug] = ft["geometry"]
     with open(areas_csv, newline="", encoding="utf-8-sig") as f:
         wards = sorted(row["key"] for row in csv.DictReader(f) if row["level"] == "ward")
+    if not wards:
+        raise ValueError("no ward rows in areas.csv")
     rasters = find_rasters(raster_dir, year)
     check_complete(rasters, year)
     rows = []
@@ -156,7 +175,7 @@ def main(argv):
     except ValueError as e:
         raise SystemExit(str(e))
     with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["area_key", "year", "total", "adults", "young_adults", "source", "method"])
         writer.writerows(rows)
 
