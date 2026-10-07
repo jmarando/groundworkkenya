@@ -30,7 +30,10 @@ export function blocShares(votes: Vote[], valid: number | null): BlocShare[] {
     .sort((a, b) => b.votes - a.votes || a.bloc.localeCompare(b.bloc));
 }
 
-/** The campaign's side's share in percent; 0 when it did not stand; null with no side or no shares. */
+/**
+ * The campaign's side's share in percent; 0 when it did not stand; null with no side or no
+ * shares.
+ */
 export function ourShare(shares: BlocShare[], ourBloc: string | null): number | null {
   if (ourBloc === null || shares.length === 0) return null;
   return shares.find((s) => s.bloc === ourBloc)?.share ?? 0;

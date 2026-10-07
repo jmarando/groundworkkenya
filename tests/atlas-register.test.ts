@@ -8,9 +8,14 @@ import { notYetRegistered, registerFlag, registerGrowth, youngShare } from "@/li
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;

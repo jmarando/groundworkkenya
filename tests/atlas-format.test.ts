@@ -43,6 +43,7 @@ eq("votes missing", fmtVotes(null), MISSING);
 
 // Shares to one decimal place.
 eq("a share", fmtShare(48.25), "48.3%");
+eq("a share on a tie rounds up", fmtShare(12.35), "12.4%");
 eq("a share that is whole", fmtShare(50), "50.0%");
 eq("a real zero share is a zero", fmtShare(0), "0.0%");
 eq("a share missing", fmtShare(null), MISSING);
@@ -50,11 +51,14 @@ eq("a share missing", fmtShare(null), MISSING);
 // Turnout as a whole percentage.
 eq("turnout", fmtTurnout(41.2), "41%");
 eq("turnout rounds half up", fmtTurnout(41.5), "42%");
+eq("a real zero turnout is a zero", fmtTurnout(0), "0%");
 eq("turnout missing", fmtTurnout(null), MISSING);
 
 // Points are a size; the words around them say which way.
 eq("points", fmtPoints(6.04), "6.0 points");
 eq("points ignore their sign", fmtPoints(-15.5), "15.5 points");
+eq("points on a tie round up", fmtPoints(-0.35), "0.4 points");
+eq("a real zero gap is a zero", fmtPoints(0), "0.0 points");
 eq("points missing", fmtPoints(null), MISSING);
 
 // A source reads "Publisher, document title"; the tag keeps the publisher.

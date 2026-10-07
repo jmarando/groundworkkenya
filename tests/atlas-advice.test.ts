@@ -52,6 +52,11 @@ eq(
   "lean-ours",
 );
 eq("mobilise starts at half the vote", act({ ourShare: 50, margin: 0, turnout: 34 }), "mobilise");
+eq(
+  "turnout above the area above is no reason to mobilise",
+  act({ turnout: 50, parentTurnout: 44 }),
+  "lean-ours",
+);
 eq("just over 3 points below is", act({ turnout: 40.9, parentTurnout: 44 }), "mobilise");
 eq(
   "the reason for a gap just over 3",
@@ -153,11 +158,25 @@ eq("no result", A({ ourShare: null, margin: null }), {
 });
 eq("no side beats no result", act({ side: null, ourShare: null, margin: null }), "set-side");
 
+// A real zero is a figure, not a missing one.
+eq("a side that took no votes is a result", A({ ourShare: 0, margin: -55 }), {
+  action: "cut-the-gap",
+  label: "Cut the gap",
+  reason: "0.0% to us, 55.0 points behind",
+});
+eq(
+  "a real zero turnout is a figure",
+  why({ turnout: 0 }),
+  "55.0% to us, but turnout was 0%, 44.0 points below Nairobi's 44%",
+);
+
 // The 75th percentile by nearest rank.
+const HUNDRED = Array.from({ length: 100 }, (_, k) => k + 1);
 eq("nearest rank of four", nearestRank([10, 20, 30, 40], 75), 30);
 eq("nearest rank sorts first", nearestRank([50, 10, 40, 20, 30], 75), 40);
 eq("nearest rank of one", nearestRank([5], 75), 5);
 eq("nearest rank of none", nearestRank([], 75), null);
+eq("nearest rank is exact where floating point is not", nearestRank(HUNDRED, 7), 7);
 eq(
   "nearest rank at the ends",
   [nearestRank([10, 20, 30], 100), nearestRank([10, 20, 30], 0)],
@@ -183,6 +202,11 @@ eq("too few siblings to say", R({ siblingTurnouts: [40, 50, 60] }), {
 });
 eq("no register", R({ registered: null }), { turnout: null, persuasion: 200, total: 200 });
 eq("no share", R({ ourShare: null }), { turnout: null, persuasion: 200, total: 200 });
+eq("a side that took no votes has none to win", R({ ourShare: 0 }), {
+  turnout: 0,
+  persuasion: 200,
+  total: 200,
+});
 eq("no own turnout", R({ turnout: null }), { turnout: null, persuasion: 200, total: 200 });
 eq("no valid votes", R({ valid: null }), { turnout: 1100, persuasion: null, total: 1100 });
 eq("nothing to go on", R({ turnout: null, valid: null }), {

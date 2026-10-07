@@ -8,18 +8,20 @@ import type { Level } from "./types";
 export const MISSING = "not found yet";
 
 const nf = new Intl.NumberFormat("en-KE");
+// toFixed rounds the binary value, so 12.35 comes out as 12.3. Intl rounds the decimal, half up.
+const nf1 = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 export const fmtVotes = (n: number | null): string =>
   n === null ? MISSING : nf.format(Math.round(n));
 
-export const fmtShare = (n: number | null): string => (n === null ? MISSING : `${n.toFixed(1)}%`);
+export const fmtShare = (n: number | null): string => (n === null ? MISSING : `${nf1.format(n)}%`);
 
 export const fmtTurnout = (n: number | null): string =>
   n === null ? MISSING : `${Math.round(n)}%`;
 
 /** Points are a size: the words around them say which way. */
 export const fmtPoints = (n: number | null): string =>
-  n === null ? MISSING : `${Math.abs(n).toFixed(1)} points`;
+  n === null ? MISSING : `${nf1.format(Math.abs(n))} points`;
 
 /** A source reads "Publisher, document title"; the tag keeps the publisher. */
 const publisher = (source: string): string => source.split(",")[0]?.trim() || source.trim();

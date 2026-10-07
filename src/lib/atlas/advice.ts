@@ -88,7 +88,8 @@ export function whatToDo(i: AdviceInput): Advice {
 export function nearestRank(values: number[], percentile: number): number | null {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
-  const rank = Math.max(1, Math.ceil((percentile / 100) * sorted.length));
+  // Multiply first: (7 / 100) * 100 is 7.000000000000001, and ceil would answer 8.
+  const rank = Math.max(1, Math.ceil((percentile * sorted.length) / 100));
   return sorted[rank - 1] ?? null;
 }
 
