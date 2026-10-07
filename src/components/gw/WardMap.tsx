@@ -423,6 +423,7 @@ export function WardMap(props: Props) {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
   function boxDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!(e.target as HTMLElement).closest(".vmap-canvas")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = local(e);
     setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, add: e.shiftKey });
