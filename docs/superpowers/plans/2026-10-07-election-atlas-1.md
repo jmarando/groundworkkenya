@@ -1963,6 +1963,12 @@ eq("mobilise", A({ ourShare: 54.2, margin: 8.4, turnout: 38, parentTurnout: 44 }
   reason: "54.2% to us, but turnout was 38%, 6.0 points below Nairobi's 44%",
 });
 eq("3 points below is not low enough", act({ turnout: 41, parentTurnout: 44 }), "lean-ours");
+eq(
+  "a gap of exactly 3 is not over 3, in floating point too",
+  act({ turnout: 30.2, parentTurnout: 33.2 }),
+  "lean-ours",
+);
+eq("mobilise starts at half the vote", act({ ourShare: 50, margin: 0, turnout: 34 }), "mobilise");
 eq("just over 3 points below is", act({ turnout: 40.9, parentTurnout: 44 }), "mobilise");
 eq(
   "the reason for a gap just over 3",
@@ -2263,7 +2269,7 @@ Expected: ESLint prints nothing.
 
 Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-advice.test.ts`
 
-Expected: `41 passed, 0 failed`
+Expected: `43 passed, 0 failed`
 
 - [ ] **Step 6: Commit**
 
@@ -2502,7 +2508,7 @@ Expected:
 tests/atlas-measures        35 passed, 0 failed
 tests/atlas-register        20 passed, 0 failed
 tests/atlas-format          25 passed, 0 failed
-tests/atlas-advice          41 passed, 0 failed
+tests/atlas-advice          43 passed, 0 failed
 tests/atlas-scope           11 passed, 0 failed
 ```
 
@@ -5340,7 +5346,7 @@ Run: `for t in tests/atlas-*.test.ts; do printf "%-34s" $t; npx -y tsx --tsconfi
 Expected:
 
 ```
-tests/atlas-advice.test.ts        41 passed, 0 failed
+tests/atlas-advice.test.ts        43 passed, 0 failed
 tests/atlas-data.test.ts          63 passed, 0 failed
 tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
