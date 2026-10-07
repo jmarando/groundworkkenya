@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { callFromInbox } from "@/lib/voice.functions";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone, Send } from "lucide-react";
+import { BarChart3, MessageCircle, Phone, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { getInbox } from "@/lib/console.functions";
@@ -77,6 +77,7 @@ const CONNECTIONS = [
 const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
 
 function Inbox() {
+  const navigate = useNavigate();
   const fetchInbox = useServerFn(getInbox);
   const sendReply = useServerFn(replyToConversation);
   const searchPeople = useServerFn(searchPeopleForMessage);
@@ -85,6 +86,7 @@ function Inbox() {
   const [myPhone, setMyPhone] = useState("");
   const [callNote, setCallNote] = useState<string | null>(null);
   const [calling, setCalling] = useState(false);
+  const [callPanelOpen, setCallPanelOpen] = useState(false);
   async function call(conversationId: string) {
     setCalling(true);
     setCallNote(null);
@@ -229,16 +231,38 @@ function Inbox() {
             {data.counts.all} conversations · {data.counts.unread} unread · {data.counts.open} open
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn--primary"
           onClick={() => {
             setComposing(true);
             setNewNote(null);
           }}
         >
-          New message
-        </button>
+          <MessageCircle aria-hidden="true" /> Message one person
+        </Button>
+      </div>
+
+      <div className="ibx-individual-actions" aria-label="Individual outreach actions">
+        <div>
+          <span className="eyebrow">One-to-one outreach</span>
+          <p>Choose one person for a message, poll invitation or phone call.</p>
+        </div>
+        <div className="ibx-individual-buttons">
+          <Button variant="outline" onClick={() => { setComposing(true); setNewNote(null); }}>
+            <MessageCircle aria-hidden="true" /> Message
+          </Button>
+          <Button variant="outline" onClick={() => void navigate({ to: "/polling" })}>
+            <BarChart3 aria-hidden="true" /> Send poll
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!open?.phone}
+            onClick={() => setCallPanelOpen(true)}
+            title={open?.phone ? `Call ${open.name}` : "Choose a conversation with a phone number"}
+          >
+            <Phone aria-hidden="true" /> Call selected person
+          </Button>
+        </div>
       </div>
 
       {composing && (
@@ -465,14 +489,19 @@ function Inbox() {
                     {open.issue ? ` · ${open.issue}` : ""}
                   </span>
                 </div>
-                <span className="pill pill--ok">
-                  <span className="g" aria-hidden="true">
-                    ●
-                  </span>{" "}
-                  {open.status}
-                </span>
+                <div className="th-head-actions">
+                  {open.phone && (
+                    <Button size="sm" onClick={() => setCallPanelOpen((visible) => !visible)} aria-expanded={callPanelOpen}>
+                      <Phone aria-hidden="true" /> Call {open.name.split(" ")[0]}
+                    </Button>
+                  )}
+                  <span className="pill pill--ok">
+                    <span className="g" aria-hidden="true">●</span>{" "}
+                    {open.status}
+                  </span>
+                </div>
               </div>
-              {open.phone && (
+              {open.phone && callPanelOpen && (
                 <div className="th-call">
                   <label className="th-compose-label" htmlFor="myPhone">
                     Call {open.name}: we ring your phone first
