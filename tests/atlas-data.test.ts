@@ -122,6 +122,24 @@ flags(
   broken((c) => c.knownDifferences.push({ ...closes, reason: "" })),
   "say why",
 );
+flags(
+  "a recorded difference with an unknown check is refused",
+  broken((c) => c.knownDifferences.push({ ...closes, check: "nonsense" })),
+  'check must be county_sum or cast_split, not "nonsense"',
+);
+flags(
+  "a recorded difference that is not a number is refused",
+  broken((c) => c.knownDifferences.push({ ...closes, difference: "one" })),
+  "difference must be a whole number",
+);
+eq(
+  "a recorded difference listed twice is refused",
+  broken((c) => {
+    lowNorth(c);
+    c.knownDifferences.push({ ...closes }, { ...closes });
+  }),
+  [`known-differences.csv row 3: county_sum for ${P1} at testland is listed twice`],
+);
 
 // Turnout.
 const SOUTH_GOV = { election_id: "2022-governor", area_key: "testland/south-test" };
@@ -131,26 +149,43 @@ flags(
   broken((c) => set(c.turnout, SOUTH_GOV, "cast_votes", "901")),
   "more votes cast than registered (901 against 900)",
 );
+flags(
+  "more valid votes than votes cast",
+  broken((c) => set(c.turnout, SOUTH_GOV, "valid_votes", "521")),
+  "more valid votes than votes cast (521 against 520)",
+);
 const extraRejected = (c: County) => set(c.turnout, NORTH_GOV, "rejected_votes", "11");
 flags(
   "valid plus rejected differs from cast",
   broken(extraRejected),
   "valid plus rejected (501) differs from cast (500)",
 );
+const castGap = {
+  check: "cast_split",
+  election_id: "2022-governor",
+  area_key: "testland/north-test",
+  candidate_id: "",
+  difference: "-1",
+  reason: "IEBC's own valid and rejected figures differ",
+};
 eq(
   "a recorded cast difference closes it",
   broken((c) => {
     extraRejected(c);
-    c.knownDifferences.push({
-      check: "cast_split",
-      election_id: "2022-governor",
-      area_key: "testland/north-test",
-      candidate_id: "",
-      difference: "-1",
-      reason: "IEBC's own valid and rejected figures differ",
-    });
+    c.knownDifferences.push({ ...castGap });
   }),
   [],
+);
+eq(
+  "a recorded cast difference listed twice is refused",
+  broken((c) => {
+    extraRejected(c);
+    c.knownDifferences.push({ ...castGap }, { ...castGap });
+  }),
+  [
+    "known-differences.csv row 3: cast_split for 2022-governor at testland/north-test " +
+      "is listed twice",
+  ],
 );
 flags(
   "a share over 100%",
@@ -165,6 +200,19 @@ flags(
   "a share over 100%",
 );
 flags(
+  "a share is measured against votes cast when valid votes are blank",
+  broken((c) => {
+    set(c.turnout, NORTH_GOV, "valid_votes", "");
+    set(
+      c.results,
+      { candidate_id: "2022-governor/testland/a-test", area_key: "testland/north-test" },
+      "votes",
+      "400",
+    );
+  }),
+  "the candidates' votes (540) pass the votes cast (500), a share over 100%",
+);
+flags(
   "a source with no publisher",
   broken((c) => set(c.turnout, SOUTH_GOV, "source", "no publisher here")),
   'must read "Publisher, document title"',
@@ -173,6 +221,16 @@ flags(
   "a plain http link",
   broken((c) => set(c.turnout, SOUTH_GOV, "source_url", "http://example.test/a")),
   "must be an https link",
+);
+flags(
+  "a turnout row for an election the atlas does not hold",
+  broken((c) => set(c.turnout, SOUTH_GOV, "election_id", "2021-governor")),
+  "2021-governor is not an election the atlas holds",
+);
+flags(
+  "a turnout row for an area that is not there",
+  broken((c) => set(c.turnout, SOUTH_GOV, "area_key", "testland/ghost-test")),
+  "testland/ghost-test is not in the files",
 );
 
 // Areas, parents and ward maps.
@@ -229,6 +287,33 @@ flags(
   ),
   "kenya is added by the schema",
 );
+flags(
+  "a key that is not lower-case parts joined by a slash",
+  broken((c) =>
+    c.areas.push({
+      key: "Bad Key",
+      level: "county",
+      name: "Bad Key",
+      parent: "kenya",
+      iebc_code: "",
+    }),
+  ),
+  '"Bad Key" is not a key: lower-case parts joined by "/"',
+);
+const needsName = "needs a name of at least two letters with no stray spaces";
+eq(
+  "an area name that is too short, or has stray spaces",
+  broken((c) => {
+    set(c.areas, { key: "testland" }, "name", " Testland");
+    set(c.areas, { key: "testland/south-test" }, "name", "S");
+  }),
+  [`areas.csv row 2: testland ${needsName}`, `areas.csv row 4: testland/south-test ${needsName}`],
+);
+flags(
+  "an IEBC code that is not one to four digits",
+  broken((c) => set(c.areas, { key: "testland" }, "iebc_code", "12345")),
+  "the IEBC code 12345 must be one to four digits",
+);
 
 // Blocs: one party, one bloc, in an election, as blocs.csv records it. A party with none recorded
 // stands as itself, and an independent (no party) as "Independent".
@@ -272,6 +357,17 @@ flags(
   checkBlocs([{ year: "2022", party: "Party A", bloc: "", ...listed }]),
   "needs a bloc",
 );
+eq(
+  "a party with no name, or with stray spaces",
+  checkBlocs([
+    { year: "2022", party: "", bloc: "Alpha", ...listed },
+    { year: "2022", party: " Party A", bloc: "Alpha", ...listed },
+  ]),
+  [
+    "blocs.csv row 2: a party must be named, with no stray spaces",
+    "blocs.csv row 3: a party must be named, with no stray spaces",
+  ],
+);
 eq("no blocs file, no blocs", loadBlocs("tests/fixtures/atlas/nowhere.csv"), []);
 
 // Candidates and their results.
@@ -291,6 +387,16 @@ flags(
   "a governor seat is a county",
 );
 flags(
+  "a seat that is not in the files",
+  broken((c) => set(c.candidates, { name: "A Test" }, "seat", "testland/ghost-test")),
+  "the seat testland/ghost-test is not in the files",
+);
+flags(
+  "a candidate name with stray spaces",
+  broken((c) => set(c.candidates, { name: "A Test" }, "name", " A Test")),
+  "2022-governor/testland/a-test needs a name with no stray spaces",
+);
+flags(
   "votes in an area outside the seat",
   broken((c) =>
     set(
@@ -301,6 +407,18 @@ flags(
     ),
   ),
   "testland/south-test is outside the seat testland/north-test",
+);
+flags(
+  "votes in an area that is not there",
+  broken((c) =>
+    set(
+      c.results,
+      { candidate_id: P1, area_key: "testland/south-test" },
+      "area_key",
+      "testland/ghost-test",
+    ),
+  ),
+  "testland/ghost-test is not in the files",
 );
 flags(
   "votes for a candidate nobody lists",
@@ -331,7 +449,23 @@ flags(
   broken((c) => set(c.register, { year: "2017" }, "year", "2019")),
   "2019 is not an election year",
 );
+flags(
+  "a register for an area that is not there",
+  broken((c) => set(c.register, { year: "2017" }, "area_key", "testland/ghost-test")),
+  "testland/ghost-test is not in the files",
+);
+flags(
+  "a registered figure that is not a number",
+  broken((c) => set(c.register, { year: "2017" }, "registered", "55O")),
+  'registered must be a whole number, not "55O"',
+);
+flags(
+  "a register source with no publisher",
+  broken((c) => set(c.register, { year: "2017" }, "source", "no publisher here")),
+  'must read "Publisher, document title"',
+);
 const WARD_ONE = { area_key: "testland/north-test/ward-one" };
+const WARD_TWO = { area_key: "testland/north-test/ward-two" };
 flags(
   "more young adults than adults",
   broken((c) => set(c.population, WARD_ONE, "young_adults", "901")),
@@ -341,6 +475,29 @@ flags(
   "more adults than people",
   broken((c) => set(c.population, WARD_ONE, "adults", "1501")),
   "adults (1501) pass the total (1500)",
+);
+flags(
+  "population for an area that is not there",
+  broken((c) => set(c.population, WARD_ONE, "area_key", "testland/ghost-test")),
+  "testland/ghost-test is not in the files",
+);
+eq(
+  "a population year outside 1990 to 2100",
+  broken((c) => {
+    set(c.population, WARD_ONE, "year", "1989");
+    set(c.population, WARD_TWO, "year", "2101");
+  }),
+  ["population.csv row 2: 1989 is not a year", "population.csv row 3: 2101 is not a year"],
+);
+flags(
+  "a population method that says nothing",
+  broken((c) => set(c.population, WARD_ONE, "method", "short")),
+  "the method must say how it was worked out",
+);
+flags(
+  "a population source with no publisher",
+  broken((c) => set(c.population, WARD_ONE, "source", "no publisher here")),
+  'must read "Publisher, document title"',
 );
 
 // Reading the files.
@@ -402,6 +559,95 @@ try {
   writeFileSync(join(root, "SOURCES.md"), "x");
   eq("counties are the folders not starting with an underscore", listCounties(root), ["nairobi"]);
   eq("no data folder, no counties", listCounties(join(tmp, "nowhere")), []);
+
+  // Ward maps: the slug alone is the key, so a ward slug that two maps (or one map twice) put in
+  // different constituencies is refused, not overwritten. The same ward again is fine.
+  const wardMaps = (name: string, files: Record<string, [string, string | null][]>) => {
+    const dir = join(tmp, name);
+    mkdirSync(dir);
+    for (const [file, wards] of Object.entries(files)) {
+      const features = wards.map(([slug, constituency]) => ({
+        type: "Feature",
+        properties:
+          constituency === null ? { slug, name: slug } : { slug, name: slug, constituency },
+        geometry: null,
+      }));
+      writeFileSync(join(dir, file), JSON.stringify({ type: "FeatureCollection", features }));
+    }
+    return dir;
+  };
+  const wardRefusal = (dir: string): string => {
+    try {
+      loadWardMaps(dir);
+      return "";
+    } catch (e) {
+      return String(e);
+    }
+  };
+  // What loads, or the refusal in its place, so that a wrong refusal fails one case, not the file.
+  const wardEntries = (dir: string) => {
+    try {
+      return [...loadWardMaps(dir)];
+    } catch (e) {
+      return String(e);
+    }
+  };
+  eq(
+    "a ward slug in two constituencies is refused",
+    wardRefusal(
+      wardMaps("clash", {
+        "a-wards.json": [["ward-one", "North Test"]],
+        "b-wards.json": [["ward-one", "South Test"]],
+      }),
+    ),
+    "Error: the ward ward-one is in north-test in a-wards.json " +
+      "but in south-test in b-wards.json: a ward slug has to name one ward",
+  );
+  eq(
+    "a ward slug twice in one map, in two constituencies, is refused",
+    wardRefusal(
+      wardMaps("twice", {
+        "a-wards.json": [
+          ["ward-one", "North Test"],
+          ["ward-one", "South Test"],
+        ],
+      }),
+    ),
+    "Error: the ward ward-one is in north-test in a-wards.json " +
+      "but in south-test in a-wards.json: a ward slug has to name one ward",
+  );
+  eq(
+    "a ward with a constituency in one map and none in another is refused",
+    wardRefusal(
+      wardMaps("none", {
+        "a-wards.json": [["ward-one", null]],
+        "b-wards.json": [["ward-one", "South Test"]],
+      }),
+    ),
+    "Error: the ward ward-one is in no constituency in a-wards.json " +
+      "but in south-test in b-wards.json: a ward slug has to name one ward",
+  );
+  eq(
+    "the same ward again, in the same constituency, is fine",
+    wardEntries(
+      wardMaps("again", {
+        "a-wards.json": [
+          ["ward-one", "North Test"],
+          ["ward-three", null],
+        ],
+        "b-wards.json": [
+          ["ward-one", "North Test"],
+          ["ward-two", "North Test"],
+          ["ward-three", null],
+        ],
+      }),
+    ),
+    [
+      ["ward-one", "north-test"],
+      ["ward-three", null],
+      ["ward-two", "north-test"],
+    ],
+  );
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }
@@ -429,12 +675,13 @@ eq("there are slug cases", cases.length > 0, true);
 for (const [name, slug] of cases) eq(`the slug of "${name}"`, slugify(name ?? ""), slug);
 
 // The files and columns are the ones scripts/atlas/build_sql.py loads.
-const python = process.env["ATLAS_PYTHON"] ?? "python3";
+const python = process.env["ATLAS_PYTHON"] || "python3";
 const asked = spawnSync(
   python,
   [
     "-c",
-    "import json, sys; sys.path.insert(0, 'scripts/atlas'); import build_sql; print(json.dumps(build_sql.FILES))",
+    "import json, sys; sys.path.insert(0, 'scripts/atlas'); import build_sql; " +
+      "print(json.dumps(build_sql.FILES))",
   ],
   { encoding: "utf8" },
 );

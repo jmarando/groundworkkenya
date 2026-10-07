@@ -123,9 +123,15 @@ export function listCounties(root: string): string[] {
     .sort();
 }
 
-/** The ward maps under a folder like public/geo: every `*-wards.json`. */
+/**
+ * The ward maps under a folder like public/geo: every `*-wards.json`. The slug alone is the key,
+ * so a slug that two maps (or one map twice) give different constituencies, a constituency in one
+ * and none in the other included, is refused rather than overwritten. The same ward again is fine.
+ */
 export function loadWardMaps(geoDir: string): WardMaps {
   const maps: WardMaps = new Map();
+  const firstIn = new Map<string, string>();
+  const named = (constituency: string | null) => constituency ?? "no constituency";
   for (const file of readdirSync(geoDir)
     .filter((f) => f.endsWith("-wards.json"))
     .sort()) {
@@ -134,7 +140,17 @@ export function loadWardMaps(geoDir: string): WardMaps {
     };
     for (const feature of geo.features) {
       const { slug, constituency } = feature.properties;
-      if (slug) maps.set(slug, constituency ? slugify(constituency) : null);
+      if (!slug) continue;
+      const there = constituency ? slugify(constituency) : null;
+      const before = maps.get(slug);
+      if (before !== undefined && before !== there) {
+        throw new Error(
+          `the ward ${slug} is in ${named(before)} in ${firstIn.get(slug)} ` +
+            `but in ${named(there)} in ${file}: a ward slug has to name one ward`,
+        );
+      }
+      maps.set(slug, there);
+      if (!firstIn.has(slug)) firstIn.set(slug, file);
     }
   }
   return maps;
@@ -201,8 +217,9 @@ type Known = { row: number; difference: number; used: boolean };
  */
 export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] {
   const problems: string[] = [];
-  const bad = (file: string, i: number, what: string) =>
+  const bad = (file: string, i: number, what: string): void => {
     problems.push(`${file}.csv row ${i + 2}: ${what}`);
+  };
 
   /** A figure that must be a whole number, or blank when `required` is false. */
   const figure = (file: string, i: number, r: Row, column: string, required = false) => {
@@ -230,8 +247,20 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
   unique("turnout", c.turnout, (r) => `${cell(r, "election_id")} at ${cell(r, "area_key")}`);
   unique("register", c.register, (r) => `${cell(r, "year")} at ${cell(r, "area_key")}`);
   unique("population", c.population, (r) => `${cell(r, "area_key")} in ${cell(r, "year")}`);
+  // A recorded difference is one per thing it is about, which is how the lookups below find it:
+  // the candidate and county for county_sum, the election and area for cast_split.
+  unique("known-differences", c.knownDifferences, (r) => {
+    const about =
+      cell(r, "check") === "cast_split" ? cell(r, "election_id") : cell(r, "candidate_id");
+    return `${cell(r, "check")} for ${about} at ${cell(r, "area_key")}`;
+  });
 
-  // The differences IEBC itself published, kept on purpose.
+  // The differences IEBC itself published, kept on purpose. Each is the figure IEBC gives for the
+  // whole, minus what its parts add up to:
+  // - county_sum is the county's own figure minus its constituencies' sum (549 against 550 is 1).
+  //   Its row names the candidate_id and the county's area_key, and leaves election_id blank.
+  // - cast_split is cast minus valid minus rejected (500, 490 and 11 is -1). Its row names the
+  //   election_id and area_key, and leaves candidate_id blank.
   const known = new Map<string, Known>();
   c.knownDifferences.forEach((r, i) => {
     const check = cell(r, "check");
@@ -421,12 +450,13 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
       }
     }
     const limit = valid ?? cast;
+    const limitName = valid !== null ? "valid votes" : "votes cast";
     const total = votesAt.get(`${election}|${area}`);
     if (limit !== null && total !== undefined && total > limit) {
       bad(
         "turnout",
         i,
-        `the candidates' votes (${total}) pass the ${valid !== null ? "valid votes" : "votes cast"} (${limit}), a share over 100%`,
+        `the candidates' votes (${total}) pass the ${limitName} (${limit}), a share over 100%`,
       );
     }
     source("turnout", i, r);
