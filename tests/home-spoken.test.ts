@@ -2,7 +2,7 @@
 // Pure. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/home-spoken.test.ts
 
-import { spokenHome } from "@/lib/home-spoken";
+import { spokenHome, spokenTime } from "@/lib/home-spoken";
 
 let pass = 0;
 let fail = 0;
@@ -77,34 +77,34 @@ const text = spokenHome({
 });
 ok(
   "it greets the person signed in",
-  text.startsWith("Good morning, Njeri. It's Thursday 1 October, and"),
+  text.startsWith("Good morning, Njeri. Let's get you ready for Thursday 1 October."),
 );
 ok(
   "where the race stands",
-  text.includes("Where you stand: Third, behind Babu Owino and Agnes Kagure."),
+  text.includes("Now, the race. Third, behind Babu Owino and Agnes Kagure."),
 );
 ok(
   "today's list",
   text.includes(
-    "One thing today. First: 2 expenses to approve. Approval needs the supporting document on file.",
+      "One thing to focus on.\n\nFirst: 2 expenses to approve. Approval needs the supporting document on file.",
   ),
 );
 ok(
   "the morning's real story",
   text.includes(
-    "The story this morning: Rationing hits Eastlands. Water rationing now covers 14 wards. A line you could use: Tankers to every ward this week.",
+    "First, the story making headlines. Rationing hits Eastlands. Water rationing now covers 14 wards.",
   ),
 );
 ok(
   "top of mind",
   text.includes(
-    "Top of mind this week: water, 70% of what was raised across news and social, messages to us and searches.",
+    "On people's minds this week: water. It accounts for 70% of what was raised across news and social, messages to us and searches.",
   ),
 );
 ok(
   "where to be",
   text.includes(
-    "Where to be today. At 10:30, Kayole water point. Bowsers at noon. All day, Sunday service.",
+    "And now, your day on the ground.\n\nAt 10 30 a.m., Kayole water point. Bowsers at noon.\n\nAll day, Sunday service.",
   ),
 );
 ok("nothing invented", !/sample|invented|Challenger/i.test(text));
@@ -119,9 +119,12 @@ const quiet = spokenHome({
 });
 ok(
   "a quiet morning says only what there is",
-  quiet.replace(/It's .* election\./, "It's …") ===
-    "Good morning, Njeri. It's … That's your briefing. Have a good day.",
+  !quiet.includes("headlines") && !quiet.includes("priorities") && quiet.endsWith("You're up to speed. Have a good day."),
 );
+ok("story leads before priorities", text.indexOf("story making headlines") < text.indexOf("today's priorities"));
+ok("suggestion is not an established position", text.includes("a suggested line: Tankers to every ward this week."));
+ok("closing priority", text.includes("your first priority: 2 expenses to approve."));
+ok("spoken times", spokenTime("00:00") === "12 a.m." && spokenTime("13:05") === "1 oh 5 p.m.");
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
