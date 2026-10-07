@@ -2040,3 +2040,8 @@ figure { margin: 0; }
   .card { break-inside:avoid; box-shadow:none; }
 }
 .el-setup .f-row select { width:14rem; max-width:55%; }
+.home-moves { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.home-moves li + li { border-top:1px solid var(--border); padding-top:10px; }
+.home-moves-h { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.home-moves-h b { margin-left:auto; font-variant-numeric:tabular-nums; }
+.home-moves .meta { margin:4px 0 0; }
