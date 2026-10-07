@@ -112,8 +112,8 @@ the candidate or manager sets the home area and sides; staff write notes.
   needs it, with the user's OK.
 - **Checks.** `tests/atlas-data.test.ts` reads every county's files and fails when:
   constituency results don't add up to the county's, for president and governor (an MP race
-  has no county total), beyond a difference recorded in `data/atlas/known-differences.csv`
-  for IEBC's own inconsistencies; a share passes 100%;
+  has no county total), beyond a difference recorded in the county's own
+  `data/atlas/<county>/known-differences.csv` for IEBC's own inconsistencies; a share passes 100%;
   cast passes registered; valid plus rejected differs from cast when all three are given; an
   area's parent is missing; a ward slug isn't in its ward map.
 - **Population.** `scripts/atlas/ward_population.py` sums WorldPop's open age-and-sex

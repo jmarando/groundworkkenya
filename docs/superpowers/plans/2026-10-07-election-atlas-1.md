@@ -66,7 +66,7 @@ bun install
 # one TypeScript test file
 npx -y tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts
 
-# the Python tests; the five that read GeoTIFFs skip without rasterio. To run them too:
+# the Python tests; the fifteen that need rasterio (the grid tests) skip without it. To run them too:
 #   python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install rasterio numpy
 # and use /tmp/gwvenv/bin/python (or export ATLAS_PYTHON=/tmp/gwvenv/bin/python for the TypeScript runner)
 python3 -m unittest discover -s scripts/atlas -p "test_*.py"
@@ -107,6 +107,9 @@ The spec is updated in the same commit as this plan.
   Elections pages and notes but not write them.
 - The "what to do" rules follow who is ahead, not the share alone (the user's call on 7 October):
   "Lean theirs" is not a rule, and lean is its own measure.
+- Recorded differences live in one `known-differences.csv` per county,
+  `data/atlas/<county>/known-differences.csv`, not in one shared file: each county's inconsistencies
+  stay with its figures.
 
 ## Review Focus
 
@@ -3267,12 +3270,14 @@ Dagoretti North,dagoretti-north
 Lang'ata,langata
 Karatina Town,karatina-town
 Ng'ang'a,nganga
+Ng`ang`a,nganga
 "Wa Test, Jr.",wa-test-jr
 Mũrĩithi,muriithi
 O'Connor-Smith,oconnor-smith
 "  Spaces  ",spaces
 A & B,a-b
 St. Paul's,st-pauls
+J.K. Mwangi,jk-mwangi
 Ward 7,ward-7
 Embakasi East,embakasi-east
 ```
@@ -3460,6 +3465,24 @@ const lowNorth = (c: County) =>
 eq("constituencies short of the county", broken(lowNorth), [
   `${P1}: its constituencies add up to 549 but testland says 550`,
 ]);
+const A_GOV = "2022-governor/testland/a-test";
+eq(
+  "constituencies short of the county, for a governor",
+  broken((c) =>
+    set(c.results, { candidate_id: A_GOV, area_key: "testland/north-test" }, "votes", "349"),
+  ),
+  [`${A_GOV}: its constituencies add up to 599 but testland says 600`],
+);
+eq(
+  "a county total with no constituency rows to add up is left alone",
+  broken((c) => {
+    c.results = c.results.filter(
+      (r) =>
+        r["candidate_id"] !== "2022-governor/testland/wa-test-jr" || r["area_key"] === "testland",
+    );
+  }),
+  [],
+);
 const closes = {
   check: "county_sum",
   election_id: "",
@@ -3485,6 +3508,14 @@ flags(
   "the recorded difference of 2 does not close it",
 );
 flags(
+  "a recorded difference of the wrong sign does not close the gap",
+  broken((c) => {
+    lowNorth(c);
+    c.knownDifferences.push({ ...closes, difference: "-1" });
+  }),
+  "the recorded difference of -1 does not close it",
+);
+flags(
   "a recorded difference nothing needs is stale",
   broken((c) => c.knownDifferences.push({ ...closes })),
   "no longer matches anything",
@@ -3493,6 +3524,19 @@ flags(
   "a recorded difference with no reason is refused",
   broken((c) => c.knownDifferences.push({ ...closes, reason: "" })),
   "say why",
+);
+flags(
+  "a recorded difference with a nine-character reason is refused",
+  broken((c) => c.knownDifferences.push({ ...closes, reason: "IEBC typo" })),
+  "the reason must say why the figures differ",
+);
+eq(
+  "a recorded difference with a ten-character reason is accepted",
+  broken((c) => {
+    lowNorth(c);
+    c.knownDifferences.push({ ...closes, reason: "IEBC typos" });
+  }),
+  [],
 );
 flags(
   "a recorded difference with an unknown check is refused",
@@ -3526,6 +3570,32 @@ flags(
   broken((c) => set(c.turnout, SOUTH_GOV, "valid_votes", "521")),
   "more valid votes than votes cast (521 against 520)",
 );
+// A blank figure is skipped, never read as 0. Each case blanks one figure of a row that has them
+// all (the fixture's one row with blanks has cast, rejected and valid all blank, which reads the
+// same as 0).
+eq(
+  "a blank rejected figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "rejected_votes", "")),
+  [],
+);
+eq(
+  "a blank cast figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "cast_votes", "")),
+  [],
+);
+eq(
+  "a blank registered figure is skipped, not read as 0",
+  broken((c) => set(c.turnout, NORTH_GOV, "registered", "")),
+  [],
+);
+eq(
+  "cast equal to registered is fine",
+  broken((c) => {
+    set(c.turnout, SOUTH_GOV, "cast_votes", "900");
+    set(c.turnout, SOUTH_GOV, "valid_votes", "890");
+  }),
+  [],
+);
 const extraRejected = (c: County) => set(c.turnout, NORTH_GOV, "rejected_votes", "11");
 flags(
   "valid plus rejected differs from cast",
@@ -3558,6 +3628,27 @@ eq(
     "known-differences.csv row 3: cast_split for 2022-governor at testland/north-test " +
       "is listed twice",
   ],
+);
+flags(
+  "a recorded cast difference of the wrong size does not close it",
+  broken((c) => {
+    extraRejected(c);
+    c.knownDifferences.push({ ...castGap, difference: "-2" });
+  }),
+  "the recorded difference of -2 does not close it",
+);
+flags(
+  "a recorded cast difference of the wrong sign does not close it",
+  broken((c) => {
+    extraRejected(c);
+    c.knownDifferences.push({ ...castGap, difference: "1" });
+  }),
+  "the recorded difference of 1 does not close it",
+);
+flags(
+  "a recorded cast difference nothing needs is stale",
+  broken((c) => c.knownDifferences.push({ ...castGap })),
+  "no longer matches anything",
 );
 flags(
   "a share over 100%",
@@ -3603,6 +3694,11 @@ flags(
   "a turnout row for an area that is not there",
   broken((c) => set(c.turnout, SOUTH_GOV, "area_key", "testland/ghost-test")),
   "testland/ghost-test is not in the files",
+);
+flags(
+  "a turnout row listed twice",
+  broken((c) => c.turnout.push({ ...find(c.turnout, SOUTH_GOV) })),
+  "2022-governor at testland/south-test is listed twice",
 );
 
 // Areas, parents and ward maps.
@@ -3685,6 +3781,11 @@ flags(
   "an IEBC code that is not one to four digits",
   broken((c) => set(c.areas, { key: "testland" }, "iebc_code", "12345")),
   "the IEBC code 12345 must be one to four digits",
+);
+flags(
+  "an area listed twice",
+  broken((c) => c.areas.push({ ...find(c.areas, { key: "testland/south-test" }) })),
+  "testland/south-test is listed twice",
 );
 
 // Blocs: one party, one bloc, in an election, as blocs.csv records it. A party with none recorded
@@ -3769,6 +3870,11 @@ flags(
   "2022-governor/testland/a-test needs a name with no stray spaces",
 );
 flags(
+  "a candidate name that is too short",
+  broken((c) => set(c.candidates, { name: "B Test" }, "name", "B")),
+  "2022-governor/testland/b needs a name with no stray spaces",
+);
+flags(
   "votes in an area outside the seat",
   broken((c) =>
     set(
@@ -3814,6 +3920,11 @@ flags(
   broken((c) => c.results.push({ ...find(c.results, { candidate_id: P1, area_key: "testland" }) })),
   "is listed twice",
 );
+flags(
+  "a candidate listed twice",
+  broken((c) => c.candidates.push({ ...find(c.candidates, { name: "A Test" }) })),
+  "2022-governor/testland/a-test is listed twice",
+);
 
 // Registers and population.
 flags(
@@ -3835,6 +3946,11 @@ flags(
   "a register source with no publisher",
   broken((c) => set(c.register, { year: "2017" }, "source", "no publisher here")),
   'must read "Publisher, document title"',
+);
+flags(
+  "a register row listed twice",
+  broken((c) => c.register.push({ ...find(c.register, { year: "2017" }) })),
+  "2017 at testland/north-test/ward-one is listed twice",
 );
 const WARD_ONE = { area_key: "testland/north-test/ward-one" };
 const WARD_TWO = { area_key: "testland/north-test/ward-two" };
@@ -3861,6 +3977,14 @@ eq(
   }),
   ["population.csv row 2: 1989 is not a year", "population.csv row 3: 2101 is not a year"],
 );
+eq(
+  "population years 1990 and 2100 are accepted",
+  broken((c) => {
+    set(c.population, WARD_ONE, "year", "1990");
+    set(c.population, WARD_TWO, "year", "2100");
+  }),
+  [],
+);
 flags(
   "a population method that says nothing",
   broken((c) => set(c.population, WARD_ONE, "method", "short")),
@@ -3870,6 +3994,11 @@ flags(
   "a population source with no publisher",
   broken((c) => set(c.population, WARD_ONE, "source", "no publisher here")),
   'must read "Publisher, document title"',
+);
+flags(
+  "a population row listed twice",
+  broken((c) => c.population.push({ ...find(c.population, WARD_ONE) })),
+  "testland/north-test/ward-one in 2025 is listed twice",
 );
 
 // Reading the files.
@@ -3904,6 +4033,112 @@ try {
     "a short row is refused",
     refusal(short).includes("results.csv row 2: 2 cells, expected 3"),
     true,
+  );
+  // The reader refuses what build_sql.py refuses, so that a county the checker passes can become a
+  // migration: a header separated by semicolons (src/lib/csv.ts would read it), a file that is not
+  // UTF-8 (it would decode with replacement characters) and a backslash in a cell.
+  const semicolons = copy("semicolons");
+  writeFileSync(
+    join(semicolons, "results.csv"),
+    "candidate_id;area_key;votes\n2022-governor/testland/a-test;testland;600\n",
+  );
+  eq(
+    "a semicolon-separated file is refused",
+    refusal(semicolons).includes(
+      "results.csv: the header must be separated by commas, not semicolons",
+    ),
+    true,
+  );
+  const areasCsv = readFileSync(join(FIXTURE, "areas.csv"), "utf8");
+  // Characters built from code points, so that this file stays plain ASCII.
+  const BOM = String.fromCharCode(0xfeff);
+  const O_UMLAUT = String.fromCharCode(0xf6); // one byte in Latin-1, not valid UTF-8 alone
+  const legacy = copy("legacy");
+  writeFileSync(
+    join(legacy, "areas.csv"),
+    Buffer.from(areasCsv.replace("North Test", `N${O_UMLAUT}rth Test`), "latin1"),
+  );
+  eq(
+    "a file that is not UTF-8 is refused",
+    refusal(legacy).includes("areas.csv: the file must be UTF-8 text"),
+    true,
+  );
+  const backslash = copy("backslash");
+  writeFileSync(join(backslash, "areas.csv"), areasCsv.replace("North Test", "North\\Test"));
+  eq(
+    "a backslash in a cell is refused",
+    refusal(backslash).includes("areas.csv row 3: the name cell has a backslash"),
+    true,
+  );
+  // ... and takes what build_sql.py takes: a byte-order mark, CRLF line endings, blank rows, and a
+  // semicolon anywhere but the header.
+  const areasRead = (name: string, text: string) => {
+    const dir = copy(name);
+    writeFileSync(join(dir, "areas.csv"), text);
+    try {
+      return loadCounty(dir).areas;
+    } catch (e) {
+      return String(e);
+    }
+  };
+  eq("a byte-order mark is accepted", areasRead("bom", `${BOM}${areasCsv}`), good.areas);
+  eq(
+    "a doubled byte-order mark is refused",
+    String(areasRead("bom2", `${BOM}${BOM}${areasCsv}`)).includes(
+      "areas.csv: the columns must be key,level,name,parent,iebc_code",
+    ),
+    true,
+  );
+  eq(
+    "CRLF line endings are accepted",
+    areasRead("crlf", areasCsv.replace(/\n/g, "\r\n")),
+    good.areas,
+  );
+  eq("blank rows are accepted", areasRead("blank", areasCsv.replace(/\n/g, "\n\n")), good.areas);
+  const semicell = areasCsv.replace("North Test", "North;Test");
+  const northSemicolon = good.areas.map((a) =>
+    a["key"] === "testland/north-test" ? { ...a, name: "North;Test" } : a,
+  );
+  eq(
+    "a semicolon in a cell, not the header, is accepted",
+    areasRead("semicell", semicell),
+    northSemicolon,
+  );
+  eq(
+    "CR line endings and a semicolon in a cell are accepted",
+    areasRead("cr", semicell.replace(/\n/g, "\r")),
+    northSemicolon,
+  );
+  // A line before the header, even a blank one, leaves the header second: build_sql.py reads the
+  // blank line as the first row, and refuses the columns it finds there.
+  const headerFirst = "areas.csv: the first line must be the header, not a blank line";
+  const refusedFirst = (name: string, text: string) =>
+    String(areasRead(name, text)).includes(headerFirst);
+  eq("a blank line before the header is refused", refusedFirst("lead1", `\n${areasCsv}`), true);
+  eq(
+    "two blank lines before the header, in a CRLF file, are refused",
+    refusedFirst("lead2", `\r\n\r\n${areasCsv.replace(/\n/g, "\r\n")}`),
+    true,
+  );
+  eq(
+    "a line of spaces before the header is refused",
+    refusedFirst("lead3", `   \n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a line of commas before the header is refused",
+    refusedFirst("lead4", `,,,,\n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a byte-order mark, a blank line, then the header is refused",
+    refusedFirst("lead5", `${BOM}\n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a byte-order mark, the header, then blank lines are accepted",
+    areasRead("lead6", `${BOM}${areasCsv.replace("\n", "\n\n\n")}\n\n`),
+    good.areas,
   );
   const missing = copy("missing");
   rmSync(join(missing, "register.csv"));
@@ -4057,8 +4292,17 @@ const asked = spawnSync(
   ],
   { encoding: "utf8" },
 );
-if (asked.error || asked.status !== 0) {
+if (asked.error) {
+  // There is no such interpreter, so there is nothing to compare with.
   console.log(`SKIP: ${python} could not say which columns build_sql.py loads.`);
+} else if (asked.status !== 0) {
+  // The interpreter ran and build_sql.py did not load (a syntax error, a renamed FILES): that is a
+  // failure, not a skip, and the interpreter says why.
+  fail++;
+  const how = asked.status ?? asked.signal;
+  console.log(
+    `FAIL the columns match build_sql.py's\n  ${python} exited with ${how}\n${asked.stderr}`,
+  );
 } else {
   const loaded = Object.fromEntries(
     Object.entries(COLUMNS).filter(([file]) => file !== "known-differences"),
@@ -4151,18 +4395,56 @@ export function slugify(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-/** A CSV file's rows as objects, refusing the wrong columns or a row of the wrong length. */
+/**
+ * A CSV file's text, read as scripts/atlas/build_sql.py reads it: as UTF-8, and bytes that are not
+ * UTF-8 are refused, not decoded into replacement characters. A byte-order mark is kept, for
+ * parseCSV to drop exactly one, as build_sql.py's utf-8-sig does: a doubled mark stays in the
+ * first header cell and the columns are refused.
+ */
+function readText(path: string): string {
+  const bytes = readFileSync(path);
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    throw new Error(
+      `${basename(path)}: the file must be UTF-8 text; save it as UTF-8, not a legacy code page`,
+    );
+  }
+}
+
+/**
+ * A CSV file's rows as objects, refusing what build_sql.py refuses: the wrong columns, a header
+ * separated by semicolons (src/lib/csv.ts reads one, build_sql.py reads commas only), a blank line
+ * before the header, a row of the wrong length, and a backslash in a cell.
+ */
 function readRows(path: string, want: readonly string[]): Row[] {
   const label = basename(path);
-  const [head, ...body] = parseCSV(readFileSync(path, "utf8"));
+  const text = readText(path);
+  const first = text.split(/\r\n|\r|\n/, 1)[0] ?? "";
+  if (first.includes(";")) {
+    throw new Error(`${label}: the header must be separated by commas, not semicolons`);
+  }
+  const [head, ...body] = parseCSV(text);
   if (!head || head.join(",") !== want.join(",")) {
     throw new Error(
       `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
     );
   }
+  // parseCSV drops blank rows, so a blank line before the header would pass above, where
+  // build_sql.py reads that line as the first row and refuses it. parseCSV says what blank is.
+  if (parseCSV(first).length === 0) {
+    throw new Error(`${label}: the first line must be the header, not a blank line`);
+  }
   return body.map((cells, i) => {
     if (cells.length !== want.length) {
       throw new Error(`${label} row ${i + 2}: ${cells.length} cells, expected ${want.length}`);
+    }
+    const slash = cells.findIndex((cell) => cell.includes("\\"));
+    if (slash !== -1) {
+      throw new Error(
+        `${label} row ${i + 2}: the ${want[slash]} cell has a backslash, ` +
+          "which build_sql.py refuses",
+      );
     }
     return Object.fromEntries(want.map((column, j) => [column, cells[j] ?? ""]));
   });
@@ -4596,7 +4878,7 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
 
 Run: `npx prettier --write scripts/atlas/checks.ts tests/atlas-data.test.ts && npx eslint scripts/atlas/checks.ts tests/atlas-data.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts | tail -3`
 
-Expected: ESLint prints nothing, then `89 passed, 0 failed`.
+Expected: ESLint prints nothing, then `125 passed, 0 failed`.
 
 - [ ] **Step 9: Commit**
 
@@ -4869,8 +5151,12 @@ The command is
 `python3 scripts/atlas/ward_population.py WARDS_GEOJSON AREAS_CSV RASTER_DIR YEAR SOURCE OUT_CSV`.
 It writes `population.csv`. Each ward is the sum of the grid pixels whose centres fall inside its
 boundary. WorldPop's bands are five years wide, so 18 to 34 is two fifths of 15 to 19 plus 20 to 24,
-25 to 29 and 30 to 34; adults likewise. It needs rasterio and numpy at run time; the age-band
-arithmetic does not, so those tests run anywhere.
+25 to 29 and 30 to 34; adults likewise. It refuses what would quietly undercount or mislead: a set
+of grids with a band left out (both sexes for age 0, age 1 and every fifth age up to 80, or the top
+band the series has), a ward with no people, a ward that runs off the grid, a repeated ward slug in
+the map, and an areas.csv with no wards; pixels equal to a grid's declared nodata are left out; and
+its method text says the figures are estimates. It needs rasterio and numpy at run time; the age-band
+arithmetic and the band rule do not, so those tests run anywhere.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -4907,6 +5193,44 @@ except ImportError:
 
 # WorldPop's bands by their first age: under 1, 1 to 4, then every five years to 80 and over.
 STARTS = [0, 1] + list(range(5, 85, 5))
+
+# An areas.csv with one ward in it, and one with only a county.
+ONE_WARD = "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
+NO_WARDS = "key,level,name,parent,iebc_code\ntestland,county,Testland,kenya,\n"
+
+# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each holding nothing.
+EMPTY_WARD_PIXELS = {(row, column): 0 for row in range(2, 6) for column in range(2, 6)}
+
+# Wards over the ten by ten grid, as (left, top, right, bottom) in pixels from its top left corner.
+# Four columns or rows against each edge, the outline 0.9 of a pixel past that edge: still on the
+# grid, as a border ward's outline can be a hair outside it. Each holds sixteen pixel centres.
+AT_THE_EDGE = {
+    "the right edge": (6.1, 2.1, 10.9, 5.9),
+    "the left edge": (-0.9, 2.1, 3.9, 5.9),
+    "the top edge": (2.1, -0.9, 5.9, 3.9),
+    "the bottom edge": (2.1, 6.1, 5.9, 10.9),
+}
+# Wards that run past an edge by more than a pixel: half off (columns 8 to 11 of ten, and so on),
+# and 1.1 pixels past.
+PAST_THE_EDGE = {
+    "half off the right edge": (8.1, 2.1, 11.9, 5.9),
+    "half off the left edge": (-1.9, 2.1, 1.9, 5.9),
+    "half off the top edge": (2.1, -1.9, 5.9, 1.9),
+    "half off the bottom edge": (2.1, 8.1, 5.9, 11.9),
+    "1.1 pixels past the right edge": (6.1, 2.1, 11.1, 5.9),
+    "1.1 pixels past the left edge": (-1.1, 2.1, 3.9, 5.9),
+    "1.1 pixels past the top edge": (2.1, -1.1, 5.9, 3.9),
+    "1.1 pixels past the bottom edge": (2.1, 6.1, 5.9, 11.1),
+}
+
+
+def ward_map(*features):
+    """The text of a ward map holding these features."""
+    return json.dumps({"type": "FeatureCollection", "features": list(features)})
+
+
+def ward_feature(slug, geometry):
+    return {"type": "Feature", "properties": {"slug": slug}, "geometry": geometry}
 
 
 class Names(unittest.TestCase):
@@ -4972,6 +5296,11 @@ class Rasters(unittest.TestCase):
             (Path(tmp.name) / name).write_bytes(b"")
         return tmp.name
 
+    def grids(self, starts, year=2025):
+        """The year's grids for both sexes at each of these band starts, as find_rasters finds them."""
+        names = [f"ken_{sex}_{lo:02d}_{year}.tif" for sex in ("f", "m") for lo in starts]
+        return wp.find_rasters(self.folder(names), year)
+
     def test_finds_the_years_grids_by_sex_and_age(self):
         found = wp.find_rasters(self.folder(["ken_f_0_2025.tif", "ken_m_0_2025.tif", "ken_f_0_2020.tif", "notes.txt"]), 2025)
         self.assertEqual(sorted(found), [("f", 0), ("m", 0)])
@@ -4995,14 +5324,76 @@ class Rasters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no grids for 2025"):
             wp.check_complete(found, 2025)
 
+    def test_a_band_missing_for_both_sexes_is_refused(self):
+        # Nothing in the files that are there says a whole band is gone, so the bands WorldPop
+        # publishes are looked for by name: under 1, 1 to 4, then every five years.
+        for gap in (20, 1, 5, 75):
+            with self.subTest(band=gap):
+                found = self.grids([lo for lo in STARTS if lo != gap])
+                with self.assertRaisesRegex(ValueError, f"missing grids: f {gap}, m {gap}"):
+                    wp.check_complete(found, 2025)
+
+    def test_grids_that_stop_short_of_80_and_over_are_refused(self):
+        found = self.grids([lo for lo in STARTS if lo <= 75])
+        with self.assertRaisesRegex(ValueError, "missing grids: f 80, m 80"):
+            wp.check_complete(found, 2025)
+
+    def test_a_gap_below_a_higher_top_band_is_refused(self):
+        # A series that goes on to 90 and over needs every band up to its last, not only to 80.
+        found = self.grids([lo for lo in STARTS + [85, 90] if lo != 85])
+        with self.assertRaisesRegex(ValueError, "missing grids: f 85, m 85"):
+            wp.check_complete(found, 2025)
+
+    def test_whole_sets_are_accepted(self):
+        wp.check_complete(self.grids(STARTS), 2025)
+        wp.check_complete(self.grids(STARTS + [85, 90]), 2025)
+
+
+class Method(unittest.TestCase):
+    def test_it_says_the_figures_are_estimates(self):
+        self.assertIn("estimate", wp.METHOD)
+        self.assertTrue(wp.METHOD.endswith("These are estimates, not counts."))
+        self.assertGreaterEqual(len(wp.METHOD), 10)
+        self.assertLessEqual(len(wp.METHOD), 500)
+
+
+class Inputs(unittest.TestCase):
+    """What build_rows refuses in the ward map and areas.csv, before it looks at a single grid."""
+
+    def files(self, features, areas):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        folder = Path(tmp.name)
+        (folder / "wards.json").write_text(ward_map(*features))
+        (folder / "areas.csv").write_text(areas)
+        return folder / "wards.json", folder / "areas.csv", folder
+
+    def test_a_repeated_slug_in_the_ward_map_is_refused(self):
+        # Two different outlines under one slug: the second would quietly replace the first.
+        first = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
+        second = {"type": "Polygon", "coordinates": [[[37.0, -2.0], [37.1, -2.0], [37.1, -2.1], [37.0, -2.0]]]}
+        geo, areas, folder = self.files([ward_feature("ward-one", first), ward_feature("ward-one", second)], ONE_WARD)
+        with self.assertRaisesRegex(ValueError, "ward-one is listed twice in the ward map"):
+            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
+
+    def test_an_areas_file_with_no_ward_rows_is_refused(self):
+        shape = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
+        geo, areas, folder = self.files([ward_feature("ward-one", shape)], NO_WARDS)
+        with self.assertRaisesRegex(ValueError, "no ward rows in areas.csv"):
+            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
+
 
 @unittest.skipUnless(HAVE_RASTERIO, "needs rasterio and numpy")
 class Grids(unittest.TestCase):
-    def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.dir = Path(tmp.name)
-        # Ten by ten pixels of 0.001 degrees, one person in each pixel of every band's grid.
+    def write_grids(self, nodata=-99999, pixels=None):
+        """Ten by ten pixels of 0.001 degrees, one person in each pixel of every band's grid.
+
+        nodata is the value the files declare for no data (None declares none). pixels maps a
+        (row, column) to the value that pixel holds instead of one person, in every grid.
+        """
+        values = np.ones((1, 10, 10), dtype="float32")
+        for (row, column), value in (pixels or {}).items():
+            values[0, row, column] = value
         transform = from_origin(36.0, -1.0, 0.001, 0.001)
         for sex in ("f", "m"):
             for lo in STARTS:
@@ -5016,9 +5407,38 @@ class Grids(unittest.TestCase):
                     dtype="float32",
                     crs="EPSG:4326",
                     transform=transform,
-                    nodata=-99999,
+                    nodata=nodata,
                 ) as dst:
-                    dst.write(np.ones((1, 10, 10), dtype="float32"))
+                    dst.write(values)
+
+    def sums_over(self, ward):
+        sums = wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
+        self.assertEqual(len(sums), 36)
+        return sums
+
+    def write_inputs(self, ward=None):
+        """wards.json and areas.csv beside the grids, for the one ward, ward-one; returns their paths."""
+        geo = self.dir / "wards.json"
+        geo.write_text(ward_map(ward_feature("ward-one", ward or self.ward)))
+        areas = self.dir / "areas.csv"
+        areas.write_text(ONE_WARD)
+        return geo, areas
+
+    def ward_over(self, left, top, right, bottom):
+        """A ward from pixel column left to right and row top to bottom of the ten by ten grid,
+        counted from its top left corner (fractions allowed)."""
+
+        def corner(column, row):
+            return [round(36.0 + 0.001 * column, 6), round(-1.0 - 0.001 * row, 6)]
+
+        ring = [corner(left, top), corner(right, top), corner(right, bottom), corner(left, bottom), corner(left, top)]
+        return {"type": "Polygon", "coordinates": [ring]}
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.write_grids()
         # A ward over four columns and four rows of pixel centres: sixteen pixels.
         self.ward = {
             "type": "Polygon",
@@ -5094,6 +5514,89 @@ class Grids(unittest.TestCase):
         self.assertGreaterEqual(len(wp.METHOD), 10)
         self.assertLessEqual(len(wp.METHOD), 500)
 
+    def test_a_pixel_the_ward_only_clips_is_left_out(self):
+        # The same sixteen pixel centres, now with a sliver 0.0001 degrees wide of the pixels all
+        # round them: it touches those pixels but reaches none of their centres, so the answer is
+        # the same. (Counting every pixel the ward touches would make it 36 a grid, not 16.)
+        clipped = {
+            "type": "Polygon",
+            "coordinates": [
+                [[36.0019, -1.0019], [36.0061, -1.0019], [36.0061, -1.0061], [36.0019, -1.0061], [36.0019, -1.0019]]
+            ],
+        }
+        sums = self.sums_over(clipped)
+        self.assertTrue(all(v == 16 for v in sums.values()))
+        self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
+
+    def test_a_positive_value_declared_as_no_data_is_not_people(self):
+        # 9999 is the files' no-data value and one pixel of the ward holds it in every grid:
+        # fifteen people a grid, not 10,014.
+        self.write_grids(nodata=9999, pixels={(3, 3): 9999})
+        sums = self.sums_over(self.ward)
+        self.assertTrue(all(v == 15 for v in sums.values()))
+        self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
+
+    def test_negative_and_nan_pixels_are_not_people(self):
+        # One pixel of the ward holds a number below zero, or NaN, whether the files declare it as
+        # no data or not.
+        for label, nodata, value in (
+            ("a declared negative", -99999, -99999),
+            ("an undeclared negative", None, -99999),
+            ("a declared NaN", float("nan"), float("nan")),
+        ):
+            with self.subTest(label):
+                self.write_grids(nodata=nodata, pixels={(3, 3): value})
+                sums = self.sums_over(self.ward)
+                self.assertTrue(all(v == 15 for v in sums.values()))
+                self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
+
+    def test_a_ward_with_no_people_is_refused_not_written_as_zero(self):
+        self.write_grids(pixels=EMPTY_WARD_PIXELS)
+        geo, areas = self.write_inputs()
+        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the grids hold no people"):
+            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
+
+    def test_main_stops_for_a_ward_with_no_people_and_writes_no_file(self):
+        self.write_grids(pixels=EMPTY_WARD_PIXELS)
+        geo, areas = self.write_inputs()
+        out = self.dir / "population.csv"
+        with self.assertRaisesRegex(SystemExit, "hold no people"):
+            wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
+        self.assertFalse(out.exists())
+
+    def test_a_ward_that_runs_past_the_grid_is_refused(self):
+        rasters = wp.find_rasters(self.dir, 2025)
+        for what, edges in PAST_THE_EDGE.items():
+            with self.subTest(what):
+                with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
+                    wp.ward_sums(self.ward_over(*edges), rasters)
+
+    def test_a_bbox_in_the_geometry_does_not_hide_a_ward_that_runs_past_the_grid(self):
+        # The coordinates run off the grid while the bbox member says the ward fits inside it.
+        ward = dict(self.ward_over(*PAST_THE_EDGE["half off the right edge"]), bbox=[36.002, -1.006, 36.006, -1.002])
+        with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
+            wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
+
+    def test_a_ward_that_runs_past_the_grid_is_named_by_its_key(self):
+        geo, areas = self.write_inputs(self.ward_over(*PAST_THE_EDGE["half off the right edge"]))
+        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the ward runs past the grid"):
+            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
+
+    def test_a_ward_at_the_edge_of_the_grid_still_works(self):
+        for what, edges in AT_THE_EDGE.items():
+            with self.subTest(what):
+                sums = self.sums_over(self.ward_over(*edges))
+                self.assertTrue(all(v == 16 for v in sums.values()))
+                self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
+
+    def test_the_file_is_written_with_unix_line_ends(self):
+        geo, areas = self.write_inputs()
+        out = self.dir / "population.csv"
+        wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
+        raw = out.read_bytes()
+        self.assertNotIn(b"\r", raw)
+        self.assertTrue(raw.endswith(b"\n"))
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -5118,7 +5621,8 @@ Usage:
   WARDS_GEOJSON  a ward map with a "slug" on each feature (public/geo/nairobi-wards.json)
   AREAS_CSV      the county's areas.csv; every ward in it must be in the ward map
   RASTER_DIR     WorldPop's 100 m age-and-sex GeoTIFFs for Kenya for YEAR: one per sex and age
-                 band, named like ken_f_15_2025_....tif (sex f or m, the band's first age, year)
+                 band, every band (under 1, 1 to 4, then every five years to 80 and over), named
+                 like ken_f_15_2025_....tif (sex f or m, the band's first age, year)
   YEAR           the year of the grids
   SOURCE         the source, written "WorldPop, <dataset title and version>"
   OUT_CSV        population.csv: area_key, year, total, adults, young_adults, source, method
@@ -5140,7 +5644,7 @@ from pathlib import Path
 METHOD = (
     "WorldPop age-and-sex grid at 100 m: the people in the pixels whose centres fall inside the "
     "ward. Five-year bands are split evenly, so 18-34 is two fifths of 15-19 plus 20-24, 25-29 and "
-    "30-34; adults likewise."
+    "30-34; adults likewise. These are estimates, not counts."
 )
 
 RASTER_NAME = re.compile(r"(?:^|_)(f|m)_(\d{1,2})_(\d{4})(?:_|\.|$)", re.IGNORECASE)
@@ -5195,7 +5699,9 @@ def find_rasters(directory, year):
 
 
 def check_complete(found, year):
-    """Both sexes for every band, from age 0: a band left out would quietly undercount."""
+    """Both sexes for every band WorldPop publishes, from age 0: under 1, 1 to 4, then every five
+    years to 80 and over (or to the last band, where the series goes on past 80). A band left out
+    would quietly undercount."""
     if not found:
         raise ValueError(f"no grids for {year}")
     ages = {lo for _, lo in found}
@@ -5204,28 +5710,60 @@ def check_complete(found, year):
         raise ValueError("missing grids: " + ", ".join(missing))
     if 0 not in ages:
         raise ValueError("the grids must start at age 0, so that the total counts everyone")
+    # The checks above only see the bands that are there, so a band missing for both sexes gets
+    # past them: look for each band by name.
+    wanted = [0, 1, *range(5, max(max(ages), 80) + 1, 5)]
+    left_out = [f"{sex} {lo}" for lo in wanted for sex in ("f", "m") if (sex, lo) not in found]
+    if left_out:
+        raise ValueError("missing grids: " + ", ".join(left_out))
 
 
 def ward_sums(geometry, rasters):
-    """{(sex, first age): people inside the ward}: the pixels whose centres fall within it."""
+    """{(sex, first age): people inside the ward}: the pixels whose centres fall within it.
+
+    A pixel counts only if it holds more than zero and is not the file's declared no-data value,
+    so a positive sentinel such as 9999 is not taken for people. A ward that runs more than a
+    pixel past the edge of a grid is refused: the part off the grid would quietly be left out.
+    """
     import rasterio
+    from rasterio.features import bounds
     from rasterio.mask import mask
 
+    # The outline's own coordinates: a bbox member, if the map has one, is not taken on trust.
+    left, bottom, right, top = bounds({k: v for k, v in geometry.items() if k != "bbox"})
     sums = {}
     for key, path in rasters.items():
         with rasterio.open(path) as src:
+            width, height = src.res
+            if (
+                left < src.bounds.left - width
+                or right > src.bounds.right + width
+                or bottom < src.bounds.bottom - height
+                or top > src.bounds.top + height
+            ):
+                raise ValueError(f"the ward runs past the grid ({path.name})")
             data, _ = mask(src, [geometry], crop=True, all_touched=False, filled=True)
             band = data[0]
-            sums[key] = float(band[band > 0].sum())
+            people = band > 0
+            if src.nodata is not None:
+                people &= band != src.nodata
+            sums[key] = float(band[people].sum())
     return sums
 
 
 def build_rows(wards_geojson, areas_csv, raster_dir, year, source):
     """population.csv's rows: one for each ward in areas.csv."""
+    shapes = {}
     with open(wards_geojson, encoding="utf-8") as f:
-        shapes = {ft["properties"]["slug"]: ft["geometry"] for ft in json.load(f)["features"]}
+        for ft in json.load(f)["features"]:
+            slug = ft["properties"]["slug"]
+            if slug in shapes:
+                raise ValueError(f"{slug} is listed twice in the ward map")
+            shapes[slug] = ft["geometry"]
     with open(areas_csv, newline="", encoding="utf-8-sig") as f:
         wards = sorted(row["key"] for row in csv.DictReader(f) if row["level"] == "ward")
+    if not wards:
+        raise ValueError("no ward rows in areas.csv")
     rasters = find_rasters(raster_dir, year)
     check_complete(rasters, year)
     rows = []
@@ -5252,7 +5790,7 @@ def main(argv):
     except ValueError as e:
         raise SystemExit(str(e))
     with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["area_key", "year", "total", "adults", "young_adults", "source", "method"])
         writer.writerows(rows)
 
@@ -5265,11 +5803,11 @@ if __name__ == "__main__":
 
 Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 50 tests` and `OK (skipped=5)`: the five grid tests skip without rasterio.
+Expected: `Ran 67 tests` and `OK (skipped=15)`: the fifteen grid tests skip without rasterio.
 
 Run: `python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy && /tmp/gwvenv/bin/python -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
 
-Expected: `Ran 50 tests` and `OK`: nothing skipped.
+Expected: `Ran 67 tests` and `OK`: nothing skipped.
 
 - [ ] **Step 5: Commit**
 
@@ -5735,7 +6273,7 @@ Expected:
 
 ```
 tests/atlas-advice.test.ts        48 passed, 0 failed
-tests/atlas-data.test.ts          89 passed, 0 failed
+tests/atlas-data.test.ts          125 passed, 0 failed
 tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
@@ -5910,9 +6448,13 @@ On WorldPop's hub find the age-and-sex structures for Kenya at 100 m for the lat
 files: under 1, 1 to 4, then every five years up to 80 and over), into
 `data/atlas/_sources/worldpop-<year>/`, checksum them as in Step 4, and check the disk first
 (`df -h /home/user` should show several GB free). The script finds a grid by a file name like
-`ken_f_15_2025_....tif` (sex `f` or `m`, the band's first age, the year) and accepts any age bands as
-long as both sexes have every band and the bands start at age 0. If the names differ from that
-pattern, rename copies and leave the originals alone. Then:
+`ken_f_15_2025_....tif` (sex `f` or `m`, the band's first age, the year). It needs both sexes for age 0,
+age 1 and every fifth age after that up to 80 (or the series' top band if it goes further), and it
+refuses a set with any of them missing, naming the missing grids: count the files against the
+publisher's listing before you run it. If the names differ from the pattern, rename copies and leave
+the originals alone; if a complete set from another layout is refused, say so rather than editing the
+script. Look at the declared nodata value of the first grid (`rasterio.open(path).nodata`) and note it
+in `SOURCES.md`; the script leaves out pixels equal to it. Then:
 
 ```bash
 python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy
