@@ -2,3 +2,5 @@ election,area,registered,cast_votes,rejected,valid,source
 2022-president,nyeri,482000,329151,2271,326880,iebc-2022-form-34c
 2022-president,nyeri/mathira,104439,73439,465,,star-2022-mathira-president
 2013-president,nyeri,356380,,,,electionskenya-2013-president
+2022-mp,nyeri/tetu,54986,38314,,,kna-2022-nyeri-mps
+2022-mp,nyeri/othaya,,44676,,,kna-2022-nyeri-mps

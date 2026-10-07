@@ -40,7 +40,9 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
   empty: the screens then call those shares "of the candidates listed".
 - Votes cast may be entered as valid plus rejected when a document gives those two, since
   that is how IEBC's forms define it; say so in the source's note.
-- The bloc is the coalition the candidate's party stood in, else the party. An independent
+- In MP races the bloc is the party: coalition partners often stood against each other
+  (UDA against TSP in Tetu, ODM against Jubilee in Mathare). In presidential and governor
+  races the bloc is the coalition the candidate's party stood in, else the party. An independent
   is a bloc of their own: `Independent: <name>`. The main coalitions: 2013 Jubilee (TNA, URP
   and partners), CORD (ODM, Wiper, Ford-K and partners), Amani (UDF, KANU and partners); 2017
   Jubilee (Jubilee Party), NASA (ODM, Wiper, ANC, Ford-K, CCM); 2022 Kenya Kwanza (UDA, ANC,

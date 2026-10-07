@@ -35,3 +35,34 @@ election,seat,candidate,area,votes,source
 2022-governor,nairobi,Polycarp Igathe,nairobi/starehe,35223,star-2022-nairobi-governor
 2022-governor,nairobi,Johnson Sakaja,nairobi/westlands,40024,star-2022-nairobi-governor
 2022-governor,nairobi,Polycarp Igathe,nairobi/westlands,38635,star-2022-nairobi-governor
+2022-mp,nairobi/westlands,Timothy Wanyonyi Wetangula,nairobi/westlands,58408,star-2022-westlands-mp
+2022-mp,nairobi/westlands,Nelson Andayi Havi,nairobi/westlands,19550,star-2022-westlands-mp
+2022-mp,nairobi/kibra,Peter Ochieng Orero,nairobi/kibra,33008,citizen-2022-kibra-mp
+2022-mp,nairobi/kibra,Mcdonald Mariga Wanyama,nairobi/kibra,20049,citizen-2022-kibra-mp
+2022-mp,nairobi/kibra,Benard Otieno Okoth,nairobi/kibra,18901,citizen-2022-kibra-mp
+2022-mp,nairobi/langata,Phelix Odiwuor Khodhe,nairobi/langata,38948,citizen-2022-langata-mp
+2022-mp,nairobi/langata,Generali Nixon Kiprotich Korir,nairobi/langata,36836,citizen-2022-langata-mp
+2022-mp,nairobi/embakasi-east,Paul Ongili Babu Owino,nairobi/embakasi-east,57410,citizen-2022-embakasi-east-mp
+2022-mp,nairobi/embakasi-east,Francis Mureithi Wambugu,nairobi/embakasi-east,29104,citizen-2022-embakasi-east-mp
+2022-mp,nairobi/embakasi-central,Benjamin Gathiru Mejjadonk,nairobi/embakasi-central,48277,star-2022-embakasi-central-mp
+2022-mp,nairobi/embakasi-central,Samuel Ng'ang'a Mwangi,nairobi/embakasi-central,29375,star-2022-embakasi-central-mp
+2022-mp,nairobi/mathare,Anthony Tom Oluoch,nairobi/mathare,28098,star-2022-mathare-mp
+2022-mp,nairobi/mathare,Billian Okoth Ojiwa,nairobi/mathare,16912,star-2022-mathare-mp
+2022-mp,nairobi/mathare,Kevin Bahati Kioko,nairobi/mathare,8166,star-2022-mathare-mp
+2022-mp,nairobi/kasarani,Ronald Kamwiko Karauri,nairobi/kasarani,32406,citizen-2022-kasarani-mp
+2022-mp,nairobi/kasarani,John Njoroge Chege,nairobi/kasarani,30444,citizen-2022-kasarani-mp
+2022-mp,nairobi/kasarani,Mercy Wanjiku Gakuya,nairobi/kasarani,24790,citizen-2022-kasarani-mp
+2022-mp,nairobi/dagoretti-north,Beatrice Kadeveresia Elachi,nairobi/dagoretti-north,52515,citizen-2022-dagoretti-north-mp
+2022-mp,nairobi/dagoretti-north,Elijah Getui Oenga,nairobi/dagoretti-north,13620,citizen-2022-dagoretti-north-mp
+2022-mp,nairobi/dagoretti-south,John Kiarie Waweru,nairobi/dagoretti-south,26394,citizen-2022-dagoretti-south-mp
+2022-mp,nairobi/dagoretti-south,Dennis Kariuki Waweru,nairobi/dagoretti-south,22773,citizen-2022-dagoretti-south-mp
+2022-mp,nairobi/starehe,Amos Mwago Maina,nairobi/starehe,50787,star-2022-starehe-mp
+2022-mp,nairobi/starehe,Simon Nganga Mbugua,nairobi/starehe,35548,star-2022-starehe-mp
+2013-mp,nairobi/embakasi-west,George Theuri,nairobi/embakasi-west,40606,star-2022-embakasi-west-history
+2013-mp,nairobi/embakasi-west,Brian Weke,nairobi/embakasi-west,35333,star-2022-embakasi-west-history
+2017-mp,nairobi/embakasi-west,George Theuri,nairobi/embakasi-west,47848,star-2022-embakasi-west-history
+2017-mp,nairobi/embakasi-west,Tom Agimba,nairobi/embakasi-west,30983,star-2022-embakasi-west-history
+2022-president,kenya,William Ruto,nairobi/roysambu,59180,star-2022-roysambu-president
+2022-president,kenya,Raila Odinga,nairobi/roysambu,31032,star-2022-roysambu-president
+2017-president,kenya,Raila Odinga,nairobi,828826,star-2022-nairobi-roundup
+2017-president,kenya,Uhuru Kenyatta,nairobi,791291,star-2022-nairobi-roundup
