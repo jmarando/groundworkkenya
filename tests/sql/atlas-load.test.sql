@@ -23,6 +23,12 @@ do $$ begin
   assert (select votes from public.atlas_results where candidate_id = '2022-mp/testland/north-test/otest') = 0, 'a real zero is kept';
   assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing figure stays missing';
   assert (select registered from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') = 1000, 'and the one given is kept';
+  assert (select rejected_votes from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing rejected count stays missing';
+  assert (select valid_votes from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing valid count stays missing';
+  assert (select source_url from public.atlas_turnout
+           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a blank link is null';
   assert (select sum(r.votes) from public.atlas_results r
             join public.atlas_candidates c on c.id = r.candidate_id
            where c.election_id = '2022-governor' and r.area_key like 'testland/%') = 1000,
@@ -52,14 +58,22 @@ rollback;
 -- test: loading it again puts back a figure that was changed
 begin;
 \ir ../fixtures/atlas/testland.sql
+update public.atlas_areas set name = 'Changed' where key = 'testland';
+update public.atlas_candidates set party = 'Changed' where id = '2022-governor/testland/a-test';
 update public.atlas_results set votes = 1 where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland';
 update public.atlas_turnout set source = 'Someone, changed it' where election_id = '2022-governor' and area_key = 'testland';
+update public.atlas_register set registered = 1 where year = 2022 and area_key = 'testland';
+update public.atlas_population set total = 2000 where area_key = 'testland/north-test/ward-one';
 \ir ../fixtures/atlas/testland.sql
 do $$ begin
+  assert (select name from public.atlas_areas where key = 'testland') = 'Testland', 'a changed area name was kept';
+  assert (select party from public.atlas_candidates where id = '2022-governor/testland/a-test') = 'Party A', 'a changed party was kept';
   assert (select votes from public.atlas_results
            where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland') = 600, 'a changed result was kept';
   assert (select source from public.atlas_turnout
            where election_id = '2022-governor' and area_key = 'testland') = 'IEBC, Governor results by constituency 2022',
     'a changed source was kept';
+  assert (select registered from public.atlas_register where year = 2022 and area_key = 'testland') = 2000, 'a changed register was kept';
+  assert (select total from public.atlas_population where area_key = 'testland/north-test/ward-one') = 1500, 'a changed population was kept';
 end $$;
 rollback;

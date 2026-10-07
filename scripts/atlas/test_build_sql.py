@@ -34,6 +34,15 @@ class Literals(unittest.TestCase):
     def test_text_that_looks_like_a_number_stays_text(self):
         self.assertEqual(build_sql.literal("iebc_code", "047"), "'047'")
 
+    def test_a_number_must_be_ascii_digits(self):
+        for value in ("٣٠٠", "１２３", "1٣"):
+            with self.assertRaises(ValueError):
+                build_sql.literal("votes", value)
+
+    def test_a_backslash_is_refused(self):
+        with self.assertRaises(ValueError):
+            build_sql.literal("name", "Wa\\Test")
+
 
 class Build(unittest.TestCase):
     def test_the_fixture_builds_the_golden_file(self):
@@ -72,6 +81,12 @@ class Build(unittest.TestCase):
             sql = build_sql.build(copy, "Testland")
             self.assertEqual(sql.count("insert into public.atlas_results "), 3)
 
+    def test_main_writes_the_golden_file_as_utf8_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "testland.sql"
+            build_sql.main(["build_sql.py", str(FIXTURE), "Testland", str(out)])
+            self.assertEqual(out.read_bytes(), GOLDEN.read_bytes())
+
 
 class Refusals(unittest.TestCase):
     def copy_fixture(self, tmp):
@@ -107,6 +122,19 @@ class Refusals(unittest.TestCase):
                 "candidate_id,area_key,votes\n2022-governor/testland/a-test,testland,6OO\n"
             )
             with self.assertRaisesRegex(ValueError, "results.csv row 2"):
+                build_sql.build(copy, "Testland")
+
+    def test_a_row_listed_twice_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = self.copy_fixture(tmp)
+            (copy / "results.csv").write_text(
+                "candidate_id,area_key,votes\n"
+                "2022-governor/testland/a-test,testland,600\n"
+                "2022-governor/testland/a-test,testland,601\n"
+            )
+            with self.assertRaisesRegex(
+                ValueError, "results.csv row 3: the same candidate_id, area_key as row 2"
+            ):
                 build_sql.build(copy, "Testland")
 
 

@@ -67,14 +67,20 @@ def literal(column, value):
     if value == "":
         return "null"
     if column in NUMBERS:
-        if not re.fullmatch(r"\d+", value):
+        # [0-9], not \d: \d also matches Arabic-Indic and full-width digits, which Postgres rejects.
+        if not re.fullmatch(r"[0-9]+", value):
             raise ValueError(f"{column} must be a whole number, not {value!r}")
         return value
+    # The quoting below is only right while the server's standard_conforming_strings is on (its
+    # default), and a data cell has no business holding a backslash.
+    if "\\" in value:
+        raise ValueError(f"{column} must not contain a backslash, not {value!r}")
     return "'" + value.replace("'", "''") + "'"
 
 
 def read(directory, name):
-    """A file's rows as dicts, each with the line it came from in "_row"."""
+    """A file's rows as dicts, each with the row number it came from in "_row": the header is
+    row 1, so the first data row is row 2."""
     path = Path(directory) / f"{name}.csv"
     if not path.exists():
         raise ValueError(f"{path.name} is missing")
@@ -84,6 +90,8 @@ def read(directory, name):
     if not rows or rows[0] != want:
         found = ",".join(rows[0]) if rows else "nothing"
         raise ValueError(f"{path.name}: the columns must be {','.join(want)}; found {found}")
+    key = TABLES[name][1]
+    seen = {}  # each row's key cells, as read -> the row number they first appeared on
     out = []
     for n, cells in enumerate(rows[1:], start=2):
         if not any(cell.strip() for cell in cells):
@@ -91,6 +99,13 @@ def read(directory, name):
         if len(cells) != len(want):
             raise ValueError(f"{path.name} row {n}: {len(cells)} cells, expected {len(want)}")
         row = dict(zip(want, cells))
+        # A repeated row would load silently, the last one winning, when the two fall in different
+        # CHUNKs, and Postgres would refuse it when they fall in the same one.
+        pair = tuple(row[c] for c in key)
+        if pair in seen:
+            first = seen[pair]
+            raise ValueError(f"{path.name} row {n}: the same {', '.join(key)} as row {first}")
+        seen[pair] = n
         row["_row"] = n
         out.append(row)
     return out
