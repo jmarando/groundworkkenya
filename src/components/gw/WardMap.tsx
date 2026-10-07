@@ -56,6 +56,8 @@ const NAIROBI: LngLatBoundsLike = [
 ];
 const EMPTY = { type: "FeatureCollection" as const, features: [] };
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
+const MIN_ZOOM = 10;
+const MAX_ZOOM = 19;
 
 function styleUrl(basemap: Basemap, key: string | null): string {
   if (!key) return OPENFREEMAP;
@@ -209,6 +211,7 @@ export function WardMap(props: Props) {
   // style load so data and states are put back on the new basemap.
   const [loaded, setLoaded] = useState(false);
   const [styleRev, setStyleRev] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(10);
   const [drag, setDrag] = useState<{
     x0: number;
     y0: number;
@@ -231,15 +234,21 @@ export function WardMap(props: Props) {
         attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,
-        maxZoom: 20,
+        minZoom: MIN_ZOOM,
+        maxZoom: MAX_ZOOM,
       });
       map.touchZoomRotate.disableRotation();
+      map.scrollZoom.enable();
+      map.doubleClickZoom.enable();
       map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: "metric" }), "bottom-right");
       map.on("style.load", () => {
         if (!map) return;
         addOverlays(map, latest.current.basemap);
         setStyleRev((r) => r + 1);
         setLoaded(true);
+      });
+      map.on("zoom", () => {
+        if (map) setZoomLevel(map.getZoom());
       });
       map.on("error", (e) => {
         const status = (e.error as { status?: number } | undefined)?.status;
@@ -374,8 +383,10 @@ export function WardMap(props: Props) {
   function zoom(by: number) {
     const map = mapRef.current;
     if (!map) return;
-    if (by > 0) map.zoomIn();
-    else map.zoomOut();
+    map.easeTo({
+      zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, map.getZoom() + by)),
+      duration: 240,
+    });
   }
 
   function fit() {
@@ -457,20 +468,32 @@ export function WardMap(props: Props) {
       )}
       {!loaded && <div className="vmap-loading meta">Loading the map…</div>}
       {props.children}
-      <div className="vglass vzoom">
-        <button type="button" aria-label="Zoom in" onClick={() => zoom(1)}>
+      <div className="vglass vzoom" aria-label="Map zoom controls">
+        <button
+          type="button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          disabled={!loaded || zoomLevel >= MAX_ZOOM - 0.01}
+          onClick={() => zoom(1)}
+        >
           +
         </button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoom(-1)}>
+        <button
+          type="button"
+          aria-label="Zoom out"
+          title="Zoom out"
+          disabled={!loaded || zoomLevel <= MIN_ZOOM + 0.01}
+          onClick={() => zoom(-1)}
+        >
           −
         </button>
         <button
           type="button"
           aria-label={props.wardBox ? "Fit the ward" : "Fit the county"}
-          style={{ fontSize: 12 }}
+          title={props.wardBox ? "Show the whole ward" : "Show all wards"}
           onClick={fit}
         >
-          ⤢
+          <span aria-hidden="true">⌖</span>
         </button>
       </div>
       {props.maptilerKey && (

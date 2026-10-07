@@ -366,7 +366,7 @@ export function VotersMap({
               onTilesRefused={() => setTilesRefused(true)}
             >
               <div className="vtop">
-                <div className="vglass vseg" role="group" aria-label="Basemap">
+                <div className="vglass vseg vseg--map" role="group" aria-label="Map view">
                   <button
                     type="button"
                     aria-pressed={shown === "satellite"}
@@ -385,7 +385,7 @@ export function VotersMap({
                   </button>
                 </div>
                 {ward && (
-                  <div className="vglass vseg" role="group" aria-label="Colour buildings by">
+                  <div className="vglass vseg vseg--data" role="group" aria-label="Colour buildings by">
                     {LAYERS.map((l) => (
                       <button
                         key={l.key}
@@ -400,13 +400,13 @@ export function VotersMap({
                 )}
                 <span className="spacer" />
                 {ward && wardBuildings && (
-                  <div className="vglass vseg" role="group" aria-label="Map tool">
+                  <div className="vglass vseg vseg--tool" role="group" aria-label="Map action">
                     <button
                       type="button"
                       aria-pressed={tool === "pan"}
                       onClick={() => setTool("pan")}
                     >
-                      Pan
+                      Move map
                     </button>
                     <button
                       type="button"
@@ -417,6 +417,15 @@ export function VotersMap({
                     </button>
                   </div>
                 )}
+              </div>
+              <div className="vglass vhint" role="status">
+                {!ward
+                  ? "Choose a ward on the map or from the list"
+                  : tool === "select"
+                    ? "Drag across buildings to select an area"
+                    : wardBuildings
+                      ? "Tap a building to see its people"
+                      : "Move or zoom the map to explore this ward"}
               </div>
               <div className="vglass vleg">
                 {legend.map((it) => (
@@ -478,8 +487,11 @@ export function VotersMap({
             {!ward && (
               <>
                 <div className="card-head" style={{ margin: "6px 0 4px" }}>
-                  <h2>Where the gap is</h2>
-                  <span className="mono">tap to fly there</span>
+                  <div>
+                    <span className="eyebrow">Start here</span>
+                    <h2>Choose a ward</h2>
+                  </div>
+                  <span className="mono">largest gaps first</span>
                 </div>
                 {worst.map((w) => (
                   <button key={w.slug} type="button" className="wl" onClick={() => setSlug(w.slug)}>
@@ -508,8 +520,13 @@ export function VotersMap({
             {ward && !focus && (
               <>
                 <div className="card-head" style={{ margin: "6px 0 4px" }}>
-                  <h2>{ward.name}</h2>
-                  <span className="mono">{ward.constituency}</span>
+                  <div>
+                    <span className="eyebrow">Ward selected</span>
+                    <h2>{ward.name}</h2>
+                  </div>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => setSlug(null)}>
+                    All wards
+                  </button>
                 </div>
                 <div className="bp-grid" style={{ gridTemplateColumns: "repeat(3,1fr)" }}>
                   <div>
