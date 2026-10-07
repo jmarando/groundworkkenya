@@ -2394,6 +2394,11 @@ eq(
     inherited: false,
   },
 );
+eq(
+  "a ward's own results come before its constituency's",
+  resultsArea("nairobi/kibra/sarangombe", () => true),
+  { key: "nairobi/kibra/sarangombe", inherited: false },
+);
 eq("a ward whose constituency has none", resultsArea("nairobi/langata/karen", has), null);
 eq(
   "a constituency with none does not borrow the county's",
@@ -2534,7 +2539,7 @@ tests/atlas-measures        35 passed, 0 failed
 tests/atlas-register        20 passed, 0 failed
 tests/atlas-format          25 passed, 0 failed
 tests/atlas-advice          48 passed, 0 failed
-tests/atlas-scope           11 passed, 0 failed
+tests/atlas-scope           12 passed, 0 failed
 ```
 
 Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "src/lib/atlas|integrations/supabase/types"`
@@ -5377,7 +5382,7 @@ tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
 tests/atlas-report.test.ts        5 passed, 0 failed
-tests/atlas-scope.test.ts         11 passed, 0 failed
+tests/atlas-scope.test.ts         12 passed, 0 failed
 tests/atlas-scripts.test.ts       atlas script tests passed
 ```
 
