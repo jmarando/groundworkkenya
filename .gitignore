@@ -38,3 +38,7 @@ dist-ssr
 .env.local
 .env.*.local
 .dev.vars
+
+# Election atlas: the documents downloaded to read figures from. They are public but large;
+# data/atlas/SOURCES.md says where each came from and its checksum.
+data/atlas/_sources/
