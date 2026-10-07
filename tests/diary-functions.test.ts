@@ -57,8 +57,20 @@ async function main() {
       row("sunday", "2026-10-11", null),
     ],
     wards: [
-      { id: "w2", campaign_id: "c2", name: "Umoja I" },
-      { id: "w1", campaign_id: "c2", name: "Kayole North" },
+      {
+        id: "w2",
+        campaign_id: "c2",
+        name: "Umoja I",
+        slug: "umoja-i",
+        constituency: "Embakasi West",
+      },
+      {
+        id: "w1",
+        campaign_id: "c2",
+        name: "Kayole North",
+        slug: "kayole-north",
+        constituency: "Embakasi Central",
+      },
     ],
   });
 
@@ -82,6 +94,14 @@ async function main() {
     "the campaign's wards, by name",
     week.wards.map((w) => w.name),
     ["Kayole North", "Umoja I"],
+  );
+  eq(
+    "the wards say where they are, for the atlas's brief",
+    week.wards.map((w) => [w.slug, w.constituency]),
+    [
+      ["kayole-north", "Embakasi Central"],
+      ["umoja-i", "Embakasi West"],
+    ],
   );
 
   const id = await writeEntry(sb as never, {

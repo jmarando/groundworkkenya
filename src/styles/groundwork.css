@@ -2047,3 +2047,4 @@ figure { margin: 0; }
 .home-moves .meta { margin:4px 0 0; }
 .vt-last { margin:10px 2px 0; font-size:13px; line-height:1.8; }
 .vt-last-l { font-weight:600; margin-right:8px; }
+.diary-brief { margin:2px 0 0; font-size:12px; color:var(--muted-foreground); }
