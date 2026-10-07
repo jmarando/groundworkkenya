@@ -2014,3 +2014,28 @@ figure { margin: 0; }
   .vt-numbers > :nth-child(-n+2) { border-top:0; }
   .vt-actions { justify-content:flex-start; }
 }
+
+/* Elections: the switches, what to do, the results, the map, notes, and the printed brief */
+.el-switches { display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 16px; }
+.el-actions { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+.el-grid { display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(0, 1fr); gap:14px; margin:14px 0; }
+.el-side { display:flex; flex-direction:column; gap:14px; min-width:0; }
+.el-todo { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 14px; border:1px solid var(--border); border-left-width:4px; border-radius:12px; background:var(--card); margin-bottom:14px; }
+.el-chip { display:inline-block; padding:2px 9px; border-radius:999px; color:#fff; font-size:11.5px; font-weight:600; }
+.el-src { font-size:11.5px; color:var(--muted-foreground); margin:8px 0 0; }
+.el-result + .el-result { margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+.el-result-h { margin:0 0 8px; }
+.el-map { width:100%; height:auto; display:block; }
+.el-note textarea { width:100%; font:inherit; padding:10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:inherit; }
+.el-note-body { white-space:pre-wrap; margin:0 0 6px; }
+.el-print-only { display:none; }
+@media (max-width:1100px) {
+  .el-grid { grid-template-columns:1fr; }
+  .el-actions { justify-content:flex-start; }
+}
+@media print {
+  .sb, .topbar, .el-actions, .el-switches, .el-note .mb-actions, .el-map + .meta { display:none !important; }
+  .main { margin-left:0 !important; padding:0 !important; }
+  .el-print-only { display:block; font-size:11px; color:#555; }
+  .card { break-inside:avoid; box-shadow:none; }
+}

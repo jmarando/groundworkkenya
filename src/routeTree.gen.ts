@@ -20,6 +20,7 @@ import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
 import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authenticated/canvassing'
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
+import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
@@ -107,6 +108,11 @@ const AuthenticatedCanvassingRoute = AuthenticatedCanvassingRouteImport.update({
 const AuthenticatedDiaryRoute = AuthenticatedDiaryRouteImport.update({
   id: '/diary',
   path: '/diary',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
+  id: '/elections',
+  path: '/elections',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
@@ -295,6 +301,7 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/diary': typeof AuthenticatedDiaryRoute
+  '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -341,6 +348,7 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/diary': typeof AuthenticatedDiaryRoute
+  '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -389,6 +397,7 @@ export interface FileRoutesById {
   '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
   '/_authenticated/canvassing': typeof AuthenticatedCanvassingRoute
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
+  '/_authenticated/elections': typeof AuthenticatedElectionsRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/canvassing'
     | '/diary'
+    | '/elections'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -483,6 +493,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/canvassing'
     | '/diary'
+    | '/elections'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -530,6 +541,7 @@ export interface FileRouteTypes {
     | '/_authenticated/campaigns'
     | '/_authenticated/canvassing'
     | '/_authenticated/diary'
+    | '/_authenticated/elections'
     | '/_authenticated/field'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
@@ -671,6 +683,13 @@ declare module '@tanstack/react-router' {
       path: '/diary'
       fullPath: '/diary'
       preLoaderRoute: typeof AuthenticatedDiaryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/elections': {
+      id: '/_authenticated/elections'
+      path: '/elections'
+      fullPath: '/elections'
+      preLoaderRoute: typeof AuthenticatedElectionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/field': {
@@ -921,6 +940,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCampaignsRoute: typeof AuthenticatedCampaignsRoute
   AuthenticatedCanvassingRoute: typeof AuthenticatedCanvassingRoute
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
+  AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
@@ -944,6 +964,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCampaignsRoute: AuthenticatedCampaignsRoute,
   AuthenticatedCanvassingRoute: AuthenticatedCanvassingRoute,
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
+  AuthenticatedElectionsRoute: AuthenticatedElectionsRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,

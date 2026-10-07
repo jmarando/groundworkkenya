@@ -73,6 +73,12 @@ export type AtlasData = {
 
 export const electionOf = (race: Race, year: number) => `${year}-${race}`;
 
+export const RACE_NAMES: Record<Race, string> = {
+  president: "President",
+  governor: "Governor",
+  mp: "MP",
+};
+
 export const share1 = (x: number) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
 export const whole = (x: number) => `${Math.round(x * 100)}%`;
 export const votes = (n: number) => new Intl.NumberFormat("en-KE").format(n);
