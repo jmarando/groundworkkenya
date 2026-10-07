@@ -88,6 +88,11 @@ class Rasters(unittest.TestCase):
             (Path(tmp.name) / name).write_bytes(b"")
         return tmp.name
 
+    def grids(self, starts, year=2025):
+        """The year's grids for both sexes at each of these band starts, as find_rasters finds them."""
+        names = [f"ken_{sex}_{lo:02d}_{year}.tif" for sex in ("f", "m") for lo in starts]
+        return wp.find_rasters(self.folder(names), year)
+
     def test_finds_the_years_grids_by_sex_and_age(self):
         found = wp.find_rasters(self.folder(["ken_f_0_2025.tif", "ken_m_0_2025.tif", "ken_f_0_2020.tif", "notes.txt"]), 2025)
         self.assertEqual(sorted(found), [("f", 0), ("m", 0)])
@@ -111,14 +116,42 @@ class Rasters(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no grids for 2025"):
             wp.check_complete(found, 2025)
 
+    def test_a_band_missing_for_both_sexes_is_refused(self):
+        # Nothing in the files that are there says a whole band is gone, so the bands WorldPop
+        # publishes are looked for by name: under 1, 1 to 4, then every five years.
+        for gap in (20, 1, 5, 75):
+            with self.subTest(band=gap):
+                found = self.grids([lo for lo in STARTS if lo != gap])
+                with self.assertRaisesRegex(ValueError, f"missing grids: f {gap}, m {gap}"):
+                    wp.check_complete(found, 2025)
+
+    def test_grids_that_stop_short_of_80_and_over_are_refused(self):
+        found = self.grids([lo for lo in STARTS if lo <= 75])
+        with self.assertRaisesRegex(ValueError, "missing grids: f 80, m 80"):
+            wp.check_complete(found, 2025)
+
+    def test_a_gap_below_a_higher_top_band_is_refused(self):
+        # A series that goes on to 90 and over needs every band up to its last, not only to 80.
+        found = self.grids([lo for lo in STARTS + [85, 90] if lo != 85])
+        with self.assertRaisesRegex(ValueError, "missing grids: f 85, m 85"):
+            wp.check_complete(found, 2025)
+
+    def test_whole_sets_are_accepted(self):
+        wp.check_complete(self.grids(STARTS), 2025)
+        wp.check_complete(self.grids(STARTS + [85, 90]), 2025)
+
 
 @unittest.skipUnless(HAVE_RASTERIO, "needs rasterio and numpy")
 class Grids(unittest.TestCase):
-    def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.dir = Path(tmp.name)
-        # Ten by ten pixels of 0.001 degrees, one person in each pixel of every band's grid.
+    def write_grids(self, nodata=-99999, pixels=None):
+        """Ten by ten pixels of 0.001 degrees, one person in each pixel of every band's grid.
+
+        nodata is the value the files declare for no data (None declares none). pixels maps a
+        (row, column) to the value that pixel holds instead of one person, in every grid.
+        """
+        values = np.ones((1, 10, 10), dtype="float32")
+        for (row, column), value in (pixels or {}).items():
+            values[0, row, column] = value
         transform = from_origin(36.0, -1.0, 0.001, 0.001)
         for sex in ("f", "m"):
             for lo in STARTS:
@@ -132,9 +165,20 @@ class Grids(unittest.TestCase):
                     dtype="float32",
                     crs="EPSG:4326",
                     transform=transform,
-                    nodata=-99999,
+                    nodata=nodata,
                 ) as dst:
-                    dst.write(np.ones((1, 10, 10), dtype="float32"))
+                    dst.write(values)
+
+    def sums_over(self, ward):
+        sums = wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
+        self.assertEqual(len(sums), 36)
+        return sums
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dir = Path(tmp.name)
+        self.write_grids()
         # A ward over four columns and four rows of pixel centres: sixteen pixels.
         self.ward = {
             "type": "Polygon",
@@ -209,6 +253,42 @@ class Grids(unittest.TestCase):
         self.assertEqual(rows[1][6], wp.METHOD)
         self.assertGreaterEqual(len(wp.METHOD), 10)
         self.assertLessEqual(len(wp.METHOD), 500)
+
+    def test_a_pixel_the_ward_only_clips_is_left_out(self):
+        # The same sixteen pixel centres, now with a sliver 0.0001 degrees wide of the pixels all
+        # round them: it touches those pixels but reaches none of their centres, so the answer is
+        # the same. (Counting every pixel the ward touches would make it 36 a grid, not 16.)
+        clipped = {
+            "type": "Polygon",
+            "coordinates": [
+                [[36.0019, -1.0019], [36.0061, -1.0019], [36.0061, -1.0061], [36.0019, -1.0061], [36.0019, -1.0019]]
+            ],
+        }
+        sums = self.sums_over(clipped)
+        self.assertTrue(all(v == 16 for v in sums.values()))
+        self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
+
+    def test_a_positive_value_declared_as_no_data_is_not_people(self):
+        # 9999 is the files' no-data value and one pixel of the ward holds it in every grid:
+        # fifteen people a grid, not 10,014.
+        self.write_grids(nodata=9999, pixels={(3, 3): 9999})
+        sums = self.sums_over(self.ward)
+        self.assertTrue(all(v == 15 for v in sums.values()))
+        self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
+
+    def test_negative_and_nan_pixels_are_not_people(self):
+        # One pixel of the ward holds a number below zero, or NaN, whether the files declare it as
+        # no data or not.
+        for label, nodata, value in (
+            ("a declared negative", -99999, -99999),
+            ("an undeclared negative", None, -99999),
+            ("a declared NaN", float("nan"), float("nan")),
+        ):
+            with self.subTest(label):
+                self.write_grids(nodata=nodata, pixels={(3, 3): value})
+                sums = self.sums_over(self.ward)
+                self.assertTrue(all(v == 15 for v in sums.values()))
+                self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
 
 
 if __name__ == "__main__":

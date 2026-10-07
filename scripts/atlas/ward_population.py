@@ -6,7 +6,8 @@ Usage:
   WARDS_GEOJSON  a ward map with a "slug" on each feature (public/geo/nairobi-wards.json)
   AREAS_CSV      the county's areas.csv; every ward in it must be in the ward map
   RASTER_DIR     WorldPop's 100 m age-and-sex GeoTIFFs for Kenya for YEAR: one per sex and age
-                 band, named like ken_f_15_2025_....tif (sex f or m, the band's first age, year)
+                 band, every band (under 1, 1 to 4, then every five years to 80 and over), named
+                 like ken_f_15_2025_....tif (sex f or m, the band's first age, year)
   YEAR           the year of the grids
   SOURCE         the source, written "WorldPop, <dataset title and version>"
   OUT_CSV        population.csv: area_key, year, total, adults, young_adults, source, method
@@ -83,7 +84,9 @@ def find_rasters(directory, year):
 
 
 def check_complete(found, year):
-    """Both sexes for every band, from age 0: a band left out would quietly undercount."""
+    """Both sexes for every band WorldPop publishes, from age 0: under 1, 1 to 4, then every five
+    years to 80 and over (or to the last band, where the series goes on past 80). A band left out
+    would quietly undercount."""
     if not found:
         raise ValueError(f"no grids for {year}")
     ages = {lo for _, lo in found}
@@ -92,10 +95,20 @@ def check_complete(found, year):
         raise ValueError("missing grids: " + ", ".join(missing))
     if 0 not in ages:
         raise ValueError("the grids must start at age 0, so that the total counts everyone")
+    # The checks above only see the bands that are there, so a band missing for both sexes gets
+    # past them: look for each band by name.
+    wanted = [0, 1, *range(5, max(max(ages), 80) + 1, 5)]
+    left_out = [f"{sex} {lo}" for lo in wanted for sex in ("f", "m") if (sex, lo) not in found]
+    if left_out:
+        raise ValueError("missing grids: " + ", ".join(left_out))
 
 
 def ward_sums(geometry, rasters):
-    """{(sex, first age): people inside the ward}: the pixels whose centres fall within it."""
+    """{(sex, first age): people inside the ward}: the pixels whose centres fall within it.
+
+    A pixel counts only if it holds more than zero and is not the file's declared no-data value,
+    so a positive sentinel such as 9999 is not taken for people.
+    """
     import rasterio
     from rasterio.mask import mask
 
@@ -104,7 +117,10 @@ def ward_sums(geometry, rasters):
         with rasterio.open(path) as src:
             data, _ = mask(src, [geometry], crop=True, all_touched=False, filled=True)
             band = data[0]
-            sums[key] = float(band[band > 0].sum())
+            people = band > 0
+            if src.nodata is not None:
+                people &= band != src.nodata
+            sums[key] = float(band[people].sum())
     return sums
 
 
