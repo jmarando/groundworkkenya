@@ -1,0 +1,3 @@
+area_key,year,total,adults,young_adults,source,method
+testland/north-test/ward-one,2025,1500,900,400,"WorldPop, Age and sex structures (test)",Test estimate from the age-and-sex grid
+testland/north-test/ward-two,2025,1300,800,350,"WorldPop, Age and sex structures (test)",Test estimate from the age-and-sex grid

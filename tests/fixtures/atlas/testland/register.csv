@@ -1,0 +1,7 @@
+year,area_key,registered,source,source_url
+2017,testland/north-test/ward-one,550,"IEBC, Registered voters by ward 2017",https://example.test/register-2017
+2022,testland,2000,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
+2022,testland/north-test,1100,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
+2022,testland/south-test,900,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
+2022,testland/north-test/ward-one,600,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
+2022,testland/north-test/ward-two,500,"IEBC, Registered voters by ward 2022",https://example.test/register-2022

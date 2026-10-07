@@ -1,0 +1,9 @@
+id,election_id,seat,name,party,bloc
+2022-governor/testland/a-test,2022-governor,testland,A Test,Party A,Alpha
+2022-governor/testland/b-test,2022-governor,testland,B Test,Party B,Beta
+2022-governor/testland/wa-test-jr,2022-governor,testland,"Wa Test, Jr.","Party ""C""",Gamma
+2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party A,Alpha
+2022-president/kenya/p-two-test,2022-president,kenya,P Two Test,Party B,Beta
+2022-mp/testland/north-test/m-one-test,2022-mp,testland/north-test,M One Test,Party A,Alpha
+2022-mp/testland/north-test/m-two-test,2022-mp,testland/north-test,M Two Test,Party B,Beta
+2022-mp/testland/north-test/otest,2022-mp,testland/north-test,O'Test,,Independent

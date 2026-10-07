@@ -1,0 +1,9 @@
+election_id,area_key,registered,cast_votes,rejected_votes,valid_votes,source,source_url
+2022-governor,testland,2000,1020,20,1000,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
+2022-governor,testland/north-test,1100,500,10,490,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
+2022-governor,testland/south-test,900,520,10,510,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
+2022-president,testland,2000,1020,20,1000,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
+2022-president,testland/north-test,1100,560,10,550,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
+2022-president,testland/south-test,900,460,10,450,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
+2022-mp,testland/north-test,1100,510,10,500,"IEBC, MP results by constituency 2022",https://example.test/mp-2022
+2017-mp,testland/north-test,1000,,,,"IEBC, MP results by constituency 2017",
