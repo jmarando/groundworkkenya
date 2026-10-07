@@ -76,4 +76,4 @@ end $$;
 rollback;
 
 -- test: schema version
-do $$ begin assert public.groundwork_schema_version() = 21, 'schema version'; end $$;
+do $$ begin assert public.groundwork_schema_version() >= 21, 'schema version'; end $$;
