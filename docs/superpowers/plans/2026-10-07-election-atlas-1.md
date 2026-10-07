@@ -1302,9 +1302,14 @@ import type { Turnout, Vote } from "@/lib/atlas/types";
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -1557,9 +1562,14 @@ import { notYetRegistered, registerFlag, registerGrowth, youngShare } from "@/li
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -1718,9 +1728,14 @@ import {
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -1905,9 +1920,14 @@ import { nearestRank, votesWithinReach, whatToDo, type AdviceInput } from "@/lib
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -2282,9 +2302,14 @@ import { figureLabel, levelOfKey, parentKey, resultsArea } from "@/lib/atlas";
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -3253,9 +3278,14 @@ import {
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
@@ -4888,9 +4918,14 @@ import { report, shortfalls } from "../scripts/atlas/report";
 let pass = 0;
 let fail = 0;
 
+// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
+// as NaN or Infinity never passes for a missing one.
+const spell = (_key: string, v: unknown) =>
+  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
+
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
+  const g = JSON.stringify(got, spell);
+  const w = JSON.stringify(want, spell);
   if (g === w) pass++;
   else {
     fail++;
