@@ -1,0 +1,4 @@
+year,party,bloc,source,source_url
+2022,Party A,Alpha,"Registrar, Test coalition list",https://example.test/coalitions
+2022,Party B,Beta,"Registrar, Test coalition list",https://example.test/coalitions
+2022,"Party ""C""",Gamma,"Registrar, Test coalition list",https://example.test/coalitions
