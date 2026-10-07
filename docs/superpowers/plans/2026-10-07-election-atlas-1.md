@@ -2977,24 +2977,18 @@ rollback;
 -- test: loading it again changes nothing
 begin;
 \ir ../fixtures/atlas/testland.sql
-create temp table loaded as
+create temp view counted as
   select 'areas' as t, count(*) as n, sum(length(name)) as w from public.atlas_areas
   union all select 'candidates', count(*), sum(length(name)) from public.atlas_candidates
   union all select 'results', count(*), sum(votes) from public.atlas_results
   union all select 'turnout', count(*), sum(coalesce(cast_votes, 0)) from public.atlas_turnout
   union all select 'register', count(*), sum(registered) from public.atlas_register
   union all select 'population', count(*), sum(adults) from public.atlas_population;
+create temp table loaded as select * from counted;
 \ir ../fixtures/atlas/testland.sql
 do $$ begin
   assert (select count(*) from loaded) = 6, 'six tables counted';
-  assert (select count(*) from loaded l
-           join (select 'areas' as t, count(*) as n, sum(length(name)) as w from public.atlas_areas
-                 union all select 'candidates', count(*), sum(length(name)) from public.atlas_candidates
-                 union all select 'results', count(*), sum(votes) from public.atlas_results
-                 union all select 'turnout', count(*), sum(coalesce(cast_votes, 0)) from public.atlas_turnout
-                 union all select 'register', count(*), sum(registered) from public.atlas_register
-                 union all select 'population', count(*), sum(adults) from public.atlas_population) now
-             on now.t = l.t and now.n = l.n and now.w = l.w) = 6,
+  assert (select count(*) from loaded l join counted c on c.t = l.t and c.n = l.n and c.w = l.w) = 6,
     'loading twice changed a table';
 end $$;
 rollback;
