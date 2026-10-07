@@ -23,6 +23,9 @@ const KEYS: Record<string, string[][]> = {
   listening_jobs: [["key"]],
   morning_stories: [["campaign_id", "day"]],
   search_interest: [["campaign_id", "day", "kind"]],
+  atlas_settings: [["campaign_id"]],
+  atlas_sides: [["campaign_id", "election_id"]],
+  area_notes: [["campaign_id", "area_key"]],
 };
 
 const PARENTS: [string, string][] = [
