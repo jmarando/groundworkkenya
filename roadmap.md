@@ -54,7 +54,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
-- [ ] Add individual WhatsApp/email poll recipients, consent checks, and invitation tracking
+- [x] Add individual WhatsApp/email poll recipients, consent checks, and invitation tracking; dialog and validation verified without sending
 - [x] Upgrade Home readout voice and factual news-and-priorities format; verify playback and Stop
 - [x] Multi-campaign: Kalonzo, Sakaja, Waruru Gikandi; per-campaign roles; Campaigns + invites
 - [x] Campaign addresses connected; campaign-specific home and sign-in screens identify Kalonzo, Sakaja and Mathira
