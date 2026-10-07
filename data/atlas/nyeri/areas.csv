@@ -1,0 +1,14 @@
+key,level,name,parent,iebc_code
+nyeri,county,Nyeri,kenya,019
+nyeri/kieni,constituency,Kieni,nyeri,
+nyeri/mukurweini,constituency,Mukurweini,nyeri,
+nyeri/nyeri-town,constituency,Nyeri Town,nyeri,
+nyeri/othaya,constituency,Othaya,nyeri,
+nyeri/tetu,constituency,Tetu,nyeri,
+nyeri/mathira,constituency,Mathira,nyeri,
+nyeri/mathira/iriaini,ward,Iriaini,nyeri/mathira,
+nyeri/mathira/karatina-town,ward,Karatina Town,nyeri/mathira,
+nyeri/mathira/kirimukuyu,ward,Kirimukuyu,nyeri/mathira,
+nyeri/mathira/konyu,ward,Konyu,nyeri/mathira,
+nyeri/mathira/magutu,ward,Magutu,nyeri/mathira,
+nyeri/mathira/ruguru,ward,Ruguru,nyeri/mathira,

@@ -1,0 +1,13 @@
+election,seat,candidate,area,votes,source
+2022-president,kenya,Raila Odinga,nyeri,52052,iebc-2022-form-34c
+2022-president,kenya,William Ruto,nyeri,272507,iebc-2022-form-34c
+2022-president,kenya,David Mwaure Waihiga,nyeri,982,iebc-2022-form-34c
+2022-president,kenya,George Wajackoyah,nyeri,1339,iebc-2022-form-34c
+2022-president,kenya,Raila Odinga,nyeri/mathira,9328,star-2022-mathira-president
+2022-president,kenya,William Ruto,nyeri/mathira,63715,star-2022-mathira-president
+2022-president,kenya,David Mwaure Waihiga,nyeri/mathira,139,star-2022-mathira-president
+2022-president,kenya,George Wajackoyah,nyeri/mathira,257,star-2022-mathira-president
+2013-president,kenya,Uhuru Kenyatta,nyeri,318880,electionskenya-2013-president
+2013-president,kenya,Raila Odinga,nyeri,5638,electionskenya-2013-president
+2013-president,kenya,Musalia Mudavadi,nyeri,641,electionskenya-2013-president
+2013-president,kenya,Peter Kenneth,nyeri,1044,electionskenya-2013-president
