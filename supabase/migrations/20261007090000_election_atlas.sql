@@ -28,10 +28,9 @@ create table public.atlas_areas (
   constraint atlas_areas_shape check ((case level
     when 'country' then key = 'kenya' and parent is null
     when 'county' then parent = 'kenya' and key !~ '/'
-    when 'constituency' then parent is not null and parent <> 'kenya'
-                         and key ~ '^[^/]+/[^/]+$' and left(key, length(parent) + 1) = parent || '/'
-    else parent is not null
-                         and key ~ '^[^/]+/[^/]+/[^/]+$' and left(key, length(parent) + 1) = parent || '/'
+    when 'constituency' then parent <> 'kenya' and key ~ '^[^/]+/[^/]+$'
+                         and parent = regexp_replace(key, '/[^/]+$', '')
+    else key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
   end) is true)
 );
 create index atlas_areas_parent_idx on public.atlas_areas (parent);
