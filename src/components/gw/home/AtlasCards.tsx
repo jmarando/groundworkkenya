@@ -11,6 +11,7 @@ import {
   electionOf,
   RACE_NAMES,
   raceInText,
+  rankChildren,
   resultBlocks,
   TODO_COLOURS,
   votes,
@@ -69,6 +70,11 @@ export function MovesCard() {
   const a = useAtlasHome();
   if (!a) return null;
   const side = a.d.sides[electionOf(a.race, 2022)];
+  const level = a.d.areas.find((x) => x.key === a.home)?.level;
+  const parts =
+    level === "constituency" ? "wards" : level === "county" ? "constituencies" : "counties";
+  // Nothing to set a side for until some part of the home area has a count.
+  const counted = rankChildren(a.d, a.home, a.race, 2022).some((f) => f.count?.candidates.length);
   const moves = topMoves(a.d, a.home, a.race);
   return (
     <section className="card" aria-labelledby="home-moves-h">
@@ -76,7 +82,12 @@ export function MovesCard() {
         <h2 id="home-moves-h">Where votes can move</h2>
         <span className="mono">{RACE_NAMES[a.race]} · 2022</span>
       </div>
-      {!side ? (
+      {!counted ? (
+        <p className="f-note">
+          Not found yet: {a.homeName}'s {parts} have no 2022 {raceInText(a.race)} results in the
+          atlas.
+        </p>
+      ) : !side ? (
         <p className="f-note">
           {a.canSet ? (
             <>
@@ -103,18 +114,16 @@ export function MovesCard() {
                     {TODO_NAMES[f.todo.todo]}
                   </span>
                 ) : null}
-                <b>{f.reach ? votes(f.reach.total) : "—"}</b>
+                <span className="home-moves-n">
+                  <b>{f.reach ? votes(f.reach.total) : "—"}</b> within reach
+                </span>
               </div>
-              <p className="meta">
-                {f.todo?.reason} {f.reach ? "Votes within reach." : ""}
-              </p>
+              <p className="meta">{f.todo?.reason}</p>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="f-note">
-          Not found yet: {a.homeName}'s parts have no {raceInText(a.race)} results in the atlas.
-        </p>
+        <p className="f-note">Nothing to rank yet: no part has votes within reach.</p>
       )}
       <p className="meta">
         <Link to="/elections" search={{ area: a.home }}>

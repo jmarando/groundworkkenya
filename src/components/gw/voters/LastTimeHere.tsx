@@ -44,7 +44,7 @@ export function LastTimeHere({
               </span>
             </>
           ) : null}
-          {l.constituencyFigure ? <span className="dim"> · {at}'s figure</span> : null}
+          {l.constituencyFigure ? <span className="dim"> · the figure for {at}</span> : null}
         </>
       ) : (
         <span className="dim">not found yet in the atlas</span>

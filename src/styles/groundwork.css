@@ -2043,7 +2043,8 @@ figure { margin: 0; }
 .home-moves { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
 .home-moves li + li { border-top:1px solid var(--border); padding-top:10px; }
 .home-moves-h { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.home-moves-h b { margin-left:auto; font-variant-numeric:tabular-nums; }
+.home-moves-n { margin-left:auto; font-size:12px; color:var(--muted-foreground); }
+.home-moves-n b { color:var(--foreground); font-size:14px; font-variant-numeric:tabular-nums; }
 .home-moves .meta { margin:4px 0 0; }
 .vt-last { margin:10px 2px 0; font-size:13px; line-height:1.8; }
 .vt-last-l { font-weight:600; margin-right:8px; }

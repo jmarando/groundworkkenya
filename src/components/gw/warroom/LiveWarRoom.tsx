@@ -7,7 +7,7 @@ import { BallotCard } from "@/components/gw/warroom/BallotCard";
 import { FormsCard } from "@/components/gw/warroom/FormsCard";
 import { turnout2022, wardKey } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
-import { RACE_NAMES, whole } from "@/lib/atlas-view";
+import { raceInText, whole } from "@/lib/atlas-view";
 import { getWarRoom } from "@/lib/console.functions";
 import { defaultRace } from "@/lib/elections-view";
 import { raceArea } from "@/lib/race";
@@ -73,6 +73,12 @@ export function LiveWarRoom() {
     );
   }
 
+  const race = defaultRace(data.race.level);
+  // A 2022 turnout borrowed from another race the same day gets an asterisk and a note.
+  const borrowed = data.constituencies.some((c) => {
+    const then = atlas ? turnout2022(atlas, wardKey(atlas, c.name, null), race) : null;
+    return then !== null && then.race !== race;
+  });
   const s = data.stations;
   const t = data.tally;
   const total = s.total || 1;
@@ -341,7 +347,6 @@ export function LiveWarRoom() {
               </thead>
               <tbody>
                 {data.constituencies.map((c) => {
-                  const race = defaultRace(data.race.level);
                   const then = atlas
                     ? turnout2022(atlas, wardKey(atlas, c.name, null), race)
                     : null;
@@ -364,7 +369,7 @@ export function LiveWarRoom() {
                         className="num"
                         title={
                           then && then.race !== race
-                            ? `The ${RACE_NAMES[then.race].toLowerCase()} race's: the ${RACE_NAMES[race].toLowerCase()} race's 2022 turnout isn't in the atlas`
+                            ? `From the ${raceInText(then.race)} race the same day: the ${raceInText(race)} race's isn't in the atlas`
                             : "2022 turnout, from the election atlas"
                         }
                       >
@@ -379,6 +384,12 @@ export function LiveWarRoom() {
               </tbody>
             </table>
           </div>
+          {borrowed ? (
+            <p className="f-note">
+              * 2022 turnout from another race the same day (the same voters and register): the{" "}
+              {raceInText(race)} race's isn't in the atlas.
+            </p>
+          ) : null}
         </div>
 
         <div className="w-rail fx5">
