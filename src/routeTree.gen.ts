@@ -34,6 +34,7 @@ import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/t
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
 import { Route as AuthenticatedWebsiteRouteImport } from './routes/_authenticated/website'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
@@ -180,6 +181,11 @@ const AuthenticatedWebsiteRoute = AuthenticatedWebsiteRouteImport.update({
   path: '/website',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
@@ -309,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -355,6 +362,7 @@ export interface FileRoutesByTo {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
   '/_authenticated/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -451,6 +460,7 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -497,6 +507,7 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -544,6 +555,7 @@ export interface FileRouteTypes {
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
     | '/_authenticated/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -572,6 +584,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PrivacyRoute: typeof PrivacyRoute
   SetPasswordRoute: typeof SetPasswordRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   PCodeRoute: typeof PCodeRoute
   SSlugRoute: typeof SSlugRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
@@ -771,6 +784,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWebsiteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/$code': {
       id: '/p/$code'
       path: '/p/$code'
@@ -969,6 +989,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PrivacyRoute: PrivacyRoute,
   SetPasswordRoute: SetPasswordRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   PCodeRoute: PCodeRoute,
   SSlugRoute: SSlugRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
