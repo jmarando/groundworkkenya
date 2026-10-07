@@ -71,8 +71,11 @@ npx -y tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts
 # and use /tmp/gwvenv/bin/python (or export ATLAS_PYTHON=/tmp/gwvenv/bin/python for the TypeScript runner)
 python3 -m unittest discover -s scripts/atlas -p "test_*.py"
 
-# the SQL suite: Postgres 16 is installed but not on PATH, and initdb refuses to run as root
-PATH=/usr/lib/postgresql/16/bin:$PATH runuser -u nobody -- env PATH="$PATH" HOME=/tmp bash tests/sql/run.sh
+# the SQL suite: Postgres 16 is installed but not on PATH, and initdb refuses to run as root.
+# Put the Postgres directory inside env's PATH argument, as below: a PATH=... prefix on runuser is not seen
+# by the "$PATH" you pass to env, the runner then finds no initdb, prints SKIP and exits 0, a silent false pass.
+# So a run that prints "SKIP: initdb not found" has not run any SQL test.
+runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh
 
 # format and lint the files you touched
 npx prettier --write <files> && npx eslint <files>
@@ -477,7 +480,7 @@ do $$ begin assert public.groundwork_schema_version() = 22, 'schema version'; en
 
 - [ ] **Step 2: Run the suite and watch the new test fail**
 
-Run: `PATH=/usr/lib/postgresql/16/bin:$PATH runuser -u nobody -- env PATH="$PATH" HOME=/tmp bash tests/sql/run.sh`
+Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh`
 
 Expected (the exit status is 1; the other files print `ok`):
 
@@ -845,7 +848,7 @@ f=/tmp/gw-atlas-mut/supabase/migrations/20261007090000_election_atlas.sql
 # let any team member write atlas_areas: a grant and a policy
 sed -i -E 's/^grant select on public.atlas_areas,/grant select, insert, update, delete on public.atlas_areas,/' "$f"
 sed -i -E '/create policy "atlas readable by team" on public.atlas_areas/,/;$/ { s/for select/for all/; s/using \(public.is_team_member\(auth.uid\(\)\)\);/using (public.is_team_member(auth.uid())) with check (public.is_team_member(auth.uid()));/ }' "$f"
-PATH=/usr/lib/postgresql/16/bin:$PATH runuser -u nobody -- env PATH="$PATH" HOME=/tmp bash /tmp/gw-atlas-mut/tests/sql/run.sh 2>&1 | grep -E "^FAIL|ERROR:" | head -2
+runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash /tmp/gw-atlas-mut/tests/sql/run.sh 2>&1 | grep -E "^FAIL|ERROR:" | head -2
 rm -rf /tmp/gw-atlas-mut
 ```
 
@@ -3009,7 +3012,7 @@ end $$;
 rollback;
 ```
 
-Run: `PATH=/usr/lib/postgresql/16/bin:$PATH runuser -u nobody -- env PATH="$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-120`
+Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-120`
 
 Expected: every line `ok`, including `ok   tests/sql/atlas-load.test.sql (3 tests)`; 13 test files.
 
@@ -5712,7 +5715,7 @@ rollback;
 
 - [ ] **Step 3: Run the SQL suite**
 
-Run: `PATH=/usr/lib/postgresql/16/bin:$PATH runuser -u nobody -- env PATH="$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-140`
+Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-140`
 
 Expected: `ok   39 migrations apply cleanly`, every test file `ok`, including
 `ok   tests/sql/atlas-counties.test.sql (2 tests)`.
