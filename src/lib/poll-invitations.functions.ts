@@ -38,7 +38,7 @@ export const invitePollIndividuals = createServerFn({ method: "POST" })
     let opened = false;
     for (const address of data.addresses) {
       const { data: people, error: peopleError } = await sb.from("people")
-        .select("id, phone, email, full_name, opted_out, consent_whatsapp")
+        .select("id, phone, email, full_name, opted_out")
         .eq("campaign_id", campaignId)
         .eq(data.channel === "email" ? "email" : "phone", address);
       if (peopleError) throw new Error("Could not check recipients.");
@@ -47,8 +47,10 @@ export const invitePollIndividuals = createServerFn({ method: "POST" })
         results.push({ recipient: address, status: "skipped", note: "Add or check this contact in People first, in this campaign." });
         continue;
       }
-      if (person.opted_out || (data.channel === "whatsapp" && !person.consent_whatsapp)) {
-        results.push({ recipient: address, status: "skipped", note: person.opted_out ? "Opted out." : "WhatsApp permission is not recorded in People." });
+      // Individual demo invitations use the sender's explicit permission confirmation.
+      // Do not change stored consent or bypass a recipient's opt-out.
+      if (person.opted_out) {
+        results.push({ recipient: address, status: "skipped", note: "Opted out." });
         continue;
       }
       if (!opened) {
