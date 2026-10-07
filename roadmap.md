@@ -54,6 +54,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
+- [x] Surface one-person WhatsApp/message, poll and phone-call actions; keep the selected person's Call button prominent in the Inbox header
 - [x] Group inbox categories, repair conversation rows, separate message timestamps/status and compact calling controls
 - [x] Allow confirmed individual demo poll invitations without requiring stored WhatsApp consent; retain opt-outs and campaign isolation
 - [x] Add individual WhatsApp/email poll recipients, consent checks, and invitation tracking; dialog and validation verified without sending
