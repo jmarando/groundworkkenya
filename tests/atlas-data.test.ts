@@ -732,6 +732,37 @@ try {
     areasRead("cr", semicell.replace(/\n/g, "\r")),
     northSemicolon,
   );
+  // A line before the header, even a blank one, leaves the header second: build_sql.py reads the
+  // blank line as the first row, and refuses the columns it finds there.
+  const headerFirst = "areas.csv: the first line must be the header, not a blank line";
+  const refusedFirst = (name: string, text: string) =>
+    String(areasRead(name, text)).includes(headerFirst);
+  eq("a blank line before the header is refused", refusedFirst("lead1", `\n${areasCsv}`), true);
+  eq(
+    "two blank lines before the header, in a CRLF file, are refused",
+    refusedFirst("lead2", `\r\n\r\n${areasCsv.replace(/\n/g, "\r\n")}`),
+    true,
+  );
+  eq(
+    "a line of spaces before the header is refused",
+    refusedFirst("lead3", `   \n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a line of commas before the header is refused",
+    refusedFirst("lead4", `,,,,\n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a byte-order mark, a blank line, then the header is refused",
+    refusedFirst("lead5", `${BOM}\n${areasCsv}`),
+    true,
+  );
+  eq(
+    "a byte-order mark, the header, then blank lines are accepted",
+    areasRead("lead6", `${BOM}${areasCsv.replace("\n", "\n\n\n")}\n\n`),
+    good.areas,
+  );
   const missing = copy("missing");
   rmSync(join(missing, "register.csv"));
   eq("a missing file is refused", refusal(missing).includes("register.csv is missing"), true);

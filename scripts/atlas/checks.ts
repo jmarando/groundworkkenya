@@ -85,13 +85,14 @@ function readText(path: string): string {
 
 /**
  * A CSV file's rows as objects, refusing what build_sql.py refuses: the wrong columns, a header
- * separated by semicolons (src/lib/csv.ts reads one, build_sql.py reads commas only), a row of the
- * wrong length, and a backslash in a cell.
+ * separated by semicolons (src/lib/csv.ts reads one, build_sql.py reads commas only), a blank line
+ * before the header, a row of the wrong length, and a backslash in a cell.
  */
 function readRows(path: string, want: readonly string[]): Row[] {
   const label = basename(path);
   const text = readText(path);
-  if ((text.split(/\r\n|\r|\n/, 1)[0] ?? "").includes(";")) {
+  const first = text.split(/\r\n|\r|\n/, 1)[0] ?? "";
+  if (first.includes(";")) {
     throw new Error(`${label}: the header must be separated by commas, not semicolons`);
   }
   const [head, ...body] = parseCSV(text);
@@ -99,6 +100,11 @@ function readRows(path: string, want: readonly string[]): Row[] {
     throw new Error(
       `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
     );
+  }
+  // parseCSV drops blank rows, so a blank line before the header would pass above, where
+  // build_sql.py reads that line as the first row and refuses it. parseCSV says what blank is.
+  if (parseCSV(first).length === 0) {
+    throw new Error(`${label}: the first line must be the header, not a blank line`);
   }
   return body.map((cells, i) => {
     if (cells.length !== want.length) {
