@@ -133,6 +133,8 @@ Pure and tested. For an area, an election and the campaign's side:
 - **Share** of a bloc: its votes ÷ valid votes (valid is the sum of candidates' votes when the
   document doesn't give it). **Our share** uses the campaign's side for that election.
 - **Margin:** our share minus the strongest other bloc's share.
+- **Lean:** the margin read as a side: ahead leans ours, behind leans theirs. The map shades
+  it from theirs to ours.
 - **Swing:** our share in one election minus our share in the same race at the previous general
   election, in points; missing unless both are there (so never for 2013).
 - **Register growth:** registered voters now minus at the last election, and as a share.
@@ -146,11 +148,13 @@ Pure and tested. For an area, an election and the campaign's side:
      area's (constituency against county; ward against constituency once wards have results of
      their own). Skipped when either turnout is missing.
   2. **Hold:** our share is 60% or more.
-  3. **Cut the gap:** our share is under 40%.
+  3. **Cut the gap:** we trail the strongest other bloc by more than 10 points.
   4. **Persuade:** the margin is within 10 points either way (10 included), or the last swing
      was 10 points or more either way.
-  5. **Lean ours:** our share is 50% or more.
-  6. **Lean theirs:** anything else.
+  5. **Lean ours:** anything else: we are ahead by more than 10 points, short of Hold.
+  The rules follow who is ahead, not the share alone, so a crowded race (45% to 30%) reads
+  Lean ours and a narrow lead on a small share (38% to 30%) reads Persuade. Being behind has
+  no rule of its own: within 10 points is Persuade and beyond that is Cut the gap.
   Without a side for that election the answer is "Set your side first".
 - **Register flag:** an estimated quarter or more of the area's adults aren't registered.
 - **Votes within reach**, shown as two parts with their sums:
