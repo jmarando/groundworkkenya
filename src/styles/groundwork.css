@@ -2027,7 +2027,7 @@ figure { margin: 0; }
 /* Street-by-street canvassing */
 .fa-streets { display: grid; gap: 6px; }
 .fa-street-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-.fa-street { flex: 0 0 auto; display: grid; gap: 2px; text-align: left; min-height: 48px; padding: 8px 12px; border: 1px solid var(--gw-line); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
+.fa-street { flex: 0 0 auto; display: grid; gap: 2px; text-align: left; min-height: 48px; padding: 8px 12px; border: 1px solid var(--gw-border); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
 .fa-street b { font-size: 14px; }
 .fa-street small { font-size: 12px; color: var(--gw-muted); }
 .fa-street.is-on { border-color: var(--gw-accent); box-shadow: inset 0 0 0 1px var(--gw-accent); }
@@ -2035,8 +2035,8 @@ figure { margin: 0; }
 .fa-door-no { font-family: var(--font-mono); font-size: 12px; color: var(--gw-muted); margin-right: 8px; }
 .sp { display: grid; gap: 12px; }
 .sp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.sp-row { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--gw-line); }
+.sp-row { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--gw-border); }
 .sp-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .sp-head .mono { font-family: var(--font-mono); font-size: 12px; color: var(--gw-muted); }
 .sp-assign, .sp-add { display: flex; gap: 8px; flex-wrap: wrap; }
-.sp-assign input, .sp-add input { flex: 1 1 140px; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--gw-line); border-radius: 8px; background: transparent; color: inherit; font: inherit; }
+.sp-assign input, .sp-add input { flex: 1 1 140px; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--gw-border); border-radius: 8px; background: transparent; color: inherit; font: inherit; }

@@ -67,3 +67,4 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Map outline per campaign (Mathira/Kalonzo still show Nairobi base map)
 - [x] Confirm the latest GitHub-synced changes are present in this workspace
 - [ ] Rate limit /p/* at the edge (Cloudflare rule) before a web poll goes wide
+- Street-by-street canvassing ✓
