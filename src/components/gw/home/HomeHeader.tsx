@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { LoaderCircle, Play, Square } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useBriefingSpeech } from "@/hooks/useBriefingSpeech";
 
 import { daysBetween, ELECTION_DAY } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
@@ -10,40 +12,6 @@ function longDate(iso: string): string {
     month: "long",
     timeZone: "Africa/Nairobi",
   });
-}
-
-/** Reads the briefing aloud with the browser's own voice: for the drive in. */
-function useSpeech() {
-  const [can, setCan] = useState(false);
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    setCan(typeof window !== "undefined" && "speechSynthesis" in window);
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window)
-        window.speechSynthesis.cancel();
-    };
-  }, []);
-  const stop = () => {
-    window.speechSynthesis.cancel();
-    setOn(false);
-  };
-  const play = (text: string) => {
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const voices = synth.getVoices();
-    u.voice =
-      voices.find((v) => v.lang === "en-KE") ??
-      voices.find((v) => v.lang === "en-GB") ??
-      voices.find((v) => v.lang.startsWith("en")) ??
-      null;
-    u.rate = 1;
-    u.onend = () => setOn(false);
-    u.onerror = () => setOn(false);
-    synth.speak(u);
-    setOn(true);
-  };
-  return { can, on, play, stop };
 }
 
 /** Whose campaign, the day, and where the race stands, in one line. */
@@ -61,7 +29,9 @@ export function HomeHeader({
   /** Home read out, from what it shows: the Listen button plays it. */
   script: string;
 }) {
-  const speech = useSpeech();
+  const speech = useBriefingSpeech();
+  const on = speech.state !== "idle";
+  const minutes = Math.max(1, Math.ceil(script.split(/\s+/).length / 155));
   const days = daysBetween(today, ELECTION_DAY);
   return (
     <header className="mb-mast home-mast">
@@ -76,19 +46,22 @@ export function HomeHeader({
           </p>
           {verdict ? <p className="home-verdict">{verdict}</p> : null}
         </div>
-        {speech.can && (
-          <button
+        <div className="flex max-w-72 flex-col items-start gap-2">
+          <Button
             type="button"
-            className={`mb-listen${speech.on ? " is-on" : ""}`}
-            aria-pressed={speech.on}
-            onClick={() => (speech.on ? speech.stop() : speech.play(script))}
+            variant="ghost"
+            className={`mb-listen${on ? " is-on" : ""}`}
+            aria-pressed={on}
+            aria-label={on ? "Stop reading" : "Listen to morning briefing"}
+            onClick={() => (on ? speech.stop() : void speech.play(script))}
           >
             <span className="mb-listen-icon" aria-hidden="true">
-              {speech.on ? "■" : "▶"}
+              {speech.state === "loading" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : on ? <Square /> : <Play />}
             </span>
-            {speech.on ? "Stop reading" : "Listen · 3 min"}
-          </button>
-        )}
+            {speech.state === "loading" ? "Preparing · Stop" : on ? "Stop reading" : `Listen · ${minutes} min`}
+          </Button>
+          {speech.error && <p role="alert" className="text-sm text-destructive">{speech.error}</p>}
+        </div>
       </div>
     </header>
   );

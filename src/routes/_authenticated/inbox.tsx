@@ -1,8 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { callFromInbox } from "@/lib/voice.functions";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, MessageCircle, Phone, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { getInbox } from "@/lib/console.functions";
@@ -75,6 +77,7 @@ const CONNECTIONS = [
 const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
 
 function Inbox() {
+  const navigate = useNavigate();
   const fetchInbox = useServerFn(getInbox);
   const sendReply = useServerFn(replyToConversation);
   const searchPeople = useServerFn(searchPeopleForMessage);
@@ -83,6 +86,7 @@ function Inbox() {
   const [myPhone, setMyPhone] = useState("");
   const [callNote, setCallNote] = useState<string | null>(null);
   const [calling, setCalling] = useState(false);
+  const [callPanelOpen, setCallPanelOpen] = useState(false);
   async function call(conversationId: string) {
     setCalling(true);
     setCallNote(null);
@@ -227,16 +231,38 @@ function Inbox() {
             {data.counts.all} conversations · {data.counts.unread} unread · {data.counts.open} open
           </p>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn--primary"
           onClick={() => {
             setComposing(true);
             setNewNote(null);
           }}
         >
-          New message
-        </button>
+          <MessageCircle aria-hidden="true" /> Message one person
+        </Button>
+      </div>
+
+      <div className="ibx-individual-actions" aria-label="Individual outreach actions">
+        <div>
+          <span className="eyebrow">One-to-one outreach</span>
+          <p>Choose one person for a message, poll invitation or phone call.</p>
+        </div>
+        <div className="ibx-individual-buttons">
+          <Button variant="outline" onClick={() => { setComposing(true); setNewNote(null); }}>
+            <MessageCircle aria-hidden="true" /> Message
+          </Button>
+          <Button variant="outline" onClick={() => void navigate({ to: "/polling" })}>
+            <BarChart3 aria-hidden="true" /> Send poll
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!open?.phone}
+            onClick={() => setCallPanelOpen(true)}
+            title={open?.phone ? `Call ${open.name}` : "Choose a conversation with a phone number"}
+          >
+            <Phone aria-hidden="true" /> Call selected person
+          </Button>
+        </div>
       </div>
 
       {composing && (
@@ -370,53 +396,42 @@ function Inbox() {
       )}
 
       <div className="ibx fx2">
-        <div className="ibx-rail">
-          <button
-            type="button"
-            className={`ibx-f${filter === "all" ? " on" : ""}`}
-            onClick={() => setFilter("all")}
-          >
-            All <b>{data.counts.all}</b>
-          </button>
-          <button
-            type="button"
-            className={`ibx-f${filter === "unread" ? " on" : ""}`}
-            onClick={() => setFilter("unread")}
-          >
-            Unread <b>{data.counts.unread}</b>
-          </button>
-          <button
-            type="button"
-            className={`ibx-f${filter === "open" ? " on" : ""}`}
-            onClick={() => setFilter("open")}
-          >
-            Open <b>{data.counts.open}</b>
-          </button>
-          <button
-            type="button"
-            className={`ibx-f${filter === "social" ? " on" : ""}`}
-            onClick={() => setFilter("social")}
-          >
-            Social <b>{data.conversations.filter((c) => SOCIAL.includes(c.platform)).length}</b>
-          </button>
-          <button
-            type="button"
-            className={`ibx-f${filter === "angry" ? " on" : ""}`}
-            onClick={() => setFilter("angry")}
-          >
-            Angry <b>{data.conversations.filter((c) => c.sentiment === "negative").length}</b>
-          </button>
-          {data.counts.byTag.map((t) => (
-            <button
-              key={t.tag}
-              type="button"
-              className={`ibx-f${filter === t.tag ? " on" : ""}`}
-              onClick={() => setFilter(t.tag)}
-            >
-              {t.tag} <b>{t.n}</b>
-            </button>
-          ))}
-        </div>
+        <nav className="ibx-rail" aria-label="Message filters">
+          <div className="ibx-filter-group">
+            <h2 className="ibx-group-label">Queue</h2>
+            <div className="ibx-filter-options">
+              {[
+                { key: "all", label: "All messages", count: data.counts.all },
+                { key: "unread", label: "Unread", count: data.counts.unread },
+                { key: "open", label: "Open", count: data.counts.open },
+              ].map((item) => (
+                <Button key={item.key} variant="ghost" className="ibx-f" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)}>
+                  <span>{item.label}</span><span className="n">{item.count}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="ibx-filter-group">
+            <h2 className="ibx-group-label">Channel & sentiment</h2>
+            <div className="ibx-filter-options">
+              <Button variant="ghost" className="ibx-f" aria-pressed={filter === "social"} onClick={() => setFilter("social")}>
+                <span>Social</span><span className="n">{data.conversations.filter((c) => SOCIAL.includes(c.platform)).length}</span>
+              </Button>
+              <Button variant="ghost" className="ibx-f" aria-pressed={filter === "angry"} onClick={() => setFilter("angry")}>
+                <span>Negative sentiment</span><span className="n">{data.conversations.filter((c) => c.sentiment === "negative").length}</span>
+              </Button>
+            </div>
+          </div>
+          <div className="ibx-filter-group">
+            <label className="ibx-group-label" htmlFor="ibx-topic">Topics</label>
+            <select id="ibx-topic" value={["all", "unread", "open", "social", "angry"].includes(filter) ? "" : filter} onChange={(e) => setFilter(e.target.value || "all")}>
+              <option value="">All topics</option>
+              {[...data.counts.byTag].sort((a, b) => a.tag.localeCompare(b.tag)).map((t) => (
+                <option key={t.tag} value={t.tag}>{t.tag} ({t.n})</option>
+              ))}
+            </select>
+          </div>
+        </nav>
 
         <div className="ibx-list">
           <div className="ibx-search">
@@ -435,7 +450,8 @@ function Inbox() {
             <button
               key={c.id}
               type="button"
-              className={`cv${open?.id === c.id ? " on" : ""}`}
+              className="cv"
+              aria-current={open?.id === c.id ? "true" : undefined}
               onClick={() => setOpenId(c.id)}
             >
               <span className="cv-name">
@@ -449,7 +465,7 @@ function Inbox() {
                 {c.sentiment && <span className="tag">{MOOD[c.sentiment] ?? c.sentiment}</span>}
                 {c.issue && <span className="tag">{c.issue}</span>}
                 {c.ward && <span className="tag">{c.ward}</span>}
-                {c.tags.map((t) => (
+                {[...new Set(c.tags)].filter((t) => t !== c.issue && t !== c.ward && t !== c.sentiment && t !== MOOD[c.sentiment ?? ""]).map((t) => (
                   <span className="tag" key={t}>
                     {t}
                   </span>
@@ -473,15 +489,20 @@ function Inbox() {
                     {open.issue ? ` · ${open.issue}` : ""}
                   </span>
                 </div>
-                <span className="pill pill--ok">
-                  <span className="g" aria-hidden="true">
-                    ●
-                  </span>{" "}
-                  {open.status}
-                </span>
+                <div className="th-head-actions">
+                  {open.phone && (
+                    <Button size="sm" onClick={() => setCallPanelOpen((visible) => !visible)} aria-expanded={callPanelOpen}>
+                      <Phone aria-hidden="true" /> Call {open.name.split(" ")[0]}
+                    </Button>
+                  )}
+                  <span className="pill pill--ok">
+                    <span className="g" aria-hidden="true">●</span>{" "}
+                    {open.status}
+                  </span>
+                </div>
               </div>
-              {open.phone && (
-                <div className="th-compose" style={{ borderTop: 0 }}>
+              {open.phone && callPanelOpen && (
+                <div className="th-call">
                   <label className="th-compose-label" htmlFor="myPhone">
                     Call {open.name}: we ring your phone first
                   </label>
@@ -493,13 +514,9 @@ function Inbox() {
                     value={myPhone}
                     onChange={(e) => setMyPhone(e.target.value)}
                   />
-                  <button
-                    className="btn btn--sm"
-                    disabled={calling || !myPhone.trim()}
-                    onClick={() => void call(open.id)}
-                  >
-                    {calling ? "Calling…" : "Call"}
-                  </button>
+                  <Button variant="outline" className="th-call-button" disabled={calling || !myPhone.trim()} onClick={() => void call(open.id)}>
+                    <Phone aria-hidden="true" />{calling ? "Calling…" : "Call"}
+                  </Button>
                   {callNote && <p className="f-note">{callNote}</p>}
                 </div>
               )}
@@ -509,10 +526,11 @@ function Inbox() {
                 )}
                 {open.thread.map((m) => (
                   <div key={m.id} className={`msg ${m.direction === "out" ? "msg--out" : "msg--in"}`}>
-                    {m.body}
-                    <span className="msgd">
-                      {stamp(m.at)} · {m.status}
-                    </span>
+                    <div className="msg-text">{m.body}</div>
+                    <small className="msg-meta">
+                      <time dateTime={m.at}>{stamp(m.at)}</time>
+                      <span className="msg-status">{m.status}</span>
+                    </small>
                   </div>
                 ))}
                 {open.thread.length === 0 && (
@@ -538,13 +556,9 @@ function Inbox() {
                     }
                   }}
                 />
-                <button
-                  className="btn btn--primary btn--sm"
-                  disabled={sending || !draft.trim()}
-                  onClick={() => void send(open.id)}
-                >
-                  {sending ? "Sending…" : "Send"}
-                </button>
+                <Button className="btn btn--primary btn--sm th-send" disabled={sending || !draft.trim()} onClick={() => void send(open.id)}>
+                  <Send aria-hidden="true" />{sending ? "Sending…" : "Send"}
+                </Button>
               </div>
               {sendNote && <p className="f-note">{sendNote}</p>}
             </>

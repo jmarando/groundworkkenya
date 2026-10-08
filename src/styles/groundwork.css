@@ -758,15 +758,17 @@ figure { margin: 0; }
 .vseg button[aria-pressed="true"] { background:#fff; color:var(--gw-ink); }
 .vseg button:hover:not([aria-pressed="true"]) { background:hsl(158 15% 20%); }
 .vzoom { position:absolute; right:12px; bottom:44px; display:flex; flex-direction:column; overflow:hidden; }
-.vzoom button { width:36px; height:36px; font-size:17px; color:#fff; display:flex; align-items:center; justify-content:center; }
+.vzoom button { width:42px; height:42px; font-size:20px; color:#fff; display:flex; align-items:center; justify-content:center; transition-property:background-color, opacity, scale; transition-duration:160ms; }
 .vzoom button + button { border-top:1px solid hsl(158 13% 26%); }
 .vzoom button:hover { background:hsl(158 15% 20%); }
+.vzoom button:active { scale:.96; }
+.vzoom button:disabled { opacity:.35; cursor:not-allowed; }
 .vleg { position:absolute; left:12px; bottom:12px; padding:7px 10px; display:flex; gap:10px; flex-wrap:wrap; font-size:11px; max-width:calc(100% - 90px); }
 .vleg span { display:inline-flex; align-items:center; gap:6px; }
 .vleg i { width:10px; height:10px; border-radius:3px; display:inline-block; }
 .vscale { position:absolute; right:60px; bottom:14px; font-family:var(--font-mono); font-size:10px; color:#fff; text-align:right; }
 .vscale i { display:block; height:5px; border:1.5px solid #fff; border-top:0; margin-top:3px; margin-left:auto; }
-.vhint { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); font-size:11px; color:hsl(150 11% 78%); padding:6px 10px; white-space:nowrap; pointer-events:none; transition:opacity .3s ease; }
+.vhint { position:absolute; left:50%; bottom:14px; transform:translateX(-50%); font-size:12px; font-weight:600; color:hsl(150 11% 88%); padding:8px 12px; white-space:nowrap; pointer-events:none; }
 .vattr { position:absolute; right:12px; top:auto; bottom:2px; font-family:var(--font-mono); font-size:9px; color:hsl(0 0% 100% / .6); pointer-events:none; }
 
 .vgrid { display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:14px; margin-top:14px; }
@@ -1430,11 +1432,10 @@ figure { margin: 0; }
 /* ------------------------------------------------ know your voters: the real map */
 /* maplibre-gl.css loads later and sets .maplibregl-map to position:relative. */
 .vmap > .vmap-canvas { position:absolute; inset:0; z-index:0; }
-.vmap > .vtop, .vmap > .vleg, .vmap > .vzoom, .vmap > .vlogo, .vmap-loading { z-index:2; }
+.vmap > .vtop, .vmap > .vleg, .vmap > .vzoom, .vmap > .vlogo, .vmap > .vhint, .vmap-loading { z-index:2; }
 /* Clear of the controls along the top and MapLibre's scale and attribution along the bottom. */
 .vmap .vzoom { top:50%; bottom:auto; transform:translateY(-50%); }
-.vmap-select { position:absolute; inset:0; z-index:1; cursor:crosshair; touch-action:none; }
-.vmap-selbox { position:absolute; border:1.5px dashed hsl(15 77% 52%); background:hsl(15 77% 48% / .12); pointer-events:none; }
+.vmap-selbox { position:absolute; z-index:1; border:1.5px dashed hsl(15 77% 52%); background:hsl(15 77% 48% / .12); pointer-events:none; }
 .vmap-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; margin:0; color:hsl(150 11% 70%); pointer-events:none; }
 .vlogo { position:absolute; left:12px; bottom:12px; display:block; line-height:0; }
 .vlogo img { width:67px; height:20px; }
@@ -1444,6 +1445,14 @@ figure { margin: 0; }
 .vdot { display:inline-block; width:8px; height:8px; border-radius:999px; margin-right:4px; vertical-align:middle; }
 .tray-note { font-size:12px; color:hsl(150 11% 70%); }
 .vmap .maplibregl-ctrl-bottom-right { right:6px; bottom:4px; }
+.vmap .vhint { bottom:12px; }
+.vseg--tool button[aria-pressed="true"] { background:var(--gw-accent); color:var(--gw-paper); }
+
+@media (max-width:560px) {
+  .vmap .vhint { left:10px; right:62px; bottom:10px; transform:none; white-space:normal; text-align:left; }
+  .vmap .vzoom { right:10px; }
+  .vmap .vleg { display:none; }
+}
 
 /* ============================================ demo campaigns: briefing and election night */
 /* Series colours validated for identity (all pairs, both surfaces); the maps use an orange
@@ -2052,3 +2061,19 @@ figure { margin: 0; }
 .el-key { display:flex; flex-wrap:wrap; gap:6px 14px; margin:10px 0 0; font-size:11.5px; color:var(--muted-foreground); }
 .el-key span { display:inline-flex; align-items:center; gap:6px; }
 .el-key i { display:inline-block; width:10px; height:10px; border-radius:3px; }
+/* Street-by-street canvassing */
+.fa-streets { display: grid; gap: 6px; }
+.fa-street-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.fa-street { flex: 0 0 auto; display: grid; gap: 2px; text-align: left; min-height: 48px; padding: 8px 12px; border: 1px solid var(--gw-border); border-radius: 10px; background: transparent; color: inherit; cursor: pointer; }
+.fa-street b { font-size: 14px; }
+.fa-street small { font-size: 12px; color: var(--gw-muted); }
+.fa-street.is-on { border-color: var(--gw-accent); box-shadow: inset 0 0 0 1px var(--gw-accent); }
+.fa-street:focus-visible { outline: 2px solid var(--gw-accent); outline-offset: 2px; }
+.fa-door-no { font-family: var(--font-mono); font-size: 12px; color: var(--gw-muted); margin-right: 8px; }
+.sp { display: grid; gap: 12px; }
+.sp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.sp-row { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--gw-border); }
+.sp-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sp-head .mono { font-family: var(--font-mono); font-size: 12px; color: var(--gw-muted); }
+.sp-assign, .sp-add { display: flex; gap: 8px; flex-wrap: wrap; }
+.sp-assign input, .sp-add input { flex: 1 1 140px; min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--gw-border); border-radius: 8px; background: transparent; color: inherit; font: inherit; }
