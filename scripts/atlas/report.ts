@@ -1,10 +1,13 @@
 // The data report: how much of each election a county's files hold, and what is missing, in the
-// words the user reads before any screen work. `report` is pure. Running this file prints the
-// report and the checks' verdict for the counties named (default: every county under data/atlas):
+// words the user reads before any screen work. `report` is pure; `run` builds the whole output of
+// the command and says whether everything passed. Running this file prints that output for the
+// counties named (default: every county under data/atlas), from any directory, and exits 1 when
+// blocs.csv or a county has a problem, so that a failing verdict fails the command:
 //   npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi nyeri
 
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync, realpathSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { fmtVotes } from "../../src/lib/atlas/format";
 import { levelOfKey } from "../../src/lib/atlas/scope";
@@ -18,12 +21,19 @@ import {
   loadWardMaps,
   type County,
   type Row,
+  type WardMaps,
 } from "./checks";
 
 const YEARS = [2013, 2017, 2022];
 const ELECTIONS = YEARS.flatMap((y) =>
   ["president", "governor", "mp"].map((race) => `${y}-${race}`),
 );
+
+/**
+ * The heading of the line for candidates' votes short of the valid votes. It says what the line
+ * covers: an area with valid votes and no candidate rows at all is not listed.
+ */
+const SHORT = "Candidates' votes short of the valid votes (where both are held):";
 
 const cell = (r: Row, column: string): string => r[column] ?? "";
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -85,8 +95,16 @@ export function report(c: County, name: string): string {
         .filter((r) => electionOf.get(cell(r, "candidate_id")) === election)
         .map((r) => cell(r, "area_key")),
     );
+    // Turnout is the votes cast over the voters registered: a row without both holds no figure.
     const turnout = new Set(
-      c.turnout.filter((r) => cell(r, "election_id") === election).map((r) => cell(r, "area_key")),
+      c.turnout
+        .filter(
+          (r) =>
+            cell(r, "election_id") === election &&
+            cell(r, "cast_votes") !== "" &&
+            cell(r, "registered") !== "",
+        )
+        .map((r) => cell(r, "area_key")),
     );
     lines.push(
       `  ${election}: votes in ${coverage(votes, race)}; turnout in ${coverage(turnout, race)}`,
@@ -126,7 +144,7 @@ export function report(c: County, name: string): string {
     if (counts.size === 0) return [];
     const parts = [...counts]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([bloc, n]) => `${bloc} ${n}`);
+      .map(([bloc, n]) => `${bloc || "(blank)"} ${n}`);
     return [`  ${election}: ${parts.join(", ")}`];
   });
   lines.push(
@@ -136,12 +154,7 @@ export function report(c: County, name: string): string {
   );
 
   const short = shortfalls(c);
-  lines.push(
-    "",
-    short.length
-      ? `Candidates' votes short of the valid votes:\n  ${short.join("\n  ")}`
-      : "Candidates' votes short of the valid votes: none",
-  );
+  lines.push("", short.length ? `${SHORT}\n  ${short.join("\n  ")}` : `${SHORT} none`);
   const known = c.knownDifferences.map((r) => {
     const where =
       cell(r, "check") === "county_sum"
@@ -155,29 +168,84 @@ export function report(c: County, name: string): string {
   return lines.join("\n");
 }
 
-function main(args: string[]) {
-  const root = "data/atlas";
-  const names = args.length ? args : listCounties(root);
-  if (names.length === 0) {
-    console.log("No counties under data/atlas yet.");
-    return;
-  }
-  const wards = loadWardMaps("public/geo");
+/** A folder, as against a file or nothing. */
+const isFolder = (path: string): boolean => existsSync(path) && statSync(path).isDirectory();
+
+/**
+ * What the heading calls a county: its own name, from the county's row in areas.csv, else its
+ * folder's name with the first letter capitalised.
+ */
+function headingName(c: County, folder: string): string {
+  const row = c.areas.find((a) => levelOfKey(cell(a, "key")) === "county");
+  const name = row ? cell(row, "name") : "";
+  return name !== "" ? name : folder.charAt(0).toUpperCase() + folder.slice(1);
+}
+
+/**
+ * The whole output of the command for the counties named (every county under `root` when none is),
+ * less its last newline, and whether everything passed: blocs.csv and each county's checks. A name
+ * that is no county folder is said so and fails; the other names still run.
+ */
+export function run(names: string[], root: string, wards: WardMaps): { text: string; ok: boolean } {
+  const counties = listCounties(root);
+  const asked = names.length ? names : counties;
+  if (asked.length === 0) return { text: "No counties under data/atlas yet.", ok: true };
   const blocRows = loadBlocs(join(root, "blocs.csv"));
   const blocProblems = checkBlocs(blocRows);
-  if (blocProblems.length) console.log(`blocs.csv: ${blocProblems.join("\n  ")}\n`);
-  for (const name of names) {
+  // One piece for each thing the command prints, a newline between them.
+  const out: string[] = [];
+  let ok = blocProblems.length === 0;
+  if (blocProblems.length) out.push(`blocs.csv: ${blocProblems.join("\n  ")}\n`);
+  for (const name of asked) {
+    if (!isFolder(join(root, name))) {
+      out.push(`no county folder data/atlas/${name}; counties: ${counties.join(", ") || "none"}`);
+      ok = false;
+      continue;
+    }
     const county = loadCounty(join(root, name));
-    console.log(report(county, name.charAt(0).toUpperCase() + name.slice(1)));
+    out.push(report(county, headingName(county, name)));
     const problems = checkCounty(county, wards, blocMap(blocRows));
-    console.log(
+    out.push(
       problems.length
         ? `\nChecks: ${plural(problems.length, "problem")}\n  ${problems.join("\n  ")}\n`
         : "\nChecks: all pass\n",
     );
+    if (problems.length) ok = false;
+  }
+  return { text: out.join("\n"), ok };
+}
+
+const USAGE = [
+  "usage: report.ts [county ...]",
+  "Prints what each county's files hold and what is missing, then the checks' verdict.",
+].join("\n");
+
+function main(args: string[]) {
+  // `report.ts nairobi | head -1` closes the pipe before the end: that is not an error.
+  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
+    if (e.code !== "EPIPE") throw e;
+  });
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(`${USAGE}\n`);
+    return;
+  }
+  // The data and the ward maps are found from this file, so the command works from any directory.
+  const here = dirname(fileURLToPath(import.meta.url));
+  const wards = loadWardMaps(join(here, "../../public/geo"));
+  const { text, ok } = run(args, join(here, "../../data/atlas"), wards);
+  process.stdout.write(`${text}\n`);
+  process.exitCode = ok ? 0 : 1;
+}
+
+/** True when this file is the one being run, also when it is reached through a symlink. */
+function isEntry(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return realpathSync(entry) === fileURLToPath(import.meta.url);
+  } catch {
+    return false; // an entry that is no file on disk (stdin, say) is not this one
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main(process.argv.slice(2));
-}
+if (isEntry()) main(process.argv.slice(2));
