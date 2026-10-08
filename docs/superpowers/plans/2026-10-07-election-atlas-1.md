@@ -3425,6 +3425,7 @@ import {
   blocMap,
   checkBlocs,
   checkCounty,
+  checkShared,
   listCounties,
   loadBlocs,
   loadCounty,
@@ -3476,6 +3477,8 @@ function find(rows: Row[], where: Row): Row {
 function set(rows: Row[], where: Row, cell: string, value: string) {
   find(rows, where)[cell] = value;
 }
+/** The row number of the first row of `rows` like `where`, as the complaints count them. */
+const rowOf = (rows: Row[], where: Row) => rows.indexOf(find(rows, where)) + 2;
 /** What the checker says about the fixture after `edit` has broken it. */
 function broken(edit: (c: County) => void, maps: WardMaps = MAPS): string[] {
   const c = structuredClone(good);
@@ -3509,9 +3512,10 @@ eq(
 eq(
   "a county total with no constituency rows to add up is left alone",
   broken((c) => {
+    // Every governor's constituency rows go, not one candidate's: a candidate with no row where the
+    // others have theirs is refused (see "A missing row is not a zero" below).
     c.results = c.results.filter(
-      (r) =>
-        r["candidate_id"] !== "2022-governor/testland/wa-test-jr" || r["area_key"] === "testland",
+      (r) => !r["candidate_id"]?.startsWith("2022-governor/") || r["area_key"] === "testland",
     );
   }),
   [],
@@ -3964,6 +3968,182 @@ flags(
   "2022-governor/testland/a-test is listed twice",
 );
 
+// A missing row is not a zero. A share of 0 is a count, so where an election has votes, every
+// candidate whose seat covers that place has a row there (kenya covers every area, a county itself
+// and its constituencies, a constituency only itself), and the election has a turnout row there,
+// which is where the votes' source is held: a result row has none of its own. An election with no
+// votes in a place at all is a gap, not a fault.
+const M1 = "2022-mp/testland/north-test/m-one-test";
+const M2 = "2022-mp/testland/north-test/m-two-test";
+const O_TEST = "2022-mp/testland/north-test/otest";
+const B_GOV = "2022-governor/testland/b-test";
+const P2 = "2022-president/kenya/p-two-test";
+/** Takes a candidate's row at an area out of the results. */
+const without = (candidate: string, area: string) => (c: County) => {
+  c.results = c.results.filter((r) => r["candidate_id"] !== candidate || r["area_key"] !== area);
+};
+/** The complaint about a candidate with no row where the election has votes for the others. */
+const noRow = (id: string, area: string, election: string) =>
+  `${id}: no votes for ${area}, where ${election} has votes for other candidates`;
+eq("an MP with no row in their constituency", broken(without(M1, "testland/north-test")), [
+  noRow(M1, "testland/north-test", "2022-mp"),
+]);
+eq("a governor with no county row, the others having theirs", broken(without(B_GOV, "testland")), [
+  noRow(B_GOV, "testland", "2022-governor"),
+]);
+// The county's figure for the candidate no longer has all its constituencies to add up, which is
+// refused on its own account.
+eq("a governor with no row in one constituency", broken(without(B_GOV, "testland/south-test")), [
+  noRow(B_GOV, "testland/south-test", "2022-governor"),
+  `${B_GOV}: its constituencies add up to 100 but testland says 300`,
+]);
+eq("a presidential candidate with no county row", broken(without(P2, "testland")), [
+  noRow(P2, "testland", "2022-president"),
+]);
+// A row whose votes cell is refused is a row all the same, not a missing one.
+eq(
+  "a row whose votes are not a number is not a missing row",
+  broken((c) => set(c.results, { candidate_id: P1, area_key: "testland" }, "votes", "6OO")),
+  [
+    `results.csv row ${rowOf(good.results, { candidate_id: P1, area_key: "testland" })}: ` +
+      'votes must be a whole number, not "6OO"',
+  ],
+);
+// ... and it makes the place one with votes: the other MPs' rows are still missing.
+eq(
+  "the only row in a place, with a figure that is not a number, still counts",
+  broken((c) => {
+    c.results = c.results.filter(
+      (r) => r["candidate_id"] === M1 || !r["candidate_id"]?.includes("-mp/"),
+    );
+    set(c.results, { candidate_id: M1 }, "votes", "6OO");
+  }),
+  [
+    `results.csv row ${rowOf(good.results, { candidate_id: M1 })}: ` +
+      'votes must be a whole number, not "6OO"',
+    noRow(M2, "testland/north-test", "2022-mp"),
+    noRow(O_TEST, "testland/north-test", "2022-mp"),
+  ],
+);
+eq(
+  "an election with no votes in a place is a gap, not a fault",
+  broken((c) => {
+    c.results = c.results.filter(
+      (r) => !r["candidate_id"]?.startsWith("2022-governor/") || r["area_key"] !== "testland",
+    );
+  }),
+  [],
+);
+// The MP turnout row is for another area, so the MPs' votes at North Test have none. North Test has
+// turnout rows for other elections, and 2022-mp has one elsewhere: neither stands in for it.
+eq(
+  "votes with no turnout row for that election and area have no source",
+  broken((c) => set(c.turnout, { election_id: "2022-mp" }, "area_key", "testland/south-test")),
+  ["2022-mp testland/north-test: votes but no turnout row, so no source"],
+);
+
+// Counties agree on the candidates they share. Every county lists the presidential candidates and
+// each county's migration upserts them, so the last one applied wins: two counties that spell a
+// party or a bloc differently would each pass alone and still overwrite one another's data.
+const countyOf = (name: string, edit?: (candidates: Row[]) => void) => {
+  const candidates = structuredClone(good.candidates);
+  edit?.(candidates);
+  return { name, candidates };
+};
+const respell = (column: string, value: string) => (candidates: Row[]) =>
+  set(candidates, { id: P1 }, column, value);
+const disagree = (column: string, was: string, now: string, one = "alpha", other = "beta") =>
+  `${P1}: ${column} is "${was}" in ${one} but "${now}" in ${other}`;
+eq(
+  "two counties that agree on what they share",
+  checkShared([countyOf("alpha"), countyOf("beta")]),
+  [],
+);
+eq(
+  "a party spelt two ways",
+  checkShared([countyOf("alpha"), countyOf("beta", respell("party", "Party Z"))]),
+  [disagree("party", "Party A", "Party Z")],
+);
+eq(
+  "a bloc spelt two ways",
+  checkShared([countyOf("alpha"), countyOf("beta", respell("bloc", "Zeta"))]),
+  [disagree("bloc", "Alpha", "Zeta")],
+);
+eq(
+  "a party and a bloc that both differ are two complaints",
+  checkShared([
+    countyOf("alpha"),
+    countyOf("beta", (candidates) => {
+      respell("party", "Party Z")(candidates);
+      respell("bloc", "Zeta")(candidates);
+    }),
+  ]),
+  [disagree("party", "Party A", "Party Z"), disagree("bloc", "Alpha", "Zeta")],
+);
+// Every column but the id is compared.
+const P1_ROW = find(good.candidates, { id: P1 });
+for (const [column, value] of [
+  ["election_id", "2017-president"],
+  ["seat", "testland"],
+  ["name", "P One Test, Jr."],
+  ["party", "Party Z"],
+  ["bloc", "Zeta"],
+] as const) {
+  eq(
+    `a candidate whose ${column} differs between counties`,
+    checkShared([countyOf("alpha"), countyOf("beta", respell(column, value))]),
+    [disagree(column, P1_ROW[column] ?? "", value)],
+  );
+}
+eq(
+  "a candidate that only one county lists is not compared",
+  checkShared([
+    countyOf("alpha"),
+    countyOf("beta", (candidates) => {
+      candidates.splice(0, 3, {
+        id: "2022-governor/other-test/d-test",
+        election_id: "2022-governor",
+        seat: "other-test",
+        name: "D Test",
+        party: "Party D",
+        bloc: "Party D",
+      });
+    }),
+  ]),
+  [],
+);
+eq(
+  "three counties, only the third differing",
+  checkShared([
+    countyOf("alpha"),
+    countyOf("beta"),
+    countyOf("gamma", respell("party", "Party Z")),
+  ]),
+  [disagree("party", "Party A", "Party Z", "alpha", "gamma")],
+);
+eq(
+  "each county is compared with the first that lists the candidate",
+  checkShared([
+    countyOf("alpha", respell("party", "Party Z")),
+    countyOf("beta"),
+    countyOf("gamma"),
+  ]),
+  [
+    disagree("party", "Party Z", "Party A", "alpha", "beta"),
+    disagree("party", "Party Z", "Party A", "alpha", "gamma"),
+  ],
+);
+eq(
+  "a candidate a county lists twice is that county's problem, not a disagreement",
+  checkShared([
+    countyOf("alpha", (candidates) => {
+      candidates.push({ ...P1_ROW, party: "Party Z" });
+    }),
+    countyOf("beta"),
+  ]),
+  [],
+);
+
 // Registers and population.
 flags(
   "a register for a year with no election",
@@ -4015,6 +4195,13 @@ eq(
   }),
   ["population.csv row 2: 1989 is not a year", "population.csv row 3: 2101 is not a year"],
 );
+// 02025 reads as 2025 once loaded, so next to a 2025 row for the same ward it is a second row for
+// the same key, which the database refuses; it is not a year as written.
+eq(
+  "a population year written with a leading zero is not a year",
+  broken((c) => c.population.push({ ...find(c.population, WARD_ONE), year: "02025" })),
+  [`population.csv row ${good.population.length + 2}: 02025 is not a year`],
+);
 eq(
   "population years 1990 and 2100 are accepted",
   broken((c) => {
@@ -4037,6 +4224,221 @@ flags(
   "a population row listed twice",
   broken((c) => c.population.push({ ...find(c.population, WARD_ONE) })),
   "testland/north-test/ward-one in 2025 is listed twice",
+);
+
+// The database's limits. A county that passes has to load, so the checker refuses what the CHECK
+// constraints of supabase/migrations/20261007090000_election_atlas.sql refuse: text longer than its
+// column holds (lengths are in characters, with spaces trimmed off the ends, as Postgres counts
+// them), a whole number over the integer maximum, and a key the shape constraint rejects. Each
+// limit is tried one over (refused) and, where it is cheap to show, at the limit (accepted).
+const tooLong = (file: string, row: number, column: string, max: number, n: number) =>
+  `${file}.csv row ${row}: ${column} must be at most ${max} characters, not ${n}`;
+const overMax = (file: string, row: number, column: string) =>
+  `${file}.csv row ${row}: ${column} must be a whole number up to 2147483647, not "2147483648"`;
+const SOUTH = { key: "testland/south-test" };
+const B_TEST = { name: "B Test" };
+const REG_2017 = { year: "2017" };
+const SOUTH_ROW = rowOf(good.areas, SOUTH);
+const B_ROW = rowOf(good.candidates, B_TEST);
+const POP_ROW = rowOf(good.population, WARD_ONE);
+
+// Area names are 2 to 80 characters.
+eq(
+  "an area name of 80 characters",
+  broken((c) => set(c.areas, SOUTH, "name", "x".repeat(80))),
+  [],
+);
+eq(
+  "an area name of 81 characters",
+  broken((c) => set(c.areas, SOUTH, "name", "x".repeat(81))),
+  [tooLong("areas", SOUTH_ROW, "name", 80, 81)],
+);
+
+// Candidate names are 2 to 120. The dots are dropped from the slug, so the id stays right.
+const named = (n: number) =>
+  broken((c) => set(c.candidates, B_TEST, "name", "B Test".padEnd(n, ".")));
+eq("a candidate name of 120 characters", named(120), []);
+eq("a candidate name of 121 characters", named(121), [
+  tooLong("candidates", B_ROW, "name", 120, 121),
+]);
+
+// A party is empty (an independent) or 1 to 120 characters. Each party here has a bloc recorded,
+// so the bloc is right.
+const withParty = (party: string) => {
+  const c = structuredClone(good);
+  set(c.candidates, B_TEST, "party", party);
+  return check(c, MAPS, new Map<string, string>([...BLOCS, [`2022|${party}`, "Beta"]]));
+};
+eq("a party of 120 characters", withParty("P".repeat(120)), []);
+eq("a party of 121 characters", withParty("P".repeat(121)), [
+  tooLong("candidates", B_ROW, "party", 120, 121),
+]);
+// With no bloc recorded the bloc is the party, which is only spaces too.
+eq(
+  "a party of only spaces",
+  broken((c) => {
+    set(c.candidates, B_TEST, "party", "  ");
+    set(c.candidates, B_TEST, "bloc", "  ");
+  }),
+  [
+    `candidates.csv row ${B_ROW}: 2022-governor/testland/b-test: ` +
+      "the party is only spaces; leave it empty for an independent",
+  ],
+);
+
+// A bloc is 1 to 80 characters. Party Q has this bloc recorded, so the bloc is right.
+const withBloc = (bloc: string) => {
+  const c = structuredClone(good);
+  set(c.candidates, B_TEST, "party", "Party Q");
+  set(c.candidates, B_TEST, "bloc", bloc);
+  return check(c, MAPS, new Map<string, string>([...BLOCS, ["2022|Party Q", bloc]]));
+};
+eq("a bloc of 80 characters", withBloc("B".repeat(80)), []);
+eq("a bloc of 81 characters", withBloc("B".repeat(81)), [
+  tooLong("candidates", B_ROW, "bloc", 80, 81),
+]);
+
+// A source is 3 to 200 characters on every table that has one, and a source_url at most 500. The
+// source stays "Publisher, document title" and the link an https link.
+const sourced = (n: number) => `IEBC, ${"x".repeat(n - 6)}`;
+const linked = (n: number) => `https://example.test/${"a".repeat(n - 21)}`;
+eq(
+  "a turnout source of 200 characters",
+  broken((c) => set(c.turnout, SOUTH_GOV, "source", sourced(200))),
+  [],
+);
+const TURNOUT_ROW = rowOf(good.turnout, SOUTH_GOV);
+eq(
+  "a turnout source of 201 characters",
+  broken((c) => set(c.turnout, SOUTH_GOV, "source", sourced(201))),
+  [tooLong("turnout", TURNOUT_ROW, "source", 200, 201)],
+);
+eq(
+  "a register source of 201 characters",
+  broken((c) => set(c.register, REG_2017, "source", sourced(201))),
+  [tooLong("register", rowOf(good.register, REG_2017), "source", 200, 201)],
+);
+eq(
+  "a population source of 201 characters",
+  broken((c) => set(c.population, WARD_ONE, "source", sourced(201))),
+  [tooLong("population", POP_ROW, "source", 200, 201)],
+);
+// Spaces around the comma satisfy "Publisher, document title" but are nothing once trimmed.
+const SPACED = `${" ".repeat(2)}, ${" ".repeat(3)}`;
+eq(
+  "a source that is only spaces around a comma",
+  broken((c) => set(c.turnout, SOUTH_GOV, "source", SPACED)),
+  [`turnout.csv row ${TURNOUT_ROW}: source must read "Publisher, document title", not "${SPACED}"`],
+);
+eq(
+  "a turnout link of 500 characters",
+  broken((c) => set(c.turnout, SOUTH_GOV, "source_url", linked(500))),
+  [],
+);
+eq(
+  "a turnout link of 501 characters",
+  broken((c) => set(c.turnout, SOUTH_GOV, "source_url", linked(501))),
+  [tooLong("turnout", TURNOUT_ROW, "source_url", 500, 501)],
+);
+eq(
+  "a register link of 501 characters",
+  broken((c) => set(c.register, REG_2017, "source_url", linked(501))),
+  [tooLong("register", rowOf(good.register, REG_2017), "source_url", 500, 501)],
+);
+
+// A population method is 10 to 500 characters.
+eq(
+  "a population method of 500 characters",
+  broken((c) => set(c.population, WARD_ONE, "method", "x".repeat(500))),
+  [],
+);
+eq(
+  "a population method of 501 characters",
+  broken((c) => set(c.population, WARD_ONE, "method", "x".repeat(501))),
+  [tooLong("population", POP_ROW, "method", 500, 501)],
+);
+
+// Postgres counts characters, not the UTF-16 units JavaScript counts: a character outside the
+// basic plane is one. Eighty of them fit a name, one is too short for a name and five for a method.
+const FACE = String.fromCodePoint(0x1f600);
+eq(
+  "an area name of 80 characters outside the basic plane",
+  broken((c) => set(c.areas, SOUTH, "name", FACE.repeat(80))),
+  [],
+);
+eq(
+  "one character outside the basic plane is too short for an area name",
+  broken((c) => set(c.areas, SOUTH, "name", FACE)),
+  [`areas.csv row ${SOUTH_ROW}: testland/south-test ${needsName}`],
+);
+flags(
+  "one character outside the basic plane is too short for a candidate name",
+  broken((c) => set(c.candidates, B_TEST, "name", FACE)),
+  "needs a name with no stray spaces",
+);
+eq(
+  "five characters outside the basic plane are too short for a method",
+  broken((c) => set(c.population, WARD_ONE, "method", FACE.repeat(5))),
+  [`population.csv row ${POP_ROW}: the method must say how it was worked out`],
+);
+
+// A whole number is at most 2147483647, Postgres's integer maximum.
+eq(
+  "a registered figure at the integer maximum",
+  broken((c) => set(c.register, REG_2017, "registered", "2147483647")),
+  [],
+);
+const OTEST = { candidate_id: O_TEST };
+type Table = "results" | "turnout" | "register" | "population";
+const overs: [Table, string, Row][] = [
+  ["results", "votes", OTEST],
+  ["turnout", "registered", NORTH_GOV],
+  ["turnout", "cast_votes", NORTH_GOV],
+  ["turnout", "rejected_votes", NORTH_GOV],
+  ["turnout", "valid_votes", NORTH_GOV],
+  ["register", "registered", REG_2017],
+  ["population", "year", WARD_ONE],
+  ["population", "total", WARD_ONE],
+  ["population", "adults", WARD_ONE],
+  ["population", "young_adults", WARD_ONE],
+];
+for (const [file, column, where] of overs) {
+  eq(
+    `${column} one over the integer maximum, in ${file}.csv`,
+    broken((c) => set(c[file], where, column, "2147483648")),
+    [overMax(file, rowOf(good[file], where), column)],
+  );
+}
+
+// A key under kenya: the schema wants a constituency's parent to be a county, never kenya.
+eq(
+  "a constituency keyed under kenya",
+  broken((c) =>
+    c.areas.push({
+      key: "kenya/x-test",
+      level: "constituency",
+      name: "X Test",
+      parent: "kenya",
+      iebc_code: "",
+    }),
+  ),
+  [
+    `areas.csv row ${good.areas.length + 2}: kenya/x-test starts with kenya, ` +
+      "but keys do not begin with the country: a county's key is its own name",
+  ],
+);
+eq(
+  "a county whose key only starts like kenya is fine",
+  broken((c) =>
+    c.areas.push({
+      key: "kenya-west",
+      level: "county",
+      name: "Kenya West",
+      parent: "kenya",
+      iebc_code: "",
+    }),
+  ),
+  [],
 );
 
 // Reading the files.
@@ -4307,9 +4709,30 @@ try {
   rmSync(tmp, { recursive: true, force: true });
 }
 
-// The ward maps under public/geo.
+// The ward maps under public/geo. Another campaign's ward map would add to them, so Nairobi's and
+// Mathira's are looked at by name, each with the slugs its own file holds, and the total is not
+// pinned.
 const real = loadWardMaps("public/geo");
-eq("the ward maps hold Nairobi's 85 wards and Mathira's 6", real.size, 91);
+const slugsIn = (file: string): Set<string> => {
+  const geo = JSON.parse(readFileSync(join("public/geo", file), "utf8")) as {
+    features: { properties: { slug?: string } }[];
+  };
+  return new Set(geo.features.flatMap((f) => (f.properties.slug ? [f.properties.slug] : [])));
+};
+const nairobiWards = slugsIn("nairobi-wards.json");
+const mathiraWards = slugsIn("mathira-wards.json");
+eq("Nairobi's map holds 85 wards", nairobiWards.size, 85);
+eq("Mathira's map holds 6 wards", mathiraWards.size, 6);
+eq(
+  "every ward of Nairobi's map is among the loaded wards",
+  [...nairobiWards].filter((slug) => !real.has(slug)),
+  [],
+);
+eq(
+  "every ward of Mathira's map is among the loaded wards",
+  [...mathiraWards].filter((slug) => !real.has(slug)),
+  [],
+);
 eq("a Nairobi ward knows its constituency", real.get("umoja-ii"), "embakasi-west");
 eq("Mathira's map names no constituency", real.get("iriaini"), null);
 
@@ -4318,11 +4741,19 @@ const realBlocRows = loadBlocs("data/atlas/blocs.csv");
 const blocProblems = checkBlocs(realBlocRows);
 if (blocProblems.length) console.log(`blocs.csv:\n  ${blocProblems.join("\n  ")}`);
 eq("data/atlas/blocs.csv passes", blocProblems, []);
+const realCounties: { name: string; candidates: Row[] }[] = [];
 for (const name of listCounties("data/atlas")) {
-  const problems = checkCounty(loadCounty(join("data/atlas", name)), real, blocMap(realBlocRows));
+  const county = loadCounty(join("data/atlas", name));
+  realCounties.push({ name, candidates: county.candidates });
+  const problems = checkCounty(county, real, blocMap(realBlocRows));
   if (problems.length) console.log(`${name}:\n  ${problems.join("\n  ")}`);
   eq(`data/atlas/${name} passes`, problems, []);
 }
+// ... and they agree with one another on the candidates they share (with no county yet, this holds
+// for want of any).
+const realShared = checkShared(realCounties);
+if (realShared.length) console.log(`shared candidates:\n  ${realShared.join("\n  ")}`);
+eq("the counties under data/atlas agree on their shared candidates", realShared, []);
 
 // The slug rule is the one scripts/atlas/slug.py runs.
 const cases = parseCSV(readFileSync("tests/fixtures/atlas/slug-cases.csv", "utf8")).slice(1);
@@ -4385,10 +4816,13 @@ everywhere.
 ```ts
 // The checks every county's atlas files must pass before they become a migration, and the readers
 // that load them. `checkCounty` takes the parsed files and says, in a sentence each, what is
-// wrong; tests/atlas-data.test.ts runs it on every county under data/atlas. A recorded difference
-// (known-differences.csv) is how a county keeps an inconsistency IEBC itself published: it must
-// say why, and it is refused once nothing needs it any more. blocs.csv records, for each election,
-// which coalition (bloc) each party stood in, so a coalition has one name in every county.
+// wrong; tests/atlas-data.test.ts runs it on every county under data/atlas. It refuses a missing
+// row (a share of 0 is a count, and a row that is not there is none) and whatever the CHECK
+// constraints of supabase/migrations/20261007090000_election_atlas.sql refuse, so that a county
+// that passes can be applied. `checkShared` compares the counties with one another. A recorded
+// difference (known-differences.csv) is how a county keeps an inconsistency IEBC itself published:
+// it must say why, and it is refused once nothing needs it any more. blocs.csv records, for each
+// election, which coalition (bloc) each party stood in, so a coalition has one name everywhere.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -4598,13 +5032,34 @@ const SIGNED = /^-?\d+$/;
 const SOURCE = /^[^,]{2,40}, .{3,}$/;
 const HTTPS = /^https:\/\/\S+$/;
 
+/** The largest value a Postgres `integer` column holds. */
+const INT_MAX = 2147483647;
+
 const cell = (r: Row, column: string): string => r[column] ?? "";
 const whole = (s: string): number | null => (WHOLE.test(s) ? Number(s) : null);
 
-/** What is wrong with a row's source and source_url. */
+/** Characters as Postgres's length() counts them: one outside the basic plane is one, not two. */
+const chars = (s: string): number => [...s].length;
+/** What Postgres's btrim() leaves: spaces come off both ends, and nothing else (a tab stays). */
+function btrim(s: string): string {
+  let start = 0;
+  let end = s.length;
+  while (start < end && s[start] === " ") start++;
+  while (end > start && s[end - 1] === " ") end--;
+  return s.slice(start, end);
+}
+
+/** Whether a seat takes in an area: the area itself, or one below it. `kenya` takes in them all. */
+const covers = (seat: string, area: string): boolean =>
+  seat === "kenya" || area === seat || area.startsWith(`${seat}/`);
+
+/**
+ * What is wrong with a row's source and source_url. A source also has to be three characters once
+ * the spaces at its ends are trimmed, as the database wants, which spaces around the comma are not.
+ */
 function sourceProblems(r: Row): string[] {
   const out: string[] = [];
-  if (!SOURCE.test(cell(r, "source"))) {
+  if (!SOURCE.test(cell(r, "source")) || chars(btrim(cell(r, "source"))) < 3) {
     out.push(`source must read "Publisher, document title", not "${cell(r, "source")}"`);
   }
   const url = cell(r, "source_url");
@@ -4635,6 +5090,41 @@ export function checkBlocs(rows: Row[]): string[] {
   return problems;
 }
 
+/** The columns of a candidate that two counties listing the same id have to agree on. */
+const SHARED_COLUMNS = COLUMNS.candidates.filter((column) => column !== "id");
+
+/**
+ * What is wrong between counties. Every county lists the presidential candidates, and each
+ * county's migration upserts the row, so the last one applied wins: a candidate that more than one
+ * county lists has to read the same in each. Each county is compared with the first that lists the
+ * candidate; a candidate a county lists twice is checkCounty's complaint, not a disagreement.
+ */
+export function checkShared(counties: { name: string; candidates: Row[] }[]): string[] {
+  const problems: string[] = [];
+  const first = new Map<string, { county: string; row: Row }>();
+  for (const { name, candidates } of counties) {
+    const listed = new Set<string>();
+    for (const row of candidates) {
+      const id = cell(row, "id");
+      if (listed.has(id)) continue;
+      listed.add(id);
+      const before = first.get(id);
+      if (before === undefined) {
+        first.set(id, { county: name, row });
+        continue;
+      }
+      for (const column of SHARED_COLUMNS) {
+        const was = cell(before.row, column);
+        const now = cell(row, column);
+        if (was !== now) {
+          problems.push(`${id}: ${column} is "${was}" in ${before.county} but "${now}" in ${name}`);
+        }
+      }
+    }
+  }
+  return problems;
+}
+
 type Known = { row: number; difference: number; used: boolean };
 
 /**
@@ -4648,17 +5138,32 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     problems.push(`${file}.csv row ${i + 2}: ${what}`);
   };
 
-  /** A figure that must be a whole number, or blank when `required` is false. */
+  /**
+   * A figure that must be a whole number the database's integer holds, or blank when `required` is
+   * false. One that is refused answers null, so that nothing is worked out from it.
+   */
   const figure = (file: string, i: number, r: Row, column: string, required = false) => {
     const s = cell(r, column);
     if (s === "" && !required) return null;
     const n = whole(s);
-    if (n === null)
+    if (n === null) {
       bad(file, i, `${column} must be a whole number${required ? "" : " or blank"}, not "${s}"`);
+    } else if (n > INT_MAX) {
+      bad(file, i, `${column} must be a whole number up to ${INT_MAX}, not "${s}"`);
+      return null;
+    }
     return n;
   };
-  const source = (file: string, i: number, r: Row) =>
+  /** A text cell may hold at most `max` characters, as the database counts them. */
+  const atMost = (file: string, i: number, r: Row, column: string, max: number) => {
+    const n = chars(btrim(cell(r, column)));
+    if (n > max) bad(file, i, `${column} must be at most ${max} characters, not ${n}`);
+  };
+  const source = (file: string, i: number, r: Row) => {
     sourceProblems(r).forEach((what) => bad(file, i, what));
+    atMost(file, i, r, "source", 200);
+    atMost(file, i, r, "source_url", 500);
+  };
   const unique = (file: string, rows: Row[], key: (r: Row) => string) => {
     const seen = new Set<string>();
     rows.forEach((r, i) => {
@@ -4724,6 +5229,14 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!KEY.test(key)) {
       return bad("areas", i, `"${key}" is not a key: lower-case parts joined by "/"`);
     }
+    if (key.startsWith("kenya/")) {
+      bad(
+        "areas",
+        i,
+        `${key} starts with kenya, but keys do not begin with the country: ` +
+          "a county's key is its own name",
+      );
+    }
     const level = levelOfKey(key);
     const parent = parentKey(key);
     if (cell(a, "level") !== level) {
@@ -4735,9 +5248,10 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
       bad("areas", i, `the parent ${parent} is not in the files`);
     }
     const name = cell(a, "name");
-    if (name.length < 2 || name !== name.trim()) {
+    if (chars(name) < 2 || name !== name.trim()) {
       bad("areas", i, `${key} needs a name of at least two letters with no stray spaces`);
     }
+    atMost("areas", i, a, "name", 80);
     const code = cell(a, "iebc_code");
     if (code !== "" && !/^\d{1,4}$/.test(code)) {
       bad("areas", i, `the IEBC code ${code} must be one to four digits`);
@@ -4780,19 +5294,29 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(seat)) bad("candidates", i, `the seat ${seat} is not in the files`);
     const id = `${election}/${seat}/${slugify(name)}`;
     if (cell(r, "id") !== id) bad("candidates", i, `the id should be ${id}`);
-    if (name.length < 2 || name !== name.trim()) {
+    if (chars(name) < 2 || name !== name.trim()) {
       bad("candidates", i, `${id} needs a name with no stray spaces`);
     }
+    atMost("candidates", i, r, "name", 120);
     const party = cell(r, "party");
+    if (party !== "" && btrim(party) === "") {
+      bad("candidates", i, `${id}: the party is only spaces; leave it empty for an independent`);
+    }
+    atMost("candidates", i, r, "party", 120);
     const bloc =
       party === "" ? "Independent" : (blocs.get(`${election.slice(0, 4)}|${party}`) ?? party);
     if (cell(r, "bloc") !== bloc) {
       bad("candidates", i, `${id}: the bloc should be ${bloc}, not ${cell(r, "bloc")}`);
+    } else {
+      // The right bloc still has to fit its column.
+      atMost("candidates", i, r, "bloc", 80);
     }
   });
 
-  // Results, and what the candidates' votes come to in each area.
+  // Results, what the candidates' votes come to in each area, and who has a row where.
   const votesAt = new Map<string, number>();
+  const placesOf = new Map<string, Set<string>>(); // election to the areas it has a row in
+  const hasRow = new Set<string>(); // `${candidate_id}|${area_key}`
   c.results.forEach((r, i) => {
     const candidate = candidates.get(cell(r, "candidate_id"));
     const area = cell(r, "area_key");
@@ -4801,15 +5325,40 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(area)) bad("results", i, `${area} is not in the files`);
     if (candidate && areaKeys.has(area)) {
       const seat = cell(candidate, "seat");
-      if (seat !== "kenya" && area !== seat && !area.startsWith(`${seat}/`)) {
-        bad("results", i, `${area} is outside the seat ${seat}`);
-      }
+      const election = cell(candidate, "election_id");
+      if (!covers(seat, area)) bad("results", i, `${area} is outside the seat ${seat}`);
+      hasRow.add(`${cell(r, "candidate_id")}|${area}`);
+      placesOf.set(election, (placesOf.get(election) ?? new Set<string>()).add(area));
       if (votes !== null) {
-        const k = `${cell(candidate, "election_id")}|${area}`;
+        const k = `${election}|${area}`;
         votesAt.set(k, (votesAt.get(k) ?? 0) + votes);
       }
     }
   });
+
+  // A missing row is not a zero. Where an election has votes, every candidate whose seat covers
+  // that place has a row there, else their share would read as 0 when it is only not found; and
+  // the election has a turnout row there, because that is where the votes' source is held.
+  for (const [id, candidate] of candidates) {
+    const election = cell(candidate, "election_id");
+    for (const area of placesOf.get(election) ?? []) {
+      if (covers(cell(candidate, "seat"), area) && !hasRow.has(`${id}|${area}`)) {
+        problems.push(
+          `${id}: no votes for ${area}, where ${election} has votes for other candidates`,
+        );
+      }
+    }
+  }
+  const turnoutAt = new Set(
+    c.turnout.map((t) => `${cell(t, "election_id")}|${cell(t, "area_key")}`),
+  );
+  for (const [election, areas] of placesOf) {
+    for (const area of areas) {
+      if (!turnoutAt.has(`${election}|${area}`)) {
+        problems.push(`${election} ${area}: votes but no turnout row, so no source`);
+      }
+    }
+  }
 
   // Constituencies add up to their county, for president and governor; an MP race has no
   // county total.
@@ -4904,8 +5453,9 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(cell(r, "area_key")))
       bad("population", i, `${cell(r, "area_key")} is not in the files`);
     const year = figure("population", i, r, "year", true);
-    if (year !== null && (year < 1990 || year > 2100))
-      bad("population", i, `${year} is not a year`);
+    // A year written with a leading zero (02025) is the same key as 2025 once loaded.
+    if (year !== null && (year < 1990 || year > 2100 || String(year) !== cell(r, "year")))
+      bad("population", i, `${cell(r, "year")} is not a year`);
     const total = figure("population", i, r, "total", true);
     const adults = figure("population", i, r, "adults", true);
     const young = figure("population", i, r, "young_adults", true);
@@ -4915,8 +5465,9 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (young !== null && adults !== null && young > adults) {
       bad("population", i, `young adults (${young}) pass the adults (${adults})`);
     }
-    if (cell(r, "method").trim().length < 10)
+    if (chars(cell(r, "method").trim()) < 10)
       bad("population", i, "the method must say how it was worked out");
+    atMost("population", i, r, "method", 500);
     source("population", i, r);
   });
 
@@ -4938,7 +5489,7 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
 
 Run: `npx prettier --write scripts/atlas/checks.ts tests/atlas-data.test.ts && npx eslint scripts/atlas/checks.ts tests/atlas-data.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts | tail -3`
 
-Expected: ESLint prints nothing, then `127 passed, 0 failed`.
+Expected: ESLint prints nothing, then `189 passed, 0 failed`.
 
 - [ ] **Step 9: Commit**
 
@@ -4988,13 +5539,6 @@ NAIROBI = ROOT / "public" / "geo" / "nairobi-wards.json"
 MATHIRA = ROOT / "public" / "geo" / "mathira-wards.json"
 
 
-def geo(features):
-    tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-    json.dump({"type": "FeatureCollection", "features": features}, tmp)
-    tmp.close()
-    return tmp.name
-
-
 def feature(slug_, name, constituency=None):
     properties = {"slug": slug_, "name": name}
     if constituency:
@@ -5003,8 +5547,16 @@ def feature(slug_, name, constituency=None):
 
 
 class Rows(unittest.TestCase):
+    def geo(self, features):
+        """A ward map holding `features`, in a folder that is removed when the test ends."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "wards.json"
+        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}), encoding="utf-8")
+        return str(path)
+
     def test_a_map_that_names_constituencies(self):
-        path = geo([feature("ward-one", "Ward One", "North Test"), feature("ward-two", "Ward Two", "South Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-two", "Ward Two", "South Test")])
         rows = afm.build_areas(path, "Testland")
         self.assertEqual(
             rows,
@@ -5018,16 +5570,16 @@ class Rows(unittest.TestCase):
         )
 
     def test_a_map_that_names_none_takes_the_one_given(self):
-        path = geo([feature("ward-one", "Ward One"), feature("ward-two", "Ward Two")])
+        path = self.geo([feature("ward-one", "Ward One"), feature("ward-two", "Ward Two")])
         rows = afm.build_areas(path, "Testland", constituency="North Test")
         self.assertEqual([r[0] for r in rows], ["testland", "testland/north-test", "testland/north-test/ward-one", "testland/north-test/ward-two"])
 
     def test_a_map_that_names_none_and_is_given_none_is_refused(self):
         with self.assertRaisesRegex(ValueError, "names no constituency"):
-            afm.build_areas(geo([feature("ward-one", "Ward One")]), "Testland")
+            afm.build_areas(self.geo([feature("ward-one", "Ward One")]), "Testland")
 
     def test_constituencies_without_a_ward_map_are_listed_too(self):
-        path = geo([feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test")])
         rows = afm.build_areas(path, "Testland", also=["Far Test", "Away Test"])
         keys = [r[0] for r in rows]
         self.assertIn("testland/far-test", keys)
@@ -5035,12 +5587,12 @@ class Rows(unittest.TestCase):
         self.assertEqual([r for r in rows if r[0] == "testland/far-test"], [["testland/far-test", "constituency", "Far Test", "testland", ""]])
 
     def test_a_constituency_given_twice_is_refused(self):
-        path = geo([feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test")])
         with self.assertRaisesRegex(ValueError, "north-test is listed twice"):
             afm.build_areas(path, "Testland", also=["North Test"])
 
     def test_a_repeated_ward_is_refused(self):
-        path = geo([feature("ward-one", "Ward One", "North Test"), feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-one", "Ward One", "North Test")])
         with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one is listed twice"):
             afm.build_areas(path, "Testland")
 
@@ -5067,9 +5619,11 @@ class RealMaps(unittest.TestCase):
         self.assertIn(["nyeri/mathira/karatina-town", "ward", "Karatina Town", "nyeri/mathira", ""], rows)
 
     def test_the_csv_it_writes(self):
-        out = Path(tempfile.mkdtemp()) / "areas.csv"
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        out = Path(tmp.name) / "areas.csv"
         afm.main(["areas_from_map.py", str(NAIROBI), "Nairobi", str(out)])
-        lines = out.read_text().splitlines()
+        lines = out.read_text(encoding="utf-8").splitlines()
         self.assertEqual(lines[0], "key,level,name,parent,iebc_code")
         self.assertEqual(lines[1], "nairobi,county,Nairobi,kenya,")
         self.assertEqual(len(lines), 1 + 1 + 17 + 85)
@@ -5258,7 +5812,8 @@ STARTS = [0, 1] + list(range(5, 85, 5))
 ONE_WARD = "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
 NO_WARDS = "key,level,name,parent,iebc_code\ntestland,county,Testland,kenya,\n"
 
-# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each holding nothing.
+# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each
+# holding nothing.
 EMPTY_WARD_PIXELS = {(row, column): 0 for row in range(2, 6) for column in range(2, 6)}
 
 # Wards over the ten by ten grid, as (left, top, right, bottom) in pixels from its top left corner.
@@ -6341,6 +6896,37 @@ try {
   });
   eq("no names runs every county", ran([], two), { text: `${checked}\n${checked}`, ok: true });
 
+  // Counties that each pass alone but disagree about a candidate they share. Every county's
+  // migration writes the presidential candidates, so this fails the verdict, and for whichever
+  // counties are asked for: beta spells P One Test's party its own way, with no coalition recorded
+  // for that spelling, so its bloc is the party's.
+  const disagreeing = makeRoot(["alpha", "beta"], (root) =>
+    replaceIn(
+      join(root, "beta", "candidates.csv"),
+      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party A,Alpha\n",
+      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party Z,Party Z\n",
+    ),
+  );
+  const betaReport = report(loadCounty(join(disagreeing, "beta")), "Testland");
+  const betaChecked = `${betaReport}\n\nChecks: all pass\n`;
+  const disagreement = [
+    '2022-president/kenya/p-one-test: party is "Party A" in alpha but "Party Z" in beta',
+    '2022-president/kenya/p-one-test: bloc is "Alpha" in alpha but "Party Z" in beta',
+  ];
+  const sharedText = `\nShared candidates: 2 problems\n  ${disagreement.join("\n  ")}\n`;
+  eq("counties that disagree on a shared candidate fail the verdict", ran([], disagreeing), {
+    text: `${checked}\n${betaChecked}\n${sharedText}`,
+    ok: false,
+  });
+  eq(
+    "and the disagreement is found when only one of them is asked for",
+    ran(["alpha"], disagreeing),
+    {
+      text: `${checked}\n${sharedText}`,
+      ok: false,
+    },
+  );
+
   // The heading is the county's own name from areas.csv; only a county with none falls back to its
   // folder's name, capitalised.
   const firstLine = (text: string) => text.split("\n")[0];
@@ -6448,6 +7034,15 @@ data/atlas/
   files. The checker refuses: more votes cast than registered; more valid votes than cast; cast
   not equal to valid plus rejected when all three are given (unless recorded in
   `known-differences.csv`); candidates' votes above the valid votes.
+- **Complete rows**: where an election has votes in an area, every candidate whose seat covers
+  that area has a row there, and the area has a turnout row (that is where the source is). A
+  candidate whose votes were not found makes the checker refuse the county: find the figure, or
+  leave that election's rows out of the whole area, so that it reads "not found yet" and never 0%.
+- **Shared candidates**: the presidential candidates (seat `kenya`) are in every county's
+  `candidates.csv` and must be identical in all of them. Each county's migration upserts them, so the
+  checker refuses a county that disagrees with another about one.
+- **Limits**: the checker refuses what the database would (text lengths, whole numbers up to
+  2,147,483,647, a key that begins with `kenya`), so a county that passes the checker applies.
 - **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
   backslash; no row is listed twice (the key columns of a file are unique). The checker and
   `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
@@ -6466,6 +7061,9 @@ data/atlas/
   required, and a difference nothing needs any more is refused.
 - Figures come only from the publisher's own document: IEBC, the Kenya Gazette, WorldPop. A news
   report or a summary is not a source; what is not found stays blank and is listed in `SOURCES.md`.
+- **Corrections**: loading only inserts and updates. A correction that removes a row, or renames a
+  key (a re-spelt candidate name gives a new id), needs explicit `delete` statements, written by
+  hand, in the new migration; otherwise the old row stays and its votes are counted twice.
 
 ## Commands
 
@@ -6543,7 +7141,8 @@ Create `scripts/atlas/report.ts`:
 // words the user reads before any screen work. `report` is pure; `run` builds the whole output of
 // the command and says whether everything passed. Running this file prints that output for the
 // counties named (default: every county under data/atlas), from any directory, and exits 1 when
-// blocs.csv or a county has a problem, so that a failing verdict fails the command:
+// blocs.csv, a county or the candidates the counties share have a problem, so that a failing
+// verdict fails the command:
 //   npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi nyeri
 
 import { existsSync, realpathSync, statSync } from "node:fs";
@@ -6556,6 +7155,7 @@ import {
   blocMap,
   checkBlocs,
   checkCounty,
+  checkShared,
   listCounties,
   loadBlocs,
   loadCounty,
@@ -6724,8 +7324,10 @@ function headingName(c: County, folder: string): string {
 
 /**
  * The whole output of the command for the counties named (every county under `root` when none is),
- * less its last newline, and whether everything passed: blocs.csv and each county's checks. A name
- * that is no county folder is said so and fails; the other names still run.
+ * less its last newline, and whether everything passed: blocs.csv, each county's checks and the
+ * candidates the counties share. A name that is no county folder is said so and fails; the other
+ * names still run. The shared candidates are compared across every county under `root`, not only
+ * the ones named, because each county's migration writes them.
  */
 export function run(names: string[], root: string, wards: WardMaps): { text: string; ok: boolean } {
   const counties = listCounties(root);
@@ -6733,6 +7335,16 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
   if (asked.length === 0) return { text: "No counties under data/atlas yet.", ok: true };
   const blocRows = loadBlocs(join(root, "blocs.csv"));
   const blocProblems = checkBlocs(blocRows);
+  // Each county's files are read once, whether it is named or only compared.
+  const loaded = new Map<string, County>();
+  const load = (name: string): County => {
+    let county = loaded.get(name);
+    if (county === undefined) {
+      county = loadCounty(join(root, name));
+      loaded.set(name, county);
+    }
+    return county;
+  };
   // One piece for each thing the command prints, a newline between them.
   const out: string[] = [];
   let ok = blocProblems.length === 0;
@@ -6743,7 +7355,7 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
       ok = false;
       continue;
     }
-    const county = loadCounty(join(root, name));
+    const county = load(name);
     out.push(report(county, headingName(county, name)));
     const problems = checkCounty(county, wards, blocMap(blocRows));
     out.push(
@@ -6752,6 +7364,13 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
         : "\nChecks: all pass\n",
     );
     if (problems.length) ok = false;
+  }
+  const shared = checkShared(counties.map((name) => ({ name, candidates: load(name).candidates })));
+  if (shared.length) {
+    out.push(
+      `\nShared candidates: ${plural(shared.length, "problem")}\n  ${shared.join("\n  ")}\n`,
+    );
+    ok = false;
   }
   return { text: out.join("\n"), ok };
 }
@@ -6796,7 +7415,7 @@ if (isEntry()) main(process.argv.slice(2));
 
 Run: `npx prettier --write scripts/atlas/report.ts tests/atlas-report.test.ts && npx eslint scripts/atlas tests/atlas-report.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-report.test.ts | tail -2`
 
-Expected: ESLint prints nothing, then `28 passed, 0 failed`.
+Expected: ESLint prints nothing, then `30 passed, 0 failed`.
 
 Run: `npx -y tsx --tsconfig tsconfig.json scripts/atlas/report.ts`
 
@@ -6810,11 +7429,11 @@ Expected:
 
 ```
 tests/atlas-advice.test.ts        48 passed, 0 failed
-tests/atlas-data.test.ts          127 passed, 0 failed
+tests/atlas-data.test.ts          189 passed, 0 failed
 tests/atlas-format.test.ts        25 passed, 0 failed
 tests/atlas-measures.test.ts      35 passed, 0 failed
 tests/atlas-register.test.ts      20 passed, 0 failed
-tests/atlas-report.test.ts        28 passed, 0 failed
+tests/atlas-report.test.ts        30 passed, 0 failed
 tests/atlas-scope.test.ts         12 passed, 0 failed
 tests/atlas-scripts.test.ts       atlas script tests passed (67 tests)
 ```

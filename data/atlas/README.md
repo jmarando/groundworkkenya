@@ -57,6 +57,15 @@ data/atlas/
   files. The checker refuses: more votes cast than registered; more valid votes than cast; cast
   not equal to valid plus rejected when all three are given (unless recorded in
   `known-differences.csv`); candidates' votes above the valid votes.
+- **Complete rows**: where an election has votes in an area, every candidate whose seat covers
+  that area has a row there, and the area has a turnout row (that is where the source is). A
+  candidate whose votes were not found makes the checker refuse the county: find the figure, or
+  leave that election's rows out of the whole area, so that it reads "not found yet" and never 0%.
+- **Shared candidates**: the presidential candidates (seat `kenya`) are in every county's
+  `candidates.csv` and must be identical in all of them. Each county's migration upserts them, so the
+  checker refuses a county that disagrees with another about one.
+- **Limits**: the checker refuses what the database would (text lengths, whole numbers up to
+  2,147,483,647, a key that begins with `kenya`), so a county that passes the checker applies.
 - **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
   backslash; no row is listed twice (the key columns of a file are unique). The checker and
   `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
@@ -75,6 +84,9 @@ data/atlas/
   required, and a difference nothing needs any more is refused.
 - Figures come only from the publisher's own document: IEBC, the Kenya Gazette, WorldPop. A news
   report or a summary is not a source; what is not found stays blank and is listed in `SOURCES.md`.
+- **Corrections**: loading only inserts and updates. A correction that removes a row, or renames a
+  key (a re-spelt candidate name gives a new id), needs explicit `delete` statements, written by
+  hand, in the new migration; otherwise the old row stays and its votes are counted twice.
 
 ## Commands
 
