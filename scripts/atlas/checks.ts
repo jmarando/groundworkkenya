@@ -1,9 +1,12 @@
 // The checks every county's atlas files must pass before they become a migration, and the readers
 // that load them. `checkCounty` takes the parsed files and says, in a sentence each, what is
-// wrong; tests/atlas-data.test.ts runs it on every county under data/atlas. A recorded difference
-// (known-differences.csv) is how a county keeps an inconsistency IEBC itself published: it must
-// say why, and it is refused once nothing needs it any more. blocs.csv records, for each election,
-// which coalition (bloc) each party stood in, so a coalition has one name in every county.
+// wrong; tests/atlas-data.test.ts runs it on every county under data/atlas. It refuses a missing
+// row (a share of 0 is a count, and a row that is not there is none) and whatever the CHECK
+// constraints of supabase/migrations/20261007090000_election_atlas.sql refuse, so that a county
+// that passes can be applied. `checkShared` compares the counties with one another. A recorded
+// difference (known-differences.csv) is how a county keeps an inconsistency IEBC itself published:
+// it must say why, and it is refused once nothing needs it any more. blocs.csv records, for each
+// election, which coalition (bloc) each party stood in, so a coalition has one name everywhere.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -213,13 +216,34 @@ const SIGNED = /^-?\d+$/;
 const SOURCE = /^[^,]{2,40}, .{3,}$/;
 const HTTPS = /^https:\/\/\S+$/;
 
+/** The largest value a Postgres `integer` column holds. */
+const INT_MAX = 2147483647;
+
 const cell = (r: Row, column: string): string => r[column] ?? "";
 const whole = (s: string): number | null => (WHOLE.test(s) ? Number(s) : null);
 
-/** What is wrong with a row's source and source_url. */
+/** Characters as Postgres's length() counts them: one outside the basic plane is one, not two. */
+const chars = (s: string): number => [...s].length;
+/** What Postgres's btrim() leaves: spaces come off both ends, and nothing else (a tab stays). */
+function btrim(s: string): string {
+  let start = 0;
+  let end = s.length;
+  while (start < end && s[start] === " ") start++;
+  while (end > start && s[end - 1] === " ") end--;
+  return s.slice(start, end);
+}
+
+/** Whether a seat takes in an area: the area itself, or one below it. `kenya` takes in them all. */
+const covers = (seat: string, area: string): boolean =>
+  seat === "kenya" || area === seat || area.startsWith(`${seat}/`);
+
+/**
+ * What is wrong with a row's source and source_url. A source also has to be three characters once
+ * the spaces at its ends are trimmed, as the database wants, which spaces around the comma are not.
+ */
 function sourceProblems(r: Row): string[] {
   const out: string[] = [];
-  if (!SOURCE.test(cell(r, "source"))) {
+  if (!SOURCE.test(cell(r, "source")) || chars(btrim(cell(r, "source"))) < 3) {
     out.push(`source must read "Publisher, document title", not "${cell(r, "source")}"`);
   }
   const url = cell(r, "source_url");
@@ -250,6 +274,41 @@ export function checkBlocs(rows: Row[]): string[] {
   return problems;
 }
 
+/** The columns of a candidate that two counties listing the same id have to agree on. */
+const SHARED_COLUMNS = COLUMNS.candidates.filter((column) => column !== "id");
+
+/**
+ * What is wrong between counties. Every county lists the presidential candidates, and each
+ * county's migration upserts the row, so the last one applied wins: a candidate that more than one
+ * county lists has to read the same in each. Each county is compared with the first that lists the
+ * candidate; a candidate a county lists twice is checkCounty's complaint, not a disagreement.
+ */
+export function checkShared(counties: { name: string; candidates: Row[] }[]): string[] {
+  const problems: string[] = [];
+  const first = new Map<string, { county: string; row: Row }>();
+  for (const { name, candidates } of counties) {
+    const listed = new Set<string>();
+    for (const row of candidates) {
+      const id = cell(row, "id");
+      if (listed.has(id)) continue;
+      listed.add(id);
+      const before = first.get(id);
+      if (before === undefined) {
+        first.set(id, { county: name, row });
+        continue;
+      }
+      for (const column of SHARED_COLUMNS) {
+        const was = cell(before.row, column);
+        const now = cell(row, column);
+        if (was !== now) {
+          problems.push(`${id}: ${column} is "${was}" in ${before.county} but "${now}" in ${name}`);
+        }
+      }
+    }
+  }
+  return problems;
+}
+
 type Known = { row: number; difference: number; used: boolean };
 
 /**
@@ -263,17 +322,32 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     problems.push(`${file}.csv row ${i + 2}: ${what}`);
   };
 
-  /** A figure that must be a whole number, or blank when `required` is false. */
+  /**
+   * A figure that must be a whole number the database's integer holds, or blank when `required` is
+   * false. One that is refused answers null, so that nothing is worked out from it.
+   */
   const figure = (file: string, i: number, r: Row, column: string, required = false) => {
     const s = cell(r, column);
     if (s === "" && !required) return null;
     const n = whole(s);
-    if (n === null)
+    if (n === null) {
       bad(file, i, `${column} must be a whole number${required ? "" : " or blank"}, not "${s}"`);
+    } else if (n > INT_MAX) {
+      bad(file, i, `${column} must be a whole number up to ${INT_MAX}, not "${s}"`);
+      return null;
+    }
     return n;
   };
-  const source = (file: string, i: number, r: Row) =>
+  /** A text cell may hold at most `max` characters, as the database counts them. */
+  const atMost = (file: string, i: number, r: Row, column: string, max: number) => {
+    const n = chars(btrim(cell(r, column)));
+    if (n > max) bad(file, i, `${column} must be at most ${max} characters, not ${n}`);
+  };
+  const source = (file: string, i: number, r: Row) => {
     sourceProblems(r).forEach((what) => bad(file, i, what));
+    atMost(file, i, r, "source", 200);
+    atMost(file, i, r, "source_url", 500);
+  };
   const unique = (file: string, rows: Row[], key: (r: Row) => string) => {
     const seen = new Set<string>();
     rows.forEach((r, i) => {
@@ -339,6 +413,14 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!KEY.test(key)) {
       return bad("areas", i, `"${key}" is not a key: lower-case parts joined by "/"`);
     }
+    if (key.startsWith("kenya/")) {
+      bad(
+        "areas",
+        i,
+        `${key} starts with kenya, but keys do not begin with the country: ` +
+          "a county's key is its own name",
+      );
+    }
     const level = levelOfKey(key);
     const parent = parentKey(key);
     if (cell(a, "level") !== level) {
@@ -350,9 +432,10 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
       bad("areas", i, `the parent ${parent} is not in the files`);
     }
     const name = cell(a, "name");
-    if (name.length < 2 || name !== name.trim()) {
+    if (chars(name) < 2 || name !== name.trim()) {
       bad("areas", i, `${key} needs a name of at least two letters with no stray spaces`);
     }
+    atMost("areas", i, a, "name", 80);
     const code = cell(a, "iebc_code");
     if (code !== "" && !/^\d{1,4}$/.test(code)) {
       bad("areas", i, `the IEBC code ${code} must be one to four digits`);
@@ -395,19 +478,29 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(seat)) bad("candidates", i, `the seat ${seat} is not in the files`);
     const id = `${election}/${seat}/${slugify(name)}`;
     if (cell(r, "id") !== id) bad("candidates", i, `the id should be ${id}`);
-    if (name.length < 2 || name !== name.trim()) {
+    if (chars(name) < 2 || name !== name.trim()) {
       bad("candidates", i, `${id} needs a name with no stray spaces`);
     }
+    atMost("candidates", i, r, "name", 120);
     const party = cell(r, "party");
+    if (party !== "" && btrim(party) === "") {
+      bad("candidates", i, `${id}: the party is only spaces; leave it empty for an independent`);
+    }
+    atMost("candidates", i, r, "party", 120);
     const bloc =
       party === "" ? "Independent" : (blocs.get(`${election.slice(0, 4)}|${party}`) ?? party);
     if (cell(r, "bloc") !== bloc) {
       bad("candidates", i, `${id}: the bloc should be ${bloc}, not ${cell(r, "bloc")}`);
+    } else {
+      // The right bloc still has to fit its column.
+      atMost("candidates", i, r, "bloc", 80);
     }
   });
 
-  // Results, and what the candidates' votes come to in each area.
+  // Results, what the candidates' votes come to in each area, and who has a row where.
   const votesAt = new Map<string, number>();
+  const placesOf = new Map<string, Set<string>>(); // election to the areas it has a row in
+  const hasRow = new Set<string>(); // `${candidate_id}|${area_key}`
   c.results.forEach((r, i) => {
     const candidate = candidates.get(cell(r, "candidate_id"));
     const area = cell(r, "area_key");
@@ -416,15 +509,40 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(area)) bad("results", i, `${area} is not in the files`);
     if (candidate && areaKeys.has(area)) {
       const seat = cell(candidate, "seat");
-      if (seat !== "kenya" && area !== seat && !area.startsWith(`${seat}/`)) {
-        bad("results", i, `${area} is outside the seat ${seat}`);
-      }
+      const election = cell(candidate, "election_id");
+      if (!covers(seat, area)) bad("results", i, `${area} is outside the seat ${seat}`);
+      hasRow.add(`${cell(r, "candidate_id")}|${area}`);
+      placesOf.set(election, (placesOf.get(election) ?? new Set<string>()).add(area));
       if (votes !== null) {
-        const k = `${cell(candidate, "election_id")}|${area}`;
+        const k = `${election}|${area}`;
         votesAt.set(k, (votesAt.get(k) ?? 0) + votes);
       }
     }
   });
+
+  // A missing row is not a zero. Where an election has votes, every candidate whose seat covers
+  // that place has a row there, else their share would read as 0 when it is only not found; and
+  // the election has a turnout row there, because that is where the votes' source is held.
+  for (const [id, candidate] of candidates) {
+    const election = cell(candidate, "election_id");
+    for (const area of placesOf.get(election) ?? []) {
+      if (covers(cell(candidate, "seat"), area) && !hasRow.has(`${id}|${area}`)) {
+        problems.push(
+          `${id}: no votes for ${area}, where ${election} has votes for other candidates`,
+        );
+      }
+    }
+  }
+  const turnoutAt = new Set(
+    c.turnout.map((t) => `${cell(t, "election_id")}|${cell(t, "area_key")}`),
+  );
+  for (const [election, areas] of placesOf) {
+    for (const area of areas) {
+      if (!turnoutAt.has(`${election}|${area}`)) {
+        problems.push(`${election} ${area}: votes but no turnout row, so no source`);
+      }
+    }
+  }
 
   // Constituencies add up to their county, for president and governor; an MP race has no
   // county total.
@@ -519,8 +637,9 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (!areaKeys.has(cell(r, "area_key")))
       bad("population", i, `${cell(r, "area_key")} is not in the files`);
     const year = figure("population", i, r, "year", true);
-    if (year !== null && (year < 1990 || year > 2100))
-      bad("population", i, `${year} is not a year`);
+    // A year written with a leading zero (02025) is the same key as 2025 once loaded.
+    if (year !== null && (year < 1990 || year > 2100 || String(year) !== cell(r, "year")))
+      bad("population", i, `${cell(r, "year")} is not a year`);
     const total = figure("population", i, r, "total", true);
     const adults = figure("population", i, r, "adults", true);
     const young = figure("population", i, r, "young_adults", true);
@@ -530,8 +649,9 @@ export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] 
     if (young !== null && adults !== null && young > adults) {
       bad("population", i, `young adults (${young}) pass the adults (${adults})`);
     }
-    if (cell(r, "method").trim().length < 10)
+    if (chars(cell(r, "method").trim()) < 10)
       bad("population", i, "the method must say how it was worked out");
+    atMost("population", i, r, "method", 500);
     source("population", i, r);
   });
 

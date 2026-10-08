@@ -435,6 +435,37 @@ try {
   });
   eq("no names runs every county", ran([], two), { text: `${checked}\n${checked}`, ok: true });
 
+  // Counties that each pass alone but disagree about a candidate they share. Every county's
+  // migration writes the presidential candidates, so this fails the verdict, and for whichever
+  // counties are asked for: beta spells P One Test's party its own way, with no coalition recorded
+  // for that spelling, so its bloc is the party's.
+  const disagreeing = makeRoot(["alpha", "beta"], (root) =>
+    replaceIn(
+      join(root, "beta", "candidates.csv"),
+      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party A,Alpha\n",
+      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party Z,Party Z\n",
+    ),
+  );
+  const betaReport = report(loadCounty(join(disagreeing, "beta")), "Testland");
+  const betaChecked = `${betaReport}\n\nChecks: all pass\n`;
+  const disagreement = [
+    '2022-president/kenya/p-one-test: party is "Party A" in alpha but "Party Z" in beta',
+    '2022-president/kenya/p-one-test: bloc is "Alpha" in alpha but "Party Z" in beta',
+  ];
+  const sharedText = `\nShared candidates: 2 problems\n  ${disagreement.join("\n  ")}\n`;
+  eq("counties that disagree on a shared candidate fail the verdict", ran([], disagreeing), {
+    text: `${checked}\n${betaChecked}\n${sharedText}`,
+    ok: false,
+  });
+  eq(
+    "and the disagreement is found when only one of them is asked for",
+    ran(["alpha"], disagreeing),
+    {
+      text: `${checked}\n${sharedText}`,
+      ok: false,
+    },
+  );
+
   // The heading is the county's own name from areas.csv; only a county with none falls back to its
   // folder's name, capitalised.
   const firstLine = (text: string) => text.split("\n")[0];

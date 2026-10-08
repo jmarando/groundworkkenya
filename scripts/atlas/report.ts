@@ -2,7 +2,8 @@
 // words the user reads before any screen work. `report` is pure; `run` builds the whole output of
 // the command and says whether everything passed. Running this file prints that output for the
 // counties named (default: every county under data/atlas), from any directory, and exits 1 when
-// blocs.csv or a county has a problem, so that a failing verdict fails the command:
+// blocs.csv, a county or the candidates the counties share have a problem, so that a failing
+// verdict fails the command:
 //   npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi nyeri
 
 import { existsSync, realpathSync, statSync } from "node:fs";
@@ -15,6 +16,7 @@ import {
   blocMap,
   checkBlocs,
   checkCounty,
+  checkShared,
   listCounties,
   loadBlocs,
   loadCounty,
@@ -183,8 +185,10 @@ function headingName(c: County, folder: string): string {
 
 /**
  * The whole output of the command for the counties named (every county under `root` when none is),
- * less its last newline, and whether everything passed: blocs.csv and each county's checks. A name
- * that is no county folder is said so and fails; the other names still run.
+ * less its last newline, and whether everything passed: blocs.csv, each county's checks and the
+ * candidates the counties share. A name that is no county folder is said so and fails; the other
+ * names still run. The shared candidates are compared across every county under `root`, not only
+ * the ones named, because each county's migration writes them.
  */
 export function run(names: string[], root: string, wards: WardMaps): { text: string; ok: boolean } {
   const counties = listCounties(root);
@@ -192,6 +196,16 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
   if (asked.length === 0) return { text: "No counties under data/atlas yet.", ok: true };
   const blocRows = loadBlocs(join(root, "blocs.csv"));
   const blocProblems = checkBlocs(blocRows);
+  // Each county's files are read once, whether it is named or only compared.
+  const loaded = new Map<string, County>();
+  const load = (name: string): County => {
+    let county = loaded.get(name);
+    if (county === undefined) {
+      county = loadCounty(join(root, name));
+      loaded.set(name, county);
+    }
+    return county;
+  };
   // One piece for each thing the command prints, a newline between them.
   const out: string[] = [];
   let ok = blocProblems.length === 0;
@@ -202,7 +216,7 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
       ok = false;
       continue;
     }
-    const county = loadCounty(join(root, name));
+    const county = load(name);
     out.push(report(county, headingName(county, name)));
     const problems = checkCounty(county, wards, blocMap(blocRows));
     out.push(
@@ -211,6 +225,13 @@ export function run(names: string[], root: string, wards: WardMaps): { text: str
         : "\nChecks: all pass\n",
     );
     if (problems.length) ok = false;
+  }
+  const shared = checkShared(counties.map((name) => ({ name, candidates: load(name).candidates })));
+  if (shared.length) {
+    out.push(
+      `\nShared candidates: ${plural(shared.length, "problem")}\n  ${shared.join("\n  ")}\n`,
+    );
+    ok = false;
   }
   return { text: out.join("\n"), ok };
 }

@@ -16,13 +16,6 @@ NAIROBI = ROOT / "public" / "geo" / "nairobi-wards.json"
 MATHIRA = ROOT / "public" / "geo" / "mathira-wards.json"
 
 
-def geo(features):
-    tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
-    json.dump({"type": "FeatureCollection", "features": features}, tmp)
-    tmp.close()
-    return tmp.name
-
-
 def feature(slug_, name, constituency=None):
     properties = {"slug": slug_, "name": name}
     if constituency:
@@ -31,8 +24,16 @@ def feature(slug_, name, constituency=None):
 
 
 class Rows(unittest.TestCase):
+    def geo(self, features):
+        """A ward map holding `features`, in a folder that is removed when the test ends."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "wards.json"
+        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}), encoding="utf-8")
+        return str(path)
+
     def test_a_map_that_names_constituencies(self):
-        path = geo([feature("ward-one", "Ward One", "North Test"), feature("ward-two", "Ward Two", "South Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-two", "Ward Two", "South Test")])
         rows = afm.build_areas(path, "Testland")
         self.assertEqual(
             rows,
@@ -46,16 +47,16 @@ class Rows(unittest.TestCase):
         )
 
     def test_a_map_that_names_none_takes_the_one_given(self):
-        path = geo([feature("ward-one", "Ward One"), feature("ward-two", "Ward Two")])
+        path = self.geo([feature("ward-one", "Ward One"), feature("ward-two", "Ward Two")])
         rows = afm.build_areas(path, "Testland", constituency="North Test")
         self.assertEqual([r[0] for r in rows], ["testland", "testland/north-test", "testland/north-test/ward-one", "testland/north-test/ward-two"])
 
     def test_a_map_that_names_none_and_is_given_none_is_refused(self):
         with self.assertRaisesRegex(ValueError, "names no constituency"):
-            afm.build_areas(geo([feature("ward-one", "Ward One")]), "Testland")
+            afm.build_areas(self.geo([feature("ward-one", "Ward One")]), "Testland")
 
     def test_constituencies_without_a_ward_map_are_listed_too(self):
-        path = geo([feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test")])
         rows = afm.build_areas(path, "Testland", also=["Far Test", "Away Test"])
         keys = [r[0] for r in rows]
         self.assertIn("testland/far-test", keys)
@@ -63,12 +64,12 @@ class Rows(unittest.TestCase):
         self.assertEqual([r for r in rows if r[0] == "testland/far-test"], [["testland/far-test", "constituency", "Far Test", "testland", ""]])
 
     def test_a_constituency_given_twice_is_refused(self):
-        path = geo([feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test")])
         with self.assertRaisesRegex(ValueError, "north-test is listed twice"):
             afm.build_areas(path, "Testland", also=["North Test"])
 
     def test_a_repeated_ward_is_refused(self):
-        path = geo([feature("ward-one", "Ward One", "North Test"), feature("ward-one", "Ward One", "North Test")])
+        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-one", "Ward One", "North Test")])
         with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one is listed twice"):
             afm.build_areas(path, "Testland")
 
@@ -95,9 +96,11 @@ class RealMaps(unittest.TestCase):
         self.assertIn(["nyeri/mathira/karatina-town", "ward", "Karatina Town", "nyeri/mathira", ""], rows)
 
     def test_the_csv_it_writes(self):
-        out = Path(tempfile.mkdtemp()) / "areas.csv"
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        out = Path(tmp.name) / "areas.csv"
         afm.main(["areas_from_map.py", str(NAIROBI), "Nairobi", str(out)])
-        lines = out.read_text().splitlines()
+        lines = out.read_text(encoding="utf-8").splitlines()
         self.assertEqual(lines[0], "key,level,name,parent,iebc_code")
         self.assertEqual(lines[1], "nairobi,county,Nairobi,kenya,")
         self.assertEqual(len(lines), 1 + 1 + 17 + 85)

@@ -28,7 +28,8 @@ STARTS = [0, 1] + list(range(5, 85, 5))
 ONE_WARD = "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
 NO_WARDS = "key,level,name,parent,iebc_code\ntestland,county,Testland,kenya,\n"
 
-# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each holding nothing.
+# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each
+# holding nothing.
 EMPTY_WARD_PIXELS = {(row, column): 0 for row in range(2, 6) for column in range(2, 6)}
 
 # Wards over the ten by ten grid, as (left, top, right, bottom) in pixels from its top left corner.
