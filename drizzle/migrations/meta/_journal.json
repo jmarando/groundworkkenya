@@ -15,6 +15,13 @@
       "when": 1791375202415,
       "tag": "0001_canvass_streets",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791498089214,
+      "tag": "0002_election_atlas",
+      "breakpoints": true
     }
   ]
 }
