@@ -119,6 +119,418 @@ export type Database = {
           },
         ]
       }
+      area_notes: {
+        Row: {
+          area_key: string
+          body: string
+          campaign_id: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          area_key: string
+          body: string
+          campaign_id?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          area_key?: string
+          body?: string
+          campaign_id?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_notes_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "area_notes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atlas_areas: {
+        Row: {
+          iebc_code: string | null
+          key: string
+          level: string
+          name: string
+          parent: string | null
+        }
+        Insert: {
+          iebc_code?: string | null
+          key: string
+          level: string
+          name: string
+          parent?: string | null
+        }
+        Update: {
+          iebc_code?: string | null
+          key?: string
+          level?: string
+          name?: string
+          parent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_areas_parent_fkey"
+            columns: ["parent"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      atlas_candidates: {
+        Row: {
+          bloc: string
+          election_id: string
+          id: string
+          name: string
+          party: string | null
+          seat: string
+        }
+        Insert: {
+          bloc: string
+          election_id: string
+          id: string
+          name: string
+          party?: string | null
+          seat: string
+        }
+        Update: {
+          bloc?: string
+          election_id?: string
+          id?: string
+          name?: string
+          party?: string | null
+          seat?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_candidates_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_candidates_seat_fkey"
+            columns: ["seat"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      atlas_elections: {
+        Row: {
+          held_on: string
+          id: string
+          note: string | null
+          race: string
+          year: number
+        }
+        Insert: {
+          held_on: string
+          id: string
+          note?: string | null
+          race: string
+          year: number
+        }
+        Update: {
+          held_on?: string
+          id?: string
+          note?: string | null
+          race?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      atlas_population: {
+        Row: {
+          adults: number
+          area_key: string
+          source_id: string
+          total: number
+          year: number
+          young_adults: number
+        }
+        Insert: {
+          adults: number
+          area_key: string
+          source_id: string
+          total: number
+          year: number
+          young_adults: number
+        }
+        Update: {
+          adults?: number
+          area_key?: string
+          source_id?: string
+          total?: number
+          year?: number
+          young_adults?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_population_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "atlas_population_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atlas_register: {
+        Row: {
+          area_key: string
+          registered: number
+          source_id: string
+          year: number
+        }
+        Insert: {
+          area_key: string
+          registered: number
+          source_id: string
+          year: number
+        }
+        Update: {
+          area_key?: string
+          registered?: number
+          source_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_register_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "atlas_register_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atlas_results: {
+        Row: {
+          area_key: string
+          candidate_id: string
+          source_id: string
+          votes: number
+        }
+        Insert: {
+          area_key: string
+          candidate_id: string
+          source_id: string
+          votes: number
+        }
+        Update: {
+          area_key?: string
+          candidate_id?: string
+          source_id?: string
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_results_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "atlas_results_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_results_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atlas_settings: {
+        Row: {
+          campaign_id: string
+          home_area: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          home_area: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          home_area?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_settings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_settings_home_area_fkey"
+            columns: ["home_area"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      atlas_sides: {
+        Row: {
+          bloc: string
+          campaign_id: string
+          election_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bloc: string
+          campaign_id?: string
+          election_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bloc?: string
+          campaign_id?: string
+          election_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_sides_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_sides_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_elections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atlas_sources: {
+        Row: {
+          id: string
+          note: string | null
+          publisher: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          id: string
+          note?: string | null
+          publisher: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          id?: string
+          note?: string | null
+          publisher?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      atlas_turnout: {
+        Row: {
+          area_key: string
+          cast_votes: number | null
+          election_id: string
+          registered: number | null
+          rejected: number | null
+          source_id: string
+          valid: number | null
+        }
+        Insert: {
+          area_key: string
+          cast_votes?: number | null
+          election_id: string
+          registered?: number | null
+          rejected?: number | null
+          source_id: string
+          valid?: number | null
+        }
+        Update: {
+          area_key?: string
+          cast_votes?: number | null
+          election_id?: string
+          registered?: number | null
+          rejected?: number | null
+          source_id?: string
+          valid?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_turnout_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "atlas_turnout_election_id_fkey"
+            columns: ["election_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_turnout_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ballot_candidates: {
         Row: {
           campaign_id: string
