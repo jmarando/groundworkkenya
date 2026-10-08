@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 import { checkAtlas } from "@/lib/atlas-files";
 import { atlasSql } from "@/lib/atlas-sql";
 
-import { readAtlas, wardSlugs } from "./read";
+import { readAtlas, wardMaps } from "./read";
 
 const [out, ...folders] = process.argv.slice(2);
 if (!out || !folders.length) {
@@ -14,7 +14,7 @@ if (!out || !folders.length) {
   process.exit(2);
 }
 const { files, problems } = readAtlas("data/atlas", folders);
-const all = [...problems, ...checkAtlas(files, wardSlugs())];
+const all = [...problems, ...checkAtlas(files, wardMaps())];
 if (all.length) {
   console.error(all.join("\n"));
   process.exit(1);

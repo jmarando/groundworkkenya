@@ -100,11 +100,18 @@ export function briefLine(d: AtlasData, key: string | null, race: Race): string 
   return `${head}${l.share} in ${l.year}${turnout}${where}`;
 }
 
-/** Home's places where votes can move: the home area's parts with the most within reach, a side set. */
+/**
+ * Home's places where votes can move: the home area's parts with the most within reach, a side
+ * set. A constituency's wards have no results of their own until station data, so an MP's home
+ * is the constituency itself.
+ */
 export function topMoves(d: AtlasData, home: string, race: Race, n = 3): AreaFigures[] {
-  return rankChildren(d, home, race, 2022)
-    .filter((f) => f.reach && f.todo && f.todo.todo !== "no-side")
-    .slice(0, n);
+  const level = d.areas.find((a) => a.key === home)?.level;
+  const places =
+    level === "constituency"
+      ? [figuresFor(d, home, race, 2022)]
+      : rankChildren(d, home, race, 2022);
+  return places.filter((f) => f.reach && f.todo && f.todo.todo !== "no-side").slice(0, n);
 }
 
 /** 2022 turnout at a place: the campaign's race, else the same day's other races (one register). */

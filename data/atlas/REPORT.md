@@ -66,6 +66,19 @@ Missing:
 - 2022 governor: the county total
 - 2022 mp: results for 1 of 6 constituencies
 
+## Coalitions
+
+From data/atlas/blocs.csv: the coalition each party stood in for president and governor. A party not listed stood as itself; in MP races the bloc is the party.
+
+- 2013: KNC in Eagle. Wikipedia, 2013 Kenyan general election: the coalitions (citing the Daily Nation, 6 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
+- 2013: ODM in CORD. Wikipedia, 2013 Kenyan general election: the coalitions (citing The Standard, 23 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
+- 2013: TNA in Jubilee. Wikipedia, 2013 Kenyan general election: the coalitions (citing the Daily Nation, 4 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
+- 2013: UDF in Amani. Wikipedia, 2013 Kenyan general election: the coalitions (citing The Star, 4 January 2013), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
+- 2017: ODM in NASA. KBC, NASA leaders sign coalition deal (22 February 2017), https://kbctv.co.ke/blog/2017/02/22/nasa-leaders-expected-to-sign-coalition-deal-wednesday
+- 2022: Jubilee in Azimio. Capital FM, 23 parties within the Azimio La Umoja One-Kenya Coalition Political Party (13 April 2022), https://capitalfm.africa/23-parties-within-the-azimio-la-umoja-one-kenya-coalition-political-party/
+- 2022: ODM in Azimio. Capital FM, 23 parties within the Azimio La Umoja One-Kenya Coalition Political Party (13 April 2022), https://capitalfm.africa/23-parties-within-the-azimio-la-umoja-one-kenya-coalition-political-party/
+- 2022: UDA in Kenya Kwanza. The Star, Kenya Kwanza parties sign coalition agreement (12 April 2022), https://www.the-star.co.ke/news/2022-04-12-kenya-kwanza-parties-sign-coalition-agreement
+
 ## Sources
 
 - `citizen-2022-dagoretti-north-mp`: Beatrice Elachi wins Dagoretti North MP race, Citizen Digital, https://citizen.digital/article/beatrice-elachi-wins-dagoretti-north-mp-race-n303832. The top two, as printed.

@@ -25,7 +25,13 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
 - `known-differences.csv` — `election,seat,candidate,area,difference,note`: a sum that doesn't
   add up in IEBC's own documents, with the exact difference (total minus its parts) and what
   the documents say. For a turnout row whose valid and rejected don't make cast, leave seat and
-  candidate empty.
+  candidate empty. The note must say why; once the figures add up, the checker asks for the row
+  to go.
+- `blocs.csv`, in `data/atlas` itself rather than a county's folder — `year,party,bloc,source,source_url`:
+  the coalition each party stood in at one general election, so a coalition has one name in
+  every county. `source` reads "Publisher, document title"; `source_url` is an https link or
+  blank. It isn't loaded into the database: the bloc travels in `candidates.csv`, and the
+  checker holds each candidate to it.
 
 ## Rules
 
@@ -42,10 +48,17 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
   that is how IEBC's forms define it; say so in the source's note.
 - In MP races the bloc is the party: coalition partners often stood against each other
   (UDA against TSP in Tetu, ODM against Jubilee in Mathare). In presidential and governor
-  races the bloc is the coalition the candidate's party stood in, else the party. An independent
-  is a bloc of their own: `Independent: <name>`. The main coalitions: 2013 Jubilee (TNA, URP
-  and partners), CORD (ODM, Wiper, Ford-K and partners), Amani (UDF, KANU and partners); 2017
-  Jubilee (Jubilee Party), NASA (ODM, Wiper, ANC, Ford-K, CCM); 2022 Kenya Kwanza (UDA, ANC,
-  Ford-K and partners), Azimio (ODM, Jubilee, Wiper, KANU, DAP-K and partners). Where a party's
-  membership is unclear, use the party and say so in the source's note.
+  races the bloc is the coalition `blocs.csv` gives the candidate's party for that year, else
+  the party. An independent (party blank or `Independent`) is a bloc of their own:
+  `Independent: <name>`. The checker refuses any other bloc. Spell a party as the document does;
+  a party spelt two ways needs a `blocs.csv` row for each. Take a coalition from the
+  Registrar of Political Parties or the Kenya Gazette where that can be had, else from a
+  report that names the coalition's parties. Where a party's membership is unclear, leave it
+  out of `blocs.csv`, so it stands as itself, and say so in the source's note.
+- The checker holds the files to the database's limits, so a folder that passes can be applied:
+  names of 2 to 80 characters for areas and 2 to 120 for candidates, a party of up to 120, a bloc
+  of up to 60 (an independent's long name can pass it), source titles of 2 to 300 and
+  publishers of 2 to 120, notes of up to 1,000, whole numbers up to 2,147,483,647, population
+  years from 2000 to 2030, and a candidate's name with letters an id can be made from. A ward
+  must sit under the constituency its ward map names (Mathira's map names none).
 - The 2017 presidential figures are the 8 August vote.

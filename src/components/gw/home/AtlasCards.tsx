@@ -9,6 +9,7 @@ import { topMoves } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
 import {
   electionOf,
+  figuresFor,
   RACE_NAMES,
   raceInText,
   rankChildren,
@@ -71,10 +72,13 @@ export function MovesCard() {
   if (!a) return null;
   const side = a.d.sides[electionOf(a.race, 2022)];
   const level = a.d.areas.find((x) => x.key === a.home)?.level;
-  const parts =
-    level === "constituency" ? "wards" : level === "county" ? "constituencies" : "counties";
-  // Nothing to set a side for until some part of the home area has a count.
-  const counted = rankChildren(a.d, a.home, a.race, 2022).some((f) => f.count?.candidates.length);
+  // An MP's constituency is read as a whole: its wards have no results until station data.
+  const whole = level === "constituency";
+  const parts = level === "county" ? "constituencies" : "counties";
+  // Nothing to set a side for until the home area (or some part of it) has a count.
+  const counted = whole
+    ? Boolean(figuresFor(a.d, a.home, a.race, 2022).count?.candidates.length)
+    : rankChildren(a.d, a.home, a.race, 2022).some((f) => f.count?.candidates.length);
   const moves = topMoves(a.d, a.home, a.race);
   return (
     <section className="card" aria-labelledby="home-moves-h">
@@ -84,8 +88,9 @@ export function MovesCard() {
       </div>
       {!counted ? (
         <p className="f-note">
-          Not found yet: {a.homeName}'s {parts} have no 2022 {raceInText(a.race)} results in the
-          atlas.
+          {whole
+            ? `Not found yet: ${a.homeName}'s 2022 ${raceInText(a.race)} result isn't in the atlas.`
+            : `Not found yet: ${a.homeName}'s ${parts} have no 2022 ${raceInText(a.race)} results in the atlas.`}
         </p>
       ) : !side ? (
         <p className="f-note">
@@ -126,6 +131,7 @@ export function MovesCard() {
         <p className="f-note">Nothing to rank yet: no part has votes within reach.</p>
       )}
       <p className="meta">
+        {whole ? "Ward by ward comes with the polling-station results. " : null}
         <Link to="/elections" search={{ area: a.home }}>
           All of it in Elections
         </Link>

@@ -5,11 +5,11 @@
 
 import { checkAtlas } from "@/lib/atlas-files";
 
-import { atlasFolders, readAtlas, wardSlugs } from "../scripts/atlas/read";
+import { atlasFolders, readAtlas, wardMaps } from "../scripts/atlas/read";
 
 const folders = atlasFolders("data/atlas");
 const { files, problems } = readAtlas("data/atlas", folders);
-const all = [...problems, ...checkAtlas(files, wardSlugs())];
+const all = [...problems, ...checkAtlas(files, wardMaps())];
 for (const p of all) console.log(`FAIL ${p}`);
 console.log(`${folders.length} folders, ${files.results.length} results, ${all.length} problems`);
 process.exit(all.length ? 1 : 0);

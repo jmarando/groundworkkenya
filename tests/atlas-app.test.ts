@@ -165,6 +165,15 @@ eq(
   [["nairobi/westlands", "nairobi/kibra"], ["nairobi/westlands"], []],
 );
 eq(
+  "an MP's home is the constituency itself: its wards have no results until station data",
+  [
+    topMoves(D, "nairobi/westlands", "governor").map((f) => f.key),
+    topMoves(NO_SIDE, "nairobi/westlands", "governor"),
+    topMoves(D, "nyeri/mathira", "governor"),
+  ],
+  [["nairobi/westlands"], [], []],
+);
+eq(
   "2022 turnout: the campaign's race, else the same day's other race",
   [
     turnout2022(D, "nairobi/westlands", "governor"),
