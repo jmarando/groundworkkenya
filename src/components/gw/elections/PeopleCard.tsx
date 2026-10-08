@@ -10,12 +10,19 @@ const PARTS: Partial<Record<AreaFigures["level"], string>> = {
 /** Who lives here (estimates) against the register. */
 export function PeopleCard({ f }: { f: AreaFigures }) {
   const p = f.population;
+  const regYear = f.registeredYear ?? 2022;
   const rows: [string, string][] = [
     ["People (estimate)", p ? votes(p.total) : "—"],
     ["Adults (estimate)", p ? votes(p.adults) : "—"],
     ["Aged 18–34, share of adults", p && p.adults ? whole(p.youngAdults / p.adults) : "—"],
-    ["Registered voters (2022)", f.registered === null ? "—" : votes(f.registered)],
-    ["Adults not registered (estimate)", f.notRegistered ? votes(f.notRegistered.adults) : "—"],
+    [`Registered voters (${regYear})`, f.registered === null ? "—" : votes(f.registered)],
+    [
+      // The estimate and the register can be years apart, so both years are named.
+      p
+        ? `Adults not registered (${p.year} estimate, ${regYear} register)`
+        : "Adults not registered (estimate)",
+      f.notRegistered ? votes(f.notRegistered.adults) : "—",
+    ],
   ];
   return (
     <section className="card">

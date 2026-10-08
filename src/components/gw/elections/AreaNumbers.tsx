@@ -1,4 +1,4 @@
-import { TODO_NAMES } from "@/lib/atlas";
+import { TODO_NAMES, YEARS } from "@/lib/atlas";
 import {
   share1,
   signedPoints,
@@ -10,6 +10,7 @@ import {
 
 const DASH = "—";
 const growth = (rate: number) => `${rate >= 0 ? "+" : "−"}${whole(Math.abs(rate))} since 2017`;
+const yearBefore = (year: number) => [...YEARS].reverse().find((y) => y < year) ?? null;
 
 /** What to do here and why, then the area's five numbers. */
 export function AreaNumbers({
@@ -73,7 +74,13 @@ export function AreaNumbers({
         <div>
           <span className="l">Swing</span>
           <span className="n stat">{f.swing === null ? DASH : signedPoints(f.swing)}</span>
-          <span className="s">{f.yearBefore ? `since ${f.yearBefore}` : "no earlier result"}</span>
+          <span className="s">
+            {f.yearBefore
+              ? `since ${f.yearBefore}`
+              : yearBefore(year)
+                ? `no ${yearBefore(year)} result to compare`
+                : "no earlier result"}
+          </span>
         </div>
         <div>
           <span className="l">Votes within reach</span>
@@ -81,9 +88,11 @@ export function AreaNumbers({
           <span className="s">
             {!f.reach
               ? "needs a result and a side"
-              : f.turnout === null
-                ? "all from a 5-point swing; turnout not found yet"
-                : `${votes(f.reach.turnout)} from turnout, ${votes(f.reach.persuasion)} from a 5-point swing`}
+              : f.reach.turnout !== null
+                ? `${votes(f.reach.turnout)} from turnout, ${votes(f.reach.persuasion)} from a 5-point swing`
+                : f.turnout === null
+                  ? "all from a 5-point swing; turnout not found yet"
+                  : "all from a 5-point swing; too few turnouts around it to set a target"}
           </span>
         </div>
         <div>
@@ -94,7 +103,7 @@ export function AreaNumbers({
               ? "not found yet"
               : f.growth && f.growth.rate !== null
                 ? growth(f.growth.rate)
-                : "the 2022 register"}
+                : `the ${f.registeredYear ?? year} register`}
           </span>
         </div>
       </div>

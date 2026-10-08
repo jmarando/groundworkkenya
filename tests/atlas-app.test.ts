@@ -192,11 +192,13 @@ eq(
   [
     shadeLegend("todo").map((l) => l.label),
     shadeLegend("lean").map((l) => l.colour),
+    shadeLegend("lean").map((l) => l.label),
     shadeLegend("swing").map((l) => l.label),
   ],
   [
-    ["Mobilise", "Hold", "Persuade", "Cut the gap", "Lean ours", "Lean theirs"],
+    ["Mobilise", "Hold", "Persuade", "Cut the gap", "Lean ours"],
     ["hsl(0 70% 52%)", "hsl(40 90% 52%)", "hsl(142 60% 38%)"],
+    ["Behind by 30 points or more", "Level", "Ahead by 30 points or more"],
     ["15 points or more away", "No change", "15 points or more our way"],
   ],
 );

@@ -92,39 +92,53 @@ export function notRegistered(
 export const registerFlag = (gap: { adults: number } | null, adults: number | null): boolean =>
   Boolean(gap && adults && gap.adults / adults >= 0.25);
 
-/** The 75th percentile, linear between neighbours; null for no values. */
+/** The 75th percentile by nearest rank (a value in the list); null for no values. */
 export function topQuarter(values: number[]): number | null {
   if (!values.length) return null;
   const xs = [...values].sort((a, b) => a - b);
-  const i = 0.75 * (xs.length - 1);
-  const lo = Math.floor(i);
-  const hi = Math.ceil(i);
-  return xs[lo]! + (xs[hi]! - xs[lo]!) * (i - lo);
+  return xs[Math.ceil(0.75 * xs.length) - 1]!;
 }
+
+/** Votes within reach, in two parts and their sum. */
+export type Reach = {
+  /** Null when it can't be worked out: then `total` is the persuasion part alone. */
+  turnout: number | null;
+  persuasion: number;
+  total: number;
+  partial: boolean;
+};
 
 /**
  * The votes within reach here: lifting turnout to the top quarter of the
- * area's siblings at our share, and a 5-point swing of the valid votes.
+ * area's siblings (itself among them) at our share, and a 5-point swing of the
+ * valid votes.
  */
 export function votesWithinReach(
   c: AreaCount,
   side: string | null,
   siblingTurnouts: number[],
-): { turnout: number; persuasion: number; total: number } | null {
+): Reach | null {
   const share = ourShare(c, side);
   if (share === null) return null;
   const t = turnout(c);
-  const target = topQuarter(siblingTurnouts);
+  // The top quarter needs at least four places with a turnout (the area itself among them).
+  const target = siblingTurnouts.length >= 4 ? topQuarter(siblingTurnouts) : null;
   const fromTurnout =
-    t !== null && target !== null && c.registered && target > t
-      ? Math.round((target - t) * c.registered * share)
-      : 0;
+    t === null || target === null || !c.registered
+      ? null
+      : target > t
+        ? Math.round((target - t) * c.registered * share)
+        : 0;
   const persuasion = Math.round(0.05 * validVotes(c));
-  return { turnout: fromTurnout, persuasion, total: fromTurnout + persuasion };
+  return {
+    turnout: fromTurnout,
+    persuasion,
+    total: (fromTurnout ?? 0) + persuasion,
+    partial: fromTurnout === null,
+  };
 }
 
-export type Todo =
-  "mobilise" | "hold" | "cut" | "persuade" | "lean-ours" | "lean-theirs" | "no-side";
+export type Todo = "mobilise" | "hold" | "cut" | "persuade" | "lean-ours" | "no-side";
 
 export const TODO_NAMES: Record<Todo, string> = {
   mobilise: "Mobilise",
@@ -132,7 +146,6 @@ export const TODO_NAMES: Record<Todo, string> = {
   cut: "Cut the gap",
   persuade: "Persuade",
   "lean-ours": "Lean ours",
-  "lean-theirs": "Lean theirs",
   "no-side": "Set your side first",
 };
 
@@ -151,7 +164,14 @@ export type TodoInput = {
   before: { year: number; count: AreaCount; side: string | null } | null;
 };
 
-/** What to do here and why; the first rule that matches wins. */
+/** Shares are floats: a gap of exactly 3 or 10 points must not tip over a line by rounding. */
+const EPS = 1e-9;
+
+/**
+ * What to do here and why; the first rule that matches wins. The rules follow
+ * who is ahead, not the share alone: behind within 10 points is Persuade, behind
+ * by more is Cut the gap, ahead by more than 10 (short of Hold) is Lean ours.
+ */
 export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
   const share = ourShare(i.count, i.side);
   if (share === null) return { todo: "no-side", reason: `Set your side in ${i.year} first.` };
@@ -159,35 +179,36 @@ export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
   const m = margin(i.count, i.side) ?? 0;
   const leader = blocShares(i.count).find((b) => b.bloc !== i.side);
   const sw = i.before ? swing(i.count, i.side, i.before.count, i.before.side) : null;
-  if (share >= 0.5 && t !== null && i.parentTurnout !== null && t < i.parentTurnout - 0.03)
+  if (
+    share >= 0.5 - EPS &&
+    t !== null &&
+    i.parentTurnout !== null &&
+    i.parentTurnout - t > 0.03 + EPS
+  )
     return {
       todo: "mobilise",
       reason: `We took ${pct1(share)} here in ${i.year}, but turnout was ${pct0(t)}, ${points(i.parentTurnout - t)} points below ${i.parentName ?? "the area around it"}.`,
     };
-  if (share >= 0.6) return { todo: "hold", reason: `We took ${pct1(share)} here in ${i.year}.` };
-  if (share < 0.4)
+  if (share >= 0.6 - EPS)
+    return { todo: "hold", reason: `We took ${pct1(share)} here in ${i.year}.` };
+  if (m < -0.1 - EPS)
     return {
       todo: "cut",
-      reason: `We took ${pct1(share)} here in ${i.year}; ${leader ? `${leader.bloc} took ${pct1(leader.share)}` : "others took the rest"}.`,
+      reason: `We trail ${leader?.bloc ?? "the leader"} by ${points(m)} points here in ${i.year}: ${pct1(share)} to ${pct1(leader?.share ?? 0)}.`,
     };
-  if (Math.abs(m) <= 0.1)
+  if (Math.abs(m) <= 0.1 + EPS)
     return {
       todo: "persuade",
       reason: `${i.year} was close: ${pct1(share)} to us against ${pct1(leader?.share ?? 0)} for ${leader?.bloc ?? "the rest"}.`,
     };
-  if (sw !== null && i.before && Math.abs(sw) >= 0.1)
+  if (sw !== null && i.before && Math.abs(sw) >= 0.1 - EPS)
     return {
       todo: "persuade",
       reason: `Our share moved ${points(sw)} points ${sw > 0 ? "up" : "down"} between ${i.before.year} and ${i.year}.`,
     };
-  if (share >= 0.5)
-    return {
-      todo: "lean-ours",
-      reason: `We took ${pct1(share)} here in ${i.year}, a ${points(m)}-point lead.`,
-    };
   return {
-    todo: "lean-theirs",
-    reason: `${leader?.bloc ?? "Others"} took ${pct1(leader?.share ?? 0)} here in ${i.year}; we took ${pct1(share)}.`,
+    todo: "lean-ours",
+    reason: `We took ${pct1(share)} here in ${i.year}, a ${points(m)}-point lead.`,
   };
 }
 

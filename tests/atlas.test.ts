@@ -123,16 +123,26 @@ eq(
   [registerFlag({ adults: 300 }, 1_000), registerFlag({ adults: 200 }, 1_000)],
   [true, false],
 );
-near("the top quarter of turnouts", topQuarter([0.7, 0.4, 0.6, 0.5]), 0.625);
+eq(
+  "the top quarter of turnouts, by nearest rank",
+  [topQuarter([0.7, 0.4, 0.6, 0.5]), topQuarter([0.5])],
+  [0.6, 0.5],
+);
 eq("no turnouts, no top quarter", topQuarter([]), null);
 eq(
   "votes within reach: a turnout push and a 5-point swing",
   votesWithinReach(C, KK, [0.4, 0.5, 0.6, 0.7]),
   {
-    turnout: 7_500,
+    turnout: 6_000,
     persuasion: 2_500,
-    total: 10_000,
+    total: 8_500,
+    partial: false,
   },
+);
+eq(
+  "with fewer than four places' turnouts, the turnout part is missing and the total partial",
+  votesWithinReach(C, KK, [0.5, 0.6, 0.7]),
+  { turnout: null, persuasion: 2_500, total: 2_500, partial: true },
 );
 eq(
   "no turnout votes when already in the top quarter",
@@ -184,7 +194,7 @@ eq(
   },
 );
 eq(
-  "cut the gap: under 40%",
+  "cut the gap: behind by more than 10 points",
   todo([
     [KK, 15_000],
     [AZ, 33_000],
@@ -192,7 +202,7 @@ eq(
   ]),
   {
     todo: "cut",
-    reason: "We took 30.0% here in 2022; Azimio took 66.0%.",
+    reason: "We trail Azimio by 36 points here in 2022: 30.0% to 66.0%.",
   },
 );
 eq(
@@ -236,16 +246,69 @@ eq(
   },
 );
 eq(
-  "lean theirs",
+  "behind by 14 points is cutting the gap, not a lean",
   todo([
     [KK, 21_000],
     [AZ, 28_000],
     [IND, 1_000],
   ]),
   {
-    todo: "lean-theirs",
-    reason: "Azimio took 56.0% here in 2022; we took 42.0%.",
+    todo: "cut",
+    reason: "We trail Azimio by 14 points here in 2022: 42.0% to 56.0%.",
   },
+);
+eq(
+  "a crowded race we lead by 15 leans ours on 45%",
+  todo([
+    [KK, 22_500],
+    [AZ, 15_000],
+    [IND, 12_500],
+  ]),
+  {
+    todo: "lean-ours",
+    reason: "We took 45.0% here in 2022, a 15-point lead.",
+  },
+);
+eq(
+  "a narrow lead on a small share is persuade",
+  todo([
+    [KK, 19_000],
+    [AZ, 15_000],
+    ["Independent: A", 8_000],
+    ["Independent: B", 8_000],
+  ]),
+  {
+    todo: "persuade",
+    reason: "2022 was close: 38.0% to us against 30.0% for Azimio.",
+  },
+);
+eq(
+  "a lead of exactly 10 points is still close",
+  todo([
+    [KK, 27_500],
+    [AZ, 22_500],
+  ])?.todo,
+  "persuade",
+);
+eq(
+  "exactly half the vote with a turnout gap of exactly 3 points isn't mobilise; more than 3 is",
+  [
+    todo(
+      [
+        [KK, 25_000],
+        [AZ, 25_000],
+      ],
+      0.53,
+    )?.todo,
+    todo(
+      [
+        [KK, 25_000],
+        [AZ, 25_000],
+      ],
+      0.54,
+    )?.todo,
+  ],
+  ["persuade", "mobilise"],
 );
 eq(
   "no side yet",

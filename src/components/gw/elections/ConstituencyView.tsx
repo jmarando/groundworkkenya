@@ -40,6 +40,7 @@ export function ConstituencyView({
   const wards = d.areas
     .filter((a) => a.parent === area.key)
     .map((w) => figuresFor(d, w.key, race, year));
+  const estimateYear = wards.find((w) => w.population)?.population?.year ?? null;
   const missing = RACES.filter((r) => !blocks.some((b) => b.race === r)).map((r) => RACE_NAMES[r]);
   return (
     <>
@@ -87,6 +88,11 @@ export function ConstituencyView({
           <span className="mono">{wards.length} wards</span>
         </div>
         {wards.length ? null : <p className="f-note">{area.name}'s wards aren't loaded yet.</p>}
+        {estimateYear ? (
+          <p className="f-note">
+            Adults are WorldPop estimates for {estimateYear}, set against the 2022 register.
+          </p>
+        ) : null}
         <div className="tblwrap" hidden={!wards.length}>
           <table className="tbl">
             <thead>

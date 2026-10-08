@@ -190,7 +190,7 @@ eq(
     -0.12,
     2017,
     "persuade",
-    { turnout: 3, persuasion: 25, total: 28 },
+    { turnout: null, persuasion: 25, total: 25, partial: true },
     "IEBC · constituency total · 2022",
   ],
 );
@@ -257,7 +257,54 @@ eq("the blocs to pick a side from, most votes first", blocsIn(D, "2022-governor"
 eq(
   "the map's colours",
   [shadeOf(A, "todo"), shadeOf(W, "lean"), shadeOf(B, "lean")?.label],
-  [{ colour: TODO_COLOURS.persuade, label: "Persuade" }, null, "70.0% to us"],
+  [{ colour: TODO_COLOURS.persuade, label: "Persuade" }, null, "ahead by 40 points"],
+);
+const D2: AtlasData = {
+  ...D,
+  candidates: [
+    ...D.candidates,
+    {
+      id: "g13-k",
+      election: "2013-governor",
+      seat: "nairobi",
+      name: "Kidero",
+      party: "ODM",
+      bloc: "CORD",
+    },
+  ],
+  results: [...D.results, { candidate: "g13-k", area: "nairobi/b", votes: 300, source: "iebc" }],
+};
+eq(
+  "swing is against the previous general election only, so 2013 doesn't stand in for a missing 2017",
+  [
+    figuresFor(D2, "nairobi/b", "governor", 2022).swing,
+    figuresFor(D2, "nairobi/b", "governor", 2022).yearBefore,
+  ],
+  [null, null],
+);
+const D3: AtlasData = {
+  ...D,
+  turnout: [
+    ...D.turnout,
+    {
+      election: "2017-governor",
+      area: "nairobi/c",
+      registered: 700,
+      cast: 400,
+      rejected: null,
+      valid: null,
+      source: "iebc",
+    },
+  ],
+};
+eq(
+  "which year's register: 2022's, else the election's own",
+  [
+    A.registeredYear,
+    figuresFor(D3, "nairobi/c", "governor", 2017).registeredYear,
+    W.registeredYear,
+  ],
+  [2022, 2017, null],
 );
 eq(
   "signed points",

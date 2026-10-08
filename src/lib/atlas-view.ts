@@ -17,6 +17,7 @@ import {
   YEARS,
   type AreaCount,
   type Race,
+  type Reach,
   type Todo,
 } from "@/lib/atlas";
 
@@ -89,6 +90,11 @@ export function signedPoints(x: number): string {
   const p = Math.round(Math.abs(x) * 1000) / 10;
   return `${p === 0 ? "" : x > 0 ? "+" : "−"}${p} points`;
 }
+/** A margin read as a side: "ahead by 4.2 points", "behind by 12 points", "level". */
+export function leanText(m: number): string {
+  const p = Math.round(Math.abs(m) * 1000) / 10;
+  return p === 0 ? "level" : `${m > 0 ? "ahead" : "behind"} by ${p} points`;
+}
 
 /** One area's count in one election, from the rows; null when nothing was found. */
 export function countAt(d: AtlasData, election: string, area: string): AreaCount | null {
@@ -130,13 +136,14 @@ export type AreaFigures = {
   turnout: number | null;
   ourShare: number | null;
   margin: number | null;
-  /** Against `yearBefore`, the latest earlier election with a count here. */
+  /** Against `yearBefore`: the same race at the previous general election, when counted here. */
   swing: number | null;
   yearBefore: number | null;
   todo: { todo: Todo; reason: string } | null;
-  reach: { turnout: number; persuasion: number; total: number } | null;
+  reach: Reach | null;
   /** The latest register: 2022's, else the election's own. */
   registered: number | null;
+  registeredYear: number | null;
   growth: { change: number; rate: number | null } | null;
   population: AtlasPopulation | null;
   /** How many parts' estimates were added up for `population`; null when it is the area's own. */
@@ -147,10 +154,15 @@ export type AreaFigures = {
   tag: string | null;
 };
 
-const latestBefore = (d: AtlasData, race: Race, year: number, key: string): number | null =>
-  [...YEARS]
-    .reverse()
-    .find((y) => y < year && countAt(d, electionOf(race, y), key)?.candidates.length) ?? null;
+/**
+ * The general election before `year`, when the race was counted here then.
+ * Swing skips no election: with 2017 missing, 2022 has none, not one against 2013.
+ */
+function previousYear(d: AtlasData, race: Race, year: number, key: string): number | null {
+  const i = (YEARS as readonly number[]).indexOf(year);
+  const prev = i > 0 ? YEARS[i - 1]! : null;
+  return prev !== null && countAt(d, electionOf(race, prev), key)?.candidates.length ? prev : null;
+}
 
 /**
  * An area's population estimate: its own, else the sum of its parts' when every
@@ -190,7 +202,7 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
   const election = electionOf(race, year);
   const count = countAt(d, election, key);
   const side = d.sides[election] ?? null;
-  const prev = latestBefore(d, race, year, key);
+  const prev = previousYear(d, race, year, key);
   const before =
     prev === null
       ? null
@@ -212,7 +224,8 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
   const sameDay = (y: number) =>
     d.turnout.find((t) => t.area === key && t.election.startsWith(`${y}-`) && t.registered !== null)
       ?.registered ?? null;
-  const registered = reg(2022) ?? sameDay(2022) ?? count?.registered ?? null;
+  const latest = reg(2022) ?? sameDay(2022);
+  const registered = latest ?? count?.registered ?? null;
   const people = populationOf(d, key);
   const population = people?.estimate ?? null;
   const below = Boolean(population && registered !== null && registered > population.adults);
@@ -242,6 +255,7 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
         : null,
     reach: count && counted ? votesWithinReach(count, side, siblingTurnouts) : null,
     registered,
+    registeredYear: latest !== null ? 2022 : registered !== null ? year : null,
     growth: registerGrowth(reg(2022) ?? sameDay(2022), reg(2017) ?? sameDay(2017)),
     population,
     populationParts: people?.parts ?? null,
@@ -329,7 +343,6 @@ export const TODO_COLOURS: Record<Todo, string> = {
   persuade: "hsl(205 75% 46%)",
   cut: "hsl(0 70% 50%)",
   "lean-ours": "hsl(142 40% 62%)",
-  "lean-theirs": "hsl(0 45% 66%)",
   "no-side": "hsl(0 0% 76%)",
 };
 
@@ -352,10 +365,11 @@ function ramp(x: number, stops: [number, Hsl][]): string {
 const RED: Hsl = [0, 70, 52];
 const AMBER: Hsl = [40, 90, 52];
 const GREEN: Hsl = [142, 60, 38];
+/** By margin: behind leans theirs, ahead leans ours. */
 const LEAN: [number, Hsl][] = [
-  [0.3, RED],
-  [0.5, AMBER],
-  [0.7, GREEN],
+  [-0.3, RED],
+  [0, AMBER],
+  [0.3, GREEN],
 ];
 const TURNOUT: [number, Hsl][] = [
   [0.3, [210, 30, 86]],
@@ -375,11 +389,11 @@ export function shadeOf(
   if (shade === "todo")
     return f.todo ? { colour: TODO_COLOURS[f.todo.todo], label: TODO_NAMES[f.todo.todo] } : null;
   if (shade === "lean")
-    return f.ourShare === null
+    return f.margin === null
       ? null
       : {
-          colour: ramp(f.ourShare, LEAN),
-          label: `${share1(f.ourShare)} to us`,
+          colour: ramp(f.margin, LEAN),
+          label: leanText(f.margin),
         };
   if (shade === "turnout")
     return f.turnout === null
@@ -401,12 +415,14 @@ export function shadeLegend(
   shade: "todo" | "lean" | "turnout" | "swing",
 ): { label: string; colour: string }[] {
   if (shade === "todo")
-    return (["mobilise", "hold", "persuade", "cut", "lean-ours", "lean-theirs"] as Todo[]).map(
-      (t) => ({ label: TODO_NAMES[t], colour: TODO_COLOURS[t] }),
-    );
+    return (["mobilise", "hold", "persuade", "cut", "lean-ours"] as Todo[]).map((t) => ({
+      label: TODO_NAMES[t],
+      colour: TODO_COLOURS[t],
+    }));
   const key = (stops: [number, Hsl][], labels: string[]) =>
     stops.map(([x], i) => ({ label: labels[i]!, colour: ramp(x, stops) }));
-  if (shade === "lean") return key(LEAN, ["30% or less to us", "Even", "70% or more to us"]);
+  if (shade === "lean")
+    return key(LEAN, ["Behind by 30 points or more", "Level", "Ahead by 30 points or more"]);
   if (shade === "turnout") return key(TURNOUT, ["30% turnout", "75% turnout"]);
   return key(SWING, ["15 points or more away", "No change", "15 points or more our way"]);
 }
