@@ -6975,6 +6975,14 @@ replaces any earlier ones, so running it twice changes nothing. They must:
 - take area keys from `areas.csv`, matching the document's constituency names with `slugify` and
   reporting any name that matches nothing instead of guessing;
 - leave a figure the document does not give blank, and write `0` only where the document says 0;
+- write a row for EVERY candidate of an election in every area where that election has votes, and a
+  turnout row (which carries the source) for every area that has votes: the checker refuses an area
+  where some candidates have votes and another has none, so that a candidate whose votes were not
+  found is never read as 0%. If a candidate's votes cannot be found for an area, find them, or leave
+  that election's rows out of the whole area so that it reads "not found yet", and log the gap;
+- write the presidential candidates (seat `kenya`) exactly as every other county does: they are in
+  every county's `candidates.csv`, each county's migration upserts them, and the checker refuses a
+  county that spells one differently from another (Nyeri copies Nairobi's rows for them);
 - set `source` and `source_url` exactly as in `SOURCES.md`.
 
 Run them, then `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi`.
@@ -7025,6 +7033,13 @@ For every gap the report shows (an election with no results, a year with no regi
 missing, a race whose candidates' votes fall short of the valid votes), add a row to the "Gaps" table
 in `SOURCES.md`: the county, what is missing, where it was looked for, and why it is missing (not
 published, published only as an image, behind a host that was blocked, not found).
+
+A shortfall needs care. If a candidate's row is missing in an area where other candidates of that
+election have votes, the checker refuses the county: find the figure, or leave that election's rows
+out of the whole area (every candidate), so that the atlas says "not found yet" and never reads a
+missing candidate as 0%. If every candidate is present and their votes still fall short of the
+valid votes, the document disagrees with itself: keep the figures as published and log it under
+Gaps as the document's own inconsistency, with both numbers.
 
 - [ ] **Step 11: Commit**
 
