@@ -117,7 +117,7 @@ The spec is updated in the same commit as this plan.
    Test: Task 1 ("nobody writes the atlas through the API"); Task 1 Step 7 shows that the test fails
    when both a grant and a policy are added.
 2. A campaign's notes, settings and sides stay inside the campaign; only the candidate or manager
-   writes them; who changed a row, and when, cannot be forged. Tests: Task 1 (four of its ten).
+   writes them; who changed a row, and when, cannot be forged. Tests: Task 1 (four of its eleven).
 3. A missing figure is never zero: every function answers `null` for what it cannot work out.
    Tests: Tasks 2 to 5 ("no result", "no side", "nothing to go on").
 4. The "what to do" rules start where they say, the first match wins, and 45% to 30% reads "Lean
@@ -266,6 +266,35 @@ begin
 end $$;
 rollback;
 
+-- test: the atlas tables are closed to anonymous users and writable only by the service role
+begin;
+do $$
+declare
+  r record;
+  p text;
+begin
+  -- fact is true for the seven public fact tables and false for a campaign's own three.
+  for r in select * from (values
+    ('atlas_areas', true), ('atlas_elections', true), ('atlas_candidates', true), ('atlas_results', true),
+    ('atlas_turnout', true), ('atlas_register', true), ('atlas_population', true),
+    ('atlas_settings', false), ('atlas_sides', false), ('area_notes', false)) as v(t, fact)
+  loop
+    foreach p in array array['select', 'insert', 'update', 'delete']
+    loop
+      assert not has_table_privilege('anon', 'public.' || r.t, p), 'anon has ' || p || ' on ' || r.t;
+      assert has_table_privilege('service_role', 'public.' || r.t, p), 'the service role lacks ' || p || ' on ' || r.t;
+      -- A signed-in user only reads a public fact table. A campaign's own table is open to them
+      -- at the grant level, and row level security narrows it.
+      if r.fact and p <> 'select' then
+        assert not has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated has ' || p || ' on ' || r.t;
+      else
+        assert has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated lacks ' || p || ' on ' || r.t;
+      end if;
+    end loop;
+  end loop;
+end $$;
+rollback;
+
 -- test: an area's key reads as a place
 begin;
 insert into public.atlas_areas (key, level, name, parent) values ('testland', 'county', 'Testland', 'kenya');
@@ -283,6 +312,8 @@ begin
   assert pg_temp.state_of(head || $q$('testland/a-test/b-test', 'constituency', 'B Test', 'testland/a-test')$q$) = '23514', 'a constituency at ward depth';
   assert pg_temp.state_of(head || $q$('kenya/x-test/y-test', 'ward', 'Y Test', 'kenya')$q$) = '23514', 'a ward straight under Kenya';
   assert pg_temp.state_of(head || $q$('testland/x-test/y-test', 'ward', 'Y Test', 'testland')$q$) = '23514', 'a ward under a county, skipping its constituency';
+  assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', null)$q$) = '23514', 'a constituency with no parent';
+  assert pg_temp.state_of(head || $q$('testland/north-test/ward-one', 'ward', 'Ward One', null)$q$) = '23514', 'a ward with no parent';
   assert pg_temp.state_of(head || $q$('nowhere/some-test', 'constituency', 'Some Test', 'nowhere')$q$) = '23503', 'a parent that is not there';
   assert pg_temp.state_of(head || $q$('testland', 'county', 'Testland', 'kenya')$q$) = '23505', 'the same key twice';
   assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', 'testland')$q$) is null, 'a good constituency is refused';
@@ -461,6 +492,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
 do $$ begin
   assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '')$q$) = '23514', 'an empty note';
   assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '   ')$q$) = '23514', 'a blank note';
+  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', E'\n\t  ')$q$) = '23514', 'a note of newlines and tabs';
   assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2001))) = '23514', 'a note over 2,000 characters';
   assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2000))) is null, 'a note of exactly 2,000 characters is refused';
 end $$;
@@ -539,14 +571,15 @@ create table public.atlas_areas (
   iebc_code text check (iebc_code is null or iebc_code ~ '^[0-9]{1,4}$'),
   -- A county sits under Kenya; below that a key is its parent's key and one more
   -- part, so a ward's parent is its constituency and a constituency's its county.
-  -- CASE returns null for a case it forgot, which a check lets through, so the
-  -- whole answer must be true.
+  -- A null parent makes the comparisons null, and a check lets null through, so
+  -- the whole answer must be true.
   constraint atlas_areas_shape check ((case level
     when 'country' then key = 'kenya' and parent is null
     when 'county' then parent = 'kenya' and key !~ '/'
     when 'constituency' then parent <> 'kenya' and key ~ '^[^/]+/[^/]+$'
                          and parent = regexp_replace(key, '/[^/]+$', '')
-    else key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
+    when 'ward' then key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
+    else false
   end) is true)
 );
 create index atlas_areas_parent_idx on public.atlas_areas (parent);
@@ -717,7 +750,7 @@ create table public.area_notes (
   campaign_id uuid not null default public.my_campaign()
               references public.campaigns(id) on delete cascade,
   area_key    text not null references public.atlas_areas(key),
-  note        text not null check (length(btrim(note)) >= 1 and length(note) <= 2000),
+  note        text not null check (note ~ '[^[:space:]]' and length(note) <= 2000),
   updated_at  timestamptz not null default now(),
   updated_by  uuid default auth.uid() references auth.users(id) on delete set null,
   primary key (campaign_id, area_key)
@@ -779,7 +812,7 @@ Expected: the new test passes and two older ones fail, each for a reason this mi
 ok   37 migrations apply cleanly
 FAIL tests/sql/access.test.sql
 psql:tests/sql/access.test.sql:334: ERROR:  new tables with no campaign: decide whether they belong to one: atlas_areas, atlas_elections, atlas_candidates, atlas_population, atlas_results, atlas_turnout, atlas_register
-ok   tests/sql/atlas.test.sql (10 tests)
+ok   tests/sql/atlas.test.sql (11 tests)
 ...
 FAIL tests/sql/search.test.sql
 psql:tests/sql/search.test.sql:79: ERROR:  schema version
@@ -829,7 +862,7 @@ Expected:
 ```
 ok   37 migrations apply cleanly
 ok   tests/sql/access.test.sql (16 tests)
-ok   tests/sql/atlas.test.sql (10 tests)
+ok   tests/sql/atlas.test.sql (11 tests)
 ok   tests/sql/form34a.test.sql (13 tests)
 ok   tests/sql/listening.test.sql (4 tests)
 ok   tests/sql/mornings.test.sql (6 tests)
@@ -6370,6 +6403,7 @@ data/atlas/
   <county>/          one folder per county, named by its key: nairobi, nyeri
     areas.csv  candidates.csv  results.csv  turnout.csv  register.csv  population.csv
     known-differences.csv      (optional) differences IEBC itself published, kept on purpose
+  <product>.sha256   the SHA-256 of every file of a many-file product (WorldPop's grids); committed
   _sources/          the documents downloaded to read figures from; not committed
 ```
 
@@ -6389,9 +6423,13 @@ data/atlas/
 ## Rules
 
 - **Keys** are paths of slugs: `nairobi`, `nairobi/dagoretti-north`,
-  `nairobi/dagoretti-north/kileleshwa`. A slug is the IEBC name lower-cased, punctuation dropped,
-  other gaps a hyphen (`Lang'ata` is `langata`); `scripts/atlas/slug.py` is the rule. `kenya` is
-  added by the schema and stays out of `areas.csv`. A ward's slug is the one in `public/geo/*-wards.json`.
+  `nairobi/dagoretti-north/kileleshwa`. A slug is the name lower-cased, with accents, apostrophes,
+  backticks and full stops dropped and any other run of characters that are not letters or digits
+  made one hyphen (`Lang'ata` is `langata`, `Mwiyogo/Endarasha` is `mwiyogo-endarasha`);
+  `scripts/atlas/slug.py` is the rule, and `checks.ts` has the same one. `kenya` is added by the
+  schema and stays out of `areas.csv`. A ward's slug is the one in `public/geo/*-wards.json`, and
+  the ward must sit under the constituency that map names (a map that names none, Mathira's,
+  leaves the constituency to the files).
 - **Elections** are `<year>-<race>`: 2013, 2017 and 2022; `president`, `governor`, `mp`. The 2017
   presidential race is the 8 August vote; the 26 October re-run is not loaded.
 - **Candidates**: `id` is `<election_id>/<seat>/<slug of the name>`. `seat` is the area contested:
@@ -6405,17 +6443,23 @@ data/atlas/
 - **Results** are votes where they were counted: a county or a constituency. A candidate's county
   row and constituency rows must agree (president and governor).
 - **A blank is "not found"**, never a zero. Write `0` only where the document says 0.
+- **Figures** are whole numbers in ASCII digits, with no separators (a known difference's
+  `difference` may start with `-`). Every `area_key`, `seat` and `candidate_id` must be in the
+  files. The checker refuses: more votes cast than registered; more valid votes than cast; cast
+  not equal to valid plus rejected when all three are given (unless recorded in
+  `known-differences.csv`); candidates' votes above the valid votes.
 - **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
   backslash; no row is listed twice (the key columns of a file are unique). The checker and
   `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
 - **Also required**: `level` and `parent` follow the key (one part is a county, under `kenya`; two
   parts a constituency; three a ward; the parent is the key less its last part); every turnout,
   register and population row has a `source`; a known difference's `reason` and a population row's
-  `method` are at least 10 characters; the figures in `population.csv` are WorldPop estimates,
-  never counts.
+  `method` are at least 10 characters.
+- **Population figures are estimates**, never counts: WorldPop's grid summed inside each ward. The
+  `method` column says so, and the screens label them as estimates.
 - **`source`** is written "Publisher, document title" (`IEBC, Presidential results by
-  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file, and is blank only where
-  the document has no web address.
+  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file, and
+  is blank only where the document has no web address.
 - **Known differences**: `check` is `county_sum` (`difference` is what the county says minus what
   its constituencies add up to; give `candidate_id` and the county in `area_key`) or `cast_split`
   (`difference` is cast minus valid minus rejected; give `election_id` and `area_key`). A reason is
@@ -6451,6 +6495,11 @@ summary is not a source here. Downloaded files live in `_sources/` (not committe
 listed with its SHA-256, to let anyone check they have the same file. A product made of many files
 (WorldPop's grids) gets one row, whose SHA-256 is that of a manifest: the output of `sha256sum`
 over its files, saved as `data/atlas/<product>.sha256` and committed.
+
+In the CSVs a `source` is the Publisher and the Document of the row here, written
+"Publisher, Document", and a `source_url` is the URL column. "Saved as" is the path under
+`data/atlas/_sources/` (a national document used by two counties is saved once, and its "Taken
+from it" says both counties use it). "Retrieved" is the date, written YYYY-MM-DD.
 
 ## Documents used
 

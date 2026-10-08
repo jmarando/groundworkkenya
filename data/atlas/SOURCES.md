@@ -8,6 +8,11 @@ listed with its SHA-256, to let anyone check they have the same file. A product 
 (WorldPop's grids) gets one row, whose SHA-256 is that of a manifest: the output of `sha256sum`
 over its files, saved as `data/atlas/<product>.sha256` and committed.
 
+In the CSVs a `source` is the Publisher and the Document of the row here, written
+"Publisher, Document", and a `source_url` is the URL column. "Saved as" is the path under
+`data/atlas/_sources/` (a national document used by two counties is saved once, and its "Taken
+from it" says both counties use it). "Retrieved" is the date, written YYYY-MM-DD.
+
 ## Documents used
 
 | Document | Publisher | Published | URL | Saved as | Retrieved | Taken from it | Level | SHA-256 |
