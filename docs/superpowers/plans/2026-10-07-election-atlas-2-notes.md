@@ -52,12 +52,14 @@ committed.
 - The ward-population band rule assumes WorldPop's older series layout (ages 0, 1, then every five
   years up to 80). Check it against the real file list (part 1, Task 12 Step 8).
 
-## Open decision
+## Decided
 
-- **Who reads area notes.** Today any team member, including field agents, can read every area note
-  through the API (`area_notes` has a team-read policy; the spec says "the team reads them"). No
-  planned screen shows notes to agents. The final review recommends reading by candidate, manager and
-  organiser only, enforced in the database. If the user decides yes, edit the migration in place
-  before the release (it is unapplied): in the `area_notes` select policy use
-  `public.my_campaign_role() in ('super', 'candidate', 'manager', 'organiser')`, and flip the
-  agent assertion in `tests/sql/atlas.test.sql` to expect 0 notes.
+- **Who reads area notes.** On 8 October the user decided that the whole team, field agents
+  included, may read area notes through the API, as the spec says ("the team reads them"). The
+  migration keeps the team-read policy on `area_notes` (`is_team_member`), and the agent assertion in
+  `tests/sql/atlas.test.sql` stays. No planned screen shows notes to agents. The final review had
+  recommended restricting reading to the candidate, manager and organiser (in the `area_notes`
+  select policy, `public.my_campaign_role() in ('super', 'candidate', 'manager', 'organiser')`, and
+  the test flipped to expect 0 notes); revisit if a screen ever shows notes to agents or the rule
+  changes. Until the migration is applied it can be edited in place; after that it needs a new
+  migration.
