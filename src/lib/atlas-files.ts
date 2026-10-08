@@ -615,6 +615,19 @@ export function atlasReport(f: AtlasFiles): string {
       lines.push(
         `Population estimate below the 2022 register in ${below.length} of ${wards.length} wards: ${below.map((w) => name.get(w) ?? w).join(", ")}.`,
       );
+    // A count's own register against the register's: documents differ, and both are kept.
+    const disagree = f.turnout.flatMap((t) => {
+      if (t.registered === null || !(t.area === county || t.area.startsWith(`${county}/`)))
+        return [];
+      const year = Number(t.election.slice(0, 4));
+      const r = f.register.find((x) => x.year === year && x.area === t.area);
+      return r && Math.abs(t.registered - r.registered) > 0.01 * r.registered
+        ? [
+            `${name.get(t.area) ?? t.area} in ${year}, ${t.registered.toLocaleString("en-KE")} in the ${t.election.replace("-", " ")} count against ${r.registered.toLocaleString("en-KE")} in the register`,
+          ]
+        : [];
+    });
+    if (disagree.length) lines.push(`Registers that disagree: ${disagree.join("; ")}.`);
     lines.push("");
     if (missing.length) lines.push("Missing:", ...missing.map((m) => `- ${m}`), "");
   }

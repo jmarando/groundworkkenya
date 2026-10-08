@@ -361,6 +361,24 @@ for (const [table, text] of Object.entries({
     "area,year,total,adults,young_adults,source\nnairobi/kibra/sarangombe,2020,150,100,60,iebc-test",
 }) as [TableName, string][])
   readTable(table, text, table, below);
+const twoRegisters = emptyFiles();
+for (const [table, text] of Object.entries({
+  ...BASE,
+  register:
+    "year,area,registered,source\n2022,nairobi/westlands,380,iebc-test\n2022,nairobi/kibra,500,iebc-test",
+  turnout: `${BASE.turnout}\n2022-governor,nairobi/kibra,503,,,,iebc-test`,
+}) as [TableName, string][])
+  readTable(table, text, table, twoRegisters);
+eq(
+  "the report names registers that disagree by more than 1%",
+  [
+    atlasReport(twoRegisters).includes(
+      "Registers that disagree: Westlands in 2022, 400 in the 2022 governor count against 380 in the register.",
+    ),
+    atlasReport(files).includes("Registers that disagree"),
+  ],
+  [true, false],
+);
 eq(
   "the report names wards whose estimate is below the register",
   atlasReport(below).includes(

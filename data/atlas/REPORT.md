@@ -19,6 +19,7 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 Registered voters by ward: 2013: 0 of 85 · 2017: 0 of 85 · 2022: 85 of 85.
 Population estimates: 85 of 85 wards.
 Population estimate below the 2022 register in 29 of 85 wards: Kabiro, Mutu-ini, Ngando, Kayole South, Upper Savannah, Utawala, Dandora Area I, Imara Daima, Kwa Njenga, Pipeline, Eastleigh South, Pumwani, Clay City, Laini Saba, Sarangombe, Mugumo-ini, Nyayo Highrise, South C, Harambee, Maringo/Hamza, Mabatini, Mlango Kubwa, Kahawa, Zimmerman, Nairobi Central, Nairobi South, Ngara, Ziwani/Kariokor, Parklands/Highridge.
+Registers that disagree: Roysambu in 2022, 164,711 in the 2022 president count against 153,772 in the register.
 
 Missing:
 - 2013 president: results for 17 of 17 constituencies
