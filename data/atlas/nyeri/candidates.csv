@@ -1,7 +1,4 @@
 election,seat,name,party,bloc
-2022-mp,nyeri/tetu,Geoffrey Wandeto Mwangi,UDA,UDA
-2022-mp,nyeri/tetu,Francis Mahuria Gachigi,TSP,TSP
-2022-mp,nyeri/tetu,Lutherking Githigaro Wachira,Jubilee,Jubilee
 2022-mp,nyeri/kieni,Anthony Njoroge Wainaina,UDA,UDA
 2022-mp,nyeri/kieni,James Mathenge Kanini Kega,Jubilee,Jubilee
 2022-mp,nyeri/othaya,Michael Wambugu Wainaina,UDA,UDA
@@ -12,3 +9,78 @@ election,seat,name,party,bloc
 2022-mp,nyeri/mukurweini,Kariuki Muchemi,Jubilee,Jubilee
 2022-mp,nyeri/nyeri-town,Duncan Maina Mathenge,UDA,UDA
 2022-mp,nyeri/nyeri-town,Martin Deric Ngunjiri Wambugu,Jubilee,Jubilee
+2022-mp,nyeri/tetu,Geoffrey Wandeto Mwangi,UDA,UDA
+2022-mp,nyeri/tetu,Francis Mahuria Gachigi,TSP,TSP
+2022-mp,nyeri/tetu,Simon Wachira Ngatia,Chama Cha Kazi,Chama Cha Kazi
+2022-mp,nyeri/tetu,Lutherking Githigaro Wachira,Jubilee,Jubilee
+2022-mp,nyeri/tetu,Lucy Wanjiru Muthaka,Independent,Independent: Lucy Wanjiru Muthaka
+2022-mp,nyeri/tetu,Edwin Wahome Kariuki,Independent,Independent: Edwin Wahome Kariuki
+2022-mp,nyeri/tetu,Alex Gathii Gitonga,The New Democrats,The New Democrats
+2022-mp,nyeri/tetu,Peter Wambugu Kamweru,Muungano,Muungano
+2022-mp,nyeri/tetu,Eustus Maina Nyamwitha,Usawa Kwa Wote,Usawa Kwa Wote
+2017-mp,nyeri/kieni,Kega Mathenge James Kanini,Jubilee,Jubilee
+2017-mp,nyeri/kieni,Njoroge Joseph Wainaina,Independent,Independent: Njoroge Joseph Wainaina
+2017-mp,nyeri/kieni,Wanjohi Kinyua Francis,MCCP,MCCP
+2017-mp,nyeri/kieni,Warugongo Nemesyus,Independent,Independent: Warugongo Nemesyus
+2017-mp,nyeri/kieni,Muchire Kiriungi Stephen,Independent,Independent: Muchire Kiriungi Stephen
+2017-mp,nyeri/kieni,Muriuki Peter Maina,Independent,Independent: Muriuki Peter Maina
+2017-mp,nyeri/kieni,Maina Muchiri Kiuma,PPK,PPK
+2017-mp,nyeri/kieni,Mukundi Samuel Nderi,DP,DP
+2017-mp,nyeri/kieni,Nguring'a Ishmael Muriithi,KANU,KANU
+2017-mp,nyeri/mathira,Gachagua Rigathi,Jubilee,Jubilee
+2017-mp,nyeri/mathira,Maranga Phyllis Christabel Wambura,Independent,Independent: Maranga Phyllis Christabel Wambura
+2017-mp,nyeri/mathira,Kinyua Peter Weru,Independent,Independent: Kinyua Peter Weru
+2017-mp,nyeri/mathira,Thinwa George Warutere,NARC-Kenya,NARC-Kenya
+2017-mp,nyeri/mathira,Murage Nancy Wanjiku,DP,DP
+2017-mp,nyeri/mathira,Kiruta Christopher Maina,ODM,ODM
+2017-mp,nyeri/mathira,Thuku Phenasio Wang'ombe,Independent,Independent: Thuku Phenasio Wang'ombe
+2017-mp,nyeri/mathira,Wanjohi Naphtaly Muriuki,Independent,Independent: Wanjohi Naphtaly Muriuki
+2017-mp,nyeri/mukurweini,Kiai Anthony Githiaka,Jubilee,Jubilee
+2017-mp,nyeri/mukurweini,Kabando Kabando Wa,Independent,Independent: Kabando Kabando Wa
+2017-mp,nyeri/mukurweini,Waroe David Mwangi Kinaniri,Independent,Independent: Waroe David Mwangi Kinaniri
+2017-mp,nyeri/mukurweini,Peter Ndagitari Karimi Ndirangu,NARC-Kenya,NARC-Kenya
+2017-mp,nyeri/mukurweini,Kamuruci Benjamin Kaburi,PNU,PNU
+2017-mp,nyeri/mukurweini,Kamau Julius Wambugu,MCCP,MCCP
+2017-mp,nyeri/mukurweini,Ngari Robert Njoroge,DP,DP
+2017-mp,nyeri/mukurweini,Kimunyi Paul Mimano,Independent,Independent: Kimunyi Paul Mimano
+2017-mp,nyeri/nyeri-town,Wambugu Martin Deric Ngunjiri,Jubilee,Jubilee
+2017-mp,nyeri/nyeri-town,Mathenge Duncan Maina,Independent,Independent: Mathenge Duncan Maina
+2017-mp,nyeri/nyeri-town,Njama Timothy Kiragu,Independent,Independent: Njama Timothy Kiragu
+2017-mp,nyeri/nyeri-town,Ngatia Patrick Kiboi,Independent,Independent: Ngatia Patrick Kiboi
+2017-mp,nyeri/nyeri-town,Mutitu Patrick Karigu,DP,DP
+2017-mp,nyeri/nyeri-town,Kihoro Wanyiri,Independent,Independent: Kihoro Wanyiri
+2017-mp,nyeri/nyeri-town,Wanyoike Josphine Kagure,KANU,KANU
+2017-mp,nyeri/nyeri-town,Githinji Brian Mutembei,NARC-Kenya,NARC-Kenya
+2017-mp,nyeri/nyeri-town,Njeri Joseph Maina,Agano,Agano
+2017-mp,nyeri/nyeri-town,Gachema Gideon Gichuki,National Vision Party,National Vision Party
+2017-mp,nyeri/othaya,Mugambi James Gichuki,Jubilee,Jubilee
+2017-mp,nyeri/othaya,Wainaina Michael Wambugu,Independent,Independent: Wainaina Michael Wambugu
+2017-mp,nyeri/othaya,King'ara Peter Gichuki,DP,DP
+2017-mp,nyeri/othaya,Mwangi Emilio Kibui,NARC-Kenya,NARC-Kenya
+2017-mp,nyeri/othaya,Ireri Zachary Waweru,MCCP,MCCP
+2017-mp,nyeri/othaya,Gaku Joseph Minjire,Agano,Agano
+2017-mp,nyeri/othaya,Wanyanga Cecilia Wambui,Independent,Independent: Wanyanga Cecilia Wambui
+2017-mp,nyeri/othaya,Waititu David Kimengere,Independent,Independent: Waititu David Kimengere
+2017-mp,nyeri/tetu,Mwangi James Gichuhi,Jubilee,Jubilee
+2017-mp,nyeri/tetu,Gethenji James Ndungu,Independent,Independent: Gethenji James Ndungu
+2017-mp,nyeri/tetu,Kanyi Anne Nyambura,Independent,Independent: Kanyi Anne Nyambura
+2017-mp,nyeri/tetu,Wachira Lutherking Githigaro,Independent,Independent: Wachira Lutherking Githigaro
+2017-mp,nyeri/tetu,Kanyira Moses Mwangi,FP,FP
+2017-mp,nyeri/tetu,Kamwaro Anthony Kariuki,MCCP,MCCP
+2017-mp,nyeri/tetu,Ngunyangi Timothy Gachanja,DP,DP
+2017-mp,nyeri/tetu,Muthumbi Johnson Mukunya,PNU,PNU
+2017-mp,nyeri/tetu,Kiragu John Warutere,Independent,Independent: Kiragu John Warutere
+2017-mp,nyeri/tetu,Mwaniki David Thuku,Independent,Independent: Mwaniki David Thuku
+2017-mp,nyeri/tetu,Gitonga Alex Gathii,Independent,Independent: Gitonga Alex Gathii
+2017-mp,nyeri/tetu,Kihoro Gerald Ndirangu,NARC-Kenya,NARC-Kenya
+2017-mp,nyeri/tetu,Maina Edward Waithaka,The New Democrats,The New Democrats
+2017-mp,nyeri/tetu,Waweru David Kariuki,MGPK,MGPK
+2017-mp,nyeri/tetu,Runo Peter Kimani,Independent,Independent: Runo Peter Kimani
+2017-mp,nyeri/tetu,Waichere Paul Kamau,Independent,Independent: Waichere Paul Kamau
+2022-governor,nyeri,Mwalimu Edward Kahiga,UDA,Kenya Kwanza
+2022-governor,nyeri,Thuo Mathenge,The New Democrats,The New Democrats
+2022-governor,nyeri,Eng Ephraim Kirinyaga,Jubilee,Azimio
+2022-governor,nyeri,Maina Munyiri,Chama Cha Kazi,Chama Cha Kazi
+2017-governor,nyeri,Gakuru Patrick Wahome,Jubilee,Jubilee
+2017-governor,nyeri,Githaiga Samwel Wamathai,Independent,Independent: Githaiga Samwel Wamathai
+2017-governor,nyeri,Munene Kairu Patrick Maina,DP,DP

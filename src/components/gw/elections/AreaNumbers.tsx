@@ -76,7 +76,9 @@ export function AreaNumbers({
           <span className="n stat">{f.swing === null ? DASH : signedPoints(f.swing)}</span>
           <span className="s">
             {f.yearBefore
-              ? `since ${f.yearBefore}`
+              ? f.swing === null && f.ourShare !== null && !f.sideBefore
+                ? `set your ${f.yearBefore} side to compare`
+                : `since ${f.yearBefore}`
               : yearBefore(year)
                 ? `no ${yearBefore(year)} result to compare`
                 : "no earlier result"}

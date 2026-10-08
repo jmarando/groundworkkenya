@@ -11,9 +11,6 @@ election,seat,candidate,area,votes,source
 2013-president,kenya,Raila Odinga,nyeri,5638,electionskenya-2013-president
 2013-president,kenya,Musalia Mudavadi,nyeri,641,electionskenya-2013-president
 2013-president,kenya,Peter Kenneth,nyeri,1044,electionskenya-2013-president
-2022-mp,nyeri/tetu,Geoffrey Wandeto Mwangi,nyeri/tetu,19887,kna-2022-nyeri-mps
-2022-mp,nyeri/tetu,Francis Mahuria Gachigi,nyeri/tetu,11039,kna-2022-nyeri-mps
-2022-mp,nyeri/tetu,Lutherking Githigaro Wachira,nyeri/tetu,2546,kna-2022-nyeri-mps
 2022-mp,nyeri/kieni,Anthony Njoroge Wainaina,nyeri/kieni,45371,kna-2022-nyeri-mps
 2022-mp,nyeri/kieni,James Mathenge Kanini Kega,nyeri/kieni,25002,kna-2022-nyeri-mps
 2022-mp,nyeri/othaya,Michael Wambugu Wainaina,nyeri/othaya,26976,kna-2022-nyeri-mps
@@ -24,3 +21,78 @@ election,seat,candidate,area,votes,source
 2022-mp,nyeri/mukurweini,Kariuki Muchemi,nyeri/mukurweini,3391,kna-2022-nyeri-mps
 2022-mp,nyeri/nyeri-town,Duncan Maina Mathenge,nyeri/nyeri-town,41007,kna-2022-nyeri-mps
 2022-mp,nyeri/nyeri-town,Martin Deric Ngunjiri Wambugu,nyeri/nyeri-town,11808,kna-2022-nyeri-mps
+2022-mp,nyeri/tetu,Geoffrey Wandeto Mwangi,nyeri/tetu,19887,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Francis Mahuria Gachigi,nyeri/tetu,11039,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Simon Wachira Ngatia,nyeri/tetu,3401,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Lutherking Githigaro Wachira,nyeri/tetu,2546,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Lucy Wanjiru Muthaka,nyeri/tetu,447,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Edwin Wahome Kariuki,nyeri/tetu,255,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Alex Gathii Gitonga,nyeri/tetu,237,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Peter Wambugu Kamweru,nyeri/tetu,177,provisional-2022-mp-nyeri
+2022-mp,nyeri/tetu,Eustus Maina Nyamwitha,nyeri/tetu,77,provisional-2022-mp-nyeri
+2017-mp,nyeri/kieni,Kega Mathenge James Kanini,nyeri/kieni,66203,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Njoroge Joseph Wainaina,nyeri/kieni,10261,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Wanjohi Kinyua Francis,nyeri/kieni,3954,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Warugongo Nemesyus,nyeri/kieni,3067,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Muchire Kiriungi Stephen,nyeri/kieni,2364,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Muriuki Peter Maina,nyeri/kieni,2213,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Maina Muchiri Kiuma,nyeri/kieni,663,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Mukundi Samuel Nderi,nyeri/kieni,593,provisional-2017-mp-nyeri
+2017-mp,nyeri/kieni,Nguring'a Ishmael Muriithi,nyeri/kieni,430,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Gachagua Rigathi,nyeri/mathira,52757,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Maranga Phyllis Christabel Wambura,nyeri/mathira,28893,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Kinyua Peter Weru,nyeri/mathira,3643,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Thinwa George Warutere,nyeri/mathira,1153,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Murage Nancy Wanjiku,nyeri/mathira,210,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Kiruta Christopher Maina,nyeri/mathira,194,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Thuku Phenasio Wang'ombe,nyeri/mathira,147,provisional-2017-mp-nyeri
+2017-mp,nyeri/mathira,Wanjohi Naphtaly Muriuki,nyeri/mathira,116,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Kiai Anthony Githiaka,nyeri/mukurweini,25267,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Kabando Kabando Wa,nyeri/mukurweini,11731,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Waroe David Mwangi Kinaniri,nyeri/mukurweini,7321,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Peter Ndagitari Karimi Ndirangu,nyeri/mukurweini,2156,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Kamuruci Benjamin Kaburi,nyeri/mukurweini,845,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Kamau Julius Wambugu,nyeri/mukurweini,415,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Ngari Robert Njoroge,nyeri/mukurweini,333,provisional-2017-mp-nyeri
+2017-mp,nyeri/mukurweini,Kimunyi Paul Mimano,nyeri/mukurweini,179,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Wambugu Martin Deric Ngunjiri,nyeri/nyeri-town,48353,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Mathenge Duncan Maina,nyeri/nyeri-town,13486,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Njama Timothy Kiragu,nyeri/nyeri-town,2330,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Ngatia Patrick Kiboi,nyeri/nyeri-town,1457,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Mutitu Patrick Karigu,nyeri/nyeri-town,601,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Kihoro Wanyiri,nyeri/nyeri-town,578,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Wanyoike Josphine Kagure,nyeri/nyeri-town,479,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Githinji Brian Mutembei,nyeri/nyeri-town,462,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Njeri Joseph Maina,nyeri/nyeri-town,446,provisional-2017-mp-nyeri
+2017-mp,nyeri/nyeri-town,Gachema Gideon Gichuki,nyeri/nyeri-town,194,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Mugambi James Gichuki,nyeri/othaya,31651,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Wainaina Michael Wambugu,nyeri/othaya,12987,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,King'ara Peter Gichuki,nyeri/othaya,5742,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Mwangi Emilio Kibui,nyeri/othaya,430,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Ireri Zachary Waweru,nyeri/othaya,302,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Gaku Joseph Minjire,nyeri/othaya,214,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Wanyanga Cecilia Wambui,nyeri/othaya,179,provisional-2017-mp-nyeri
+2017-mp,nyeri/othaya,Waititu David Kimengere,nyeri/othaya,85,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Mwangi James Gichuhi,nyeri/tetu,24813,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Gethenji James Ndungu,nyeri/tetu,6348,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Kanyi Anne Nyambura,nyeri/tetu,4742,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Wachira Lutherking Githigaro,nyeri/tetu,4069,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Kanyira Moses Mwangi,nyeri/tetu,3422,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Kamwaro Anthony Kariuki,nyeri/tetu,819,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Ngunyangi Timothy Gachanja,nyeri/tetu,261,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Muthumbi Johnson Mukunya,nyeri/tetu,233,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Kiragu John Warutere,nyeri/tetu,224,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Mwaniki David Thuku,nyeri/tetu,116,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Gitonga Alex Gathii,nyeri/tetu,110,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Kihoro Gerald Ndirangu,nyeri/tetu,106,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Maina Edward Waithaka,nyeri/tetu,64,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Waweru David Kariuki,nyeri/tetu,49,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Runo Peter Kimani,nyeri/tetu,41,provisional-2017-mp-nyeri
+2017-mp,nyeri/tetu,Waichere Paul Kamau,nyeri/tetu,21,provisional-2017-mp-nyeri
+2022-governor,nyeri,Mwalimu Edward Kahiga,nyeri,213373,provisional-2022-governor-nyeri
+2022-governor,nyeri,Thuo Mathenge,nyeri,81467,provisional-2022-governor-nyeri
+2022-governor,nyeri,Eng Ephraim Kirinyaga,nyeri,26373,provisional-2022-governor-nyeri
+2022-governor,nyeri,Maina Munyiri,nyeri,4497,provisional-2022-governor-nyeri
+2017-governor,nyeri,Gakuru Patrick Wahome,nyeri,284791,provisional-2017-governor-nyeri
+2017-governor,nyeri,Githaiga Samwel Wamathai,nyeri,87237,provisional-2017-governor-nyeri
+2017-governor,nyeri,Munene Kairu Patrick Maina,nyeri,19141,provisional-2017-governor-nyeri

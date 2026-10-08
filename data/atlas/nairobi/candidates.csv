@@ -1,30 +1,292 @@
 election,seat,name,party,bloc
 2022-governor,nairobi,Johnson Sakaja,UDA,Kenya Kwanza
 2022-governor,nairobi,Polycarp Igathe,Jubilee,Azimio
-2022-mp,nairobi/westlands,Timothy Wanyonyi Wetangula,ODM,ODM
-2022-mp,nairobi/westlands,Nelson Andayi Havi,UDA,UDA
-2022-mp,nairobi/kibra,Peter Ochieng Orero,ODM,ODM
-2022-mp,nairobi/kibra,Mcdonald Mariga Wanyama,UDA,UDA
-2022-mp,nairobi/kibra,Benard Otieno Okoth,Independent,Independent: Benard Otieno Okoth
-2022-mp,nairobi/langata,Phelix Odiwuor Khodhe,ODM,ODM
-2022-mp,nairobi/langata,Generali Nixon Kiprotich Korir,UDA,UDA
 2022-mp,nairobi/embakasi-east,Paul Ongili Babu Owino,ODM,ODM
 2022-mp,nairobi/embakasi-east,Francis Mureithi Wambugu,UDA,UDA
-2022-mp,nairobi/embakasi-central,Benjamin Gathiru Mejjadonk,UDA,UDA
-2022-mp,nairobi/embakasi-central,Samuel Ng'ang'a Mwangi,Jubilee,Jubilee
-2022-mp,nairobi/mathare,Anthony Tom Oluoch,ODM,ODM
-2022-mp,nairobi/mathare,Billian Okoth Ojiwa,UDA,UDA
-2022-mp,nairobi/mathare,Kevin Bahati Kioko,Jubilee,Jubilee
 2022-mp,nairobi/kasarani,Ronald Kamwiko Karauri,Independent,Independent: Ronald Kamwiko Karauri
 2022-mp,nairobi/kasarani,John Njoroge Chege,UDA,UDA
 2022-mp,nairobi/kasarani,Mercy Wanjiku Gakuya,Jubilee,Jubilee
-2022-mp,nairobi/dagoretti-north,Beatrice Kadeveresia Elachi,ODM,ODM
-2022-mp,nairobi/dagoretti-north,Elijah Getui Oenga,Independent,Independent: Elijah Getui Oenga
-2022-mp,nairobi/dagoretti-south,John Kiarie Waweru,UDA,UDA
-2022-mp,nairobi/dagoretti-south,Dennis Kariuki Waweru,Jubilee,Jubilee
-2022-mp,nairobi/starehe,Amos Mwago Maina,Jubilee,Jubilee
-2022-mp,nairobi/starehe,Simon Nganga Mbugua,UDA,UDA
 2013-mp,nairobi/embakasi-west,George Theuri,TNA,TNA
 2013-mp,nairobi/embakasi-west,Brian Weke,ODM,ODM
 2017-mp,nairobi/embakasi-west,George Theuri,Jubilee,Jubilee
-2017-mp,nairobi/embakasi-west,Tom Agimba,ODM,ODM
+2022-mp,nairobi/westlands,Timothy Wanyonyi Wetangula,ODM,ODM
+2022-mp,nairobi/westlands,Nelson Andayi Havi,UDA,UDA
+2022-mp,nairobi/westlands,Sylvia Mulama Kamande,ANC,ANC
+2022-mp,nairobi/westlands,Betty Njeri Tett,Independent,Independent: Betty Njeri Tett
+2022-mp,nairobi/westlands,David Calleb Otieno,Independent,Independent: David Calleb Otieno
+2022-mp,nairobi/westlands,Carolyne Wanjiku Ndungu,TSP,TSP
+2022-mp,nairobi/westlands,Kenneth Waiganjo Kihara,Independent,Independent: Kenneth Waiganjo Kihara
+2022-mp,nairobi/westlands,Stanley Mmbwanga Inyimili,Safina,Safina
+2022-mp,nairobi/westlands,Gregory Wafula Nalianya,DAP-K,DAP-K
+2022-mp,nairobi/westlands,Mary Kerubo Okari,UPA,UPA
+2022-mp,nairobi/langata,Phelix Odiwuor Khodhe,ODM,ODM
+2022-mp,nairobi/langata,Generali Nixon Kiprotich Korir,UDA,UDA
+2022-mp,nairobi/langata,Osman Abdullahi Osman,KANU,KANU
+2022-mp,nairobi/langata,Lilian Akinyi Opiyo,NARC,NARC
+2022-mp,nairobi/langata,Thomas Awili Okiri,Independent,Independent: Thomas Awili Okiri
+2022-mp,nairobi/langata,Susan Atieno Odongo,Independent,Independent: Susan Atieno Odongo
+2022-mp,nairobi/langata,Caroline Jepkemboi,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/langata,Bornes Chepkoros Busienei,National Vision Party,National Vision Party
+2022-mp,nairobi/langata,Samwel Maina Ng'ang'a,Safina,Safina
+2022-mp,nairobi/langata,Mbogai Sarah Mkarie,UPA,UPA
+2022-mp,nairobi/langata,Cliff Aboki Omingo,FORD-Asili,FORD-Asili
+2022-mp,nairobi/kibra,Peter Ochieng Orero,ODM,ODM
+2022-mp,nairobi/kibra,Mcdonald Mariga Wanyama,UDA,UDA
+2022-mp,nairobi/kibra,Benard Otieno Okoth,Independent,Independent: Benard Otieno Okoth
+2022-mp,nairobi/kibra,Peris Wanjiru Karanja,Muungano,Muungano
+2022-mp,nairobi/kibra,Yusuf Noah,DAP-K,DAP-K
+2022-mp,nairobi/kibra,A Malassen Hamida Musa Twahir,ANC,ANC
+2022-mp,nairobi/kibra,Erick Ochieng Obayi,Independent,Independent: Erick Ochieng Obayi
+2022-mp,nairobi/kibra,Edwin Imbalo Ndeda,UPIA,UPIA
+2022-mp,nairobi/kibra,Fransco Ojiambo Okidi,PDU,PDU
+2022-mp,nairobi/roysambu,Augustine Kamande Mwafrika,UDA,UDA
+2022-mp,nairobi/roysambu,Isaac Waihenya Ndirangu,Jubilee,Jubilee
+2022-mp,nairobi/roysambu,Lee Muchiri Kamau,ANC,ANC
+2022-mp,nairobi/roysambu,Lawrence Muguna Kaburu,NARC-Kenya,NARC-Kenya
+2022-mp,nairobi/roysambu,Brown Munyoroku Kariuki,TSP,TSP
+2022-mp,nairobi/roysambu,Keziah Muthoni Kuria,PDU,PDU
+2022-mp,nairobi/roysambu,Franklin Mwendani Njiru,Independent,Independent: Franklin Mwendani Njiru
+2022-mp,nairobi/roysambu,Samuel Maina Ndengwa,NOPEU,NOPEU
+2022-mp,nairobi/roysambu,Lucky Mugambi Kigwulu,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/embakasi-south,Julius Musili Mawathe,Wiper,Wiper
+2022-mp,nairobi/embakasi-south,Janganya Erick Kebati,Independent,Independent: Janganya Erick Kebati
+2022-mp,nairobi/embakasi-south,Irshadali Mohamed Sumra,ODM,ODM
+2022-mp,nairobi/embakasi-south,Urbanus Kaveva Kalumba,UDA,UDA
+2022-mp,nairobi/embakasi-south,Jared Osiago Mogaka,UPA,UPA
+2022-mp,nairobi/embakasi-south,Zeinab Wario Galma,Kenya Reform Party,Kenya Reform Party
+2022-mp,nairobi/embakasi-south,Silas Make Otuke,DAP-K,DAP-K
+2022-mp,nairobi/embakasi-south,Calystus Wafula,UDP,UDP
+2022-mp,nairobi/embakasi-south,Robert Onsomu,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/embakasi-central,Benjamin Gathiru Mejjadonk,UDA,UDA
+2022-mp,nairobi/embakasi-central,Samuel Ng'ang'a Mwangi,Jubilee,Jubilee
+2022-mp,nairobi/embakasi-central,Hezbon Omondi,Independent,Independent: Hezbon Omondi
+2022-mp,nairobi/embakasi-central,Jairus Mulei Musyoka,Muungano,Muungano
+2022-mp,nairobi/embakasi-central,Richard Wambugu Kanoru,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/embakasi-central,Jackiline Moraa Riogi,UPA,UPA
+2022-mp,nairobi/embakasi-central,Samuel Tai Omare,Ukweli,Ukweli
+2022-mp,nairobi/embakasi-central,Collins Kennedy Musungu,PDU,PDU
+2022-mp,nairobi/embakasi-west,Mark Samuel Muriithi Mwenje,Jubilee,Jubilee
+2022-mp,nairobi/embakasi-west,George Theuri,UDA,UDA
+2022-mp,nairobi/embakasi-west,Mildred Nyamboke Okero,UPA,UPA
+2022-mp,nairobi/embakasi-west,Francis Tirus Mbuthia,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/makadara,George Aladwa Omwera,ODM,ODM
+2022-mp,nairobi/makadara,Antony Ngone Waithaka,UDA,UDA
+2022-mp,nairobi/makadara,Mark Ndung'u Nganga,Jubilee,Jubilee
+2022-mp,nairobi/makadara,Nzioka Julius Kaunda,Independent,Independent: Nzioka Julius Kaunda
+2022-mp,nairobi/makadara,Fredrick Ooko Aketch,Wiper,Wiper
+2022-mp,nairobi/makadara,Grace Atieno Omondi,NARC-Kenya,NARC-Kenya
+2022-mp,nairobi/makadara,Grace Wanene Mwashighadi,UPA,UPA
+2022-mp,nairobi/makadara,Japheth Vyalu Kiio,Chama Cha Uzalendo,Chama Cha Uzalendo
+2022-mp,nairobi/kamukunji,Yusuf Hassan Abdi,Jubilee,Jubilee
+2022-mp,nairobi/kamukunji,Robow Mohamed Hassan,UDA,UDA
+2022-mp,nairobi/kamukunji,Noor Ahmed Mohamed,Wiper,Wiper
+2022-mp,nairobi/kamukunji,Hussein Daud Abdi,National Reconstruction Alliance,National Reconstruction Alliance
+2022-mp,nairobi/kamukunji,Caroline Muthoni Boy,Safina,Safina
+2022-mp,nairobi/kamukunji,Nelson Mwangi,Independent,Independent: Nelson Mwangi
+2022-mp,nairobi/kamukunji,Abdiaziz Hassan Mahamud,FPK,FPK
+2022-mp,nairobi/starehe,Amos Mwago Maina,Jubilee,Jubilee
+2022-mp,nairobi/starehe,Simon Nganga Mbugua,UDA,UDA
+2022-mp,nairobi/starehe,Mary Mumbi Wachira,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/mathare,Anthony Tom Oluoch,ODM,ODM
+2022-mp,nairobi/mathare,Billian Okoth Ojiwa,UDA,UDA
+2022-mp,nairobi/mathare,Kevin Bahati Kioko,Jubilee,Jubilee
+2022-mp,nairobi/mathare,Ngunga Benson Milai,Wiper,Wiper
+2022-mp,nairobi/mathare,Reuben E O M Liyala,Labour Party of Kenya,Labour Party of Kenya
+2022-mp,nairobi/mathare,Moses Muturi Gachira,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/mathare,James Ongero Madafu,ANC,ANC
+2022-mp,nairobi/mathare,Anne Wanjiru Muniu,Independent,Independent: Anne Wanjiru Muniu
+2022-mp,nairobi/mathare,Jacob Wanyoike Karanja,Independent,Independent: Jacob Wanyoike Karanja
+2022-mp,nairobi/mathare,Benson Makori Makworo,Safina,Safina
+2022-mp,nairobi/mathare,Michael Mungai Mukuri,Independent,Independent: Michael Mungai Mukuri
+2022-mp,nairobi/mathare,Daniel Tresvant Odera,DAP-K,DAP-K
+2022-mp,nairobi/mathare,Emilio Kibui Mwangi,Independent,Independent: Emilio Kibui Mwangi
+2022-mp,nairobi/dagoretti-north,Beatrice Kadeveresia Elachi,ODM,ODM
+2022-mp,nairobi/dagoretti-north,Elijah Getui Oenga,Independent,Independent: Elijah Getui Oenga
+2022-mp,nairobi/dagoretti-north,Amos Oyongo Ombui,UDA,UDA
+2022-mp,nairobi/dagoretti-north,Carnicius Jackson Mesoh,ANC,ANC
+2022-mp,nairobi/dagoretti-north,Cindy Katile Mwendwa,Ukweli,Ukweli
+2022-mp,nairobi/dagoretti-north,Jeremiah Migosi Nyaribari,Independent,Independent: Jeremiah Migosi Nyaribari
+2022-mp,nairobi/dagoretti-north,Leocadia Gaudencia Nyanchama,KNC,KNC
+2022-mp,nairobi/dagoretti-north,Roselyne Maundu,Independent,Independent: Roselyne Maundu
+2022-mp,nairobi/dagoretti-north,Eric Mokua Arita,Justice and Freedom Party,Justice and Freedom Party
+2022-mp,nairobi/dagoretti-north,Arnold Onyango Maliba,DAP-K,DAP-K
+2022-mp,nairobi/dagoretti-north,Hoops Shihemi Alexander,Usawa Kwa Wote,Usawa Kwa Wote
+2022-mp,nairobi/dagoretti-north,Agani M Julius,UPA,UPA
+2022-mp,nairobi/dagoretti-north,Lewis Miriorio Nyambegera,Muungano,Muungano
+2022-mp,nairobi/dagoretti-south,John Kiarie Waweru,UDA,UDA
+2022-mp,nairobi/dagoretti-south,Dennis Kariuki Waweru,Jubilee,Jubilee
+2022-mp,nairobi/dagoretti-south,Brian Gakungu Muchene,Independent,Independent: Brian Gakungu Muchene
+2022-mp,nairobi/dagoretti-south,Mary Njambi Koikai,Independent,Independent: Mary Njambi Koikai
+2022-mp,nairobi/dagoretti-south,Grace Wagoci Mikinya Lobo,Chama Cha Kazi,Chama Cha Kazi
+2022-mp,nairobi/dagoretti-south,Paul Maina Muhia,Independent,Independent: Paul Maina Muhia
+2022-mp,nairobi/dagoretti-south,Kennedy Ochieng Oliech,Independent,Independent: Kennedy Ochieng Oliech
+2022-mp,nairobi/dagoretti-south,Duncan Wahinya Waweru,Independent,Independent: Duncan Wahinya Waweru
+2022-mp,nairobi/dagoretti-south,Edward Waithaka Wakaba,Tujibebe Wakenya,Tujibebe Wakenya
+2022-mp,nairobi/dagoretti-south,Aloyce Otete Kabbis,PDU,PDU
+2017-mp,nairobi/dagoretti-north,Arati Paul Simba,ODM,ODM
+2017-mp,nairobi/dagoretti-north,Elachi Beatrice Kadeveresia,Jubilee,Jubilee
+2017-mp,nairobi/dagoretti-north,Amos Bernard Shilibwa,ANC,ANC
+2017-mp,nairobi/dagoretti-north,Lukalo Caroline Muhonja,FPK,FPK
+2017-mp,nairobi/dagoretti-north,Mesoh Carnicius Jackson,Independent,Independent: Mesoh Carnicius Jackson
+2017-mp,nairobi/dagoretti-north,Khalwale Wilberforce L,Ford-Kenya,Ford-Kenya
+2017-mp,nairobi/dagoretti-north,Koech Kiigen Kipng'eno,Independent,Independent: Koech Kiigen Kipng'eno
+2017-mp,nairobi/dagoretti-north,Babandege Dickson Wandiri,Independent,Independent: Babandege Dickson Wandiri
+2017-mp,nairobi/dagoretti-north,Alexander Hoops Shihemi,PEP,PEP
+2017-mp,nairobi/dagoretti-north,Marwa Furaha Maseke,MCCP,MCCP
+2017-mp,nairobi/dagoretti-north,Ekodoi Albert Ariku,Independent,Independent: Ekodoi Albert Ariku
+2017-mp,nairobi/dagoretti-north,Nganyi Obulialia Elphas,Independent,Independent: Nganyi Obulialia Elphas
+2017-mp,nairobi/dagoretti-north,Onyancha Godhek Ogamba,Independent,Independent: Onyancha Godhek Ogamba
+2017-mp,nairobi/dagoretti-north,Mulumeti Evans Simiyu Juma,NAPK,NAPK
+2017-mp,nairobi/dagoretti-north,Obuga Livingstone Kamadi,NARC-Kenya,NARC-Kenya
+2017-mp,nairobi/dagoretti-north,Rugiri Ndungi,Safina,Safina
+2017-mp,nairobi/dagoretti-south,Waweru John Kiarie,Jubilee,Jubilee
+2017-mp,nairobi/dagoretti-south,Waweru Dennis Kariuki,Independent,Independent: Waweru Dennis Kariuki
+2017-mp,nairobi/dagoretti-south,Wandera Fredrick Odwory,ODM,ODM
+2017-mp,nairobi/dagoretti-south,Kangari Gaciku Muhu,Independent,Independent: Kangari Gaciku Muhu
+2017-mp,nairobi/dagoretti-south,Okong'o Kennedy Omondi,Independent,Independent: Okong'o Kennedy Omondi
+2017-mp,nairobi/dagoretti-south,Muthinja Martin Chege,MCCP,MCCP
+2017-mp,nairobi/embakasi-central,Mwangi Benjamin Gathiru,Jubilee,Jubilee
+2017-mp,nairobi/embakasi-central,Omondi Hezbon,ODM,ODM
+2017-mp,nairobi/embakasi-central,Wanjiku Joseph Murote,PNU,PNU
+2017-mp,nairobi/embakasi-central,Wanjala Newton,ANC,ANC
+2017-mp,nairobi/embakasi-central,Onyura Mary Alice,Independent,Independent: Onyura Mary Alice
+2017-mp,nairobi/embakasi-central,Mwangi Stephen Maina,Independent,Independent: Mwangi Stephen Maina
+2017-mp,nairobi/embakasi-central,Musungu Collins Kennedy,KANU,KANU
+2017-mp,nairobi/embakasi-central,Munyi Beatrice Nyakambi,Safina,Safina
+2017-mp,nairobi/embakasi-central,Mungai Michael Munai,CCP,CCP
+2017-mp,nairobi/embakasi-east,Babu Owino Paul Ongili,ODM,ODM
+2017-mp,nairobi/embakasi-east,Wambugu Francis Mureithi,Jubilee,Jubilee
+2017-mp,nairobi/embakasi-east,Wekesa Francis Masinde,Independent,Independent: Wekesa Francis Masinde
+2017-mp,nairobi/embakasi-east,Mwangi Mary Wangari,MCCP,MCCP
+2017-mp,nairobi/embakasi-east,Bosire Philip Nyauncho,Independent,Independent: Bosire Philip Nyauncho
+2017-mp,nairobi/embakasi-east,Waruinge Stephen Maina,Independent,Independent: Waruinge Stephen Maina
+2017-mp,nairobi/embakasi-east,Obiende Joshua Otieno,ANC,ANC
+2017-mp,nairobi/embakasi-east,Haji Jibril Abdow,Wiper,Wiper
+2017-mp,nairobi/embakasi-east,Nzioki Robert Kitheka,Independent,Independent: Nzioki Robert Kitheka
+2017-mp,nairobi/embakasi-east,Wangui Maina Faith,ALPK,ALPK
+2017-mp,nairobi/embakasi-north,Gakuya James Mwangi,Jubilee,Jubilee
+2017-mp,nairobi/embakasi-north,Wangui Jane Muringii,ODM,ODM
+2017-mp,nairobi/embakasi-north,Wachira Benedict Wandeto,SDP,SDP
+2017-mp,nairobi/embakasi-north,Mwangi Joseph Kirai,MCCP,MCCP
+2017-mp,nairobi/embakasi-north,Nkubiria Sebastiano Laichena,Independent,Independent: Nkubiria Sebastiano Laichena
+2017-mp,nairobi/embakasi-north,Ngunje Gabriel Karuga,RLP,RLP
+2017-mp,nairobi/embakasi-south,Mawathe Julius Musili,Wiper,Wiper
+2017-mp,nairobi/embakasi-south,Sumra Irshadali Mohamed,ODM,ODM
+2017-mp,nairobi/embakasi-south,Mutungi Paul Mutunga,Jubilee,Jubilee
+2017-mp,nairobi/embakasi-south,Ondieki Evans,Ford-Kenya,Ford-Kenya
+2017-mp,nairobi/embakasi-south,Mbugua David N Njuguna,Independent,Independent: Mbugua David N Njuguna
+2017-mp,nairobi/embakasi-south,Robert Kibagendi Otachi,KANU,KANU
+2017-mp,nairobi/embakasi-south,Karuma Michael Ng'ang'a,MCCP,MCCP
+2017-mp,nairobi/embakasi-south,Obanyi David Ombese,Independent,Independent: Obanyi David Ombese
+2017-mp,nairobi/embakasi-south,Nyakweba Kennedy Koto,KSC,KSC
+2017-mp,nairobi/embakasi-south,Juma Dennis Ochieng Orengo,Independent,Independent: Juma Dennis Ochieng Orengo
+2017-mp,nairobi/embakasi-south,Ogeta Peter Omosa,Independent,Independent: Ogeta Peter Omosa
+2017-mp,nairobi/embakasi-south,Onyari Akama Jared,MDP,MDP
+2017-mp,nairobi/embakasi-west,Theuri George,Jubilee,Jubilee
+2017-mp,nairobi/embakasi-west,Agimba Tom Gideon Onyango,ODM,ODM
+2017-mp,nairobi/embakasi-west,Muthaka Lucy Wanjiru,MCCP,MCCP
+2017-mp,nairobi/embakasi-west,Kuria Moses,Independent,Independent: Kuria Moses
+2017-mp,nairobi/embakasi-west,Kihu Cynthia Wanjiku,UP,UP
+2017-mp,nairobi/embakasi-west,Ochieng Nicholas Oyoo,RBK,RBK
+2017-mp,nairobi/embakasi-west,Joseph Yogo Oluoch,Independent,Independent: Joseph Yogo Oluoch
+2017-mp,nairobi/embakasi-west,Mwaura John Kamonjo,Independent,Independent: Mwaura John Kamonjo
+2017-mp,nairobi/embakasi-west,Ndungu Nicholas Wambugu,ALPK,ALPK
+2017-mp,nairobi/kamukunji,Abdi Yusuf Hassan,Jubilee,Jubilee
+2017-mp,nairobi/kamukunji,Ibrahim Ahmed,Wiper,Wiper
+2017-mp,nairobi/kamukunji,Omar Abdikadir Mohamud,ODM,ODM
+2017-mp,nairobi/kamukunji,Abdulrahim Omar Muchiri,KANU,KANU
+2017-mp,nairobi/kamukunji,Murago George W,Independent,Independent: Murago George W
+2017-mp,nairobi/kamukunji,Macharia Kagio Edward Mwangi,MCCP,MCCP
+2017-mp,nairobi/kamukunji,Mahamud Abdiaziz Hassan,FPK,FPK
+2017-mp,nairobi/kasarani,Gakuya Mercy Wanjiku,Jubilee,Jubilee
+2017-mp,nairobi/kasarani,Owino Steven Paul,ODM,ODM
+2017-mp,nairobi/kasarani,Chege John Njoroge,Independent,Independent: Chege John Njoroge
+2017-mp,nairobi/kasarani,Kamwere Isaac Wachira,MCCP,MCCP
+2017-mp,nairobi/kibra,Okoth Kenneth Odhiambo,ODM,ODM
+2017-mp,nairobi/kibra,Wasike Doreen Nangame Khayanga,Jubilee,Jubilee
+2017-mp,nairobi/kibra,Okoth Judah Martin Oduor,Independent,Independent: Okoth Judah Martin Oduor
+2017-mp,nairobi/kibra,Mugasia Robert,UDP,UDP
+2017-mp,nairobi/kibra,Katiwa Titus Mutinda,RLP,RLP
+2017-mp,nairobi/langata,Korir Generali Nixon Kiprotich,Jubilee,Jubilee
+2017-mp,nairobi/langata,Ocholla Oscar Omoke,ODM,ODM
+2017-mp,nairobi/langata,Sijeny Judith Achieng,Wiper,Wiper
+2017-mp,nairobi/langata,Kirwa William Kipkemboi Arap,ANC,ANC
+2017-mp,nairobi/langata,Kariuki Kavore,Independent,Independent: Kariuki Kavore
+2017-mp,nairobi/langata,Kithyaka Douglas Mbuvi,Independent,Independent: Kithyaka Douglas Mbuvi
+2017-mp,nairobi/langata,Kiragu Margery Nduta,LPK,LPK
+2017-mp,nairobi/langata,Omar Abdullahi Shariff,KANU,KANU
+2017-mp,nairobi/langata,Mulialia Okumu Hillary,Independent,Independent: Mulialia Okumu Hillary
+2017-mp,nairobi/langata,Kipkemboi Epega Robert,Independent,Independent: Kipkemboi Epega Robert
+2017-mp,nairobi/langata,Syongoh Musaari Kahiga,Independent,Independent: Syongoh Musaari Kahiga
+2017-mp,nairobi/langata,Odera Daniel Tresvant,Ford-Kenya,Ford-Kenya
+2017-mp,nairobi/langata,Isaac Tonui Kiprotich,CCM,CCM
+2017-mp,nairobi/langata,Thuo John Kibathi,Independent,Independent: Thuo John Kibathi
+2017-mp,nairobi/langata,Chenani Daniel Akweli,Independent,Independent: Chenani Daniel Akweli
+2017-mp,nairobi/langata,Otula Amos Onyango,Independent,Independent: Otula Amos Onyango
+2017-mp,nairobi/langata,Teigut Stephen Kipruto,CCU,CCU
+2017-mp,nairobi/makadara,Omwera George Aladwa,ODM,ODM
+2017-mp,nairobi/makadara,Kangara Benson Mutura,Jubilee,Jubilee
+2017-mp,nairobi/makadara,Mburu Mathew Maina,Independent,Independent: Mburu Mathew Maina
+2017-mp,nairobi/makadara,Nyanginja Reuben Ndolo,Independent,Independent: Nyanginja Reuben Ndolo
+2017-mp,nairobi/makadara,Momanyi Robert Omwenga,ELP,ELP
+2017-mp,nairobi/makadara,Onderi Haron Okindo,Independent,Independent: Onderi Haron Okindo
+2017-mp,nairobi/makadara,Mwarisha Teri Hudson,NLP,NLP
+2017-mp,nairobi/makadara,Wandurwa David Gichimu,MCCP,MCCP
+2017-mp,nairobi/mathare,Oluoch Anthony Tom,ODM,ODM
+2017-mp,nairobi/mathare,Kariuki Steven,Jubilee,Jubilee
+2017-mp,nairobi/mathare,Mang'eni John Wesonga,Independent,Independent: Mang'eni John Wesonga
+2017-mp,nairobi/mathare,Maelo Maurice Mutimba,ANC,ANC
+2017-mp,nairobi/mathare,Mburu Antony Kimani,Independent,Independent: Mburu Antony Kimani
+2017-mp,nairobi/mathare,Mwangi Joseph Kanguchu,FAP,FAP
+2017-mp,nairobi/mathare,Atanda Stanley Ngaywa,UDP,UDP
+2017-mp,nairobi/mathare,Macharia Mariam Muthoni,Independent,Independent: Macharia Mariam Muthoni
+2017-mp,nairobi/mathare,Gachihi Gacheke,SDP,SDP
+2017-mp,nairobi/roysambu,Ndirangu Isaac Waihenya,Jubilee,Jubilee
+2017-mp,nairobi/roysambu,Kamau Lee Muchiri,Independent,Independent: Kamau Lee Muchiri
+2017-mp,nairobi/roysambu,Gichomo Vincent Kamau,Independent,Independent: Gichomo Vincent Kamau
+2017-mp,nairobi/roysambu,Kamau Augustine Kamande,DP,DP
+2017-mp,nairobi/roysambu,Ochuka Robert Ochieng,Independent,Independent: Ochuka Robert Ochieng
+2017-mp,nairobi/roysambu,Kinyua Jane Wairimu,Independent,Independent: Kinyua Jane Wairimu
+2017-mp,nairobi/roysambu,Murithi Clifford,Independent,Independent: Murithi Clifford
+2017-mp,nairobi/roysambu,Kimani Stephen Mugo,PDU,PDU
+2017-mp,nairobi/roysambu,Wahome Weston Wanjohi,Independent,Independent: Wahome Weston Wanjohi
+2017-mp,nairobi/roysambu,Njue Jackson Mutwiri,Independent,Independent: Njue Jackson Mutwiri
+2017-mp,nairobi/roysambu,Njenga Shem King'e,MCCP,MCCP
+2017-mp,nairobi/ruaraka,Francis Kajwang' Tom Joseph,ODM,ODM
+2017-mp,nairobi/ruaraka,Amollo Elizabeth Ongoro,ANC,ANC
+2017-mp,nairobi/ruaraka,Kinyua Dominic Gathecha,Jubilee,Jubilee
+2017-mp,nairobi/ruaraka,Maranga Joseph Isaboke,NARC-Kenya,NARC-Kenya
+2017-mp,nairobi/ruaraka,Masika Allan Juma,National Vision Party,National Vision Party
+2017-mp,nairobi/ruaraka,Ajiba Paul Caleb Musikoyo,Independent,Independent: Ajiba Paul Caleb Musikoyo
+2017-mp,nairobi/ruaraka,Orete Charles Ouma,Independent,Independent: Orete Charles Ouma
+2017-mp,nairobi/starehe,Njagua Charles Kanyi,Jubilee,Jubilee
+2017-mp,nairobi/starehe,Ndwiga Steve Mbogo,ODM,ODM
+2017-mp,nairobi/starehe,Mwangi Boniface,UP,UP
+2017-mp,nairobi/starehe,Kwenya John Mwaniki,MCCP,MCCP
+2017-mp,nairobi/starehe,Kivati Rhoda Mumoh,Wiper,Wiper
+2017-mp,nairobi/starehe,Odero Analalava Moses,Safina,Safina
+2017-mp,nairobi/starehe,Getange Thomas Makori Hamed,RLP,RLP
+2017-mp,nairobi/starehe,Nganga David Wakahu,CMD,CMD
+2017-mp,nairobi/westlands,Wetangula Timothy Wanyonyi,ODM,ODM
+2017-mp,nairobi/westlands,Gichenga Dedan Mugo,Jubilee,Jubilee
+2017-mp,nairobi/westlands,Walji Ashif Amin Sadrudin,ANC,ANC
+2017-mp,nairobi/westlands,Mwangi Jessee Wanyeki,Agano,Agano
+2017-mp,nairobi/westlands,Omala Raphael Mbondo,KANU,KANU
+2017-mp,nairobi/westlands,Ngaira Jeremy Shidzugane,Independent,Independent: Ngaira Jeremy Shidzugane
+2017-mp,nairobi/westlands,Owino Sammy Odhiambo,RLP,RLP
+2017-mp,nairobi/westlands,Onyango Kennedy Odiwuor,GCK,GCK
+2022-governor,nairobi,Harman Grewal,Safina,Safina
+2022-governor,nairobi,Agnes Kariuki,Independent,Independent: Agnes Kariuki
+2022-governor,nairobi,Kenneth Nyamwamu,UPA,UPA
+2022-governor,nairobi,Cleophas Kiio,Ford-Kenya,Ford-Kenya
+2022-governor,nairobi,Esther Thairu,Independent,Independent: Esther Thairu
+2022-governor,nairobi,Denis Kodhe,LDP,LDP
+2022-governor,nairobi,Nancy Mwadime,Usawa Kwa Wote,Usawa Kwa Wote
+2017-governor,nairobi,Kioko Mike Sonko Mbuvi Gidion,Jubilee,Jubilee
+2017-governor,nairobi,Evans Kidero Odhiambo,ODM,NASA
+2017-governor,nairobi,Kenneth Peter,Independent,Independent: Kenneth Peter
+2017-governor,nairobi,Miguna Miguna,Independent,Independent: Miguna Miguna
+2017-governor,nairobi,Macharia Lawrence Kamau,PDU,PDU
+2017-governor,nairobi,Mumo Michael Mutinda,Agano,Agano
+2017-governor,nairobi,Francis Mwanga Inganji,NAPK,NAPK
+2017-governor,nairobi,Waweru Godfrey Wanyoike,Independent,Independent: Waweru Godfrey Wanyoike

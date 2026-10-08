@@ -139,6 +139,8 @@ export type AreaFigures = {
   /** Against `yearBefore`: the same race at the previous general election, when counted here. */
   swing: number | null;
   yearBefore: number | null;
+  /** Our side at `yearBefore`; swing needs it. */
+  sideBefore: string | null;
   todo: { todo: Todo; reason: string } | null;
   reach: Reach | null;
   /** The latest register: 2022's, else the election's own. */
@@ -242,6 +244,7 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
     margin: count ? margin(count, side) : null,
     swing: count && before ? swing(count, side, before.count, before.side) : null,
     yearBefore: prev,
+    sideBefore: before?.side ?? null,
     todo:
       count && counted
         ? whatToDo({

@@ -62,3 +62,7 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
   years from 2000 to 2030, and a candidate's name with letters an id can be made from. A ward
   must sit under the constituency its ward map names (Mathira's map names none).
 - The 2017 presidential figures are the 8 August vote.
+- Provisional results are public figures not yet checked against IEBC's forms: their sources
+  are published as "Provisional results" and their notes say what was checked (IEBC's
+  candidate lists for completeness, and the press where it printed the leaders). Replace them
+  with IEBC's figures as each form is checked.

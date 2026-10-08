@@ -2,3 +2,15 @@ election,area,registered,cast_votes,rejected,valid,source
 2022-president,nairobi,2416551,1352236,12869,1339367,iebc-2022-form-34c
 2013-president,nairobi,1728801,,,,electionskenya-2013-president
 2022-president,nairobi/roysambu,164711,92124,1102,91022,star-2022-roysambu-president
+2022-mp,nairobi/westlands,160739,,,83321,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,145649,,,79988,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,128282,,,74345,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,153772,,,90508,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,167953,,,82168,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,145892,,,82124,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-west,141878,,,81023,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,129627,,,73571,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,128516,,,60932,provisional-2022-mp-nairobi
+2022-mp,nairobi/starehe,169575,,,89987,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,123163,,,62407,provisional-2022-mp-nairobi
+2022-governor,nairobi,,,,1324409,provisional-2022-governor-nairobi

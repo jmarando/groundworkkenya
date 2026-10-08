@@ -306,6 +306,17 @@ eq(
   ],
   [2022, 2017, null],
 );
+const NO_SIDE_BEFORE = figuresFor(
+  { ...D, sides: { "2022-governor": "Kenya Kwanza" } },
+  "nairobi/a",
+  "governor",
+  2022,
+);
+eq(
+  "an earlier count without a side for it: no swing, and the screen can say why",
+  [NO_SIDE_BEFORE.swing, NO_SIDE_BEFORE.yearBefore, NO_SIDE_BEFORE.sideBefore, A.sideBefore],
+  [null, 2017, null, "Jubilee"],
+);
 eq(
   "signed points",
   [signedPoints(0.052), signedPoints(-0.12), signedPoints(0)],

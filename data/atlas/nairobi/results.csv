@@ -7,8 +7,6 @@ election,seat,candidate,area,votes,source
 2013-president,kenya,Raila Odinga,nairobi,691156,electionskenya-2013-president
 2013-president,kenya,Musalia Mudavadi,nairobi,22061,electionskenya-2013-president
 2013-president,kenya,Peter Kenneth,nairobi,15662,electionskenya-2013-president
-2022-governor,nairobi,Johnson Sakaja,nairobi,699392,star-2022-nairobi-governor
-2022-governor,nairobi,Polycarp Igathe,nairobi,573518,star-2022-nairobi-governor
 2022-governor,nairobi,Johnson Sakaja,nairobi/dagoretti-north,39756,star-2022-nairobi-governor
 2022-governor,nairobi,Polycarp Igathe,nairobi/dagoretti-north,39027,star-2022-nairobi-governor
 2022-governor,nairobi,Johnson Sakaja,nairobi/dagoretti-south,44789,star-2022-nairobi-governor
@@ -35,34 +33,297 @@ election,seat,candidate,area,votes,source
 2022-governor,nairobi,Polycarp Igathe,nairobi/starehe,35223,star-2022-nairobi-governor
 2022-governor,nairobi,Johnson Sakaja,nairobi/westlands,40024,star-2022-nairobi-governor
 2022-governor,nairobi,Polycarp Igathe,nairobi/westlands,38635,star-2022-nairobi-governor
-2022-mp,nairobi/westlands,Timothy Wanyonyi Wetangula,nairobi/westlands,58408,star-2022-westlands-mp
-2022-mp,nairobi/westlands,Nelson Andayi Havi,nairobi/westlands,19550,star-2022-westlands-mp
-2022-mp,nairobi/kibra,Peter Ochieng Orero,nairobi/kibra,33008,citizen-2022-kibra-mp
-2022-mp,nairobi/kibra,Mcdonald Mariga Wanyama,nairobi/kibra,20049,citizen-2022-kibra-mp
-2022-mp,nairobi/kibra,Benard Otieno Okoth,nairobi/kibra,18901,citizen-2022-kibra-mp
-2022-mp,nairobi/langata,Phelix Odiwuor Khodhe,nairobi/langata,38948,citizen-2022-langata-mp
-2022-mp,nairobi/langata,Generali Nixon Kiprotich Korir,nairobi/langata,36836,citizen-2022-langata-mp
 2022-mp,nairobi/embakasi-east,Paul Ongili Babu Owino,nairobi/embakasi-east,57410,citizen-2022-embakasi-east-mp
 2022-mp,nairobi/embakasi-east,Francis Mureithi Wambugu,nairobi/embakasi-east,29104,citizen-2022-embakasi-east-mp
-2022-mp,nairobi/embakasi-central,Benjamin Gathiru Mejjadonk,nairobi/embakasi-central,48277,star-2022-embakasi-central-mp
-2022-mp,nairobi/embakasi-central,Samuel Ng'ang'a Mwangi,nairobi/embakasi-central,29375,star-2022-embakasi-central-mp
-2022-mp,nairobi/mathare,Anthony Tom Oluoch,nairobi/mathare,28098,star-2022-mathare-mp
-2022-mp,nairobi/mathare,Billian Okoth Ojiwa,nairobi/mathare,16912,star-2022-mathare-mp
-2022-mp,nairobi/mathare,Kevin Bahati Kioko,nairobi/mathare,8166,star-2022-mathare-mp
 2022-mp,nairobi/kasarani,Ronald Kamwiko Karauri,nairobi/kasarani,32406,citizen-2022-kasarani-mp
 2022-mp,nairobi/kasarani,John Njoroge Chege,nairobi/kasarani,30444,citizen-2022-kasarani-mp
 2022-mp,nairobi/kasarani,Mercy Wanjiku Gakuya,nairobi/kasarani,24790,citizen-2022-kasarani-mp
-2022-mp,nairobi/dagoretti-north,Beatrice Kadeveresia Elachi,nairobi/dagoretti-north,52515,citizen-2022-dagoretti-north-mp
-2022-mp,nairobi/dagoretti-north,Elijah Getui Oenga,nairobi/dagoretti-north,13620,citizen-2022-dagoretti-north-mp
-2022-mp,nairobi/dagoretti-south,John Kiarie Waweru,nairobi/dagoretti-south,26394,citizen-2022-dagoretti-south-mp
-2022-mp,nairobi/dagoretti-south,Dennis Kariuki Waweru,nairobi/dagoretti-south,22773,citizen-2022-dagoretti-south-mp
-2022-mp,nairobi/starehe,Amos Mwago Maina,nairobi/starehe,50787,star-2022-starehe-mp
-2022-mp,nairobi/starehe,Simon Nganga Mbugua,nairobi/starehe,35548,star-2022-starehe-mp
 2013-mp,nairobi/embakasi-west,George Theuri,nairobi/embakasi-west,40606,star-2022-embakasi-west-history
 2013-mp,nairobi/embakasi-west,Brian Weke,nairobi/embakasi-west,35333,star-2022-embakasi-west-history
-2017-mp,nairobi/embakasi-west,George Theuri,nairobi/embakasi-west,47848,star-2022-embakasi-west-history
-2017-mp,nairobi/embakasi-west,Tom Agimba,nairobi/embakasi-west,30983,star-2022-embakasi-west-history
 2022-president,kenya,William Ruto,nairobi/roysambu,59180,star-2022-roysambu-president
 2022-president,kenya,Raila Odinga,nairobi/roysambu,31032,star-2022-roysambu-president
 2017-president,kenya,Raila Odinga,nairobi,828826,star-2022-nairobi-roundup
 2017-president,kenya,Uhuru Kenyatta,nairobi,791291,star-2022-nairobi-roundup
+2022-mp,nairobi/westlands,Timothy Wanyonyi Wetangula,nairobi/westlands,58408,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Nelson Andayi Havi,nairobi/westlands,19550,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Sylvia Mulama Kamande,nairobi/westlands,1325,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Betty Njeri Tett,nairobi/westlands,1054,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,David Calleb Otieno,nairobi/westlands,939,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Carolyne Wanjiku Ndungu,nairobi/westlands,589,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Kenneth Waiganjo Kihara,nairobi/westlands,558,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Stanley Mmbwanga Inyimili,nairobi/westlands,392,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Gregory Wafula Nalianya,nairobi/westlands,280,provisional-2022-mp-nairobi
+2022-mp,nairobi/westlands,Mary Kerubo Okari,nairobi/westlands,226,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Phelix Odiwuor Khodhe,nairobi/langata,38948,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Generali Nixon Kiprotich Korir,nairobi/langata,36836,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Osman Abdullahi Osman,nairobi/langata,732,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Lilian Akinyi Opiyo,nairobi/langata,620,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Thomas Awili Okiri,nairobi/langata,620,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Susan Atieno Odongo,nairobi/langata,581,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Caroline Jepkemboi,nairobi/langata,522,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Bornes Chepkoros Busienei,nairobi/langata,359,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Samwel Maina Ng'ang'a,nairobi/langata,337,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Mbogai Sarah Mkarie,nairobi/langata,220,provisional-2022-mp-nairobi
+2022-mp,nairobi/langata,Cliff Aboki Omingo,nairobi/langata,213,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Peter Ochieng Orero,nairobi/kibra,33008,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Mcdonald Mariga Wanyama,nairobi/kibra,20049,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Benard Otieno Okoth,nairobi/kibra,18901,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Peris Wanjiru Karanja,nairobi/kibra,944,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Yusuf Noah,nairobi/kibra,528,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,A Malassen Hamida Musa Twahir,nairobi/kibra,408,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Erick Ochieng Obayi,nairobi/kibra,203,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Edwin Imbalo Ndeda,nairobi/kibra,168,provisional-2022-mp-nairobi
+2022-mp,nairobi/kibra,Fransco Ojiambo Okidi,nairobi/kibra,136,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Augustine Kamande Mwafrika,nairobi/roysambu,45221,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Isaac Waihenya Ndirangu,nairobi/roysambu,40381,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Lee Muchiri Kamau,nairobi/roysambu,1519,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Lawrence Muguna Kaburu,nairobi/roysambu,1335,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Brown Munyoroku Kariuki,nairobi/roysambu,660,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Keziah Muthoni Kuria,nairobi/roysambu,528,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Franklin Mwendani Njiru,nairobi/roysambu,518,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Samuel Maina Ndengwa,nairobi/roysambu,232,provisional-2022-mp-nairobi
+2022-mp,nairobi/roysambu,Lucky Mugambi Kigwulu,nairobi/roysambu,114,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Julius Musili Mawathe,nairobi/embakasi-south,38859,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Janganya Erick Kebati,nairobi/embakasi-south,17917,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Irshadali Mohamed Sumra,nairobi/embakasi-south,11091,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Urbanus Kaveva Kalumba,nairobi/embakasi-south,10994,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Jared Osiago Mogaka,nairobi/embakasi-south,2359,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Zeinab Wario Galma,nairobi/embakasi-south,418,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Silas Make Otuke,nairobi/embakasi-south,254,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Calystus Wafula,nairobi/embakasi-south,200,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-south,Robert Onsomu,nairobi/embakasi-south,76,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Benjamin Gathiru Mejjadonk,nairobi/embakasi-central,48277,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Samuel Ng'ang'a Mwangi,nairobi/embakasi-central,29375,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Hezbon Omondi,nairobi/embakasi-central,2139,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Jairus Mulei Musyoka,nairobi/embakasi-central,852,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Richard Wambugu Kanoru,nairobi/embakasi-central,438,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Jackiline Moraa Riogi,nairobi/embakasi-central,393,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Samuel Tai Omare,nairobi/embakasi-central,375,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-central,Collins Kennedy Musungu,nairobi/embakasi-central,275,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-west,Mark Samuel Muriithi Mwenje,nairobi/embakasi-west,46552,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-west,George Theuri,nairobi/embakasi-west,32933,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-west,Mildred Nyamboke Okero,nairobi/embakasi-west,948,provisional-2022-mp-nairobi
+2022-mp,nairobi/embakasi-west,Francis Tirus Mbuthia,nairobi/embakasi-west,590,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,George Aladwa Omwera,nairobi/makadara,32332,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Antony Ngone Waithaka,nairobi/makadara,28545,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Mark Ndung'u Nganga,nairobi/makadara,6011,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Nzioka Julius Kaunda,nairobi/makadara,2972,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Fredrick Ooko Aketch,nairobi/makadara,2216,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Grace Atieno Omondi,nairobi/makadara,710,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Grace Wanene Mwashighadi,nairobi/makadara,531,provisional-2022-mp-nairobi
+2022-mp,nairobi/makadara,Japheth Vyalu Kiio,nairobi/makadara,254,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Yusuf Hassan Abdi,nairobi/kamukunji,34264,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Robow Mohamed Hassan,nairobi/kamukunji,22644,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Noor Ahmed Mohamed,nairobi/kamukunji,1156,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Hussein Daud Abdi,nairobi/kamukunji,974,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Caroline Muthoni Boy,nairobi/kamukunji,810,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Nelson Mwangi,nairobi/kamukunji,784,provisional-2022-mp-nairobi
+2022-mp,nairobi/kamukunji,Abdiaziz Hassan Mahamud,nairobi/kamukunji,300,provisional-2022-mp-nairobi
+2022-mp,nairobi/starehe,Amos Mwago Maina,nairobi/starehe,50777,provisional-2022-mp-nairobi
+2022-mp,nairobi/starehe,Simon Nganga Mbugua,nairobi/starehe,35548,provisional-2022-mp-nairobi
+2022-mp,nairobi/starehe,Mary Mumbi Wachira,nairobi/starehe,3662,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Anthony Tom Oluoch,nairobi/mathare,28098,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Billian Okoth Ojiwa,nairobi/mathare,16912,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Kevin Bahati Kioko,nairobi/mathare,8166,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Ngunga Benson Milai,nairobi/mathare,4641,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Reuben E O M Liyala,nairobi/mathare,1554,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Moses Muturi Gachira,nairobi/mathare,831,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,James Ongero Madafu,nairobi/mathare,805,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Anne Wanjiru Muniu,nairobi/mathare,593,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Jacob Wanyoike Karanja,nairobi/mathare,348,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Benson Makori Makworo,nairobi/mathare,155,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Michael Mungai Mukuri,nairobi/mathare,150,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Daniel Tresvant Odera,nairobi/mathare,98,provisional-2022-mp-nairobi
+2022-mp,nairobi/mathare,Emilio Kibui Mwangi,nairobi/mathare,56,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Beatrice Kadeveresia Elachi,nairobi/dagoretti-north,52515,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Elijah Getui Oenga,nairobi/dagoretti-north,13620,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Amos Oyongo Ombui,nairobi/dagoretti-north,11658,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Carnicius Jackson Mesoh,nairobi/dagoretti-north,994,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Cindy Katile Mwendwa,nairobi/dagoretti-north,930,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Jeremiah Migosi Nyaribari,nairobi/dagoretti-north,563,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Leocadia Gaudencia Nyanchama,nairobi/dagoretti-north,477,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Roselyne Maundu,nairobi/dagoretti-north,461,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Eric Mokua Arita,nairobi/dagoretti-north,337,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Arnold Onyango Maliba,nairobi/dagoretti-north,324,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Hoops Shihemi Alexander,nairobi/dagoretti-north,265,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Agani M Julius,nairobi/dagoretti-north,201,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-north,Lewis Miriorio Nyambegera,nairobi/dagoretti-north,66,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,John Kiarie Waweru,nairobi/dagoretti-south,26394,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Dennis Kariuki Waweru,nairobi/dagoretti-south,22773,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Brian Gakungu Muchene,nairobi/dagoretti-south,13786,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Mary Njambi Koikai,nairobi/dagoretti-south,1510,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Grace Wagoci Mikinya Lobo,nairobi/dagoretti-south,980,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Paul Maina Muhia,nairobi/dagoretti-south,718,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Kennedy Ochieng Oliech,nairobi/dagoretti-south,718,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Duncan Wahinya Waweru,nairobi/dagoretti-south,246,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Edward Waithaka Wakaba,nairobi/dagoretti-south,194,provisional-2022-mp-nairobi
+2022-mp,nairobi/dagoretti-south,Aloyce Otete Kabbis,nairobi/dagoretti-south,120,provisional-2022-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Arati Paul Simba,nairobi/dagoretti-north,50598,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Elachi Beatrice Kadeveresia,nairobi/dagoretti-north,34686,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Amos Bernard Shilibwa,nairobi/dagoretti-north,17792,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Lukalo Caroline Muhonja,nairobi/dagoretti-north,564,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Mesoh Carnicius Jackson,nairobi/dagoretti-north,463,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Khalwale Wilberforce L,nairobi/dagoretti-north,278,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Koech Kiigen Kipng'eno,nairobi/dagoretti-north,249,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Babandege Dickson Wandiri,nairobi/dagoretti-north,242,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Alexander Hoops Shihemi,nairobi/dagoretti-north,221,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Marwa Furaha Maseke,nairobi/dagoretti-north,184,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Ekodoi Albert Ariku,nairobi/dagoretti-north,168,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Nganyi Obulialia Elphas,nairobi/dagoretti-north,87,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Onyancha Godhek Ogamba,nairobi/dagoretti-north,82,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Mulumeti Evans Simiyu Juma,nairobi/dagoretti-north,78,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Obuga Livingstone Kamadi,nairobi/dagoretti-north,70,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-north,Rugiri Ndungi,nairobi/dagoretti-north,64,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Waweru John Kiarie,nairobi/dagoretti-south,55675,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Waweru Dennis Kariuki,nairobi/dagoretti-south,12708,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Wandera Fredrick Odwory,nairobi/dagoretti-south,11285,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Kangari Gaciku Muhu,nairobi/dagoretti-south,3114,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Okong'o Kennedy Omondi,nairobi/dagoretti-south,308,provisional-2017-mp-nairobi
+2017-mp,nairobi/dagoretti-south,Muthinja Martin Chege,nairobi/dagoretti-south,203,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Mwangi Benjamin Gathiru,nairobi/embakasi-central,49854,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Omondi Hezbon,nairobi/embakasi-central,38630,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Wanjiku Joseph Murote,nairobi/embakasi-central,4708,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Wanjala Newton,nairobi/embakasi-central,2026,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Onyura Mary Alice,nairobi/embakasi-central,835,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Mwangi Stephen Maina,nairobi/embakasi-central,363,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Musungu Collins Kennedy,nairobi/embakasi-central,348,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Munyi Beatrice Nyakambi,nairobi/embakasi-central,314,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-central,Mungai Michael Munai,nairobi/embakasi-central,102,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Babu Owino Paul Ongili,nairobi/embakasi-east,46587,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Wambugu Francis Mureithi,nairobi/embakasi-east,42253,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Wekesa Francis Masinde,nairobi/embakasi-east,2908,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Mwangi Mary Wangari,nairobi/embakasi-east,1486,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Bosire Philip Nyauncho,nairobi/embakasi-east,1396,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Waruinge Stephen Maina,nairobi/embakasi-east,1383,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Obiende Joshua Otieno,nairobi/embakasi-east,1173,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Haji Jibril Abdow,nairobi/embakasi-east,635,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Nzioki Robert Kitheka,nairobi/embakasi-east,279,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-east,Wangui Maina Faith,nairobi/embakasi-east,196,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Gakuya James Mwangi,nairobi/embakasi-north,43733,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Wangui Jane Muringii,nairobi/embakasi-north,31923,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Wachira Benedict Wandeto,nairobi/embakasi-north,1428,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Mwangi Joseph Kirai,nairobi/embakasi-north,329,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Nkubiria Sebastiano Laichena,nairobi/embakasi-north,190,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-north,Ngunje Gabriel Karuga,nairobi/embakasi-north,156,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Mawathe Julius Musili,nairobi/embakasi-south,33348,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Sumra Irshadali Mohamed,nairobi/embakasi-south,33113,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Mutungi Paul Mutunga,nairobi/embakasi-south,23424,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Ondieki Evans,nairobi/embakasi-south,2052,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Mbugua David N Njuguna,nairobi/embakasi-south,1752,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Robert Kibagendi Otachi,nairobi/embakasi-south,992,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Karuma Michael Ng'ang'a,nairobi/embakasi-south,867,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Obanyi David Ombese,nairobi/embakasi-south,743,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Nyakweba Kennedy Koto,nairobi/embakasi-south,603,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Juma Dennis Ochieng Orengo,nairobi/embakasi-south,337,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Ogeta Peter Omosa,nairobi/embakasi-south,246,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-south,Onyari Akama Jared,nairobi/embakasi-south,209,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Theuri George,nairobi/embakasi-west,55819,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Agimba Tom Gideon Onyango,nairobi/embakasi-west,35358,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Muthaka Lucy Wanjiru,nairobi/embakasi-west,1102,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Kuria Moses,nairobi/embakasi-west,738,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Kihu Cynthia Wanjiku,nairobi/embakasi-west,417,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Ochieng Nicholas Oyoo,nairobi/embakasi-west,285,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Joseph Yogo Oluoch,nairobi/embakasi-west,241,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Mwaura John Kamonjo,nairobi/embakasi-west,226,provisional-2017-mp-nairobi
+2017-mp,nairobi/embakasi-west,Ndungu Nicholas Wambugu,nairobi/embakasi-west,168,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Abdi Yusuf Hassan,nairobi/kamukunji,39842,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Ibrahim Ahmed,nairobi/kamukunji,21468,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Omar Abdikadir Mohamud,nairobi/kamukunji,10977,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Abdulrahim Omar Muchiri,nairobi/kamukunji,2522,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Murago George W,nairobi/kamukunji,2263,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Macharia Kagio Edward Mwangi,nairobi/kamukunji,666,provisional-2017-mp-nairobi
+2017-mp,nairobi/kamukunji,Mahamud Abdiaziz Hassan,nairobi/kamukunji,247,provisional-2017-mp-nairobi
+2017-mp,nairobi/kasarani,Gakuya Mercy Wanjiku,nairobi/kasarani,78698,provisional-2017-mp-nairobi
+2017-mp,nairobi/kasarani,Owino Steven Paul,nairobi/kasarani,17938,provisional-2017-mp-nairobi
+2017-mp,nairobi/kasarani,Chege John Njoroge,nairobi/kasarani,16851,provisional-2017-mp-nairobi
+2017-mp,nairobi/kasarani,Kamwere Isaac Wachira,nairobi/kasarani,834,provisional-2017-mp-nairobi
+2017-mp,nairobi/kibra,Okoth Kenneth Odhiambo,nairobi/kibra,66914,provisional-2017-mp-nairobi
+2017-mp,nairobi/kibra,Wasike Doreen Nangame Khayanga,nairobi/kibra,11397,provisional-2017-mp-nairobi
+2017-mp,nairobi/kibra,Okoth Judah Martin Oduor,nairobi/kibra,5996,provisional-2017-mp-nairobi
+2017-mp,nairobi/kibra,Mugasia Robert,nairobi/kibra,501,provisional-2017-mp-nairobi
+2017-mp,nairobi/kibra,Katiwa Titus Mutinda,nairobi/kibra,459,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Korir Generali Nixon Kiprotich,nairobi/langata,41086,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Ocholla Oscar Omoke,nairobi/langata,39593,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Sijeny Judith Achieng,nairobi/langata,5292,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Kirwa William Kipkemboi Arap,nairobi/langata,1274,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Kariuki Kavore,nairobi/langata,1147,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Kithyaka Douglas Mbuvi,nairobi/langata,592,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Kiragu Margery Nduta,nairobi/langata,589,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Omar Abdullahi Shariff,nairobi/langata,490,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Mulialia Okumu Hillary,nairobi/langata,433,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Kipkemboi Epega Robert,nairobi/langata,422,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Syongoh Musaari Kahiga,nairobi/langata,369,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Odera Daniel Tresvant,nairobi/langata,349,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Isaac Tonui Kiprotich,nairobi/langata,335,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Thuo John Kibathi,nairobi/langata,280,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Chenani Daniel Akweli,nairobi/langata,187,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Otula Amos Onyango,nairobi/langata,127,provisional-2017-mp-nairobi
+2017-mp,nairobi/langata,Teigut Stephen Kipruto,nairobi/langata,59,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Omwera George Aladwa,nairobi/makadara,45516,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Kangara Benson Mutura,nairobi/makadara,41125,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Mburu Mathew Maina,nairobi/makadara,2726,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Nyanginja Reuben Ndolo,nairobi/makadara,2045,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Momanyi Robert Omwenga,nairobi/makadara,1695,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Onderi Haron Okindo,nairobi/makadara,440,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Mwarisha Teri Hudson,nairobi/makadara,359,provisional-2017-mp-nairobi
+2017-mp,nairobi/makadara,Wandurwa David Gichimu,nairobi/makadara,249,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Oluoch Anthony Tom,nairobi/mathare,44196,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Kariuki Steven,nairobi/mathare,34366,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Mang'eni John Wesonga,nairobi/mathare,600,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Maelo Maurice Mutimba,nairobi/mathare,576,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Mburu Antony Kimani,nairobi/mathare,335,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Mwangi Joseph Kanguchu,nairobi/mathare,321,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Atanda Stanley Ngaywa,nairobi/mathare,315,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Macharia Mariam Muthoni,nairobi/mathare,270,provisional-2017-mp-nairobi
+2017-mp,nairobi/mathare,Gachihi Gacheke,nairobi/mathare,164,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Ndirangu Isaac Waihenya,nairobi/roysambu,74349,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Kamau Lee Muchiri,nairobi/roysambu,22919,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Gichomo Vincent Kamau,nairobi/roysambu,5801,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Kamau Augustine Kamande,nairobi/roysambu,4257,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Ochuka Robert Ochieng,nairobi/roysambu,2551,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Kinyua Jane Wairimu,nairobi/roysambu,2028,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Murithi Clifford,nairobi/roysambu,1094,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Kimani Stephen Mugo,nairobi/roysambu,689,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Wahome Weston Wanjohi,nairobi/roysambu,495,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Njue Jackson Mutwiri,nairobi/roysambu,450,provisional-2017-mp-nairobi
+2017-mp,nairobi/roysambu,Njenga Shem King'e,nairobi/roysambu,376,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Francis Kajwang' Tom Joseph,nairobi/ruaraka,36892,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Amollo Elizabeth Ongoro,nairobi/ruaraka,31512,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Kinyua Dominic Gathecha,nairobi/ruaraka,16068,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Maranga Joseph Isaboke,nairobi/ruaraka,502,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Masika Allan Juma,nairobi/ruaraka,484,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Ajiba Paul Caleb Musikoyo,nairobi/ruaraka,253,provisional-2017-mp-nairobi
+2017-mp,nairobi/ruaraka,Orete Charles Ouma,nairobi/ruaraka,130,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Njagua Charles Kanyi,nairobi/starehe,61266,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Ndwiga Steve Mbogo,nairobi/starehe,38292,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Mwangi Boniface,nairobi/starehe,15831,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Kwenya John Mwaniki,nairobi/starehe,1746,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Kivati Rhoda Mumoh,nairobi/starehe,939,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Odero Analalava Moses,nairobi/starehe,233,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Getange Thomas Makori Hamed,nairobi/starehe,181,provisional-2017-mp-nairobi
+2017-mp,nairobi/starehe,Nganga David Wakahu,nairobi/starehe,165,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Wetangula Timothy Wanyonyi,nairobi/westlands,58455,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Gichenga Dedan Mugo,nairobi/westlands,30724,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Walji Ashif Amin Sadrudin,nairobi/westlands,15858,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Mwangi Jessee Wanyeki,nairobi/westlands,866,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Omala Raphael Mbondo,nairobi/westlands,368,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Ngaira Jeremy Shidzugane,nairobi/westlands,217,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Owino Sammy Odhiambo,nairobi/westlands,196,provisional-2017-mp-nairobi
+2017-mp,nairobi/westlands,Onyango Kennedy Odiwuor,nairobi/westlands,186,provisional-2017-mp-nairobi
+2022-governor,nairobi,Johnson Sakaja,nairobi,699392,provisional-2022-governor-nairobi
+2022-governor,nairobi,Polycarp Igathe,nairobi,573516,provisional-2022-governor-nairobi
+2022-governor,nairobi,Harman Grewal,nairobi,10521,provisional-2022-governor-nairobi
+2022-governor,nairobi,Agnes Kariuki,nairobi,10086,provisional-2022-governor-nairobi
+2022-governor,nairobi,Kenneth Nyamwamu,nairobi,7377,provisional-2022-governor-nairobi
+2022-governor,nairobi,Cleophas Kiio,nairobi,6485,provisional-2022-governor-nairobi
+2022-governor,nairobi,Esther Thairu,nairobi,5944,provisional-2022-governor-nairobi
+2022-governor,nairobi,Denis Kodhe,nairobi,5557,provisional-2022-governor-nairobi
+2022-governor,nairobi,Nancy Mwadime,nairobi,5531,provisional-2022-governor-nairobi
+2017-governor,nairobi,Kioko Mike Sonko Mbuvi Gidion,nairobi,871794,provisional-2017-governor-nairobi
+2017-governor,nairobi,Evans Kidero Odhiambo,nairobi,696888,provisional-2017-governor-nairobi
+2017-governor,nairobi,Kenneth Peter,nairobi,42935,provisional-2017-governor-nairobi
+2017-governor,nairobi,Miguna Miguna,nairobi,10308,provisional-2017-governor-nairobi
+2017-governor,nairobi,Macharia Lawrence Kamau,nairobi,1691,provisional-2017-governor-nairobi
+2017-governor,nairobi,Mumo Michael Mutinda,nairobi,1616,provisional-2017-governor-nairobi
+2017-governor,nairobi,Francis Mwanga Inganji,nairobi,1569,provisional-2017-governor-nairobi
+2017-governor,nairobi,Waweru Godfrey Wanyoike,nairobi,1212,provisional-2017-governor-nairobi
