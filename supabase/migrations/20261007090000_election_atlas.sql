@@ -23,14 +23,16 @@ create table public.atlas_areas (
   parent    text references public.atlas_areas(key),
   iebc_code text check (iebc_code is null or iebc_code ~ '^[0-9]{1,4}$'),
   -- A county sits under Kenya; below that a key is its parent's key and one more
-  -- part. CASE returns null for a case it forgot, which a check lets through, so
+  -- part, so a ward's parent is its constituency and a constituency's its county.
+  -- A null parent makes the comparisons null, and a check lets null through, so
   -- the whole answer must be true.
   constraint atlas_areas_shape check ((case level
     when 'country' then key = 'kenya' and parent is null
     when 'county' then parent = 'kenya' and key !~ '/'
     when 'constituency' then parent <> 'kenya' and key ~ '^[^/]+/[^/]+$'
                          and parent = regexp_replace(key, '/[^/]+$', '')
-    else key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
+    when 'ward' then key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
+    else false
   end) is true)
 );
 create index atlas_areas_parent_idx on public.atlas_areas (parent);
@@ -201,7 +203,7 @@ create table public.area_notes (
   campaign_id uuid not null default public.my_campaign()
               references public.campaigns(id) on delete cascade,
   area_key    text not null references public.atlas_areas(key),
-  note        text not null check (length(btrim(note)) >= 1 and length(note) <= 2000),
+  note        text not null check (note ~ '[^[:space:]]' and length(note) <= 2000),
   updated_at  timestamptz not null default now(),
   updated_by  uuid default auth.uid() references auth.users(id) on delete set null,
   primary key (campaign_id, area_key)

@@ -78,6 +78,35 @@ begin
 end $$;
 rollback;
 
+-- test: the atlas tables are closed to anonymous users and writable only by the service role
+begin;
+do $$
+declare
+  r record;
+  p text;
+begin
+  -- fact is true for the seven public fact tables and false for a campaign's own three.
+  for r in select * from (values
+    ('atlas_areas', true), ('atlas_elections', true), ('atlas_candidates', true), ('atlas_results', true),
+    ('atlas_turnout', true), ('atlas_register', true), ('atlas_population', true),
+    ('atlas_settings', false), ('atlas_sides', false), ('area_notes', false)) as v(t, fact)
+  loop
+    foreach p in array array['select', 'insert', 'update', 'delete']
+    loop
+      assert not has_table_privilege('anon', 'public.' || r.t, p), 'anon has ' || p || ' on ' || r.t;
+      assert has_table_privilege('service_role', 'public.' || r.t, p), 'the service role lacks ' || p || ' on ' || r.t;
+      -- A signed-in user only reads a public fact table. A campaign's own table is open to them
+      -- at the grant level, and row level security narrows it.
+      if r.fact and p <> 'select' then
+        assert not has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated has ' || p || ' on ' || r.t;
+      else
+        assert has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated lacks ' || p || ' on ' || r.t;
+      end if;
+    end loop;
+  end loop;
+end $$;
+rollback;
+
 -- test: an area's key reads as a place
 begin;
 insert into public.atlas_areas (key, level, name, parent) values ('testland', 'county', 'Testland', 'kenya');
@@ -95,6 +124,8 @@ begin
   assert pg_temp.state_of(head || $q$('testland/a-test/b-test', 'constituency', 'B Test', 'testland/a-test')$q$) = '23514', 'a constituency at ward depth';
   assert pg_temp.state_of(head || $q$('kenya/x-test/y-test', 'ward', 'Y Test', 'kenya')$q$) = '23514', 'a ward straight under Kenya';
   assert pg_temp.state_of(head || $q$('testland/x-test/y-test', 'ward', 'Y Test', 'testland')$q$) = '23514', 'a ward under a county, skipping its constituency';
+  assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', null)$q$) = '23514', 'a constituency with no parent';
+  assert pg_temp.state_of(head || $q$('testland/north-test/ward-one', 'ward', 'Ward One', null)$q$) = '23514', 'a ward with no parent';
   assert pg_temp.state_of(head || $q$('nowhere/some-test', 'constituency', 'Some Test', 'nowhere')$q$) = '23503', 'a parent that is not there';
   assert pg_temp.state_of(head || $q$('testland', 'county', 'Testland', 'kenya')$q$) = '23505', 'the same key twice';
   assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', 'testland')$q$) is null, 'a good constituency is refused';
@@ -273,6 +304,7 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
 do $$ begin
   assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '')$q$) = '23514', 'an empty note';
   assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '   ')$q$) = '23514', 'a blank note';
+  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', E'\n\t  ')$q$) = '23514', 'a note of newlines and tabs';
   assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2001))) = '23514', 'a note over 2,000 characters';
   assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2000))) is null, 'a note of exactly 2,000 characters is refused';
 end $$;
