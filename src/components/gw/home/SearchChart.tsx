@@ -4,6 +4,7 @@ import { toneVar } from "@/components/gw/demo/tone";
 import { dayName } from "@/lib/diary";
 import { labelTicks } from "@/lib/race-data";
 import type { SearchChartModel } from "@/lib/search-interest";
+import type { SearchPeak } from "@/lib/search-peaks";
 
 const W = 600;
 const H = 220;
@@ -16,7 +17,7 @@ const shortDay = (d: string) => dayName(d).split(" ").slice(1).join(" ");
  * Thirty days of search interest, a line per candidate, 100 being the busiest
  * day of any of them. Hover a day for every candidate's figure.
  */
-export function SearchChart({ model }: { model: SearchChartModel }) {
+export function SearchChart({ model, peaks = [] }: { model: SearchChartModel; peaks?: SearchPeak[] }) {
   const [at, setAt] = useState<number | null>(null);
   const { days, series } = model;
   const last = days.length - 1;
@@ -102,6 +103,17 @@ export function SearchChart({ model }: { model: SearchChartModel }) {
             </text>
           </g>
         ))}
+        {peaks.map((p) => {
+          const tone = series.find((s) => s.key === p.key)?.tone ?? "a";
+          return (
+            <g key={`${p.key}-${p.day}`} className="trend-peak">
+              <circle cx={x(p.index)} cy={y(p.value) - 11} r={7} style={{ fill: toneVar(tone) }} />
+              <text x={x(p.index)} y={y(p.value) - 7.5} textAnchor="middle">
+                {p.n}
+              </text>
+            </g>
+          );
+        })}
         {at !== null && (
           <line className="trend-cross" x1={x(at)} x2={x(at)} y1={M.t} y2={H - M.b} />
         )}
