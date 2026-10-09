@@ -35,7 +35,7 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
         .from("listening_mentions")
         .select("title, url, domain, snippet, published_at, found_at, reach")
         .gte("found_at", `${from}T00:00:00Z`)
-        .lt("found_at", `${addOne(to!)}T00:00:00Z`)
+        .lt("found_at", `${addDaysIso(to!, 10)}T00:00:00Z`)
         .order("found_at", { ascending: false })
         .limit(1000);
       return (data ?? []) as PeakMention[];
@@ -126,4 +126,4 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
   );
 }
 
-const addOne = (d: string) => new Date(Date.parse(d) + 86400000).toISOString().slice(0, 10);
+const addDaysIso = (d: string, n: number) => new Date(Date.parse(d) + n * 86400000).toISOString().slice(0, 10);
