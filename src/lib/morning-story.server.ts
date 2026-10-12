@@ -5,7 +5,7 @@
 // shared job row says what happened in counts only.
 
 import { nairobiToday } from "@/lib/demo/insights";
-import { askAiJson } from "@/lib/listening.server";
+import { askAiJson, PauseError } from "@/lib/listening.server";
 import {
   checkStory,
   headlinesStory,
@@ -18,6 +18,7 @@ import {
 type Client = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the Supabase builder, loosely
   from: (table: string) => any;
+  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
 const JOB_KEY = "morning_story";
@@ -191,41 +192,57 @@ export async function runMorningStory(
     .select("*")
     .eq("key", JOB_KEY)
     .maybeSingle();
-  if (!opts.force && job?.last_run_at && Date.parse(job.last_run_at) >= sixOn(day)) return out;
-  if (!opts.force && job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
+  if (job?.status === "paused") return out;
+  if (job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
+  const claim = await sb.rpc("claim_morning_job", { _key: JOB_KEY, _now: now.toISOString() });
+  if (claim.error) throw new Error("Could not reserve the morning briefing.");
+  if (!claim.data) return out;
   out.ran = true;
-  await sb.from("listening_jobs").upsert(
-    {
-      key: JOB_KEY,
-      status: "running",
-      locked_until: new Date(now.getTime() + 10 * 60_000).toISOString(),
-      updated_at: now.toISOString(),
-    },
-    { onConflict: "key" },
-  );
+  const { data: collection } = await sb.from("listening_jobs").select("status, paused_reason").eq("key", "listening_scan").maybeSingle();
+  let paused: string | null = null;
+  if (collection?.status === "paused" && /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))) {
+    await sb.from("listening_jobs").update({ status: "paused", paused_reason: collection.paused_reason, locked_until: null }).eq("key", JOB_KEY);
+    return out;
+  }
 
-  const { data: campaigns } = await sb.from("campaigns").select("id, name, candidate, seat");
+  const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(5);
+  if (campaignError) throw new Error("Could not read campaigns for the morning briefing.");
   for (const c of (campaigns ?? []) as CampaignInfo[]) {
     const { data: have } = await sb
       .from("morning_stories")
-      .select("id")
+      .select("id, story, written_by")
       .eq("campaign_id", c.id)
       .eq("day", day)
       .maybeSingle();
-    if (have) {
+    if (have && (have.written_by === "team" || have.story?.kind === "written" || Number(have.story?.from) > 0)) {
       out.kept++;
       continue;
     }
     const g = await gather(sb, c.id, now);
     if (!g.items.length) {
       out.quiet++;
+      {
+        const quiet = headlinesStory([]);
+        quiet.summary = collection?.status === "paused"
+          ? "News collection is paused. Today's briefing has no fresh sources; this does not mean there was no news. Open Listening to resolve the collection problem."
+          : "No fresh source items were collected for this campaign. This morning's check is saved; new sources will be picked up on the next scheduled run.";
+        const quietRow = { campaign_id: c.id, day, story: quiet, written_by: "groundwork", edited_by: null };
+        const { error } = have
+          ? await sb.from("morning_stories").update(quietRow).eq("id", have.id).eq("written_by", "groundwork").eq("story->>from", "0")
+          : await sb.from("morning_stories").upsert(quietRow, { onConflict: "campaign_id,day", ignoreDuplicates: true });
+        if (error) out.notes.push("A briefing status could not be stored.");
+      }
       continue;
     }
     let story: MorningStory | null = null;
     try {
       story = await writeStory(c, g);
     } catch (err) {
-      out.notes.push(`${c.name}: ${(err as Error).message}`);
+      out.notes.push(`Story writing: ${(err as Error).message}`);
+      if (err instanceof PauseError) {
+        paused = err.message;
+        break;
+      }
     }
     if (story) out.written++;
     else {
@@ -233,9 +250,10 @@ export async function runMorningStory(
       out.headlines++;
     }
     // Never over a story the team saved while this one was being written.
-    const { error } = await sb
-      .from("morning_stories")
-      .upsert(
+    const row = { campaign_id: c.id, day, story, written_by: "groundwork", edited_by: null };
+    const { error } = have
+      ? await sb.from("morning_stories").update(row).eq("id", have.id).eq("written_by", "groundwork").eq("story->>from", "0")
+      : await sb.from("morning_stories").upsert(
         { campaign_id: c.id, day, story, written_by: "groundwork", edited_by: null },
         { onConflict: "campaign_id,day", ignoreDuplicates: true },
       );
@@ -255,7 +273,8 @@ export async function runMorningStory(
   await sb.from("listening_jobs").upsert(
     {
       key: JOB_KEY,
-      status: "idle",
+      status: paused ? "paused" : "idle",
+      paused_reason: paused,
       locked_until: null,
       last_run_at: now.toISOString(),
       detail,

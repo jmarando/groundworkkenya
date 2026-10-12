@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 import { LastResultCard, MovesCard } from "@/components/gw/home/AtlasCards";
 import { PollChart } from "@/components/gw/home/PollChart";
@@ -45,10 +46,8 @@ export function RaceReal({
         onRemove={onRemovePoll}
       />
       <SearchCard read={search} rivals={race.rivals} />
-      <div className="mb-two">
-        <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
-        <TopOfMindCard mind={mind} />
-      </div>
+      <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
+      <TopOfMindCard mind={mind} />
       <MovesCard />
       <LastResultCard />
     </>
@@ -179,21 +178,20 @@ function RivalsCard({
   canEdit: boolean;
   onEdit: () => void;
 }) {
-  const newest = [...race.polls].sort(byRecency);
+  const active = race.rivals.filter(r => race.posts.some(p => p.rivalId === r.id));
   return (
-    <section className="card home-rivals" aria-labelledby="home-rivals-h">
+    <section className="home-rivals home-rival-activity" aria-labelledby="home-rivals-h">
       <div className="card-head">
-        <h2 id="home-rivals-h">Who&apos;s running</h2>
+        <div><h2 id="home-rivals-h">Latest candidate activity</h2><p className="meta">{active.length ? "From their own public posts." : "No recent candidate posts collected."}</p></div>
         {canEdit && (
-          <button type="button" className="btn btn--ghost btn--sm" onClick={onEdit}>
+          <Button variant="outline" size="sm" onClick={onEdit}>
             Edit rivals
-          </button>
+          </Button>
         )}
       </div>
-      {race.rivals.length ? (
+      {active.length ? (
         <ul className="home-rival-list">
-          {race.rivals.map((r) => {
-            const p = newest.find((x) => shareOf(x, r) !== null);
+          {active.map((r) => {
             // Posts come newest first.
             const post = race.posts.find((x) => x.rivalId === r.id);
             const landed = post ? landedLine(post) : "";
@@ -203,20 +201,7 @@ function RivalsCard({
                 <div>
                   <b>{r.name}</b>
                   {r.isUs ? <span className="dim"> · yours</span> : null}
-                  <small className="dim">
-                    {[r.party, r.office].filter(Boolean).join(" · ") || "Party not recorded"}
-                  </small>
                 </div>
-                <span className="home-rival-share">
-                  {p ? (
-                    <>
-                      <b>{shareOf(p, r)}%</b>
-                      <small className="dim">{pollLabel(p)}</small>
-                    </>
-                  ) : (
-                    <small className="dim">In no poll yet</small>
-                  )}
-                </span>
                 {post ? (
                   <div className="home-rival-post">
                     <a href={post.url} target="_blank" rel="noopener noreferrer">
@@ -232,7 +217,7 @@ function RivalsCard({
           })}
         </ul>
       ) : (
-        <p className="meta">No candidates on record yet.</p>
+        null
       )}
     </section>
   );

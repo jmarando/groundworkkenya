@@ -32,14 +32,18 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           { auth: { autoRefreshToken: false, persistSession: false } },
         );
 
-        const result = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
-        // Once a day the same call reads rivals' own posts (it keeps its own clock).
-        const rivals = await runRivalSweep(sb as never).catch((e: Error) => ({
+        const result = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 }).catch((e: Error) => ({
           ran: false,
           error: e.message,
         }));
-        // And once a morning, each campaign's story from its day of news.
+        // Always check the morning record, even when collection throws or pauses.
+        // Do this before rival work so that unrelated provider failures cannot delay it.
         const story = await runMorningStory(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
+        // Once a day the same call reads rivals' own posts (it keeps its own clock).
+        const rivals = await runRivalSweep(sb as never).catch((e: Error) => ({
           ran: false,
           error: e.message,
         }));
