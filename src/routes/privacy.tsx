@@ -16,8 +16,10 @@ export const Route = createFileRoute("/privacy")({
           "How Groundwork collects, uses and protects personal data across its campaign platform.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://groundwork.ke/privacy" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://groundwork.ke/privacy" }],
   }),
   component: PrivacyPage,
 });

@@ -15,25 +15,107 @@ import shot6 from "@/assets/landing/shot6.webp";
 import shot7 from "@/assets/landing/shot7.webp";
 import shot8 from "@/assets/landing/shot8.webp";
 
+// The general site lives on the root domain; campaign subdomains share this page
+// (CampaignHome), so they point search engines here too.
+const SITE = "https://groundwork.ke";
+const TITLE = "Groundwork · the campaign OS for Kenyan elections";
+const DESCRIPTION =
+  "The campaign OS for Kenyan elections: voters and doors, SMS and USSD polls, one inbox, social listening and election night, on IEBC's map of 1,450 wards.";
+const SHARE_DESCRIPTION =
+  "Know every voter by ward and door, poll any phone in English or Kiswahili, answer every message, hear what's said online, and count every Form 34A on election night.";
+const SOCIAL_CARD = `${SITE}/brand/groundwork-social-card.png`;
+
+const FAQ: { q: string; a: string }[] = [
+  {
+    q: "Do our supporters need smartphones?",
+    a: "No. Polls and sign-ups work by SMS reply and by USSD on any phone. The web link and WhatsApp are there for people who prefer them. Agents use the field app on a low-cost Android phone, and it keeps working without data.",
+  },
+  {
+    q: "Can we message supporters on WhatsApp?",
+    a: "Your team can run WhatsApp from their own phones and log conversations in the Groundwork inbox. Meta's WhatsApp Business Policy doesn't allow political campaigns on its automated Business Platform, so SMS and USSD carry the automated sends. We'll walk you through what works best for your seat.",
+  },
+  {
+    q: "Does it work in Kiswahili?",
+    a: "Yes. Polls go out in English and Kiswahili and count replies in either, USSD menus and campaign websites come in both, and the inbox reads the mood and issue of a message in English, Kiswahili or Sheng.",
+  },
+  {
+    q: "What does social listening cover?",
+    a: "News and the open web, TikTok, YouTube and Reddit by keyword, your rivals' own posts, Google Alerts and Google Trends, swept on a schedule. Each sweep says what it could not reach, so a gap never passes for silence.",
+  },
+  {
+    q: "Where do the supporter records come from?",
+    a: "From your own campaign: door knocks, rallies, polls, sign-ups, events and your existing lists. Every record carries its source and consent, and we don't sell or supply contact lists.",
+  },
+  {
+    q: "Is the parallel tally an official result?",
+    a: "No. Only the IEBC declares results. Groundwork records the forms your agents observe and shows you where you stand, how much of the register you've covered, and where the forms disagree.",
+  },
+  {
+    q: "How long does it take to get started?",
+    a: "A workspace with your wards and your first team can be live within a week. The more time before polling day, the more doors you'll have on the map.",
+  },
+  {
+    q: "Do you work with every party?",
+    a: "Groundwork is a product, not a political consultancy. Each campaign gets its own workspace, and nothing is shared between them.",
+  },
+];
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE}/#organization`,
+      name: "Groundwork",
+      url: `${SITE}/`,
+      logo: `${SITE}/brand/groundwork-app-icon-512.png`,
+      areaServed: { "@type": "Country", name: "Kenya" },
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Groundwork",
+      url: `${SITE}/`,
+      description: DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web, Android",
+      inLanguage: ["en", "sw"],
+      areaServed: { "@type": "Country", name: "Kenya" },
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: FAQ.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
+
 export const Route = createFileRoute("/")({
   component: Landing,
   head: () => ({
     meta: [
-      { title: "Groundwork · the campaign OS" },
-      {
-        name: "description",
-        content:
-          "Groundwork is the campaign OS: supporters, field agents, messaging, polling, money and election night in one system.",
-      },
-      { property: "og:title", content: "Groundwork · the campaign OS" },
-      {
-        property: "og:description",
-        content:
-          "Supporters, field agents, messaging, polling, money and election night in one system. Know every voter, reach them on the channel they answer.",
-      },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: SHARE_DESCRIPTION },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: `${SITE}/` },
+      { property: "og:site_name", content: "Groundwork" },
+      { property: "og:locale", content: "en_KE" },
+      { property: "og:image", content: SOCIAL_CARD },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Groundwork, the campaign OS" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: TITLE },
+      { name: "twitter:description", content: SHARE_DESCRIPTION },
+      { name: "twitter:image", content: SOCIAL_CARD },
+      { "script:ld+json": STRUCTURED_DATA },
     ],
+    links: [{ rel: "canonical", href: `${SITE}/` }],
   }),
 });
 
@@ -298,7 +380,7 @@ function Landing() {
                   <i />
                   <i />
                   <i />
-                  <span>app.groundwork.co.ke/voters</span>
+                  <span>groundwork.ke/voters</span>
                 </div>
                 <img
                   src={shot1}
@@ -328,8 +410,8 @@ function Landing() {
                   ✓
                 </span>
                 <span>
-                  <b>Walk list sent · 12 doors</b>
-                  <small>Ordered by walking distance</small>
+                  <b>Form 34A filed · PS-0012/2</b>
+                  <small>By USSD · photo attached</small>
                 </span>
               </div>
             </div>
@@ -381,10 +463,18 @@ function Landing() {
                 <h3>Organise</h3>
                 <p>Know who lives where, who's with you, and who still needs a knock.</p>
                 <ul>
-                  <li>People <span>CRM</span></li>
-                  <li>Know your voters <span>map</span></li>
-                  <li>Canvassing &amp; walk lists <span>field</span></li>
-                  <li>Agents &amp; M-Pesa stipends <span>money</span></li>
+                  <li>
+                    People <span>CRM</span>
+                  </li>
+                  <li>
+                    Voters map <span>county to door</span>
+                  </li>
+                  <li>
+                    Walk lists &amp; door app <span>offline</span>
+                  </li>
+                  <li>
+                    Agents &amp; stipends <span>M-Pesa</span>
+                  </li>
                 </ul>
               </div>
               <div className="wl">
@@ -395,10 +485,18 @@ function Landing() {
                   it's a headline.
                 </p>
                 <ul>
-                  <li>Inbox <span>SMS · DMs · email</span></li>
-                  <li>Broadcast &amp; ads <span>SMS · Meta · Google</span></li>
-                  <li>Listening <span>TikTok · X · YouTube</span></li>
-                  <li>Polling <span>SMS · USSD · web</span></li>
+                  <li>
+                    Inbox <span>SMS · WhatsApp · email · DMs</span>
+                  </li>
+                  <li>
+                    Broadcast &amp; ads <span>SMS · Meta · Google</span>
+                  </li>
+                  <li>
+                    Listening <span>news · TikTok · YouTube · Reddit</span>
+                  </li>
+                  <li>
+                    Polling <span>SMS · USSD · web</span>
+                  </li>
                 </ul>
               </div>
               <div className="wl">
@@ -406,10 +504,18 @@ function Landing() {
                 <h3>Protect the vote</h3>
                 <p>Agents on every station, forms photographed, a parallel tally you can defend.</p>
                 <ul>
-                  <li>Field app <span>offline</span></li>
-                  <li>Parallel tally <span>Form 34A</span></li>
-                  <li>War room <span>live</span></li>
-                  <li>Incidents <span>chain of custody</span></li>
+                  <li>
+                    Parallel tally <span>Form 34A by USSD</span>
+                  </li>
+                  <li>
+                    War room <span>live</span>
+                  </li>
+                  <li>
+                    Incidents <span>chain of custody</span>
+                  </li>
+                  <li>
+                    Election atlas <span>2013 to 2022</span>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -424,26 +530,27 @@ function Landing() {
                 Every door, <span className="m">known.</span>
               </h3>
               <p>
-                Satellite imagery of the ward, every rooftop outlined, every household on the record.
-                Pick a street, send an agent, message the doors, and watch the reports come back.
+                Satellite imagery of every ward, each household your agents meet placed on the map,
+                and the last three elections alongside. Pick a ward, send an agent, message the
+                people there, and watch the reports come back.
               </p>
               <ul className="ticks">
                 <li>
                   <span>
-                    <b>County to doorstep.</b> Drill from a county to a ward to a single apartment
-                    block.
+                    <b>County to doorstep.</b> Drill from a county to a ward to the people in it,
+                    and colour it by canvass, support or top issue.
                   </span>
                 </li>
                 <li>
                   <span>
-                    <b>Walk lists in one tap.</b> Draw a box over a street; the route is ordered by
-                    walking distance and pushed to the agent's phone.
+                    <b>Who to knock next.</b> Walk lists put the never-contacted first and go
+                    straight to the agent's phone.
                   </span>
                 </li>
                 <li>
                   <span>
-                    <b>Five lenses.</b> Canvass status, support, agent turf, top issue, voter
-                    registration.
+                    <b>Past results, sourced.</b> 2013, 2017 and 2022 results from IEBC's own forms,
+                    with what to do in each area.
                   </span>
                 </li>
               </ul>
@@ -463,20 +570,20 @@ function Landing() {
                 One record per <span className="m">person.</span>
               </h3>
               <p>
-                A poll reply, a rally check-in, a DM and a door knock all land on the same record.
-                Duplicates merge; the history stays.
+                A poll reply, a message, a website sign-up and a door knock land on the same record
+                when the number matches, and the history stays.
               </p>
               <ul className="ticks">
                 <li>
                   <span>
-                    <b>Eight ways in.</b> Door knocks, rally QR codes, SMS and USSD opt-ins, DMs, web
-                    sign-ups, volunteer forms, registration desks, imports.
+                    <b>Every way in.</b> Door knocks, SMS and USSD replies, messages, your campaign
+                    website's volunteer form in English and Kiswahili, and imports.
                   </span>
                 </li>
                 <li>
                   <span>
-                    <b>Next best action.</b> Register them, persuade them, recruit them, or knock the
-                    door.
+                    <b>Find them again.</b> Filter by ward, support, consent and last contact, then
+                    message exactly those people.
                   </span>
                 </li>
                 <li>
@@ -542,18 +649,19 @@ Nini kirekebishwe kwanza mtaani kwako?
 
           <div className="feat rev">
             <div className="ft">
-              <span className="eyebrow">Inbox &amp; broadcast</span>
+              <span className="eyebrow">Inbox, broadcast &amp; listening</span>
               <h3>
                 Every message, <span className="m">answered.</span>
               </h3>
               <p>
-                SMS, email, Facebook and Instagram DMs, X, TikTok comments and USSD call-backs in one
-                queue, tagged by ward and issue and routed to the desk that owns it.
+                SMS, WhatsApp, email, Facebook and Instagram DMs, X and USSD call-backs in one
+                queue, each read for mood and issue in English, Kiswahili or Sheng.
               </p>
               <ul className="ticks">
                 <li>
                   <span>
-                    <b>Suggested replies</b> in the voice your campaign actually speaks.
+                    <b>Social listening.</b> News, TikTok, YouTube, Reddit and your rivals' own
+                    posts, swept every hour, with Google Trends for what people search.
                   </span>
                 </li>
                 <li>
@@ -564,7 +672,8 @@ Nini kirekebishwe kwanza mtaani kwako?
                 </li>
                 <li>
                   <span>
-                    <b>Team channels</b> for ward coordinators, the comms desk and finance approvals.
+                    <b>A 06:00 briefing.</b> The morning's checked story and your day, to read or
+                    hear before the first meeting.
                   </span>
                 </li>
               </ul>
@@ -581,8 +690,8 @@ Nini kirekebishwe kwanza mtaani kwako?
                 Every shilling, <span className="m">accounted.</span>
               </h3>
               <p>
-                Spend against the statutory limit, e-TIMS receipts on every line, stipends to agents
-                by M-Pesa, and an authorised person who approves before anything moves.
+                Spend against the statutory limit, a supporting document on every line, stipends to
+                agents by M-Pesa, and an authorised person who approves before anything moves.
               </p>
               <ul className="ticks">
                 <li>
@@ -592,12 +701,14 @@ Nini kirekebishwe kwanza mtaani kwako?
                 </li>
                 <li>
                   <span>
-                    <b>Append-only ledger.</b> Edits reverse; nothing is deleted.
+                    <b>The limit, always in view.</b> Spend against the statutory ceiling, marked at
+                    half, three quarters and 90%.
                   </span>
                 </li>
                 <li>
                   <span>
-                    <b>One-click audit pack</b> for disclosure.
+                    <b>Contributions on record.</b> Every contributor and amount, where the
+                    candidate can see them.
                   </span>
                 </li>
               </ul>
@@ -621,9 +732,9 @@ Nini kirekebishwe kwanza mtaani kwako?
                 </h2>
               </div>
               <p>
-                Agents photograph the signed Form 34A at every station you cover. Two people enter
-                each form blind. The war room shows the parallel tally against the official stream,
-                with coverage stated on every figure.
+                Agents key the counts from each signed Form 34A by USSD on any phone and send a
+                photo of the form. The war room shows the parallel tally against the official
+                stream, with coverage stated on every figure.
               </p>
             </div>
             <div className="pic">
@@ -637,8 +748,8 @@ Nini kirekebishwe kwanza mtaani kwako?
                 <span className="g" style={{ color: "var(--ok)" }}>
                   ●
                 </span>
-                <b>Double-blind entry</b>
-                <p>Two entries per form. Disagreements go to adjudication, not to the screen.</p>
+                <b>Any phone, no app</b>
+                <p>Kiswahili USSD screens walk the agent through each count and a final check.</p>
               </div>
               <div>
                 <span className="g" style={{ color: "var(--amber)" }}>
@@ -675,12 +786,14 @@ Nini kirekebishwe kwanza mtaani kwako?
                 <ul className="ticks">
                   <li>
                     <span>
-                      <b>Offline first.</b> Everything queues and syncs when there's signal.
+                      <b>Offline first.</b> Door visits queue on the phone and send when there's
+                      signal.
                     </span>
                   </li>
                   <li>
                     <span>
-                      <b>GPS-checked arrivals</b> at polling stations.
+                      <b>Sign-ups at the door.</b> A new supporter's name, number and consent,
+                      recorded on the step.
                     </span>
                   </li>
                   <li>
@@ -825,53 +938,12 @@ Nini kirekebishwe kwanza mtaani kwako?
               </div>
             </div>
             <div className="faq">
-              <details>
-                <summary>Do our supporters need smartphones?</summary>
-                <p>
-                  No. Polls and sign-ups work by SMS reply and by USSD on any phone. The web link and
-                  WhatsApp are there for people who prefer them. Agents use the field app on a
-                  low-cost Android phone, and it keeps working without data.
-                </p>
-              </details>
-              <details>
-                <summary>Can we message supporters on WhatsApp?</summary>
-                <p>
-                  Your team can run WhatsApp from their own phones and log conversations in the
-                  Groundwork inbox. Meta's WhatsApp Business Policy doesn't allow political campaigns
-                  on its automated Business Platform, so SMS and USSD carry the automated sends. We'll
-                  walk you through what works best for your seat.
-                </p>
-              </details>
-              <details>
-                <summary>Where do the supporter records come from?</summary>
-                <p>
-                  From your own campaign: door knocks, rallies, polls, sign-ups, events and your
-                  existing lists. Every record carries its source and consent, and we don't sell or
-                  supply contact lists.
-                </p>
-              </details>
-              <details>
-                <summary>Is the parallel tally an official result?</summary>
-                <p>
-                  No. Only the IEBC declares results. Groundwork records the forms your agents observe
-                  and shows you where you stand, how much of the register you've covered, and where
-                  the forms disagree.
-                </p>
-              </details>
-              <details>
-                <summary>How long does it take to get started?</summary>
-                <p>
-                  A workspace with your wards and your first team can be live within a week. The more
-                  time before polling day, the more doors you'll have on the map.
-                </p>
-              </details>
-              <details>
-                <summary>Do you work with every party?</summary>
-                <p>
-                  Groundwork is a product, not a political consultancy. Each campaign gets its own
-                  workspace, and nothing is shared between them.
-                </p>
-              </details>
+              {FAQ.map((f) => (
+                <details key={f.q}>
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
             </div>
           </div>
         </section>
@@ -915,6 +987,7 @@ Nini kirekebishwe kwanza mtaani kwako?
             <a href="#trust">Trust</a>
             <a href="#faq">FAQ</a>
             <a href="#demo">Book a demo</a>
+            <Link to="/privacy">Privacy</Link>
           </div>
           <div>
             <h4>Account</h4>
@@ -922,7 +995,7 @@ Nini kirekebishwe kwanza mtaani kwako?
             <a href="mailto:justin@glab.africa">justin@glab.africa</a>
           </div>
           <div className="base">
-            <span>© 2026 Groundwork · groundwork.co.ke</span>
+            <span>© 2026 Groundwork · groundwork.ke</span>
             <span>Groundwork reports; the IEBC declares.</span>
           </div>
         </div>
