@@ -1545,6 +1545,8 @@ figure { margin: 0; }
 
 .mb-grid { display:grid; grid-template-columns:minmax(0, 1fr) 340px; gap:22px; align-items:start; }
 .mb-side { display:flex; flex-direction:column; gap:14px; }
+.morning-wide-details { margin-top:18px; }
+.morning-wide-details .mb-story-sum { max-width:none; }
 .mb-two { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:18px; align-items:start; }
 .mb-story { padding:4px 2px 0; }
 .mb-story-kicker { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted-foreground); }
