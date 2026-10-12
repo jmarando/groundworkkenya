@@ -254,6 +254,13 @@ export function fakeSupabase(
   }
 
   const rpc = (name: string, args: Row = {}) => {
+    if (name === "claim_morning_job") {
+      const existing = rows("listening_jobs").find((j) => j["key"] === args["_key"]);
+      if (existing && (existing["status"] === "paused" || String(existing["locked_until"] ?? "") > String(args["_now"]))) return Promise.resolve({ data: false, error: null });
+      const lease = { key: args["_key"], status: "running", locked_until: new Date(Date.parse(String(args["_now"])) + 600_000).toISOString() };
+      if (existing) Object.assign(existing, lease); else rows("listening_jobs").push(lease);
+      return Promise.resolve({ data: true, error: null });
+    }
     const fn = rpcs[name];
     return Promise.resolve(
       fn
