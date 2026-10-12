@@ -2802,6 +2802,10 @@ export type Database = {
         Returns: boolean
       }
       channel_campaign: { Args: never; Returns: string }
+      claim_morning_job: {
+        Args: { _key: string; _now: string }
+        Returns: boolean
+      }
       create_campaign: {
         Args: {
           _candidate: string
