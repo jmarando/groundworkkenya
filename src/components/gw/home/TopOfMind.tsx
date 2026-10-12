@@ -7,7 +7,7 @@ const isWeb = (u: string | null): u is string => Boolean(u && /^https?:\/\//i.te
 /** The week's top issues, each with what every source made of it. */
 export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
   return (
-    <section className="card home-mind" aria-labelledby="home-mind-h">
+    <section className="home-mind" aria-labelledby="home-mind-h">
       <div className="card-head">
         <div>
           <h2 id="home-mind-h">Top of mind this week</h2>
@@ -28,7 +28,7 @@ export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
                 {MIND_SOURCES.map((s) => {
                   const share = l.shares[s];
                   return (
-                    <div key={s}>
+                   <div key={s} data-source={s}>
                       <dt>{SOURCE_NAMES[s]}</dt>
                       <dd>
                         {share === null ? (
@@ -46,7 +46,7 @@ export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
                   );
                 })}
               </dl>
-              {l.examples.map((e) => (
+              {l.examples.slice(0, 1).map((e) => (
                 <p key={e.text} className="home-issue-line">
                   {isWeb(e.url) ? (
                     <a href={e.url} target="_blank" rel="noopener noreferrer">
@@ -57,6 +57,7 @@ export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
                   )}
                 </p>
               ))}
+              {l.examples.length > 1 && <details className="mind-more"><summary>More sources</summary>{l.examples.slice(1).map(e => <p key={e.text} className="home-issue-line">{isWeb(e.url) ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.text}</a> : e.text}</p>)}</details>}
             </li>
           ))}
         </ol>
