@@ -33,5 +33,5 @@ export const catchUpMorning = createServerFn({ method: "POST" })
     if (!PRINCIPAL_ROLES.includes(role as MyRole)) throw new Error("Only the candidate or manager can check the morning run.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { runMorningStory } = await import("@/lib/morning-story.server");
-    return runMorningStory(supabaseAdmin);
+    return runMorningStory({ from: table => supabaseAdmin.from(table as "listening_jobs"), rpc: (_fn, args) => supabaseAdmin.rpc("claim_morning_job", { _key: String(args["_key"]), _now: String(args["_now"]) }) });
   });
