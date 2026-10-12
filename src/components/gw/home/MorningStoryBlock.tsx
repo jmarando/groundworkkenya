@@ -92,9 +92,8 @@ export function MorningStoryBlock({
           ) : null}
         </>
       ) : (
-        <h2 id="mb-story-h" className="mb-story-h">
-          This morning&apos;s top stories
-        </h2>
+        <><h2 id="mb-story-h" className="mb-story-h">{st.from ? "This morning’s top stories" : "This morning’s check"}</h2>
+        {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}</>
       )}
     </article>
   );

@@ -58,6 +58,7 @@ function DiaryPage() {
           </div>
           {first ? (
             <nav className="diary-nav" aria-label="Weeks">
+              <Link to="/archive" search={{ month: first.slice(0, 7) }} className="btn btn--ghost btn--sm">Archive</Link>
               <Link
                 to="/diary"
                 search={{ week: addDays(first, -7) }}

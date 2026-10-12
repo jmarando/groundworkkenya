@@ -24,3 +24,5 @@ Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above 
 
 - Inbox filters are grouped by queue, channel/sentiment and topic; message metadata is a separate block, with a two-pane tablet layout and stacked phone layout. Why: filters stay scannable and timestamps never run into message text.
 - The voters map uses MapLibre's native pan, wheel/pinch and bounded animated zoom; ward/building actions stay explained in-map. Why: field users need predictable spatial controls and one clear next step.
+- Morning briefings reserve an atomic database lease, save dated no-source outcomes, and retry only missing or zero-source automated rows on later hourly runs; provider blocks stay paused. Why: daily checks remain visible without fabricating news or duplicating paid work.
+- The shared archive reads monthly morning stories and diary through authenticated user-scoped clients. Why: historical campaign records retain the same isolation as current records.
