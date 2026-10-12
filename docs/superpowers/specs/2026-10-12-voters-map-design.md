@@ -64,6 +64,10 @@ The level follows the zoom, so scrolling in and clicking in land in the same pla
 Mathira's area is one constituency, so it starts at the constituency level. The map's
 bounds are the area's, with a margin.
 
+A line on the map says what a click or a scroll does at the level on show ("Click a ward to
+drop in", "Click a centre for its result", "Click a house, or draw around houses for a walk
+list"), as AGENTS.md asks: the map's actions stay explained on the map.
+
 ### The panel
 
 At the top, the area's five numbers as today's ladder has them (registered, on file,
