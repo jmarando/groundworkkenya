@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SetPasswordRouteImport } from './routes/set-password'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
+import { Route as AuthenticatedArchiveRouteImport } from './routes/_authenticated/archive'
 import { Route as AuthenticatedBriefingRouteImport } from './routes/_authenticated/briefing'
 import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authenticated/broadcast'
 import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
@@ -84,6 +85,11 @@ const SetPasswordRoute = SetPasswordRouteImport.update({
 const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedArchiveRoute = AuthenticatedArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedBriefingRoute = AuthenticatedBriefingRouteImport.update({
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/archive': typeof AuthenticatedArchiveRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
   '/campaigns': typeof AuthenticatedCampaignsRoute
@@ -350,6 +357,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/archive': typeof AuthenticatedArchiveRoute
   '/briefing': typeof AuthenticatedBriefingRoute
   '/broadcast': typeof AuthenticatedBroadcastRoute
   '/campaigns': typeof AuthenticatedCampaignsRoute
@@ -400,6 +408,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
+  '/_authenticated/archive': typeof AuthenticatedArchiveRoute
   '/_authenticated/briefing': typeof AuthenticatedBriefingRoute
   '/_authenticated/broadcast': typeof AuthenticatedBroadcastRoute
   '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
@@ -450,6 +459,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/set-password'
     | '/agents'
+    | '/archive'
     | '/briefing'
     | '/broadcast'
     | '/campaigns'
@@ -498,6 +508,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/set-password'
     | '/agents'
+    | '/archive'
     | '/briefing'
     | '/broadcast'
     | '/campaigns'
@@ -547,6 +558,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/set-password'
     | '/_authenticated/agents'
+    | '/_authenticated/archive'
     | '/_authenticated/briefing'
     | '/_authenticated/broadcast'
     | '/_authenticated/campaigns'
@@ -661,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AuthenticatedAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/archive': {
+      id: '/_authenticated/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof AuthenticatedArchiveRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/briefing': {
@@ -955,6 +974,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
+  AuthenticatedArchiveRoute: typeof AuthenticatedArchiveRoute
   AuthenticatedBriefingRoute: typeof AuthenticatedBriefingRoute
   AuthenticatedBroadcastRoute: typeof AuthenticatedBroadcastRoute
   AuthenticatedCampaignsRoute: typeof AuthenticatedCampaignsRoute
@@ -979,6 +999,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
+  AuthenticatedArchiveRoute: AuthenticatedArchiveRoute,
   AuthenticatedBriefingRoute: AuthenticatedBriefingRoute,
   AuthenticatedBroadcastRoute: AuthenticatedBroadcastRoute,
   AuthenticatedCampaignsRoute: AuthenticatedCampaignsRoute,

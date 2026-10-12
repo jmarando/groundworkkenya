@@ -121,7 +121,7 @@ async function main() {
     eq(
       "a story for the campaign with news",
       [stories(sb).length, s?.["campaign_id"], s?.["day"], s?.["written_by"]],
-      [1, "c2", "2026-09-30", "groundwork"],
+      [2, "c2", "2026-09-30", "groundwork"],
     );
     const story = s?.["story"] as {
       headline: string;
@@ -152,14 +152,14 @@ async function main() {
     );
 
     const again = await runMorningStory(sb as never, { now: at("07:05") });
-    eq("a second call that morning writes nothing", [again.ran, prompts.length], [false, 1]);
+    eq("a second call only checks missing-source campaigns without AI", [again.ran, prompts.length], [true, 1]);
 
     const tomorrow = at("06:10", "2026-10-01");
     const next = await runMorningStory(sb as never, { now: tomorrow });
     eq(
       "the next morning writes again",
       [next.ran, stories(sb).length],
-      [true, 1 + (next.written + next.headlines)],
+      [true, 4],
     );
   }
   {
@@ -185,7 +185,7 @@ async function main() {
         r.kept,
         prompts.length,
       ],
-      [1, "Ours", 1, 0],
+      [2, "Ours", 1, 0],
     );
   }
   {
@@ -212,6 +212,22 @@ async function main() {
     );
   }
 
+  {
+    const now = at("06:05");
+    const sb = world(now, { listening_jobs: [{ key: "morning_story", status: "paused", paused_reason: "AI access denied" }] });
+    const prompts = stubAi();
+    const r = await runMorningStory(sb as never, { now, force: true });
+    eq("force never bypasses a persisted provider pause", [r.ran, prompts.length], [false, 0]);
+  }
+  {
+    const now = at("06:05");
+    const sb = world(now);
+    const prompts = stubAi(403);
+    await runMorningStory(sb as never, { now });
+    await runMorningStory(sb as never, { now: at("07:05") });
+    const job = sb.tables["listening_jobs"]?.find(j => j["key"] === "morning_story");
+    eq("AI denial persists and stops later campaigns and runs", [job?.["status"], prompts.length], ["paused", 1]);
+  }
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

@@ -41,9 +41,9 @@ export type ScanResult = {
   notes: string[];
 };
 
-class PauseError extends Error {
+export class PauseError extends Error {
   reason: string;
-  constructor(reason: string) {
+  constructor(reason: string, public status?: number) {
     super(reason);
     this.reason = reason;
   }
@@ -196,7 +196,7 @@ export async function askAiJson<T>(prompt: string, name: string, schema: object)
   if (!res.ok || !res.body) {
     const body = await res.text();
     if (isBlocking(res.status))
-      throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`);
+      throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`, res.status);
     throw new Error(`AI request failed (${res.status}): ${body.slice(0, 180)}`);
   }
 
