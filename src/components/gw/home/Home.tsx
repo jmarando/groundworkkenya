@@ -70,6 +70,7 @@ export function Home({
         time={now}
         plan={plan}
         watch={watchList(d.diary, today)}
+        upcoming={d.diary.filter((entry) => entry.day > today && entry.kind !== "watch")}
         canEdit={canEdit}
         onEditStory={() => setEditing("story")}
       />

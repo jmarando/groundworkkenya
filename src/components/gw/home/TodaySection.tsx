@@ -1,6 +1,6 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
 import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
-import { MorningNews, MorningStoryBlock, MorningStoryDetails } from "@/components/gw/home/MorningStoryBlock";
+import { MorningNews, MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
 import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
 import type { StoryView } from "@/lib/morning-story";
@@ -19,6 +19,7 @@ export function TodaySection({
   time,
   plan,
   watch,
+  upcoming,
   canEdit,
   onEditStory,
 }: {
@@ -32,6 +33,7 @@ export function TodaySection({
   /** Today's stops from the diary, and what to watch over the next three days. */
   plan: DiaryEntry[];
   watch: DiaryEntry[];
+  upcoming: DiaryEntry[];
   canEdit: boolean;
   onEditStory: () => void;
 }) {
@@ -66,13 +68,11 @@ export function TodaySection({
           time={time}
           canEdit={canEdit}
           onEdit={onEditStory}
-          separateDetails
         />
         <aside className="mb-side" aria-label="Today's plan">
-          <DiaryPlan plan={plan} watch={watch} loading={loading} canEdit={canEdit} />
+          <DiaryPlan plan={plan} watch={watch} upcoming={upcoming} loading={loading} canEdit={canEdit} />
         </aside>
       </div>
-      <div className="morning-wide-details"><MorningStoryDetails view={story} /></div>
       <MorningNews view={story} />
     </section>
   );
