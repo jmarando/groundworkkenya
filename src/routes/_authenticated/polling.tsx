@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PollBuilder } from "@/components/gw/PollBuilder";
+import { PollRecipients } from "@/components/gw/PollRecipients";
+import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
 import { useAccess } from "@/hooks/useAccess";
 import { getPolling } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
@@ -22,12 +25,12 @@ export const Route = createFileRoute("/_authenticated/polling")({
       { title: "Polling · Groundwork" },
       {
         name: "description",
-        content: "Run short polls by SMS and USSD and read the results ward by ward.",
+        content: "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
       },
       { property: "og:title", content: "Polling · Groundwork" },
       {
         property: "og:description",
-        content: "Run short polls by SMS and USSD and read the results ward by ward.",
+        content: "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -117,6 +120,7 @@ function Polling() {
   };
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [recipientPoll, setRecipientPoll] = useState<{ id: string; code: string; question: string; status: string } | null>(null);
   const { data } = useQuery({ queryKey: ["polling"], queryFn: () => fetchPolling() });
 
   const refresh = async (id?: string) => {
@@ -175,6 +179,7 @@ function Polling() {
   return (
     <section className="view active" aria-label="Polling">
       {building && <PollBuilder onClose={closeBuilder} initialQuestion={ask} />}
+      {recipientPoll && <PollRecipients poll={recipientPoll} onClose={() => setRecipientPoll(null)} />}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Listening · polling</span>
@@ -310,6 +315,11 @@ function Polling() {
               {openId === p.id && <PollResults id={p.id} />}
 
               <div className="pb-actions">
+                {isPrincipal && ["draft", "live"].includes(p.status) && (
+                  <Button variant="outline" size="sm" onClick={() => setRecipientPoll(p)}>
+                    <Send /> Send to individuals
+                  </Button>
+                )}
                 {isPrincipal && p.status === "draft" && (
                   <button
                     className="btn btn--primary btn--sm"

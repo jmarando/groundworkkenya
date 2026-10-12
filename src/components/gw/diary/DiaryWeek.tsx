@@ -1,7 +1,11 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
+
+import { useAccess } from "@/hooks/useAccess";
+import { briefLine, wardKey } from "@/lib/atlas-app";
+import { getAtlas } from "@/lib/atlas.functions";
 
 import {
   cleanEntry,
@@ -12,8 +16,9 @@ import {
   type DiaryEntry,
 } from "@/lib/diary";
 import { removeDiaryEntry, saveDiaryEntry, type DiaryWeek as Week } from "@/lib/diary.functions";
+import { defaultRace } from "@/lib/elections-view";
 
-type Ward = { id: string; name: string };
+type Ward = Week["wards"][number];
 
 /** The diary and Home both show entries; read them again after a change. */
 function useRefresh() {
@@ -24,8 +29,31 @@ function useRefresh() {
   };
 }
 
+/** Each stop in a ward, with a line from the last election there (the atlas). */
+function useBriefs(week: Week): Record<string, string> {
+  const { campaign } = useAccess();
+  const fetchAtlas = useServerFn(getAtlas);
+  const { data: atlas } = useQuery({
+    queryKey: ["atlas"],
+    queryFn: () => fetchAtlas(),
+    staleTime: 5 * 60_000,
+  });
+  return useMemo(() => {
+    if (!atlas) return {};
+    const race = defaultRace(campaign?.level);
+    const out: Record<string, string> = {};
+    for (const e of week.entries) {
+      const w = e.wardId ? week.wards.find((x) => x.id === e.wardId) : undefined;
+      const line = w ? briefLine(atlas, wardKey(atlas, w.constituency, w.slug), race) : null;
+      if (line) out[e.id] = line;
+    }
+    return out;
+  }, [atlas, week, campaign?.level]);
+}
+
 /** A week of the diary, Monday to Sunday, each day with its entries by time. */
 export function DiaryWeek({ week, canEdit }: { week: Week; canEdit: boolean }) {
+  const briefs = useBriefs(week);
   return (
     <div className="diary-days">
       {week.days.map((day) => (
@@ -35,6 +63,7 @@ export function DiaryWeek({ week, canEdit }: { week: Week; canEdit: boolean }) {
           isToday={day === week.today}
           entries={week.entries.filter((e) => e.day === day)}
           wards={week.wards}
+          briefs={briefs}
           canEdit={canEdit}
         />
       ))}
@@ -47,12 +76,15 @@ function DiaryDay({
   isToday,
   entries,
   wards,
+  briefs,
   canEdit,
 }: {
   day: string;
   isToday: boolean;
   entries: DiaryEntry[];
   wards: Ward[];
+  /** A line from the last election, by entry id, for stops in a ward. */
+  briefs: Record<string, string>;
   canEdit: boolean;
 }) {
   const [adding, setAdding] = useState(false);
@@ -91,6 +123,11 @@ function DiaryDay({
                       {e.wardName ? ` · ${e.wardName}` : ""}
                     </span>
                   </p>
+                  {briefs[e.id] ? (
+                    <p className="diary-brief" title="The last election here, from the atlas">
+                      {briefs[e.id]}
+                    </p>
+                  ) : null}
                   {e.note ? <p className="mb-time-why">{e.note}</p> : null}
                   {canEdit ? (
                     <div className="diary-actions">

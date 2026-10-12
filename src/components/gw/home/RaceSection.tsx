@@ -1,7 +1,7 @@
-import { OfficialResult, RaceReal } from "@/components/gw/home/RaceReal";
+import { LastResultCard, MovesCard } from "@/components/gw/home/AtlasCards";
+import { RaceReal } from "@/components/gw/home/RaceReal";
 import { SectionHead } from "@/components/gw/home/SectionHead";
 import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
-import type { Scenario } from "@/lib/demo/types";
 import type { RaceView, SectionMode } from "@/lib/home";
 import type { SearchRead } from "@/lib/search-interest";
 import type { TopOfMind } from "@/lib/top-of-mind";
@@ -9,10 +9,9 @@ import type { TopOfMind } from "@/lib/top-of-mind";
 /**
  * Where the race stands: the campaign's own candidates, polls and search
  * interest when it has them on record; otherwise what's missing and who adds
- * it. The week's issues and the last election's result show either way.
+ * it. The week's issues, where votes can move and the last result show either way.
  */
 export function RaceSection({
-  s,
   mode,
   race,
   mind,
@@ -21,7 +20,6 @@ export function RaceSection({
   onEdit,
   onRemovePoll,
 }: {
-  s: Scenario;
   mode: SectionMode;
   race: RaceView;
   mind: TopOfMind;
@@ -35,7 +33,6 @@ export function RaceSection({
       <SectionHead id="home-race" title="The race" />
       {mode === "real" ? (
         <RaceReal
-          s={s}
           race={race}
           mind={mind}
           search={search}
@@ -71,7 +68,8 @@ export function RaceSection({
             )}
           </section>
           <TopOfMindCard mind={mind} />
-          {s.lastTime.official ? <OfficialResult s={s} /> : null}
+          <MovesCard />
+          <LastResultCard />
         </>
       )}
     </section>

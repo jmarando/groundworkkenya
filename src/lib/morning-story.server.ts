@@ -248,6 +248,7 @@ export async function runMorningStory(
       out.headlines &&
         `${count(out.headlines, "campaign", "campaigns")} got the top headlines instead.`,
       out.quiet && `${count(out.quiet, "campaign", "campaigns")} had no news in the last day.`,
+      ...out.notes,
     ]
       .filter(Boolean)
       .join(" · ") || null;

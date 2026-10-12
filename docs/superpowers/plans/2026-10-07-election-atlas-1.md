@@ -1,201 +1,84 @@
-# Election atlas, part 1: the shared tables, the calculations and the data — Implementation Plan
+# Election atlas, part 1: the tables, the figures and the arithmetic — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the atlas's foundations: the database tables (schema 22), the pure rules that turn
-results, registers and population into "what to do and why", and the Nairobi and Nyeri figures for
-the last three elections, loaded from checked, sourced files and reported to the user before any
-screen is built.
+**Goal:** A shared atlas of public election figures (2013, 2017 and 2022; president, governor
+and MP) for Nairobi and Nyeri, with registers and population estimates, loaded from checked
+files with their sources, plus the tested arithmetic the screens will use; ending with a
+report to the user of what was found.
 
-**Architecture:** One migration creates seven public-fact tables that every team reads and nobody
-writes through the API, and three tables each campaign keeps for itself (home area, sides, notes).
-The rules are small pure modules in `src/lib/atlas/`, written test first. A county's figures are CSV
-files under `data/atlas/<county>/`, checked by a TypeScript checker, turned into an idempotent
-migration by a Python script, and summed up by a report. This plan stops at that report: the
-Elections section (spec steps 4 to 6) is the second plan.
+**Architecture:** Schema 22 adds read-only atlas tables (no `campaign_id`: public facts) and
+three campaign tables (home area, sides, notes). Figures live as CSV files under
+`data/atlas/<folder>/`; a pure module reads and checks them (`src/lib/atlas-files.ts`), another
+turns them into an idempotent migration (`src/lib/atlas-sql.ts`), and small scripts under
+`scripts/atlas/` do the file reading, the WorldPop calls and the report. The arithmetic is one
+pure module (`src/lib/atlas.ts`).
 
-**Tech Stack:** PostgreSQL with row level security (Supabase), TypeScript run by tsx, Python 3
-(standard library, plus rasterio and numpy for WorldPop's grids), poppler's `pdftotext` for IEBC's
-PDFs.
+**Tech Stack:** Postgres/Supabase (RLS), TypeScript run with tsx, the repo's CSV helpers,
+WorldPop's statistics API, tsx tests and the SQL test harness.
 
-**Spec:** `docs/superpowers/specs/2026-10-07-election-atlas-design.md`: sections 1 to 4 (the shared
-atlas, each campaign's own, data, calculations), Privacy and the law, Testing, and build steps 1
-to 3.
+**Spec:** `docs/superpowers/specs/2026-10-07-election-atlas-design.md` (sections 1–4, Data,
+Privacy, Errors, Testing; build order steps 1–3). Part 2 (the Elections section and the touches
+across the app) is a separate plan written after the user has seen the data report.
 
 ## Global Constraints
 
-- Work on branch `claude/local-folder-access-qo9pew`. Nothing goes to `main`; never rewrite pushed
-  history (AGENTS.md). Push the branch only.
-- Nothing is applied to the live database. Migrations are written and tested on a throwaway
-  Postgres; at the release the user applies them, migrations first, with their OK. The county data
-  migrations are written only after the user has read the data report (Task 14).
-- Commit messages end with `Co-Authored-By: Claude <noreply@anthropic.com>`. No model name or
-  version goes in any file, commit message or comment.
-- Test first for every rule: write the test, run it, see it fail for the right reason, then write the
-  code. `npm test` runs every `tests/*.test.ts`, then the SQL tests.
-- TypeScript is Prettier-formatted (100 columns, double quotes, trailing commas) and passes ESLint:
-  run `npx prettier --write` then `npx eslint` on every file you create or change.
-  `src/integrations/supabase/types.ts` is generated and already fails Prettier; leave its style alone.
-- Shares and turnout are percentages (0 to 100), unrounded until shown: shares to one decimal place,
-  turnout as a whole percentage, votes with thousands separators. A missing figure is `null` and
-  shows as "not found yet"; it is never zero. (spec section 4)
-- Every number carries where it came from and at what level, and an estimate says it is an
-  estimate. (spec "Success")
-- Nothing anywhere holds a person's ethnicity or tribe, or guesses it from a name; communities
-  appear only in the team's notes about places. (spec "Privacy and the law")
-- This repository is public: data files hold public figures only, and no secret goes in any file.
-- Figures come only from the publisher's own document (IEBC, the Kenya Gazette, WorldPop). A news
-  report, a summary or a search snippet is not a source. What is not found stays blank and is listed
-  in `data/atlas/SOURCES.md`. (spec section 3)
-- The atlas tables are a deliberate exception to "every campaign table has a campaign_id": they hold
-  public facts. The three campaign tables carry `campaign_id` and the usual restrictive "own
-  campaign only" policy.
-
-## Running things in this cloud container
-
-A fresh session needs these. The install here is partial (Lovable's private npm mirror answers 403),
-but eslint, prettier and tsc are present.
-
-```bash
-# once, in a fresh container: there is no node_modules. This exits 1 with
-# "error: GET https://europe-west4-npm.pkg.dev/... 403" for some packages: expected, and it still
-# installs eslint, prettier and typescript. If `npx eslint --version` or `npx prettier --version`
-# fails afterwards, tell the user rather than skipping lint.
-bun install
-
-# one TypeScript test file
-npx -y tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts
-
-# the Python tests; the fifteen that need rasterio (the grid tests) skip without it. To run them too:
-#   python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install rasterio numpy
-# and use /tmp/gwvenv/bin/python (or export ATLAS_PYTHON=/tmp/gwvenv/bin/python for the TypeScript runner)
-python3 -m unittest discover -s scripts/atlas -p "test_*.py"
-
-# the SQL suite: Postgres 16 is installed but not on PATH, and initdb refuses to run as root.
-# Put the Postgres directory inside env's PATH argument, as below: a PATH=... prefix on runuser is not seen
-# by the "$PATH" you pass to env, the runner then finds no initdb, prints SKIP and exits 0, a silent false pass.
-# So a run that prints "SKIP: initdb not found" has not run any SQL test.
-runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh
-
-# format and lint the files you touched
-npx prettier --write <files> && npx eslint <files>
-
-# typecheck: the whole project has hundreds of errors here from the partial install, so look only at yours
-npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "src/lib/atlas|integrations/supabase/types"
-```
-
-On a full install (the user's machine, CI) `npm test` runs everything. In this container five older
-test files fail with `ERR_MODULE_NOT_FOUND` for `@tanstack/react-router` or `@tanstack/react-start`:
-`tests/demo.test.ts`, `diary-functions`, `home`, `morning-story-functions` and `race`. They fail the
-same on an untouched checkout, so ignore them here; every other `tests/*.test.ts` passes. The SQL
-runner needs the checkout readable by the `nobody` user, which `/home/user/groundworkkenya` is.
-
-## What this plan changes in the spec
-
-The spec is updated in the same commit as this plan.
-
-- `atlas_turnout`'s `cast`, `rejected` and `valid` are `cast_votes`, `rejected_votes` and
-  `valid_votes`: `cast` is a reserved word in SQL.
-- A candidate's `id` is `<election>/<seat>/<slug of the name>`, so loading is idempotent and readable.
-- `src/lib/atlas.ts` is a folder of small modules, `src/lib/atlas/`, behind one import,
-  `@/lib/atlas`. `tests/atlas.test.ts` is five files, one per module, so each task's tests stand alone.
-- Added, not in the spec: `scripts/atlas/areas_from_map.py` (areas.csv from a ward map, so no key is
-  typed), `scripts/atlas/report.ts` (the data report the spec promises), `data/atlas/blocs.csv`
-  (which coalition each party stood in, so a coalition has one name in every county), and one slug
-  rule shared by Python and TypeScript.
-- "Staff write notes" is read as `is_staff()`: the candidate or manager. Organisers can read the
-  Elections pages and notes but not write them.
-- The "what to do" rules follow who is ahead, not the share alone (the user's call on 7 October):
-  "Lean theirs" is not a rule, and lean is its own measure.
-- Recorded differences live in one `known-differences.csv` per county,
-  `data/atlas/<county>/known-differences.csv`, not in one shared file: each county's inconsistencies
-  stay with its figures.
+- Work on the local branch `election-atlas`. Nothing is pushed or merged without the user's
+  OK; migrations go to the database before code that needs them; never rewrite pushed history
+  (AGENTS.md).
+- Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Lint only new or changed lines; in files with older lint errors the count must not rise.
+  Test first for every rule; `npm test` runs every `tests/*.test.ts`, then the SQL tests.
+- The repository is public: only public figures go in `data/atlas`. No personal data, and no
+  field anywhere for a person's ethnicity.
+- Every figure names its source document; a figure that wasn't found stays missing (never
+  zero, never estimated from other figures); estimates are labelled as estimates.
+- Schema version 22 (`groundwork_schema_version()`).
+- Copy is plain English.
 
 ## Review Focus
 
-1. Nobody writes the atlas through the API: the tables have no write grant and no write policy.
-   Test: Task 1 ("nobody writes the atlas through the API"); Task 1 Step 7 shows that the test fails
-   when both a grant and a policy are added.
-2. A campaign's notes, settings and sides stay inside the campaign; only the candidate or manager
-   writes them; who changed a row, and when, cannot be forged. Tests: Task 1 (four of its eleven).
-3. A missing figure is never zero: every function answers `null` for what it cannot work out.
-   Tests: Tasks 2 to 5 ("no result", "no side", "nothing to go on").
-4. The "what to do" rules start where they say, the first match wins, and 45% to 30% reads "Lean
-   ours" while 38% to 30% reads "Persuade". Tests: Task 5.
-5. Loading a county twice changes nothing and puts back a changed figure; names with commas, quotes
-   and apostrophes survive. Tests: Task 7 (the golden file, and the SQL load test).
-6. The checker catches each fault it names, and nothing in `data/atlas` is trusted until it passes.
-   Tests: Task 8.
-7. Provenance: every figure's source is a primary document recorded in `SOURCES.md` with its
-   checksum, and nothing is guessed. Tasks 12 and 13, and the report in Task 14.
-8. Nothing is applied to the live database and nothing is pushed to `main`. Global Constraints.
-
-## File map
-
-| File | Responsibility |
-|------|----------------|
-| `supabase/migrations/20261007090000_election_atlas.sql` | Schema 22: the seven atlas tables, three campaign tables, policies, the nine elections |
-| `src/lib/atlas/types.ts` | The shared shapes: `Race`, `Level`, `Vote`, `Turnout`, `BlocShare`, `Lean` |
-| `src/lib/atlas/measures.ts` | Turnout, valid votes, bloc shares, our share, margin, lean, swing |
-| `src/lib/atlas/register.ts` | Register growth, adults not yet registered, the young share, the register flag |
-| `src/lib/atlas/format.ts` | How figures are written, and the tag each carries |
-| `src/lib/atlas/advice.ts` | What to do in an area and why; the votes within reach |
-| `src/lib/atlas/scope.ts` | The key above an area, an area's level, which area's results a ward shows |
-| `src/lib/atlas/index.ts` | One import for all of the above |
-| `scripts/atlas/build_sql.py` | A county's files into an idempotent migration |
-| `scripts/atlas/slug.py`, `scripts/atlas/checks.ts` | The slug rule (twice, kept in step by shared cases) and the data checker |
-| `scripts/atlas/areas_from_map.py` | A county's `areas.csv` from its ward map |
-| `scripts/atlas/ward_population.py` | Ward population from WorldPop's age-and-sex grids |
-| `scripts/atlas/report.ts` | The data report for the user |
-| `data/atlas/` | The county files, `blocs.csv`, `SOURCES.md`, `README.md` |
-| `tests/atlas-*.test.ts`, `tests/sql/atlas*.test.sql`, `scripts/atlas/test_*.py`, `tests/fixtures/atlas/` | Tests, and a fictional county, "Testland", for them to run on |
+1. A results document that lists only the leading candidates: shares must come from the
+   document's valid votes, not from adding up the listed candidates. Test: Task 2 ("a partial
+   list uses the document's valid votes").
+2. A figure typed with a thousands separator or a space ("12,345", "12 345"): the row is
+   refused, never read as 12. Test: Task 3 ("a number with a comma is refused").
+3. IEBC's own figures not adding up (constituencies against the county): the check fails unless
+   that exact difference is recorded with a note. Test: Task 3 ("a recorded difference passes",
+   "a different amount still fails").
+4. A ward in the data that the ward map doesn't know (renamed or misspelt): refused. Test: Task 3
+   ("a ward the map doesn't know").
+5. Independent candidates lumped into one "Independent" bloc, making a strongest rival that never
+   existed: each independent is a bloc of their own and a bare "Independent" bloc is refused.
+   Test: Task 3 ("a bare Independent bloc is refused").
 
 ---
 
 ### Task 1: Schema 22, the atlas tables
 
 **Files:**
-- Create: `tests/sql/atlas.test.sql`
 - Create: `supabase/migrations/20261007090000_election_atlas.sql`
-- Modify: `tests/sql/access.test.sql` (its list of tables with no campaign)
-- Modify: `tests/sql/search.test.sql` (its schema-version check)
-- Modify: `src/integrations/supabase/types.ts` (ten tables, alphabetical, between `agent_stipends` and `ballot_candidates`)
+- Test: `tests/sql/atlas.test.sql`
 
-**Interfaces:** Produces the tables
-`atlas_areas(key, level, name, parent, iebc_code)`,
-`atlas_elections(id, year, race, held_on, note)`,
-`atlas_candidates(id, election_id, seat, name, party, bloc)`,
-`atlas_results(candidate_id, area_key, votes)`,
-`atlas_turnout(election_id, area_key, registered, cast_votes, rejected_votes, valid_votes, source, source_url)`,
-`atlas_register(year, area_key, registered, source, source_url)`,
-`atlas_population(area_key, year, total, adults, young_adults, source, method)`;
-and, per campaign,
-`atlas_settings(campaign_id, home_area, updated_at, updated_by)`,
-`atlas_sides(campaign_id, election_id, bloc, updated_at, updated_by)`,
-`area_notes(campaign_id, area_key, note, updated_at, updated_by)`;
-the trigger function `public.atlas_stamp()`; `groundwork_schema_version()` = 22. The country row
-`kenya` and the nine elections (2013, 2017 and 2022; president, governor and MP) are seeded.
+**Interfaces:** Produces tables `atlas_sources(id, title, publisher, url, note)`,
+`atlas_areas(key, level, name, parent, iebc_code)`, `atlas_elections(id, year, race, held_on,
+note)` (nine rows, ids like `2022-governor`), `atlas_candidates(id, election_id, seat, name,
+party, bloc)`, `atlas_results(candidate_id, area_key, votes, source_id)`,
+`atlas_turnout(election_id, area_key, registered, cast_votes, rejected, valid, source_id)`,
+`atlas_register(year, area_key, registered, source_id)`, `atlas_population(area_key, year,
+total, adults, young_adults, source_id)`; campaign tables `atlas_settings(campaign_id,
+home_area, updated_by, updated_at)`, `atlas_sides(campaign_id, election_id, bloc, updated_by,
+updated_at)`, `area_notes(id, campaign_id, area_key, body, updated_by, updated_at)`.
 
-- [ ] **Step 1: Write the failing SQL tests**
-
-Create `tests/sql/atlas.test.sql`. Ten tests: the nine elections are there; every team reads the
-atlas and nobody outside a team does; nobody writes it through the API, not even a candidate; an
-area's key reads as a place; results, turnout, registers and population must make sense; a
-campaign's notes, settings and sides stay inside the campaign; the team reads and only the
-candidate or manager writes; one home area and one side per election, changed by upsert; a note is a
-note, and keeps who changed it and when; the schema version is 22.
+- [ ] **Step 1: Write the failing test** `tests/sql/atlas.test.sql`:
 
 ```sql
--- The election atlas: who reads it, that nobody writes it through the API, the
--- shape of its keys and figures, and that a campaign's home area, sides and
--- notes stay inside the campaign. Run with tests/sql/run.sh; each test rolls back.
+-- The election atlas: every team reads the public figures and nobody signed in
+-- writes them; each campaign's home area, sides and notes stay inside it, and
+-- only the candidate or manager changes them. Run with tests/sql/run.sh; each
+-- test rolls back.
 
 \ir fixtures.sql
-
--- An organiser in Sakaja, beside the fixtures' candidate, manager and agent.
-insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000b7', 'organiser.sakaja@example.test');
-insert into public.campaign_members (campaign_id, user_id, role)
-values ('ca000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-0000000000b7', 'organiser');
 
 -- The SQLSTATE a statement fails with, or null when it runs.
 create or replace function pg_temp.state_of(_sql text)
@@ -207,393 +90,121 @@ exception when others then
   return sqlstate;
 end $$;
 
--- test: the nine elections and the country are there
+-- A few public figures to read, written as a migration would (kept if the
+-- first counties' figures already put them there).
+insert into public.atlas_sources (id, title, publisher) values ('test-source', 'A test document', 'IEBC')
+  on conflict do nothing;
+insert into public.atlas_areas (key, level, name, parent) values ('kenya', 'country', 'Kenya', null)
+  on conflict do nothing;
+insert into public.atlas_areas (key, level, name, parent) values ('nairobi', 'county', 'Nairobi', 'kenya')
+  on conflict do nothing;
+
+-- test: the schema is at version 22 or later
 do $$ begin
-  assert (select count(*) from public.atlas_elections) = 9, 'nine elections';
-  assert (select count(*) from public.atlas_elections where year in (2013, 2017, 2022)) = 9, 'in three years';
-  assert (select held_on from public.atlas_elections where id = '2022-governor') = date '2022-08-09', 'the 2022 date';
-  assert (select note from public.atlas_elections where id = '2017-president') like '%annulled%', 'the 2017 note';
-  assert (select count(*) from public.atlas_areas where level = 'country') = 1, 'one country';
-  assert (select key from public.atlas_areas where level = 'country') = 'kenya', 'and it is Kenya';
+  assert public.groundwork_schema_version() >= 22, 'schema 22';
 end $$;
 
--- test: every team reads the atlas; nobody outside a team does
+-- test: every team reads the atlas, nobody signed in writes it, and a pending account reads nothing
 begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland');
 set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000f6';
 do $$ begin
-  assert (select count(*) from public.atlas_areas where key like 'testland%') = 2, 'an agent reads the atlas';
-  assert (select count(*) from public.atlas_elections) = 9, 'an agent reads the elections';
+  assert (select count(*) from public.atlas_areas where key = 'nairobi') = 1, 'a Mathira agent reads Nairobi';
+  assert (select count(*) from public.atlas_elections) = 9, 'and the nine elections';
+  assert pg_temp.state_of($q$insert into public.atlas_areas (key, level, name, parent) values ('nyeri', 'county', 'Nyeri', 'kenya')$q$) = '42501', 'a team member can''t add an area';
+  assert pg_temp.state_of($q$update public.atlas_elections set note = 'x'$q$) = '42501', 'or change an election';
 end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
 do $$ begin
-  assert (select count(*) from public.atlas_areas where key like 'testland%') = 2, 'another campaign reads the same atlas';
+  assert pg_temp.state_of($q$delete from public.atlas_sources$q$) = '42501', 'not even a candidate deletes a source';
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000d4';
 do $$ begin
-  assert (select count(*) from public.atlas_areas) = 0, 'a pending account reads the atlas';
-end $$;
-reset role;
-set local role anon;
-do $$
-begin
-  perform count(*) from public.atlas_areas;
-  assert false, 'anon reads the atlas';
-exception when insufficient_privilege then null;
+  assert (select count(*) from public.atlas_areas) = 0, 'a pending account reads no areas';
 end $$;
 rollback;
 
--- test: nobody writes the atlas through the API, not even a candidate
+-- test: notes, sides and the home area stay inside their campaign, written by the candidate or manager
 begin;
-set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
-do $$
-declare
-  r record;
-begin
-  for r in select * from (values
-    ('atlas_areas', 'name'), ('atlas_elections', 'note'), ('atlas_candidates', 'party'),
-    ('atlas_results', 'votes'), ('atlas_turnout', 'source'), ('atlas_register', 'source'),
-    ('atlas_population', 'method')) as v(t, c)
-  loop
-    assert pg_temp.state_of(format('insert into public.%I default values', r.t)) = '42501', 'a candidate adds to ' || r.t;
-    assert pg_temp.state_of(format('update public.%I set %I = %I', r.t, r.c, r.c)) = '42501', 'a candidate edits ' || r.t;
-    assert pg_temp.state_of(format('delete from public.%I', r.t)) = '42501', 'a candidate deletes from ' || r.t;
-  end loop;
-end $$;
-rollback;
-
--- test: the atlas tables are closed to anonymous users and writable only by the service role
-begin;
-do $$
-declare
-  r record;
-  p text;
-begin
-  -- fact is true for the seven public fact tables and false for a campaign's own three.
-  for r in select * from (values
-    ('atlas_areas', true), ('atlas_elections', true), ('atlas_candidates', true), ('atlas_results', true),
-    ('atlas_turnout', true), ('atlas_register', true), ('atlas_population', true),
-    ('atlas_settings', false), ('atlas_sides', false), ('area_notes', false)) as v(t, fact)
-  loop
-    foreach p in array array['select', 'insert', 'update', 'delete']
-    loop
-      assert not has_table_privilege('anon', 'public.' || r.t, p), 'anon has ' || p || ' on ' || r.t;
-      assert has_table_privilege('service_role', 'public.' || r.t, p), 'the service role lacks ' || p || ' on ' || r.t;
-      -- A signed-in user only reads a public fact table. A campaign's own table is open to them
-      -- at the grant level, and row level security narrows it.
-      if r.fact and p <> 'select' then
-        assert not has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated has ' || p || ' on ' || r.t;
-      else
-        assert has_table_privilege('authenticated', 'public.' || r.t, p), 'authenticated lacks ' || p || ' on ' || r.t;
-      end if;
-    end loop;
-  end loop;
-end $$;
-rollback;
-
--- test: an area's key reads as a place
-begin;
-insert into public.atlas_areas (key, level, name, parent) values ('testland', 'county', 'Testland', 'kenya');
-do $$
-declare
-  head constant text := 'insert into public.atlas_areas (key, level, name, parent) values ';
-begin
-  assert pg_temp.state_of(head || $q$('Testland-2', 'county', 'Testland Two', 'kenya')$q$) = '23514', 'an upper-case key';
-  assert pg_temp.state_of(head || $q$('test land', 'county', 'Test Land', 'kenya')$q$) = '23514', 'a key with a space';
-  assert pg_temp.state_of(head || $q$('testland-2', 'county', 'Testland Two', null)$q$) = '23514', 'a county with no parent';
-  assert pg_temp.state_of(head || $q$('testland-2', 'county', 'Testland Two', 'testland')$q$) = '23514', 'a county under a county';
-  assert pg_temp.state_of(head || $q$('somewhere', 'country', 'Somewhere', null)$q$) = '23514', 'a second country';
-  assert pg_temp.state_of(head || $q$('kenya/x-test', 'constituency', 'X Test', 'kenya')$q$) = '23514', 'a constituency straight under Kenya';
-  assert pg_temp.state_of(head || $q$('testland/other-test', 'constituency', 'Other Test', 'testland/none')$q$) = '23514', 'a key not under its parent';
-  assert pg_temp.state_of(head || $q$('testland/a-test/b-test', 'constituency', 'B Test', 'testland/a-test')$q$) = '23514', 'a constituency at ward depth';
-  assert pg_temp.state_of(head || $q$('kenya/x-test/y-test', 'ward', 'Y Test', 'kenya')$q$) = '23514', 'a ward straight under Kenya';
-  assert pg_temp.state_of(head || $q$('testland/x-test/y-test', 'ward', 'Y Test', 'testland')$q$) = '23514', 'a ward under a county, skipping its constituency';
-  assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', null)$q$) = '23514', 'a constituency with no parent';
-  assert pg_temp.state_of(head || $q$('testland/north-test/ward-one', 'ward', 'Ward One', null)$q$) = '23514', 'a ward with no parent';
-  assert pg_temp.state_of(head || $q$('nowhere/some-test', 'constituency', 'Some Test', 'nowhere')$q$) = '23503', 'a parent that is not there';
-  assert pg_temp.state_of(head || $q$('testland', 'county', 'Testland', 'kenya')$q$) = '23505', 'the same key twice';
-  assert pg_temp.state_of(head || $q$('testland/north-test', 'constituency', 'North Test', 'testland')$q$) is null, 'a good constituency is refused';
-  assert pg_temp.state_of(head || $q$('testland/north-test/ward-one', 'ward', 'Ward One', 'testland/north-test')$q$) is null, 'a good ward is refused';
-end $$;
-rollback;
-
--- test: results, turnout, registers and population must make sense
-begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland');
-insert into public.atlas_candidates (id, election_id, seat, name, party, bloc)
-values ('2022-governor/testland/a-test', '2022-governor', 'testland', 'A Test', 'Party A', 'Alpha');
-do $$
-declare
-  turnout constant text := 'insert into public.atlas_turnout (election_id, area_key, registered, cast_votes, rejected_votes, valid_votes, source, source_url) values ';
-begin
-  -- candidates
-  assert pg_temp.state_of($q$insert into public.atlas_candidates (id, election_id, seat, name, bloc)
-    values ('2022-mp/testland/b-test', '2022-governor', 'testland', 'B Test', 'Beta')$q$) = '23514', 'a candidate id not built from its election and seat';
-  assert pg_temp.state_of($q$insert into public.atlas_candidates (id, election_id, seat, name, bloc)
-    values ('2022-governor/testland/a-test-2', '2022-governor', 'testland', 'A Test', 'Beta')$q$) = '23505', 'the same name twice in a seat';
-  -- results
-  assert pg_temp.state_of($q$insert into public.atlas_results values ('2022-governor/testland/a-test', 'testland', -1)$q$) = '23514', 'negative votes';
-  assert pg_temp.state_of($q$insert into public.atlas_results values ('2022-governor/testland/nobody', 'testland', 5)$q$) = '23503', 'votes for a candidate nobody lists';
-  assert pg_temp.state_of($q$insert into public.atlas_results values ('2022-governor/testland/a-test', 'nowhere', 5)$q$) = '23503', 'votes counted nowhere';
-  insert into public.atlas_results values ('2022-governor/testland/a-test', 'testland', 100);
-  assert pg_temp.state_of($q$insert into public.atlas_results values ('2022-governor/testland/a-test', 'testland', 100)$q$) = '23505', 'the same votes twice';
-  -- turnout
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', 100, 101, null, null, 'IEBC, Test results', null)$q$) = '23514', 'more cast than registered';
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', 100, 90, 0, 91, 'IEBC, Test results', null)$q$) = '23514', 'more valid than cast';
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', 100, 90, 1, 89, 'IEBC, Test results', 'http://example.test/a')$q$) = '23514', 'a plain http link';
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', 100, 90, 1, 89, null, null)$q$) = '23502', 'a figure with no source';
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', null, 90, null, null, 'IEBC, Test results', null)$q$) is null, 'missing figures are refused';
-  assert pg_temp.state_of(turnout || $q$('2022-governor', 'testland', 100, 90, 1, 89, 'IEBC, Test results', 'https://example.test/a')$q$) = '23505', 'turnout twice for one area';
-  -- registers
-  assert pg_temp.state_of($q$insert into public.atlas_register values (2022, 'testland', -5, 'IEBC, Test register', null)$q$) = '23514', 'a negative register';
-  assert pg_temp.state_of($q$insert into public.atlas_register values (1800, 'testland', 5, 'IEBC, Test register', null)$q$) = '23514', 'a register from 1800';
-  assert pg_temp.state_of($q$insert into public.atlas_register values (2022, 'testland', 5, 'IEBC, Test register', null)$q$) is null, 'a good register is refused';
-  -- population
-  assert pg_temp.state_of($q$insert into public.atlas_population values ('testland', 2025, 100, 60, 70, 'WorldPop, Test', 'Test method of estimating')$q$) = '23514', 'more young adults than adults';
-  assert pg_temp.state_of($q$insert into public.atlas_population values ('testland', 2025, 100, 120, 70, 'WorldPop, Test', 'Test method of estimating')$q$) = '23514', 'more adults than people';
-  assert pg_temp.state_of($q$insert into public.atlas_population values ('testland', 2025, 100, 60, 30, 'WorldPop, Test', 'short')$q$) = '23514', 'a method too short to say anything';
-  assert pg_temp.state_of($q$insert into public.atlas_population values ('testland', 2025, 100, 60, 30, 'WorldPop, Test', 'Test method of estimating')$q$) is null, 'a good estimate is refused';
-  -- elections
-  assert pg_temp.state_of($q$insert into public.atlas_elections values ('2022-mp', 2022, 'governor', '2022-08-09', null)$q$) = '23514', 'an election id that is not its year and race';
-  assert pg_temp.state_of($q$insert into public.atlas_elections values ('2022-senator', 2022, 'senator', '2022-08-09', null)$q$) = '23514', 'a race the atlas does not hold';
-end $$;
-rollback;
-
--- test: a campaign's notes, settings and sides stay inside the campaign
-begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland');
-set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
-insert into public.area_notes (area_key, note) values ('testland/north-test', 'Sakaja note');
-insert into public.atlas_settings (home_area) values ('testland');
-insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Alpha');
-do $$ begin
-  assert (select campaign_id from public.area_notes) = 'ca000000-0000-4000-8000-000000000002', 'a note is filed under the candidate''s campaign';
-  assert (select count(*) from public.atlas_settings) = 1, 'the candidate reads the settings';
-  assert (select count(*) from public.atlas_sides) = 1, 'the candidate reads the sides';
-end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
-do $$ begin
-  assert (select count(*) from public.area_notes) = 0, 'Mathira reads Sakaja''s notes';
-  assert (select count(*) from public.atlas_settings) = 0, 'Mathira reads Sakaja''s settings';
-  assert (select count(*) from public.atlas_sides) = 0, 'Mathira reads Sakaja''s sides';
-  assert pg_temp.state_of($q$insert into public.area_notes (campaign_id, area_key, note)
-    values ('ca000000-0000-4000-8000-000000000002', 'testland', 'cross')$q$) = '42501', 'Mathira writes into Sakaja''s notes';
-  assert pg_temp.state_of($q$insert into public.atlas_settings (campaign_id, home_area)
-    values ('ca000000-0000-4000-8000-000000000002', 'testland')$q$) = '42501', 'Mathira writes into Sakaja''s settings';
-  update public.area_notes set note = 'changed';
-end $$;
-insert into public.area_notes (area_key, note) values ('testland/north-test', 'Mathira note');
-do $$ begin
-  assert (select note from public.area_notes) = 'Mathira note', 'Mathira reads only its own note on the same area';
-end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-000000000099';
-do $$ begin
-  assert (select note from public.area_notes) = 'Sakaja note', 'the super admin reads the campaign they are looking at';
-end $$;
-reset role;
-do $$ begin
-  assert (select count(*) from public.area_notes) = 2, 'one note per campaign for the same area';
-  assert (select note from public.area_notes where campaign_id = 'ca000000-0000-4000-8000-000000000002') = 'Sakaja note',
-    'someone outside the campaign changed its note';
-end $$;
-rollback;
-
--- test: the team reads; only the candidate or manager writes
-begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland'),
-  ('testland/south-test', 'constituency', 'South Test', 'testland');
-insert into public.area_notes (campaign_id, area_key, note)
-values ('ca000000-0000-4000-8000-000000000002', 'testland/north-test', 'A note');
 set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
-insert into public.atlas_settings (home_area) values ('testland');
-insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Alpha');
-insert into public.area_notes (area_key, note) values ('testland/south-test', 'Manager note');
+insert into public.area_notes (area_key, body) values ('nairobi', 'Matatu saccos meet on Fridays.');
+insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Kenya Kwanza');
+insert into public.atlas_settings (home_area) values ('nairobi');
 do $$ begin
-  assert (select count(*) from public.area_notes) = 2, 'the manager writes a note';
-end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b7';
-do $$ begin
-  assert (select count(*) from public.area_notes) = 2, 'an organiser reads the notes';
-  assert (select count(*) from public.atlas_settings) = 1, 'an organiser reads the settings';
-  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', 'Organiser note')$q$) = '42501', 'an organiser writes a note';
-  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2017-governor', 'Beta')$q$) = '42501', 'an organiser sets a side';
-  update public.area_notes set note = 'changed';
-  delete from public.atlas_sides;
-  update public.atlas_settings set home_area = 'testland/north-test';
+  assert (select campaign_id from public.area_notes) = 'ca000000-0000-4000-8000-000000000002', 'the note is Sakaja''s';
+  assert (select updated_by from public.area_notes) = '00000000-0000-0000-0000-0000000000c3', 'and says who wrote it';
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
 do $$ begin
-  assert (select count(*) from public.area_notes) = 2, 'an agent reads the notes';
-  assert pg_temp.state_of($q$insert into public.atlas_settings (home_area) values ('testland')$q$) = '42501', 'an agent sets the home area';
-  update public.area_notes set note = 'changed';
-  delete from public.area_notes;
+  assert (select count(*) from public.area_notes) = 1, 'Sakaja''s agent reads the note';
+  perform pg_temp.state_of($q$update public.area_notes set body = 'x'$q$);
+  assert (select body from public.area_notes) = 'Matatu saccos meet on Fridays.', 'but can''t change it';
+  assert pg_temp.state_of($q$insert into public.area_notes (area_key, body) values ('kenya', 'x')$q$) = '42501', 'or add one';
+  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2017-governor', 'Jubilee')$q$) = '42501', 'or pick a side';
 end $$;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000d4';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
 do $$ begin
-  assert (select count(*) from public.area_notes) = 0, 'a pending account reads notes';
-end $$;
-reset role;
-do $$ begin
-  assert (select count(*) from public.area_notes where note = 'changed') = 0, 'a non-staff edit went through';
-  assert (select count(*) from public.area_notes) = 2, 'a non-staff delete went through';
-  assert (select count(*) from public.atlas_sides) = 1, 'an organiser deleted a side';
-  assert (select home_area from public.atlas_settings) = 'testland', 'an organiser changed the home area';
+  assert (select count(*) from public.area_notes) = 0, 'Mathira reads none of Sakaja''s notes';
+  assert (select count(*) from public.atlas_sides) = 0, 'nor its sides';
+  assert (select count(*) from public.atlas_settings) = 0, 'nor its home area';
+  assert pg_temp.state_of($q$insert into public.area_notes (campaign_id, area_key, body) values ('ca000000-0000-4000-8000-000000000002', 'nairobi', 'x')$q$) = '42501', 'and can''t write into Sakaja';
 end $$;
 rollback;
 
--- test: one home area and one side per election, changed by upsert
+-- test: a note can't be empty or longer than 2,000 characters, and a side needs a real election
 begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland');
 set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
-do $$ begin
-  assert pg_temp.state_of($q$insert into public.atlas_settings (home_area) values ('nowhere')$q$) = '23503', 'a home area that is not in the atlas';
-  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2030-mp', 'Beta')$q$) = '23503', 'a side in an election that is not in the atlas';
-  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2017-mp', '   ')$q$) = '23514', 'a blank side';
-end $$;
-insert into public.atlas_settings (home_area) values ('testland');
-insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Alpha');
-do $$ begin
-  assert pg_temp.state_of($q$insert into public.atlas_settings (home_area) values ('testland/north-test')$q$) = '23505', 'two home areas';
-  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Beta')$q$) = '23505', 'two sides for one election';
-end $$;
-insert into public.atlas_settings (home_area) values ('testland/north-test')
-  on conflict (campaign_id) do update set home_area = excluded.home_area;
-insert into public.atlas_sides (election_id, bloc) values ('2022-governor', 'Beta')
-  on conflict (campaign_id, election_id) do update set bloc = excluded.bloc;
-do $$ begin
-  assert (select home_area from public.atlas_settings) = 'testland/north-test', 'the home area is changed';
-  assert (select bloc from public.atlas_sides where election_id = '2022-governor') = 'Beta', 'the side is changed';
-  assert (select count(*) from public.atlas_sides) = 1, 'and still one';
-end $$;
-rollback;
-
--- test: a note is a note, and it keeps who changed it and when
-begin;
-insert into public.atlas_areas (key, level, name, parent) values
-  ('testland', 'county', 'Testland', 'kenya'),
-  ('testland/north-test', 'constituency', 'North Test', 'testland');
-set local role authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a1';
-do $$ begin
-  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '')$q$) = '23514', 'an empty note';
-  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', '   ')$q$) = '23514', 'a blank note';
-  assert pg_temp.state_of($q$insert into public.area_notes (area_key, note) values ('testland', E'\n\t  ')$q$) = '23514', 'a note of newlines and tabs';
-  assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2001))) = '23514', 'a note over 2,000 characters';
-  assert pg_temp.state_of(format('insert into public.area_notes (area_key, note) values (%L, %L)', 'testland', repeat('x', 2000))) is null, 'a note of exactly 2,000 characters is refused';
-end $$;
-insert into public.area_notes (area_key, note, updated_at, updated_by)
-values ('testland/north-test', 'First', '2020-01-01', '00000000-0000-0000-0000-0000000000c3');
-do $$ begin
-  assert (select updated_by from public.area_notes where area_key = 'testland/north-test') = '00000000-0000-0000-0000-0000000000a1',
-    'a note is signed by someone else';
-  assert (select updated_at from public.area_notes where area_key = 'testland/north-test') = now(), 'a note is backdated';
-end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
-update public.area_notes set note = 'Second', updated_by = '00000000-0000-0000-0000-0000000000a1' where area_key = 'testland/north-test';
 do $$ begin
-  assert (select updated_by from public.area_notes where area_key = 'testland/north-test') = '00000000-0000-0000-0000-0000000000c3',
-    'an edit keeps the previous editor''s name';
+  assert pg_temp.state_of($q$insert into public.area_notes (area_key, body) values ('nairobi', '   ')$q$) = '23514', 'an empty note';
+  assert pg_temp.state_of(format($q$insert into public.area_notes (area_key, body) values ('nairobi', %L)$q$, repeat('a', 2001))) = '23514', 'a long note';
+  assert pg_temp.state_of($q$insert into public.atlas_sides (election_id, bloc) values ('2019-governor', 'X')$q$) = '23503', 'an election that never was';
 end $$;
 rollback;
-
--- test: schema version
-do $$ begin assert public.groundwork_schema_version() = 22, 'schema version'; end $$;
 ```
 
-- [ ] **Step 2: Run the suite and watch the new test fail**
+- [ ] **Step 2: Run** `bash tests/sql/run.sh`. Expected: FAIL in `atlas.test.sql` (relation
+      `public.atlas_sources` does not exist).
 
-Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh`
-
-Expected (the exit status is 1; the other files print `ok`):
-
-```
-ok   36 migrations apply cleanly
-FAIL tests/sql/atlas.test.sql
-psql:tests/sql/atlas.test.sql:30: ERROR:  relation "public.atlas_elections" does not exist
-```
-
-- [ ] **Step 3: Write the migration**
-
-Create `supabase/migrations/20261007090000_election_atlas.sql`.
-
-Choices worth knowing before you read it:
-- The seven public tables get `select` for authenticated users through a team-member policy and
-  nothing else: no write grant and no write policy, so only migrations and the service role write.
-- `atlas_areas.key` is checked for its shape (a key is a county under `kenya`, or its parent's key
-  and one more part). `CASE` answers null for a case it forgot and a `CHECK` lets null through, so
-  the whole answer must be `is true`.
-- A candidate's `id` must start with its election and seat. The slug of the name is not checked in
-  the database: lower-casing differs between locales, so the TypeScript checker (Task 8) owns it.
-- `cast` is a reserved word in SQL, so the turnout columns are `cast_votes`, `rejected_votes` and
-  `valid_votes`.
-- `atlas_stamp()` sets `updated_at` and `updated_by` on every insert and update, whatever the caller
-  says, and is locked down like the repository's other trigger helpers (the access test checks that).
+- [ ] **Step 3: Write the migration** `supabase/migrations/20261007090000_election_atlas.sql`:
 
 ```sql
--- Election atlas. Schema version 22.
+-- The election atlas. Schema version 22.
 --
--- The last three general elections down to the constituency, who lives where, and
--- where votes can move. Public facts (areas, results, turnout, registers and
--- population estimates) are held once, in tables every team reads and nobody
--- writes through the API: only migrations and the server do. That is a deliberate
--- exception to "every campaign table has a campaign_id". Each campaign keeps its
--- own home area, sides and notes about places; the team reads them and the
--- candidate or campaign manager writes them.
---
--- Nothing here records a person's ethnicity. Communities appear only in the
--- team's notes about places.
+-- Public facts shared by every campaign: areas from Kenya down to wards, the
+-- elections of 2013, 2017 and 2022 (president, governor and MP), who stood and
+-- in which bloc, results and turnout by area, registered voters by ward, and
+-- population estimates, each figure with the document it came from. Every team
+-- reads them; only migrations and the server write them, so they carry no
+-- campaign_id. Each campaign keeps its own home area, the bloc it counts as its
+-- side in each past election, and notes about places. Nothing here records
+-- anything about a person.
 
--- ============ the shared atlas ============
+create table public.atlas_sources (
+  id        text primary key check (id ~ '^[a-z0-9][a-z0-9-]{1,79}$'),
+  title     text not null check (length(btrim(title)) between 2 and 300),
+  publisher text not null check (length(btrim(publisher)) between 2 and 120),
+  url       text check (url is null or url ~ '^https?://'),
+  note      text check (note is null or length(note) <= 1000)
+);
 
--- A place, keyed by a path of slugs that reads as the place and joins the ward
--- maps: kenya, nairobi, nairobi/dagoretti-north, nairobi/dagoretti-north/kileleshwa.
 create table public.atlas_areas (
-  key       text primary key
-            check (key ~ '^[a-z0-9]+(-[a-z0-9]+)*(/[a-z0-9]+(-[a-z0-9]+)*){0,2}$'),
+  key       text primary key check (key ~ '^[a-z0-9-]+(/[a-z0-9-]+){0,2}$'),
   level     text not null check (level in ('country', 'county', 'constituency', 'ward')),
   name      text not null check (length(btrim(name)) between 2 and 80),
   parent    text references public.atlas_areas(key),
-  iebc_code text check (iebc_code is null or iebc_code ~ '^[0-9]{1,4}$'),
-  -- A county sits under Kenya; below that a key is its parent's key and one more
-  -- part, so a ward's parent is its constituency and a constituency's its county.
-  -- A null parent makes the comparisons null, and a check lets null through, so
-  -- the whole answer must be true.
-  constraint atlas_areas_shape check ((case level
-    when 'country' then key = 'kenya' and parent is null
-    when 'county' then parent = 'kenya' and key !~ '/'
-    when 'constituency' then parent <> 'kenya' and key ~ '^[^/]+/[^/]+$'
-                         and parent = regexp_replace(key, '/[^/]+$', '')
-    when 'ward' then key ~ '^[^/]+/[^/]+/[^/]+$' and parent = regexp_replace(key, '/[^/]+$', '')
-    else false
-  end) is true)
+  iebc_code text check (iebc_code is null or iebc_code ~ '^[0-9]{1,6}$'),
+  check ((level = 'country') = (parent is null))
 );
-create index atlas_areas_parent_idx on public.atlas_areas (parent);
 
-insert into public.atlas_areas (key, level, name, parent) values ('kenya', 'country', 'Kenya', null);
-
--- One race in one general election. The id says which: 2022-president.
 create table public.atlas_elections (
   id      text primary key,
-  year    integer not null check (year between 1992 and 2100),
+  year    integer not null check (year in (2013, 2017, 2022)),
   race    text not null check (race in ('president', 'governor', 'mp')),
   held_on date not null,
-  note    text check (note is null or length(note) <= 500),
-  constraint atlas_elections_id check (id = year::text || '-' || race)
+  note    text,
+  check (id = year::text || '-' || race)
 );
 
 insert into public.atlas_elections (id, year, race, held_on, note) values
@@ -601,196 +212,129 @@ insert into public.atlas_elections (id, year, race, held_on, note) values
   ('2013-governor', 2013, 'governor', '2013-03-04', null),
   ('2013-mp', 2013, 'mp', '2013-03-04', null),
   ('2017-president', 2017, 'president', '2017-08-08',
-   'The 8 August 2017 vote, annulled by the Supreme Court. The 26 October re-run was boycotted in opposition areas, so it says little about lean and is not loaded.'),
+   'The 8 August vote, annulled by the Supreme Court. The 26 October re-run was boycotted in opposition areas, so it says little about lean and is not used.'),
   ('2017-governor', 2017, 'governor', '2017-08-08', null),
   ('2017-mp', 2017, 'mp', '2017-08-08', null),
   ('2022-president', 2022, 'president', '2022-08-09', null),
   ('2022-governor', 2022, 'governor', '2022-08-09', null),
   ('2022-mp', 2022, 'mp', '2022-08-09', null);
 
--- A candidate for a seat: the area contested (kenya, a county or a constituency).
--- The id is election/seat/name-slug; bloc is the coalition, or the party where
--- there was none (Jubilee and CORD in 2013, Jubilee and NASA in 2017, Kenya
--- Kwanza and Azimio in 2022).
 create table public.atlas_candidates (
-  id          text primary key,
+  id          text primary key check (length(id) between 5 and 200),
   election_id text not null references public.atlas_elections(id),
   seat        text not null references public.atlas_areas(key),
   name        text not null check (length(btrim(name)) between 2 and 120),
   party       text check (party is null or length(btrim(party)) between 1 and 120),
-  bloc        text not null check (length(btrim(bloc)) between 1 and 80),
-  constraint atlas_candidates_id_shape check (id like election_id || '/' || seat || '/%'),
-  constraint atlas_candidates_name_key unique (election_id, seat, name)
+  bloc        text not null check (length(btrim(bloc)) between 1 and 60),
+  unique (election_id, seat, name)
 );
 
--- Votes where they were counted: a county or a constituency now, wards and
--- polling stations later.
 create table public.atlas_results (
   candidate_id text not null references public.atlas_candidates(id) on delete cascade,
   area_key     text not null references public.atlas_areas(key),
   votes        integer not null check (votes >= 0),
+  source_id    text not null references public.atlas_sources(id),
   primary key (candidate_id, area_key)
 );
-create index atlas_results_area_idx on public.atlas_results (area_key);
 
--- What the document says about turnout; each figure may be missing. source reads
--- "Publisher, document title", so the screens can tag a figure with its publisher.
 create table public.atlas_turnout (
-  election_id    text not null references public.atlas_elections(id),
-  area_key       text not null references public.atlas_areas(key),
-  registered     integer check (registered is null or registered >= 0),
-  cast_votes     integer check (cast_votes is null or cast_votes >= 0),
-  rejected_votes integer check (rejected_votes is null or rejected_votes >= 0),
-  valid_votes    integer check (valid_votes is null or valid_votes >= 0),
-  source         text not null check (length(btrim(source)) between 3 and 200),
-  source_url     text check (source_url is null
-                          or (source_url ~ '^https://[^[:space:]]+$' and length(source_url) <= 500)),
+  election_id text not null references public.atlas_elections(id),
+  area_key    text not null references public.atlas_areas(key),
+  registered  integer check (registered is null or registered >= 0),
+  cast_votes  integer check (cast_votes is null or cast_votes >= 0),
+  rejected    integer check (rejected is null or rejected >= 0),
+  valid       integer check (valid is null or valid >= 0),
+  source_id   text not null references public.atlas_sources(id),
   primary key (election_id, area_key),
-  constraint atlas_turnout_cast check (cast_votes is null or registered is null or cast_votes <= registered),
-  constraint atlas_turnout_valid check (valid_votes is null or cast_votes is null or valid_votes <= cast_votes)
+  check (cast_votes is null or registered is null or cast_votes <= registered),
+  check (valid is null or cast_votes is null or valid <= cast_votes)
 );
-create index atlas_turnout_area_idx on public.atlas_turnout (area_key);
 
--- Registered voters by area for each election year, where IEBC published them.
 create table public.atlas_register (
-  year       integer not null check (year between 1992 and 2100),
+  year       integer not null check (year in (2013, 2017, 2022)),
   area_key   text not null references public.atlas_areas(key),
   registered integer not null check (registered >= 0),
-  source     text not null check (length(btrim(source)) between 3 and 200),
-  source_url text check (source_url is null
-                      or (source_url ~ '^https://[^[:space:]]+$' and length(source_url) <= 500)),
+  source_id  text not null references public.atlas_sources(id),
   primary key (year, area_key)
 );
-create index atlas_register_area_idx on public.atlas_register (area_key);
 
--- Population estimates, never presented as counts: adults are 18 and over, young
--- adults 18 to 34. method says how they were worked out.
 create table public.atlas_population (
   area_key     text not null references public.atlas_areas(key),
-  year         integer not null check (year between 1990 and 2100),
+  year         integer not null check (year between 2000 and 2030),
   total        integer not null check (total >= 0),
-  adults       integer not null check (adults >= 0),
-  young_adults integer not null check (young_adults >= 0),
-  source       text not null check (length(btrim(source)) between 3 and 200),
-  method       text not null check (length(btrim(method)) between 10 and 500),
-  primary key (area_key, year),
-  constraint atlas_population_parts check (young_adults <= adults and adults <= total)
+  adults       integer not null check (adults >= 0 and adults <= total),
+  young_adults integer not null check (young_adults >= 0 and young_adults <= adults),
+  source_id    text not null references public.atlas_sources(id),
+  primary key (area_key, year)
 );
 
-alter table public.atlas_areas enable row level security;
-alter table public.atlas_elections enable row level security;
-alter table public.atlas_candidates enable row level security;
-alter table public.atlas_results enable row level security;
-alter table public.atlas_turnout enable row level security;
-alter table public.atlas_register enable row level security;
-alter table public.atlas_population enable row level security;
+-- Every team reads the atlas; nobody signed in writes it.
+do $$
+declare t text;
+begin
+  foreach t in array array['atlas_sources', 'atlas_areas', 'atlas_elections', 'atlas_candidates',
+                           'atlas_results', 'atlas_turnout', 'atlas_register', 'atlas_population'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from anon, authenticated', t);
+    execute format('grant select on public.%I to authenticated', t);
+    execute format('grant all on public.%I to service_role', t);
+    execute format('create policy "atlas readable by any team" on public.%I for select to authenticated using (public.is_team_member(auth.uid()))', t);
+  end loop;
+end $$;
 
-revoke all on public.atlas_areas, public.atlas_elections, public.atlas_candidates, public.atlas_results,
-              public.atlas_turnout, public.atlas_register, public.atlas_population from anon, authenticated;
-grant select on public.atlas_areas, public.atlas_elections, public.atlas_candidates, public.atlas_results,
-                public.atlas_turnout, public.atlas_register, public.atlas_population to authenticated;
-grant all on public.atlas_areas, public.atlas_elections, public.atlas_candidates, public.atlas_results,
-             public.atlas_turnout, public.atlas_register, public.atlas_population to service_role;
+-- Each campaign's own: its home area, its side in each past election, and notes about places.
+create table public.atlas_settings (
+  campaign_id uuid primary key default public.my_campaign()
+              references public.campaigns(id) on delete cascade,
+  home_area   text not null references public.atlas_areas(key),
+  updated_by  uuid,
+  updated_at  timestamptz not null default now()
+);
 
-create policy "atlas readable by team" on public.atlas_areas for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_elections for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_candidates for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_results for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_turnout for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_register for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "atlas readable by team" on public.atlas_population for select to authenticated
-  using (public.is_team_member(auth.uid()));
+create table public.atlas_sides (
+  campaign_id uuid not null default public.my_campaign()
+              references public.campaigns(id) on delete cascade,
+  election_id text not null references public.atlas_elections(id),
+  bloc        text not null check (length(btrim(bloc)) between 1 and 60),
+  updated_by  uuid,
+  updated_at  timestamptz not null default now(),
+  primary key (campaign_id, election_id)
+);
 
--- ============ each campaign's own ============
+create table public.area_notes (
+  id          uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null default public.my_campaign()
+              references public.campaigns(id) on delete cascade,
+  area_key    text not null references public.atlas_areas(key),
+  body        text not null check (length(btrim(body)) between 1 and 2000),
+  updated_by  uuid,
+  updated_at  timestamptz not null default now(),
+  constraint area_notes_area_key unique (campaign_id, area_key)
+);
 
--- Who changed a row, and when, whatever the caller says.
+-- Who changed it, and when, whoever writes.
 create or replace function public.atlas_stamp()
-returns trigger
-language plpgsql
-set search_path = public
-as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   new.updated_at := now();
   new.updated_by := auth.uid();
   return new;
 end $$;
 
-revoke all on function public.atlas_stamp() from public, anon, authenticated;
-
--- The campaign's home area: a constituency for an MP, a county for a governor,
--- kenya for a presidential campaign.
-create table public.atlas_settings (
-  campaign_id uuid primary key default public.my_campaign()
-              references public.campaigns(id) on delete cascade,
-  home_area   text not null references public.atlas_areas(key),
-  updated_at  timestamptz not null default now(),
-  updated_by  uuid default auth.uid() references auth.users(id) on delete set null
-);
-
--- For each past election, the bloc the campaign counts as "our side".
-create table public.atlas_sides (
-  campaign_id uuid not null default public.my_campaign()
-              references public.campaigns(id) on delete cascade,
-  election_id text not null references public.atlas_elections(id),
-  bloc        text not null check (length(btrim(bloc)) between 1 and 80),
-  updated_at  timestamptz not null default now(),
-  updated_by  uuid default auth.uid() references auth.users(id) on delete set null,
-  primary key (campaign_id, election_id)
-);
-
--- One note per area per campaign: about the place (its communities, the
--- languages used, churches, associations, local leaders), never about a person.
-create table public.area_notes (
-  campaign_id uuid not null default public.my_campaign()
-              references public.campaigns(id) on delete cascade,
-  area_key    text not null references public.atlas_areas(key),
-  note        text not null check (note ~ '[^[:space:]]' and length(note) <= 2000),
-  updated_at  timestamptz not null default now(),
-  updated_by  uuid default auth.uid() references auth.users(id) on delete set null,
-  primary key (campaign_id, area_key)
-);
-
-create trigger atlas_settings_stamp before insert or update on public.atlas_settings
-  for each row execute function public.atlas_stamp();
-create trigger atlas_sides_stamp before insert or update on public.atlas_sides
-  for each row execute function public.atlas_stamp();
-create trigger area_notes_stamp before insert or update on public.area_notes
-  for each row execute function public.atlas_stamp();
-
-alter table public.atlas_settings enable row level security;
-alter table public.atlas_sides enable row level security;
-alter table public.area_notes enable row level security;
-
-revoke all on public.atlas_settings, public.atlas_sides, public.area_notes from anon, authenticated;
-grant select, insert, update, delete on public.atlas_settings, public.atlas_sides, public.area_notes to authenticated;
-grant all on public.atlas_settings, public.atlas_sides, public.area_notes to service_role;
-
-create policy "own campaign only" on public.atlas_settings as restrictive for all to authenticated
-  using (campaign_id = public.my_campaign()) with check (campaign_id = public.my_campaign());
-create policy "settings readable by team" on public.atlas_settings for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "settings written by staff" on public.atlas_settings for all to authenticated
-  using (public.is_staff(auth.uid())) with check (public.is_staff(auth.uid()));
-
-create policy "own campaign only" on public.atlas_sides as restrictive for all to authenticated
-  using (campaign_id = public.my_campaign()) with check (campaign_id = public.my_campaign());
-create policy "sides readable by team" on public.atlas_sides for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "sides written by staff" on public.atlas_sides for all to authenticated
-  using (public.is_staff(auth.uid())) with check (public.is_staff(auth.uid()));
-
-create policy "own campaign only" on public.area_notes as restrictive for all to authenticated
-  using (campaign_id = public.my_campaign()) with check (campaign_id = public.my_campaign());
-create policy "notes readable by team" on public.area_notes for select to authenticated
-  using (public.is_team_member(auth.uid()));
-create policy "notes written by staff" on public.area_notes for all to authenticated
-  using (public.is_staff(auth.uid())) with check (public.is_staff(auth.uid()));
+do $$
+declare t text;
+begin
+  foreach t in array array['atlas_settings', 'atlas_sides', 'area_notes'] loop
+    execute format('create trigger %I before insert or update on public.%I for each row execute function public.atlas_stamp()', t || '_stamp', t);
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from anon, authenticated', t);
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('grant all on public.%I to service_role', t);
+    execute format('create policy "own campaign only" on public.%I as restrictive for all to authenticated using (campaign_id = public.my_campaign()) with check (campaign_id = public.my_campaign())', t);
+    execute format('create policy "read by the team" on public.%I for select to authenticated using (public.is_team_member(auth.uid()))', t);
+    execute format('create policy "written by the candidate or manager" on public.%I for all to authenticated using (public.is_staff(auth.uid())) with check (public.is_staff(auth.uid()))', t);
+  end loop;
+end $$;
 
 create or replace function public.groundwork_schema_version()
 returns integer
@@ -802,550 +346,59 @@ revoke all on function public.groundwork_schema_version() from public, anon, aut
 grant execute on function public.groundwork_schema_version() to service_role;
 ```
 
-- [ ] **Step 4: Run the suite again; two older tests now fail, correctly**
-
-Run the same command as Step 2.
-
-Expected: the new test passes and two older ones fail, each for a reason this migration owns.
-
-```
-ok   37 migrations apply cleanly
-FAIL tests/sql/access.test.sql
-psql:tests/sql/access.test.sql:334: ERROR:  new tables with no campaign: decide whether they belong to one: atlas_areas, atlas_elections, atlas_candidates, atlas_population, atlas_results, atlas_turnout, atlas_register
-ok   tests/sql/atlas.test.sql (11 tests)
-...
-FAIL tests/sql/search.test.sql
-psql:tests/sql/search.test.sql:79: ERROR:  schema version
-```
-
-The first is the guard that every table either has a campaign or is on a short list of the
-platform's own; the atlas is public facts, so it joins the list. The second pins the schema version
-to exactly 21; an older test that does this loosens to `>= 21` when a newer migration lands, as
-`mornings.test.sql` did for 20.
-
-- [ ] **Step 5: Update the two older tests**
-
-```diff
---- a/tests/sql/access.test.sql
-+++ b/tests/sql/access.test.sql
-@@ -329,7 +329,10 @@ begin
-      and c.relname not in ('campaigns', 'profiles', 'user_roles', 'demo_leads', 'rate_limits',
-                            'whatsapp_webhook_events', 'listening_jobs',
-                            -- ScrapeCreators credits: one key, so one count for every campaign
--                           'social_credits');
-+                           'social_credits',
-+                           -- The election atlas: public facts, the same for every campaign
-+                           'atlas_areas', 'atlas_elections', 'atlas_candidates', 'atlas_results',
-+                           'atlas_turnout', 'atlas_register', 'atlas_population');
-   assert t is null, 'new tables with no campaign: decide whether they belong to one: ' || t;
- end $$;
- 
-```
-
-```diff
---- a/tests/sql/search.test.sql
-+++ b/tests/sql/search.test.sql
-@@ -76,4 +76,4 @@ end $$;
- rollback;
- 
- -- test: schema version
--do $$ begin assert public.groundwork_schema_version() = 21, 'schema version'; end $$;
-+do $$ begin assert public.groundwork_schema_version() >= 21, 'schema version'; end $$;
-```
-
-- [ ] **Step 6: Run the suite: everything passes**
-
-Run the same command as Step 2.
-
-Expected:
-
-```
-ok   37 migrations apply cleanly
-ok   tests/sql/access.test.sql (16 tests)
-ok   tests/sql/atlas.test.sql (11 tests)
-ok   tests/sql/form34a.test.sql (13 tests)
-ok   tests/sql/listening.test.sql (4 tests)
-ok   tests/sql/mornings.test.sql (6 tests)
-ok   tests/sql/outbox.test.sql (12 tests)
-ok   tests/sql/people.test.sql (7 tests)
-ok   tests/sql/public.test.sql (4 tests)
-ok   tests/sql/race.test.sql (8 tests)
-ok   tests/sql/sample.test.sql (2 tests)
-ok   tests/sql/search.test.sql (5 tests)
-ok   tests/sql/site.test.sql (7 tests)
-```
-
-- [ ] **Step 7: Check that the write protection has teeth (nothing to commit)**
-
-A passing test can be a test that cannot fail. Break the migration in a scratch copy, in the way that
-would really expose the atlas, and see the test notice.
-
-```bash
-rm -rf /tmp/gw-atlas-mut && mkdir -p /tmp/gw-atlas-mut && cp -r supabase tests /tmp/gw-atlas-mut/ && chmod -R a+rX /tmp/gw-atlas-mut
-f=/tmp/gw-atlas-mut/supabase/migrations/20261007090000_election_atlas.sql
-# let any team member write atlas_areas: a grant and a policy
-sed -i -E 's/^grant select on public.atlas_areas,/grant select, insert, update, delete on public.atlas_areas,/' "$f"
-sed -i -E '/create policy "atlas readable by team" on public.atlas_areas/,/;$/ { s/for select/for all/; s/using \(public.is_team_member\(auth.uid\(\)\)\);/using (public.is_team_member(auth.uid())) with check (public.is_team_member(auth.uid()));/ }' "$f"
-runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash /tmp/gw-atlas-mut/tests/sql/run.sh 2>&1 | grep -E "^FAIL|ERROR:" | head -2
-rm -rf /tmp/gw-atlas-mut
-```
-
-Expected: `FAIL tests/sql/atlas.test.sql` and `ERROR:  a candidate adds to atlas_areas`. (The two
-layers are both there. A grant that no policy backs is caught only for `update` and `delete`: they
-raise nothing and change no rows, so the test fails on `a candidate edits atlas_areas`. A grant of
-`insert` alone slips past, because row level security then refuses the insert with the same
-SQLSTATE, 42501, that a missing privilege gives, and the test cannot tell the two layers apart.)
-
-- [ ] **Step 8: Add the ten tables to the generated types**
-
-The generated types file is updated by hand in this repository until the migration is applied and
-Lovable regenerates it. Add the tables in alphabetical order, columns and relationships sorted the
-way the generator sorts them:
-
-```diff
---- a/src/integrations/supabase/types.ts
-+++ b/src/integrations/supabase/types.ts
-@@ -119,6 +119,369 @@ export type Database = {
-           },
-         ]
-       }
-+      area_notes: {
-+        Row: {
-+          area_key: string
-+          campaign_id: string
-+          note: string
-+          updated_at: string
-+          updated_by: string | null
-+        }
-+        Insert: {
-+          area_key: string
-+          campaign_id?: string
-+          note: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Update: {
-+          area_key?: string
-+          campaign_id?: string
-+          note?: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "area_notes_area_key_fkey"
-+            columns: ["area_key"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+          {
-+            foreignKeyName: "area_notes_campaign_id_fkey"
-+            columns: ["campaign_id"]
-+            isOneToOne: false
-+            referencedRelation: "campaigns"
-+            referencedColumns: ["id"]
-+          },
-+        ]
-+      }
-+      atlas_areas: {
-+        Row: {
-+          iebc_code: string | null
-+          key: string
-+          level: string
-+          name: string
-+          parent: string | null
-+        }
-+        Insert: {
-+          iebc_code?: string | null
-+          key: string
-+          level: string
-+          name: string
-+          parent?: string | null
-+        }
-+        Update: {
-+          iebc_code?: string | null
-+          key?: string
-+          level?: string
-+          name?: string
-+          parent?: string | null
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_areas_parent_fkey"
-+            columns: ["parent"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+        ]
-+      }
-+      atlas_candidates: {
-+        Row: {
-+          bloc: string
-+          election_id: string
-+          id: string
-+          name: string
-+          party: string | null
-+          seat: string
-+        }
-+        Insert: {
-+          bloc: string
-+          election_id: string
-+          id: string
-+          name: string
-+          party?: string | null
-+          seat: string
-+        }
-+        Update: {
-+          bloc?: string
-+          election_id?: string
-+          id?: string
-+          name?: string
-+          party?: string | null
-+          seat?: string
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_candidates_election_id_fkey"
-+            columns: ["election_id"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_elections"
-+            referencedColumns: ["id"]
-+          },
-+          {
-+            foreignKeyName: "atlas_candidates_seat_fkey"
-+            columns: ["seat"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+        ]
-+      }
-+      atlas_elections: {
-+        Row: {
-+          held_on: string
-+          id: string
-+          note: string | null
-+          race: string
-+          year: number
-+        }
-+        Insert: {
-+          held_on: string
-+          id: string
-+          note?: string | null
-+          race: string
-+          year: number
-+        }
-+        Update: {
-+          held_on?: string
-+          id?: string
-+          note?: string | null
-+          race?: string
-+          year?: number
-+        }
-+        Relationships: []
-+      }
-+      atlas_population: {
-+        Row: {
-+          adults: number
-+          area_key: string
-+          method: string
-+          source: string
-+          total: number
-+          year: number
-+          young_adults: number
-+        }
-+        Insert: {
-+          adults: number
-+          area_key: string
-+          method: string
-+          source: string
-+          total: number
-+          year: number
-+          young_adults: number
-+        }
-+        Update: {
-+          adults?: number
-+          area_key?: string
-+          method?: string
-+          source?: string
-+          total?: number
-+          year?: number
-+          young_adults?: number
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_population_area_key_fkey"
-+            columns: ["area_key"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+        ]
-+      }
-+      atlas_register: {
-+        Row: {
-+          area_key: string
-+          registered: number
-+          source: string
-+          source_url: string | null
-+          year: number
-+        }
-+        Insert: {
-+          area_key: string
-+          registered: number
-+          source: string
-+          source_url?: string | null
-+          year: number
-+        }
-+        Update: {
-+          area_key?: string
-+          registered?: number
-+          source?: string
-+          source_url?: string | null
-+          year?: number
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_register_area_key_fkey"
-+            columns: ["area_key"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+        ]
-+      }
-+      atlas_results: {
-+        Row: {
-+          area_key: string
-+          candidate_id: string
-+          votes: number
-+        }
-+        Insert: {
-+          area_key: string
-+          candidate_id: string
-+          votes: number
-+        }
-+        Update: {
-+          area_key?: string
-+          candidate_id?: string
-+          votes?: number
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_results_area_key_fkey"
-+            columns: ["area_key"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+          {
-+            foreignKeyName: "atlas_results_candidate_id_fkey"
-+            columns: ["candidate_id"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_candidates"
-+            referencedColumns: ["id"]
-+          },
-+        ]
-+      }
-+      atlas_settings: {
-+        Row: {
-+          campaign_id: string
-+          home_area: string
-+          updated_at: string
-+          updated_by: string | null
-+        }
-+        Insert: {
-+          campaign_id?: string
-+          home_area: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Update: {
-+          campaign_id?: string
-+          home_area?: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_settings_campaign_id_fkey"
-+            columns: ["campaign_id"]
-+            isOneToOne: true
-+            referencedRelation: "campaigns"
-+            referencedColumns: ["id"]
-+          },
-+          {
-+            foreignKeyName: "atlas_settings_home_area_fkey"
-+            columns: ["home_area"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+        ]
-+      }
-+      atlas_sides: {
-+        Row: {
-+          bloc: string
-+          campaign_id: string
-+          election_id: string
-+          updated_at: string
-+          updated_by: string | null
-+        }
-+        Insert: {
-+          bloc: string
-+          campaign_id?: string
-+          election_id: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Update: {
-+          bloc?: string
-+          campaign_id?: string
-+          election_id?: string
-+          updated_at?: string
-+          updated_by?: string | null
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_sides_campaign_id_fkey"
-+            columns: ["campaign_id"]
-+            isOneToOne: false
-+            referencedRelation: "campaigns"
-+            referencedColumns: ["id"]
-+          },
-+          {
-+            foreignKeyName: "atlas_sides_election_id_fkey"
-+            columns: ["election_id"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_elections"
-+            referencedColumns: ["id"]
-+          },
-+        ]
-+      }
-+      atlas_turnout: {
-+        Row: {
-+          area_key: string
-+          cast_votes: number | null
-+          election_id: string
-+          registered: number | null
-+          rejected_votes: number | null
-+          source: string
-+          source_url: string | null
-+          valid_votes: number | null
-+        }
-+        Insert: {
-+          area_key: string
-+          cast_votes?: number | null
-+          election_id: string
-+          registered?: number | null
-+          rejected_votes?: number | null
-+          source: string
-+          source_url?: string | null
-+          valid_votes?: number | null
-+        }
-+        Update: {
-+          area_key?: string
-+          cast_votes?: number | null
-+          election_id?: string
-+          registered?: number | null
-+          rejected_votes?: number | null
-+          source?: string
-+          source_url?: string | null
-+          valid_votes?: number | null
-+        }
-+        Relationships: [
-+          {
-+            foreignKeyName: "atlas_turnout_area_key_fkey"
-+            columns: ["area_key"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_areas"
-+            referencedColumns: ["key"]
-+          },
-+          {
-+            foreignKeyName: "atlas_turnout_election_id_fkey"
-+            columns: ["election_id"]
-+            isOneToOne: false
-+            referencedRelation: "atlas_elections"
-+            referencedColumns: ["id"]
-+          },
-+        ]
-+      }
-       ballot_candidates: {
-         Row: {
-           campaign_id: string
-```
-
-Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "integrations/supabase/types"`
-
-Expected: no output.
-
-- [ ] **Step 9: Commit**
-
-```bash
-git add tests/sql/atlas.test.sql supabase/migrations/20261007090000_election_atlas.sql tests/sql/access.test.sql tests/sql/search.test.sql src/integrations/supabase/types.ts
-git commit -m "Atlas: schema 22, the shared tables and each campaign's own" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+- [ ] **Step 4: Run** `bash tests/sql/run.sh`. Expected: all SQL tests pass, including
+      `atlas.test.sql` (4 tests).
+- [ ] **Step 5: Commit** `Schema 22: an election atlas every team reads, and each campaign's notes and sides`.
 
 ---
 
-### Task 2: Result measures
+### Task 2: The arithmetic
 
 **Files:**
-- Create: `src/lib/atlas/types.ts`
-- Create: `src/lib/atlas/measures.ts`
-- Test: `tests/atlas-measures.test.ts`
+- Create: `src/lib/atlas.ts`
+- Test: `tests/atlas.test.ts`
 
-**Interfaces:** Produces, in `types.ts`:
-`type Race = "president" | "governor" | "mp"`,
-`type Level = "country" | "county" | "constituency" | "ward"`,
-`type Vote = { bloc: string; votes: number }`,
-`type Turnout = { registered: number | null; cast: number | null; rejected: number | null; valid: number | null }`,
-`type BlocShare = { bloc: string; votes: number; share: number }`,
-`type Lean = { side: "ours" | "theirs" | "even"; points: number }`.
-In `measures.ts`:
-`settle(x: number): number`,
-`turnoutPct(t: Turnout | null | undefined): number | null`,
-`validVotes(t: Turnout | null | undefined, votes: Vote[]): number | null`,
-`blocShares(votes: Vote[], valid: number | null): BlocShare[]`,
-`ourShare(shares: BlocShare[], ourBloc: string | null): number | null`,
-`margin(shares: BlocShare[], ourBloc: string | null): number | null`,
-`lean(m: number | null): Lean | null`,
-`swing(now: number | null, before: number | null): number | null`.
+**Interfaces:** Produces `type Race`, `RACES`, `YEARS`, `electionId(year, race)`,
+`type AreaCount = { year; candidates: { name; party: string | null; bloc; votes }[]; registered:
+number | null; cast: number | null; rejected: number | null; valid: number | null }`,
+`turnout(c)`, `validVotes(c)`, `blocShares(c): { bloc; votes; share }[]`, `ourShare(c, side)`,
+`margin(c, side)`, `swing(now, sideNow, before, sideBefore)`, `registerGrowth(now, before)`,
+`notRegistered(pop, registered)`, `registerFlag(gap, adults)`, `topQuarter(values)`,
+`votesWithinReach(c, side, siblingTurnouts)`, `type Todo`, `TODO_NAMES`,
+`whatToDo({ year, count, side, parentTurnout, parentName, before }): { todo; reason }`,
+`figureTag(publisher, level, year, estimate?)`.
 
-- [ ] **Step 1: Write the failing tests**
-
-Create `tests/atlas-measures.test.ts`:
+- [ ] **Step 1: Write the failing test** `tests/atlas.test.ts`:
 
 ```ts
-// Checks for the election atlas's result measures: turnout, valid votes, each bloc's
-// share, our share, the margin, lean and swing. Pure; nothing leaves this process.
-// A missing figure is null and never zero. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts
+// Checks for the election atlas's arithmetic: turnout, shares, margins, swing,
+// the register, what to do and why, and the votes within reach. Pure. Run
+// from the repository root:
+//   npx tsx --tsconfig tsconfig.json tests/atlas.test.ts
 
 import {
   blocShares,
-  lean,
+  figureTag,
   margin,
+  notRegistered,
   ourShare,
+  registerFlag,
+  registerGrowth,
   swing,
-  turnoutPct,
+  topQuarter,
+  turnout,
   validVotes,
-} from "@/lib/atlas/measures";
-import type { Turnout, Vote } from "@/lib/atlas/types";
+  votesWithinReach,
+  whatToDo,
+  type AreaCount,
+} from "@/lib/atlas";
 
 let pass = 0;
 let fail = 0;
 
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
+  const g = JSON.stringify(got);
+  const w = JSON.stringify(want);
   if (g === w) pass++;
   else {
     fail++;
@@ -1353,2101 +406,388 @@ function eq(name: string, got: unknown, want: unknown) {
   }
 }
 
-const T = (over: Partial<Turnout> = {}): Turnout => ({
-  registered: 1000,
-  cast: 412,
-  rejected: null,
+/** Every number in a value rounded to four places, so float noise can't fail a check. */
+const r4 = (v: unknown): unknown =>
+  typeof v === "number"
+    ? Math.round(v * 1e4) / 1e4
+    : Array.isArray(v)
+      ? v.map(r4)
+      : v && typeof v === "object"
+        ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, r4(x)]))
+        : v;
+const near = (name: string, got: unknown, want: unknown) => eq(name, r4(got), r4(want));
+
+const count = (cands: [string, number][], o: Partial<AreaCount> = {}): AreaCount => ({
+  year: 2022,
+  candidates: cands.map(([bloc, votes]) => ({ name: `${bloc} candidate`, party: null, bloc, votes })),
+  registered: 100_000,
+  cast: 50_000,
+  rejected: 0,
   valid: null,
-  ...over,
+  ...o,
 });
-
-// Turnout is cast over registered, in percent; missing when either is.
-eq("turnout", turnoutPct(T()), 41.2);
-eq("turnout with no cast", turnoutPct(T({ cast: null })), null);
-eq("turnout with no register", turnoutPct(T({ registered: null })), null);
-eq("turnout over an empty register", turnoutPct(T({ registered: 0 })), null);
-eq("turnout with no row at all", [turnoutPct(null), turnoutPct(undefined)], [null, null]);
-eq("a real zero turnout is not missing", turnoutPct(T({ cast: 0 })), 0);
-
-// Valid votes: what the document gives, else the candidates' votes added up.
-const VOTES: Vote[] = [
-  { bloc: "Alpha", votes: 600 },
-  { bloc: "Beta", votes: 300 },
-  { bloc: "Alpha", votes: 100 },
-];
-eq("valid votes as published", validVotes(T({ valid: 950 }), VOTES), 950);
-eq("valid votes added up", validVotes(T(), VOTES), 1000);
-eq("valid votes with no turnout row", validVotes(null, VOTES), 1000);
-eq("valid votes with nothing to go on", validVotes(T(), []), null);
-
-// Shares: a bloc's votes over the valid votes, biggest first, ties by name.
-eq("bloc shares", blocShares(VOTES, 1000), [
-  { bloc: "Alpha", votes: 700, share: 70 },
-  { bloc: "Beta", votes: 300, share: 30 },
+const KK = "Kenya Kwanza";
+const AZ = "Azimio";
+const IND = "Independent: Jane Wambui";
+const C = count([
+  [KK, 30_000],
+  [AZ, 18_000],
+  [IND, 2_000],
 ]);
+
+near("turnout", turnout(C), 0.5);
+eq("no turnout without a register", turnout(count([[KK, 1]], { registered: null })), null);
+eq("valid votes add up when the document doesn't give them", validVotes(C), 50_000);
+near("each bloc's share, largest first", blocShares(C), [
+  { bloc: KK, votes: 30_000, share: 0.6 },
+  { bloc: AZ, votes: 18_000, share: 0.36 },
+  { bloc: IND, votes: 2_000, share: 0.04 },
+]);
+near(
+  "a partial list uses the document's valid votes",
+  ourShare(count([[KK, 30_000], [AZ, 18_000]], { valid: 60_000 }), KK),
+  0.5,
+);
+eq("no side, no share", ourShare(C, null), null);
+eq("a side with nobody standing here has nothing", ourShare(C, "Jubilee"), 0);
+near("margin over the strongest other bloc", margin(C, KK), 0.24);
+near("a negative margin when behind", margin(C, AZ), -0.24);
+near(
+  "swing between elections, each with its own side",
+  swing(C, KK, count([["Jubilee", 25_000], ["NASA", 25_000]]), "Jubilee"),
+  0.1,
+);
+eq("no swing without the election before", swing(C, KK, null, "Jubilee"), null);
+near("register growth", registerGrowth(120_000, 100_000), { change: 20_000, rate: 0.2 });
+eq("no growth without both", registerGrowth(120_000, null), null);
+near("adults not registered, and how young they are", notRegistered({ adults: 1_000, young_adults: 400 }, 700), {
+  adults: 300,
+  youngShare: 0.4,
+});
+eq("never below zero", notRegistered({ adults: 1_000, young_adults: 400 }, 1_200)?.adults, 0);
+eq("the register flag at a quarter", [registerFlag({ adults: 300 }, 1_000), registerFlag({ adults: 200 }, 1_000)], [true, false]);
+near("the top quarter of turnouts", topQuarter([0.7, 0.4, 0.6, 0.5]), 0.625);
+eq("no turnouts, no top quarter", topQuarter([]), null);
+eq("votes within reach: a turnout push and a 5-point swing", votesWithinReach(C, KK, [0.4, 0.5, 0.6, 0.7]), {
+  turnout: 7_500,
+  persuasion: 2_500,
+  total: 10_000,
+});
+eq("no turnout votes when already in the top quarter", votesWithinReach(C, KK, [0.3, 0.35, 0.4, 0.45])?.turnout, 0);
+eq("no reach without a side", votesWithinReach(C, null, [0.5]), null);
+
+const todo = (
+  cands: [string, number][],
+  parentTurnout: number | null = 0.5,
+  before: AreaCount | null = null,
+) =>
+  whatToDo({
+    year: 2022,
+    count: count(cands),
+    side: KK,
+    parentTurnout,
+    parentName: "Nairobi",
+    before: before ? { year: 2017, count: before, side: "Jubilee" } : null,
+  });
+
+eq("mobilise: ours, but turnout well below the county's", todo([[KK, 30_000], [AZ, 20_000]], 0.6), {
+  todo: "mobilise",
+  reason: "We took 60.0% here in 2022, but turnout was 50%, 10 points below Nairobi.",
+});
+eq("hold: 60% or more", todo([[KK, 30_000], [AZ, 20_000]], 0.52), {
+  todo: "hold",
+  reason: "We took 60.0% here in 2022.",
+});
+eq("cut the gap: under 40%", todo([[KK, 15_000], [AZ, 33_000], [IND, 2_000]]), {
+  todo: "cut",
+  reason: "We took 30.0% here in 2022; Azimio took 66.0%.",
+});
+eq("persuade: a close one", todo([[KK, 24_000], [AZ, 22_500], [IND, 3_500]]), {
+  todo: "persuade",
+  reason: "2022 was close: 48.0% to us against 45.0% for Azimio.",
+});
 eq(
-  "a tie is listed by name",
-  blocShares(
-    [
-      { bloc: "Zed", votes: 5 },
-      { bloc: "Abe", votes: 5 },
-    ],
-    10,
-  ),
-  [
-    { bloc: "Abe", votes: 5, share: 50 },
-    { bloc: "Zed", votes: 5, share: 50 },
-  ],
+  "persuade: a big swing",
+  todo([[KK, 27_500], [AZ, 17_500], [IND, 5_000]], 0.5, count([["Jubilee", 21_000], ["NASA", 29_000]])),
+  { todo: "persuade", reason: "Our share moved 13 points up between 2017 and 2022." },
 );
-eq("shares with no total", blocShares(VOTES, null), []);
-eq("shares over a zero total", blocShares(VOTES, 0), []);
-
-// Our share uses the campaign's side.
-const SHARES = blocShares(VOTES, 1000);
-eq("our share", ourShare(SHARES, "Alpha"), 70);
-eq("a bloc that did not stand has no votes", ourShare(SHARES, "Gamma"), 0);
-eq("no side set", ourShare(SHARES, null), null);
-eq("no shares to read", ourShare([], "Alpha"), null);
-
-// Margin: our share minus the strongest other bloc's.
-eq("margin when ahead", margin(SHARES, "Alpha"), 40);
-eq("margin when behind", margin(SHARES, "Beta"), -40);
-const THREE = blocShares(
-  [
-    { bloc: "Alpha", votes: 450 },
-    { bloc: "Beta", votes: 300 },
-    { bloc: "Gamma", votes: 250 },
-  ],
-  1000,
+eq("lean ours", todo([[KK, 27_500], [AZ, 17_500], [IND, 5_000]]), {
+  todo: "lean-ours",
+  reason: "We took 55.0% here in 2022, a 20-point lead.",
+});
+eq("lean theirs", todo([[KK, 21_000], [AZ, 28_000], [IND, 1_000]]), {
+  todo: "lean-theirs",
+  reason: "Azimio took 56.0% here in 2022; we took 42.0%.",
+});
+eq(
+  "no side yet",
+  whatToDo({ year: 2022, count: C, side: null, parentTurnout: 0.5, parentName: "Nairobi", before: null }),
+  { todo: "no-side", reason: "Set your side in 2022 first." },
 );
-eq("margin against the strongest other bloc", margin(THREE, "Alpha"), 15);
-eq("margin of the middle bloc", margin(THREE, "Beta"), -15);
-eq("margin when unopposed", margin(blocShares([{ bloc: "Alpha", votes: 80 }], 80), "Alpha"), 100);
-eq("margin when we did not stand", margin(SHARES, "Gamma"), -70);
-eq("margin with no side", margin(SHARES, null), null);
-eq("margin with no shares", margin([], "Alpha"), null);
-
-// Lean is the margin read as a side.
-eq("lean ours", lean(40), { side: "ours", points: 40 });
-eq("lean theirs", lean(-15.5), { side: "theirs", points: 15.5 });
-eq("level", lean(0), { side: "even", points: 0 });
-eq("floating point noise is level", lean(1e-12), { side: "even", points: 0 });
-eq("no margin, no lean", lean(null), null);
-
-// Swing is our share now minus our share at the election before, in points.
-eq("swing towards us", swing(52.3, 48.1), 4.2);
-eq("swing away from us", swing(40, 51.5), -11.5);
-eq("swing with no earlier share", swing(52.3, null), null);
-eq("swing with no later share", swing(null, 48.1), null);
+eq(
+  "the tag on every figure",
+  [figureTag("IEBC", "constituency", 2022), figureTag("WorldPop", "ward", 2020, true)],
+  ["IEBC · constituency total · 2022", "WorldPop estimate · 2020"],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [ ] **Step 2: Run** `npx -y tsx --tsconfig tsconfig.json tests/atlas.test.ts`. Expected: FAIL
+      (module `@/lib/atlas` not found).
 
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts`
-
-Expected: it does not get as far as a test:
-`Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@/lib' imported from .../tests/atlas-measures.test.ts`
-
-- [ ] **Step 3: Write the types and the measures**
-
-Create `src/lib/atlas/types.ts`:
+- [ ] **Step 3: Implement** `src/lib/atlas.ts`:
 
 ```ts
-// The election atlas's shared shapes. Shares and turnout are percentages (0 to 100), kept
-// unrounded until they are shown. A missing figure is null, never zero.
+// The election atlas's arithmetic: turnout, shares, margins, swing, register
+// growth, the estimate of adults not yet registered, what to do in an area and
+// why, and the votes within reach. Pure: the screens hand it an area's count
+// and show what comes back.
 
 export type Race = "president" | "governor" | "mp";
-export type Level = "country" | "county" | "constituency" | "ward";
+export const RACES: Race[] = ["president", "governor", "mp"];
+export const YEARS = [2013, 2017, 2022] as const;
 
-/** One candidate's votes in one area for one election, with the bloc they stood for. */
-export type Vote = { bloc: string; votes: number };
+export const electionId = (year: number, race: Race) => `${year}-${race}`;
 
-/**
- * What the document says about turnout in one area; each figure may be missing. These are
- * `atlas_turnout`'s registered, cast_votes, rejected_votes and valid_votes.
- */
-export type Turnout = {
+/** One area's count in one election. */
+export type AreaCount = {
+  year: number;
+  /** Who stood, with their bloc and their votes here. */
+  candidates: { name: string; party: string | null; bloc: string; votes: number }[];
   registered: number | null;
   cast: number | null;
   rejected: number | null;
   valid: number | null;
 };
 
-/** A bloc's votes in an area and its share of the valid votes, in percent. */
 export type BlocShare = { bloc: string; votes: number; share: number };
 
-/** Which way an area leans and by how many points. */
-export type Lean = { side: "ours" | "theirs" | "even"; points: number };
-```
-
-Create `src/lib/atlas/measures.ts`. `settle` rounds to six decimals so that a margin of exactly 10
-points is not 10.000000000000002; every measure that feeds a comparison passes through it.
-
-```ts
-// What an area's results say: turnout, valid votes, each bloc's share, ours, the margin, which
-// way it leans and how it swung. Pure. Every function answers null for a figure it cannot work
-// out, so a missing number never reads as zero.
-
-import type { BlocShare, Lean, Turnout, Vote } from "./types";
-
-/** Floating point leaves 10.000000000000002 where the answer is 10; round before comparing. */
-export const settle = (x: number): number => Math.round(x * 1e6) / 1e6;
-
-/** Turnout in percent: cast over registered. Missing when either is, or the register is empty. */
-export function turnoutPct(t: Turnout | null | undefined): number | null {
-  if (!t || t.registered === null || t.cast === null || t.registered <= 0) return null;
-  return settle((t.cast / t.registered) * 100);
+/** Votes cast ÷ registered; null when either is missing or nobody was registered. */
+export function turnout(c: AreaCount): number | null {
+  return c.cast !== null && c.registered ? c.cast / c.registered : null;
 }
 
-/** Valid votes: what the document gives, else the candidates' votes added up. */
-export function validVotes(t: Turnout | null | undefined, votes: Vote[]): number | null {
-  if (t && t.valid !== null) return t.valid;
-  if (votes.length === 0) return null;
-  return votes.reduce((sum, v) => sum + v.votes, 0);
-}
+/** The document's valid votes, else the candidates' votes added up. */
+export const validVotes = (c: AreaCount): number =>
+  c.valid ?? c.candidates.reduce((t, x) => t + x.votes, 0);
 
-/** Each bloc's votes and share of the valid votes, biggest first, ties by name. */
-export function blocShares(votes: Vote[], valid: number | null): BlocShare[] {
-  if (valid === null || valid <= 0) return [];
-  const byBloc = new Map<string, number>();
-  for (const v of votes) byBloc.set(v.bloc, (byBloc.get(v.bloc) ?? 0) + v.votes);
-  return [...byBloc]
-    .map(([bloc, n]) => ({ bloc, votes: n, share: settle((n / valid) * 100) }))
+/** Each bloc's votes and share of the valid votes, largest first. */
+export function blocShares(c: AreaCount): BlocShare[] {
+  const valid = validVotes(c);
+  const by = new Map<string, number>();
+  for (const x of c.candidates) by.set(x.bloc, (by.get(x.bloc) ?? 0) + x.votes);
+  return [...by.entries()]
+    .map(([bloc, votes]) => ({ bloc, votes, share: valid ? votes / valid : 0 }))
     .sort((a, b) => b.votes - a.votes || a.bloc.localeCompare(b.bloc));
 }
 
-/**
- * The campaign's side's share in percent; 0 when it did not stand; null with no side or no
- * shares.
- */
-export function ourShare(shares: BlocShare[], ourBloc: string | null): number | null {
-  if (ourBloc === null || shares.length === 0) return null;
-  return shares.find((s) => s.bloc === ourBloc)?.share ?? 0;
+/** Our side's share: null without a side or votes; 0 when our side had nobody standing here. */
+export function ourShare(c: AreaCount, side: string | null): number | null {
+  if (!side || !validVotes(c)) return null;
+  return blocShares(c).find((b) => b.bloc === side)?.share ?? 0;
 }
 
-/** Our share minus the strongest other bloc's, in points; the other is 0 when unopposed. */
-export function margin(shares: BlocShare[], ourBloc: string | null): number | null {
-  const ours = ourShare(shares, ourBloc);
+/** Our share minus the strongest other bloc's. */
+export function margin(c: AreaCount, side: string | null): number | null {
+  const ours = ourShare(c, side);
   if (ours === null) return null;
-  const others = shares.filter((s) => s.bloc !== ourBloc).map((s) => s.share);
-  return settle(ours - (others.length ? Math.max(...others) : 0));
+  const other = blocShares(c).find((b) => b.bloc !== side);
+  return ours - (other?.share ?? 0);
 }
 
-/** The margin read as a side: ahead leans ours, behind leans theirs. */
-export function lean(m: number | null): Lean | null {
-  if (m === null) return null;
-  const p = settle(m);
-  return { side: p > 0 ? "ours" : p < 0 ? "theirs" : "even", points: Math.abs(p) };
+/** Our share now minus at the election before, each with that election's side (0.05 is 5 points). */
+export function swing(
+  now: AreaCount | null,
+  sideNow: string | null,
+  before: AreaCount | null,
+  sideBefore: string | null,
+): number | null {
+  if (!now || !before) return null;
+  const a = ourShare(now, sideNow);
+  const b = ourShare(before, sideBefore);
+  return a === null || b === null ? null : a - b;
 }
 
-/** Our share now minus our share at the election before, in points. */
-export function swing(now: number | null, before: number | null): number | null {
-  return now === null || before === null ? null : settle(now - before);
-}
-```
-
-- [ ] **Step 4: Format and lint**
-
-Run: `npx prettier --write src/lib/atlas tests/atlas-measures.test.ts && npx eslint src/lib/atlas tests/atlas-measures.test.ts`
-
-Expected: Prettier lists the files (`(unchanged)` for any that already match) and ESLint prints
-nothing.
-
-- [ ] **Step 5: Run the tests and watch them pass**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-measures.test.ts`
-
-Expected: `35 passed, 0 failed`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/lib/atlas/types.ts src/lib/atlas/measures.ts tests/atlas-measures.test.ts
-git commit -m "Atlas: turnout, shares, margin, lean and swing" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 3: Register and population measures
-
-**Files:**
-- Create: `src/lib/atlas/register.ts`
-- Test: `tests/atlas-register.test.ts`
-
-**Interfaces:** Consumes `settle` from `./measures`. Produces:
-`registerGrowth(now: number | null, before: number | null): { change: number; pct: number | null } | null`,
-`notYetRegistered(adults: number | null, registered: number | null): number | null`,
-`youngShare(young: number | null, adults: number | null): number | null`,
-`registerFlag(adults: number | null, registered: number | null): boolean`.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `tests/atlas-register.test.ts`:
-
-```ts
-// Checks for the election atlas's register and population measures: register growth, adults not
-// yet registered, the young share and the register flag. Pure; nothing leaves this process. A
-// missing figure is null and never zero. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-register.test.ts
-
-import { notYetRegistered, registerFlag, registerGrowth, youngShare } from "@/lib/atlas/register";
-
-let pass = 0;
-let fail = 0;
-
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
-function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
-  if (g === w) pass++;
-  else {
-    fail++;
-    console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
-  }
-}
-
-// Register growth: registered voters now minus at the last election, and as a share.
-eq("growth", registerGrowth(52000, 48000), { change: 4000, pct: 8.333333 });
-eq("a shrinking register", registerGrowth(45000, 48000), { change: -3000, pct: -6.25 });
-eq("growth from an empty register has no share", registerGrowth(500, 0), {
-  change: 500,
-  pct: null,
-});
-eq("growth with no earlier register", registerGrowth(52000, null), null);
-eq("growth with no later register", registerGrowth(null, 48000), null);
-
-// Not yet registered: adults minus registered voters, never below zero.
-eq("not yet registered", notYetRegistered(10000, 7600), 2400);
-eq("more registered than adults", notYetRegistered(10000, 10400), 0);
-eq("not yet registered, no adults figure", notYetRegistered(null, 7600), null);
-eq("not yet registered, no register", notYetRegistered(10000, null), null);
-
-// The young share: 18 to 34 as a share of the area's adults.
-eq("young share", youngShare(4200, 10000), 42);
-eq("young share of no adults", youngShare(0, 0), null);
-eq("young share, no young figure", youngShare(null, 10000), null);
-eq("young share, no adults figure", youngShare(4200, null), null);
-
-// The register flag: an estimated quarter or more of the adults are not registered.
-eq("exactly a quarter is flagged", registerFlag(10000, 7500), true);
-eq("just under a quarter is not", registerFlag(10000, 7501), false);
-eq("half unregistered is flagged", registerFlag(10000, 5000), true);
-eq("a full register is not", registerFlag(10000, 10000), false);
-eq("no adults figure is not flagged", registerFlag(null, 7500), false);
-eq("no register is not flagged", registerFlag(10000, null), false);
-eq("no adults is not flagged", registerFlag(0, 0), false);
-
-console.log(`${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-register.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@/lib' imported from .../tests/atlas-register.test.ts`
-
-- [ ] **Step 3: Write the measures**
-
-Create `src/lib/atlas/register.ts`. The young share is 18 to 34 as a share of the area's adults: it
-describes who lives there, and says nothing about who is unregistered (nothing does).
-
-```ts
-// What the register and the population estimates say about an area: how the register grew, how
-// many adults are not yet registered, how young the adults are, and whether the gap is wide
-// enough to flag. Pure. Population figures are estimates; a figure that is missing is null.
-
-import { settle } from "./measures";
-
-/** Registered voters now minus at the last election, and that as a share of the last. */
 export function registerGrowth(
   now: number | null,
   before: number | null,
-): { change: number; pct: number | null } | null {
+): { change: number; rate: number | null } | null {
   if (now === null || before === null) return null;
+  return { change: now - before, rate: before ? (now - before) / before : null };
+}
+
+/** Adults not on the register (an estimate, never below zero) and the share of adults aged 18–34. */
+export function notRegistered(
+  pop: { adults: number; young_adults: number } | null,
+  registered: number | null,
+): { adults: number; youngShare: number | null } | null {
+  if (!pop || registered === null) return null;
   return {
-    change: now - before,
-    pct: before > 0 ? settle(((now - before) / before) * 100) : null,
+    adults: Math.max(pop.adults - registered, 0),
+    youngShare: pop.adults ? pop.young_adults / pop.adults : null,
   };
 }
 
-/** Adults minus registered voters, never below zero. An estimate: the adults are. */
-export function notYetRegistered(adults: number | null, registered: number | null): number | null {
-  if (adults === null || registered === null) return null;
-  return Math.max(0, adults - registered);
+/** An estimated quarter or more of the adults aren't registered. */
+export const registerFlag = (gap: { adults: number } | null, adults: number | null): boolean =>
+  Boolean(gap && adults && gap.adults / adults >= 0.25);
+
+/** The 75th percentile, linear between neighbours; null for no values. */
+export function topQuarter(values: number[]): number | null {
+  if (!values.length) return null;
+  const xs = [...values].sort((a, b) => a - b);
+  const i = 0.75 * (xs.length - 1);
+  const lo = Math.floor(i);
+  const hi = Math.ceil(i);
+  return xs[lo]! + (xs[hi]! - xs[lo]!) * (i - lo);
 }
 
 /**
- * 18 to 34 as a share of the area's adults, in percent. It says who lives there, not who is
- * unregistered.
+ * The votes within reach here: lifting turnout to the top quarter of the
+ * area's siblings at our share, and a 5-point swing of the valid votes.
  */
-export function youngShare(young: number | null, adults: number | null): number | null {
-  if (young === null || adults === null || adults <= 0) return null;
-  return settle((young / adults) * 100);
+export function votesWithinReach(
+  c: AreaCount,
+  side: string | null,
+  siblingTurnouts: number[],
+): { turnout: number; persuasion: number; total: number } | null {
+  const share = ourShare(c, side);
+  if (share === null) return null;
+  const t = turnout(c);
+  const target = topQuarter(siblingTurnouts);
+  const fromTurnout =
+    t !== null && target !== null && c.registered && target > t
+      ? Math.round((target - t) * c.registered * share)
+      : 0;
+  const persuasion = Math.round(0.05 * validVotes(c));
+  return { turnout: fromTurnout, persuasion, total: fromTurnout + persuasion };
 }
 
-/** An estimated quarter or more of the area's adults are not registered. */
-export function registerFlag(adults: number | null, registered: number | null): boolean {
-  const missing = notYetRegistered(adults, registered);
-  if (missing === null || adults === null || adults <= 0) return false;
-  return settle(missing / adults) >= 0.25;
-}
-```
+export type Todo = "mobilise" | "hold" | "cut" | "persuade" | "lean-ours" | "lean-theirs" | "no-side";
 
-- [ ] **Step 4: Format and lint**
-
-Run: `npx prettier --write src/lib/atlas tests/atlas-register.test.ts && npx eslint src/lib/atlas tests/atlas-register.test.ts`
-
-Expected: ESLint prints nothing.
-
-- [ ] **Step 5: Run the tests and watch them pass**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-register.test.ts`
-
-Expected: `20 passed, 0 failed`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/lib/atlas/register.ts tests/atlas-register.test.ts
-git commit -m "Atlas: register growth, adults not yet registered, the young share" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 4: How figures are written, and their tags
-
-**Files:**
-- Create: `src/lib/atlas/format.ts`
-- Test: `tests/atlas-format.test.ts`
-
-**Interfaces:** Consumes `type Level` from `./types`. Produces:
-`MISSING` (`"not found yet"`),
-`fmtVotes(n: number | null): string` (thousands separators),
-`fmtShare(n: number | null): string` (one decimal place and a `%`),
-`fmtTurnout(n: number | null): string` (a whole percentage),
-`fmtPoints(n: number | null): string` (a size, whatever its sign: `"6.0 points"`),
-`resultTag(source: string, level: Level, year: number): string` (`"IEBC · constituency total · 2022"`),
-`registerTag(source: string, level: Level, year: number): string` (`"IEBC · ward register · 2022"`),
-`estimateTag(source: string, year: number): string` (`"WorldPop estimate · 2025"`).
-A `source` reads "Publisher, document title"; the tag keeps the publisher.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `tests/atlas-format.test.ts`:
-
-```ts
-// Checks for how the election atlas writes its figures: shares to one decimal place, turnout as a
-// whole percentage, votes with thousands separators, a missing figure as missing, and the tag a
-// figure carries to say where it came from. Pure; nothing leaves this process. Run from the
-// repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-format.test.ts
-
-import {
-  MISSING,
-  estimateTag,
-  fmtPoints,
-  fmtShare,
-  fmtTurnout,
-  fmtVotes,
-  registerTag,
-  resultTag,
-} from "@/lib/atlas/format";
-
-let pass = 0;
-let fail = 0;
-
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
-function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
-  if (g === w) pass++;
-  else {
-    fail++;
-    console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
-  }
-}
-
-eq("what missing reads as", MISSING, "not found yet");
-
-// Votes, with thousands separators.
-eq("votes", fmtVotes(1234567), "1,234,567");
-eq("votes are whole", fmtVotes(999.6), "1,000");
-eq("a real zero is a zero", fmtVotes(0), "0");
-eq("votes missing", fmtVotes(null), MISSING);
-
-// Shares to one decimal place.
-eq("a share", fmtShare(48.25), "48.3%");
-eq("a share on a tie rounds up", fmtShare(12.35), "12.4%");
-eq("a share that is whole", fmtShare(50), "50.0%");
-eq("a real zero share is a zero", fmtShare(0), "0.0%");
-eq("a share missing", fmtShare(null), MISSING);
-
-// Turnout as a whole percentage.
-eq("turnout", fmtTurnout(41.2), "41%");
-eq("turnout rounds half up", fmtTurnout(41.5), "42%");
-eq("a real zero turnout is a zero", fmtTurnout(0), "0%");
-eq("turnout missing", fmtTurnout(null), MISSING);
-
-// Points are a size; the words around them say which way.
-eq("points", fmtPoints(6.04), "6.0 points");
-eq("points ignore their sign", fmtPoints(-15.5), "15.5 points");
-eq("points on a tie round up", fmtPoints(-0.35), "0.4 points");
-eq("a real zero gap is a zero", fmtPoints(0), "0.0 points");
-eq("points missing", fmtPoints(null), MISSING);
-
-// A source reads "Publisher, document title"; the tag keeps the publisher.
-eq(
-  "a result tag",
-  resultTag("IEBC, Presidential results by constituency", "constituency", 2022),
-  "IEBC · constituency total · 2022",
-);
-eq(
-  "a county result tag",
-  resultTag("IEBC, Governor results", "county", 2017),
-  "IEBC · county total · 2017",
-);
-eq(
-  "a register tag",
-  registerTag("IEBC, Registered voters by ward", "ward", 2022),
-  "IEBC · ward register · 2022",
-);
-eq(
-  "an estimate tag",
-  estimateTag("WorldPop, Age and sex structures, Kenya", 2025),
-  "WorldPop estimate · 2025",
-);
-eq("a source that is only a name", resultTag("IEBC", "county", 2013), "IEBC · county total · 2013");
-eq(
-  "a source with stray spaces",
-  estimateTag("  WorldPop , grid", 2025),
-  "WorldPop estimate · 2025",
-);
-
-console.log(`${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-format.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@/lib' imported from .../tests/atlas-format.test.ts`
-
-- [ ] **Step 3: Write the formatting**
-
-Create `src/lib/atlas/format.ts`. Numbers use `Intl.NumberFormat("en-KE")`, as the rest of the app
-does.
-
-```ts
-// How the atlas writes its figures: shares to one decimal place, turnout as a whole percentage,
-// votes with thousands separators, a missing figure as missing, and the tag each figure carries
-// to say where it came from. Pure.
-
-import type { Level } from "./types";
-
-/** What a figure that is not there reads as. Never "0". */
-export const MISSING = "not found yet";
-
-const nf = new Intl.NumberFormat("en-KE");
-// toFixed rounds the binary value, so 12.35 comes out as 12.3. Intl rounds the decimal, half up.
-const nf1 = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
-export const fmtVotes = (n: number | null): string =>
-  n === null ? MISSING : nf.format(Math.round(n));
-
-export const fmtShare = (n: number | null): string => (n === null ? MISSING : `${nf1.format(n)}%`);
-
-export const fmtTurnout = (n: number | null): string =>
-  n === null ? MISSING : `${Math.round(n)}%`;
-
-/** Points are a size: the words around them say which way. */
-export const fmtPoints = (n: number | null): string =>
-  n === null ? MISSING : `${nf1.format(Math.abs(n))} points`;
-
-/** A source reads "Publisher, document title"; the tag keeps the publisher. */
-const publisher = (source: string): string => source.split(",")[0]?.trim() || source.trim();
-
-/** "IEBC · constituency total · 2022": a result counted at that level, in that year. */
-export const resultTag = (source: string, level: Level, year: number): string =>
-  `${publisher(source)} · ${level} total · ${year}`;
-
-/** "IEBC · ward register · 2022". */
-export const registerTag = (source: string, level: Level, year: number): string =>
-  `${publisher(source)} · ${level} register · ${year}`;
-
-/** "WorldPop estimate · 2025": a population figure that is an estimate, never a count. */
-export const estimateTag = (source: string, year: number): string =>
-  `${publisher(source)} estimate · ${year}`;
-```
-
-- [ ] **Step 4: Format and lint**
-
-Run: `npx prettier --write src/lib/atlas tests/atlas-format.test.ts && npx eslint src/lib/atlas tests/atlas-format.test.ts`
-
-Expected: ESLint prints nothing.
-
-- [ ] **Step 5: Run the tests and watch them pass**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-format.test.ts`
-
-Expected: `25 passed, 0 failed`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/lib/atlas/format.ts tests/atlas-format.test.ts
-git commit -m "Atlas: how figures are written, and the tag each carries" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 5: What to do in an area, and the votes within reach
-
-**Files:**
-- Create: `src/lib/atlas/advice.ts`
-- Test: `tests/atlas-advice.test.ts`
-
-**Interfaces:** Consumes `settle` from `./measures`; `fmtPoints`, `fmtShare`, `fmtTurnout`, `MISSING`
-from `./format`. Produces:
-`type Action = "mobilise" | "hold" | "cut-the-gap" | "persuade" | "lean-ours"`,
-`type Advice = { action: Action | "set-side" | "no-result"; label: string; reason: string }`,
-`type AdviceInput = { side: string | null; ourShare: number | null; margin: number | null; swing: number | null; turnout: number | null; parentTurnout: number | null; parentName: string }`,
-`whatToDo(i: AdviceInput): Advice`,
-`nearestRank(values: number[], percentile: number): number | null`,
-`type ReachInput = { turnout: number | null; siblingTurnouts: number[]; registered: number | null; ourShare: number | null; valid: number | null }`,
-`type Reach = { turnout: number | null; persuasion: number | null; total: number | null }`,
-`votesWithinReach(i: ReachInput): Reach`.
-
-The rules, first match wins (spec section 4, as the user revised them on 7 October). Without a side
-the answer is "Set your side first"; with a side but no result it is "No result".
-
-| # | Answer | When |
-|---|--------|------|
-| 1 | Mobilise | our share is 50% or more and turnout is more than 3 points below the area above's (skipped when either turnout is missing) |
-| 2 | Hold | our share is 60% or more |
-| 3 | Cut the gap | we trail the strongest other bloc by more than 10 points |
-| 4 | Persuade | the margin is within 10 points either way (10 included), or the last swing was 10 points or more |
-| 5 | Lean ours | anything else: ahead by more than 10 points, short of Hold |
-
-Votes within reach, as two parts and their sum: *turnout*, the extra voters if this area's turnout
-rose to the 75th percentile (nearest rank) of its siblings', at our share (zero when it is already
-there; missing with fewer than four siblings that have a turnout); and *persuasion*, 5% of the valid
-votes.
-
-- [ ] **Step 1: Write the failing tests**
-
-Create `tests/atlas-advice.test.ts`:
-
-```ts
-// Checks for what the election atlas says to do in an area and why, and for the votes within
-// reach: every rule, where each one starts, which wins when two apply, what happens when a figure
-// is missing, and the reason line that goes with each answer. Pure; nothing leaves this process.
-// Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-advice.test.ts
-
-import { nearestRank, votesWithinReach, whatToDo, type AdviceInput } from "@/lib/atlas/advice";
-
-let pass = 0;
-let fail = 0;
-
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
-function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
-  if (g === w) pass++;
-  else {
-    fail++;
-    console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
-  }
-}
-
-// A side is set, turnout is level with the area above, and we lead by 20 on 55%.
-const A = (over: Partial<AdviceInput> = {}) =>
-  whatToDo({
-    side: "Alpha",
-    ourShare: 55,
-    margin: 20,
-    swing: null,
-    turnout: 44,
-    parentTurnout: 44,
-    parentName: "Nairobi",
-    ...over,
-  });
-const act = (over: Partial<AdviceInput>) => A(over).action;
-const why = (over: Partial<AdviceInput>) => A(over).reason;
-
-// 1. Mobilise: half the vote or more, and turnout more than 3 points below the area above.
-eq("mobilise", A({ ourShare: 54.2, margin: 8.4, turnout: 38, parentTurnout: 44 }), {
-  action: "mobilise",
-  label: "Mobilise",
-  reason: "54.2% to us, but turnout was 38%, 6.0 points below Nairobi's 44%",
-});
-eq("3 points below is not low enough", act({ turnout: 41, parentTurnout: 44 }), "lean-ours");
-eq(
-  "a gap of exactly 3 is not over 3, in floating point too",
-  act({ turnout: 30.2, parentTurnout: 33.2 }),
-  "lean-ours",
-);
-eq("mobilise starts at half the vote", act({ ourShare: 50, margin: 0, turnout: 34 }), "mobilise");
-eq(
-  "turnout above the area above is no reason to mobilise",
-  act({ turnout: 50, parentTurnout: 44 }),
-  "lean-ours",
-);
-eq("just over 3 points below is", act({ turnout: 40.9, parentTurnout: 44 }), "mobilise");
-eq(
-  "the reason for a gap just over 3",
-  why({ turnout: 40.9, parentTurnout: 44 }),
-  "55.0% to us, but turnout was 41%, 3.1 points below Nairobi's 44%",
-);
-eq("mobilise needs half the vote", act({ ourShare: 49.9, margin: 3, turnout: 34 }), "persuade");
-eq("no turnout, no mobilise", act({ ourShare: 65, margin: 40, turnout: null }), "hold");
-eq("no turnout above, no mobilise", act({ ourShare: 65, margin: 40, parentTurnout: null }), "hold");
-eq("mobilise comes before hold", A({ ourShare: 65, margin: 40, turnout: 36 }), {
-  action: "mobilise",
-  label: "Mobilise",
-  reason: "65.0% to us, but turnout was 36%, 8.0 points below Nairobi's 44%",
-});
-
-// 2. Hold: 60% or more.
-eq("hold", A({ ourShare: 60, margin: 25 }), {
-  action: "hold",
-  label: "Hold",
-  reason: "60.0% to us",
-});
-eq("59.9% is not a stronghold", act({ ourShare: 59.9, margin: 25 }), "lean-ours");
-
-// 3. Cut the gap: trailing the strongest other bloc by more than 10 points.
-eq("cut the gap", A({ ourShare: 35, margin: -15 }), {
-  action: "cut-the-gap",
-  label: "Cut the gap",
-  reason: "35.0% to us, 15.0 points behind",
-});
-eq("10 points behind is still a contest", A({ ourShare: 45, margin: -10 }), {
-  action: "persuade",
-  label: "Persuade",
-  reason: "45.0% to us, 10.0 points behind",
-});
-eq("just over 10 behind is not", A({ ourShare: 44.9, margin: -10.1 }), {
-  action: "cut-the-gap",
-  label: "Cut the gap",
-  reason: "44.9% to us, 10.1 points behind",
-});
-eq(
-  "cut the gap comes before a swing",
-  act({ ourShare: 35, margin: -15, swing: 12 }),
-  "cut-the-gap",
-);
-
-// 4. Persuade: within 10 points either way, or the last swing was 10 points or more.
-eq("persuade, ahead", A({ ourShare: 53, margin: 6 }), {
-  action: "persuade",
-  label: "Persuade",
-  reason: "53.0% to us, 6.0 points ahead",
-});
-eq("persuade, level", why({ ourShare: 50, margin: 0 }), "50.0% to us, level");
-eq(
-  "10 points ahead is still a contest",
-  why({ ourShare: 55, margin: 10 }),
-  "55.0% to us, 10.0 points ahead",
-);
-eq("floating point noise at 10", act({ ourShare: 55, margin: 10.000000000000002 }), "persuade");
-eq("a swing away makes it a contest", A({ ourShare: 58, margin: 16, swing: -12 }), {
-  action: "persuade",
-  label: "Persuade",
-  reason: "58.0% to us, swung 12.0 points away from us since last time",
-});
-eq(
-  "a swing of exactly 10 counts",
-  why({ ourShare: 58, margin: 16, swing: 10 }),
-  "58.0% to us, swung 10.0 points to us since last time",
-);
-eq("a swing of 9.9 does not", act({ ourShare: 58, margin: 16, swing: 9.9 }), "lean-ours");
-eq(
-  "margin and swing together",
-  why({ ourShare: 48, margin: -4, swing: 11 }),
-  "48.0% to us, 4.0 points behind, swung 11.0 points to us since last time",
-);
-
-// 5. Lean ours: ahead by more than 10 points, short of a stronghold.
-eq("lean ours", A({ ourShare: 58, margin: 16 }), {
-  action: "lean-ours",
-  label: "Lean ours",
-  reason: "58.0% to us, 16.0 points ahead",
-});
-eq(
-  "a crowded race: 45% to 30% leans ours",
-  why({ ourShare: 45, margin: 15 }),
-  "45.0% to us, 15.0 points ahead",
-);
-eq(
-  "a narrow lead on a small share: 38% to 30% is a contest",
-  why({ ourShare: 38, margin: 8 }),
-  "38.0% to us, 8.0 points ahead",
-);
-
-// Missing figures.
-eq("no side", A({ side: null }), { action: "set-side", label: "Set your side first", reason: "" });
-eq("no result", A({ ourShare: null, margin: null }), {
-  action: "no-result",
-  label: "No result",
-  reason: "not found yet",
-});
-eq("no side beats no result", act({ side: null, ourShare: null, margin: null }), "set-side");
-
-// A real zero is a figure, not a missing one.
-eq("a side that took no votes is a result", A({ ourShare: 0, margin: -55 }), {
-  action: "cut-the-gap",
-  label: "Cut the gap",
-  reason: "0.0% to us, 55.0 points behind",
-});
-eq(
-  "a real zero turnout is a figure",
-  why({ turnout: 0 }),
-  "55.0% to us, but turnout was 0%, 44.0 points below Nairobi's 44%",
-);
-
-// The 75th percentile by nearest rank.
-const HUNDRED = Array.from({ length: 100 }, (_, k) => k + 1);
-eq("nearest rank of four", nearestRank([10, 20, 30, 40], 75), 30);
-eq("nearest rank sorts first", nearestRank([50, 10, 40, 20, 30], 75), 40);
-eq("nearest rank of one", nearestRank([5], 75), 5);
-eq("nearest rank of none", nearestRank([], 75), null);
-eq("nearest rank is exact where floating point is not", nearestRank(HUNDRED, 7), 7);
-eq(
-  "nearest rank at the ends",
-  [nearestRank([10, 20, 30], 100), nearestRank([10, 20, 30], 0)],
-  [30, 10],
-);
-
-// Votes within reach: turnout up to the top quarter of its siblings, and a 5-point swing to us.
-const R = (over: Partial<Parameters<typeof votesWithinReach>[0]> = {}) =>
-  votesWithinReach({
-    turnout: 40,
-    siblingTurnouts: [40, 50, 60, 70],
-    registered: 10000,
-    ourShare: 55,
-    valid: 4000,
-    ...over,
-  });
-eq("votes within reach", R(), { turnout: 1100, persuasion: 200, total: 1300 });
-eq("already in the top quarter", R({ turnout: 70 }), { turnout: 0, persuasion: 200, total: 200 });
-eq("too few siblings to say", R({ siblingTurnouts: [40, 50, 60] }), {
-  turnout: null,
-  persuasion: 200,
-  total: 200,
-});
-eq("no register", R({ registered: null }), { turnout: null, persuasion: 200, total: 200 });
-eq("no share", R({ ourShare: null }), { turnout: null, persuasion: 200, total: 200 });
-eq("a side that took no votes has none to win", R({ ourShare: 0 }), {
-  turnout: 0,
-  persuasion: 200,
-  total: 200,
-});
-eq("no own turnout", R({ turnout: null }), { turnout: null, persuasion: 200, total: 200 });
-eq("no valid votes", R({ valid: null }), { turnout: 1100, persuasion: null, total: 1100 });
-eq("nothing to go on", R({ turnout: null, valid: null }), {
-  turnout: null,
-  persuasion: null,
-  total: null,
-});
-
-console.log(`${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-advice.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@/lib' imported from .../tests/atlas-advice.test.ts`
-
-- [ ] **Step 3: Write the rules**
-
-Create `src/lib/atlas/advice.ts`:
-
-```ts
-// What to do in an area and why, and the votes within reach there. Pure. The rules follow who is
-// ahead, not the share alone, so a crowded race (45% to 30%) reads "Lean ours" and a narrow lead
-// on a small share (38% to 30%) reads "Persuade". Each answer carries a one-line reason built from
-// the numbers. Shares, margins and swings are percentages and points, as `measures.ts` gives them.
-
-import { fmtPoints, fmtShare, fmtTurnout, MISSING } from "./format";
-import { settle } from "./measures";
-
-export type Action = "mobilise" | "hold" | "cut-the-gap" | "persuade" | "lean-ours";
-
-export type Advice = {
-  action: Action | "set-side" | "no-result";
-  label: string;
-  reason: string;
-};
-
-export type AdviceInput = {
-  /** The bloc the campaign counts as ours in this election; null until it is set. */
-  side: string | null;
-  ourShare: number | null;
-  margin: number | null;
-  /** Our share now minus our share at the election before, in points. */
-  swing: number | null;
-  turnout: number | null;
-  /** Turnout in the area above (the county for a constituency), and what to call that area. */
-  parentTurnout: number | null;
-  parentName: string;
-};
-
-const LABELS: Record<Action, string> = {
+export const TODO_NAMES: Record<Todo, string> = {
   mobilise: "Mobilise",
   hold: "Hold",
-  "cut-the-gap": "Cut the gap",
+  cut: "Cut the gap",
   persuade: "Persuade",
   "lean-ours": "Lean ours",
+  "lean-theirs": "Lean theirs",
+  "no-side": "Set your side first",
 };
 
-const answer = (action: Action, reason: string): Advice => ({
-  action,
-  label: LABELS[action],
-  reason,
-});
+const pct1 = (x: number) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
+const pct0 = (x: number) => `${Math.round(x * 100)}%`;
+const points = (x: number) => `${Math.round(Math.abs(x) * 1000) / 10}`;
 
-/**
- * First match wins:
- * 1. Mobilise: our share is 50% or more and turnout is more than 3 points below the area above.
- * 2. Hold: our share is 60% or more.
- * 3. Cut the gap: we trail the strongest other bloc by more than 10 points.
- * 4. Persuade: the margin is within 10 points either way, or the last swing was 10 or more.
- * 5. Lean ours: anything else, which is ahead by more than 10 points.
- */
-export function whatToDo(i: AdviceInput): Advice {
-  if (i.side === null) return { action: "set-side", label: "Set your side first", reason: "" };
-  if (i.ourShare === null || i.margin === null) {
-    return { action: "no-result", label: "No result", reason: MISSING };
-  }
-  const share = settle(i.ourShare);
-  const m = settle(i.margin);
-  const swing = i.swing === null ? null : settle(i.swing);
-  const gap =
-    i.turnout !== null && i.parentTurnout !== null ? settle(i.parentTurnout - i.turnout) : null;
-  const to = `${fmtShare(share)} to us`;
-
-  if (share >= 50 && gap !== null && gap > 3) {
-    return answer(
-      "mobilise",
-      `${to}, but turnout was ${fmtTurnout(i.turnout)}, ${fmtPoints(gap)} below ` +
-        `${i.parentName}'s ${fmtTurnout(i.parentTurnout)}`,
-    );
-  }
-  if (share >= 60) return answer("hold", to);
-  if (m < -10) return answer("cut-the-gap", `${to}, ${fmtPoints(m)} behind`);
-
-  const contest = Math.abs(m) <= 10;
-  const swung = swing !== null && Math.abs(swing) >= 10;
-  if (contest || swung) {
-    const parts = [to];
-    if (contest) parts.push(m === 0 ? "level" : `${fmtPoints(m)} ${m > 0 ? "ahead" : "behind"}`);
-    if (swung) {
-      parts.push(`swung ${fmtPoints(swing)} ${swing > 0 ? "to" : "away from"} us since last time`);
-    }
-    return answer("persuade", parts.join(", "));
-  }
-  return answer("lean-ours", `${to}, ${fmtPoints(m)} ahead`);
-}
-
-/** The value at a percentile by the nearest-rank method; null for an empty list. */
-export function nearestRank(values: number[], percentile: number): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  // Multiply first: (7 / 100) * 100 is 7.000000000000001, and ceil would answer 8.
-  const rank = Math.max(1, Math.ceil((percentile * sorted.length) / 100));
-  return sorted[rank - 1] ?? null;
-}
-
-export type ReachInput = {
-  /** This area's turnout, in percent. */
-  turnout: number | null;
-  /** The turnouts of all the areas with the same parent, this one included, that have one. */
-  siblingTurnouts: number[];
-  registered: number | null;
-  /** Our share, in percent. */
-  ourShare: number | null;
-  valid: number | null;
+export type TodoInput = {
+  year: number;
+  count: AreaCount;
+  side: string | null;
+  /** Turnout in the area around this one (the county for a constituency), same election. */
+  parentTurnout: number | null;
+  parentName: string | null;
+  /** The same area at the election before, with our side then. */
+  before: { year: number; count: AreaCount; side: string | null } | null;
 };
 
-export type Reach = { turnout: number | null; persuasion: number | null; total: number | null };
+/** What to do here and why; the first rule that matches wins. */
+export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
+  const share = ourShare(i.count, i.side);
+  if (share === null) return { todo: "no-side", reason: `Set your side in ${i.year} first.` };
+  const t = turnout(i.count);
+  const m = margin(i.count, i.side) ?? 0;
+  const leader = blocShares(i.count).find((b) => b.bloc !== i.side);
+  const sw = i.before ? swing(i.count, i.side, i.before.count, i.before.side) : null;
+  if (share >= 0.5 && t !== null && i.parentTurnout !== null && t < i.parentTurnout - 0.03)
+    return {
+      todo: "mobilise",
+      reason: `We took ${pct1(share)} here in ${i.year}, but turnout was ${pct0(t)}, ${points(i.parentTurnout - t)} points below ${i.parentName ?? "the area around it"}.`,
+    };
+  if (share >= 0.6) return { todo: "hold", reason: `We took ${pct1(share)} here in ${i.year}.` };
+  if (share < 0.4)
+    return {
+      todo: "cut",
+      reason: `We took ${pct1(share)} here in ${i.year}; ${leader ? `${leader.bloc} took ${pct1(leader.share)}` : "others took the rest"}.`,
+    };
+  if (Math.abs(m) <= 0.1)
+    return {
+      todo: "persuade",
+      reason: `${i.year} was close: ${pct1(share)} to us against ${pct1(leader?.share ?? 0)} for ${leader?.bloc ?? "the rest"}.`,
+    };
+  if (sw !== null && i.before && Math.abs(sw) >= 0.1)
+    return {
+      todo: "persuade",
+      reason: `Our share moved ${points(sw)} points ${sw > 0 ? "up" : "down"} between ${i.before.year} and ${i.year}.`,
+    };
+  if (share >= 0.5)
+    return { todo: "lean-ours", reason: `We took ${pct1(share)} here in ${i.year}, a ${points(m)}-point lead.` };
+  return {
+    todo: "lean-theirs",
+    reason: `${leader?.bloc ?? "Others"} took ${pct1(leader?.share ?? 0)} here in ${i.year}; we took ${pct1(share)}.`,
+  };
+}
 
-/**
- * The votes within reach, as two parts and their sum:
- * - turnout: if this area's turnout rose to the 75th percentile of its siblings' (nearest rank),
- *   the extra voters, at our share. Zero when it is already there; missing with fewer than four
- *   siblings that have a turnout, or when a figure it needs is missing.
- * - persuasion: 5% of the valid votes, a 5-point swing to us.
- */
-export function votesWithinReach(i: ReachInput): Reach {
-  let turnoutVotes: number | null = null;
-  if (
-    i.turnout !== null &&
-    i.registered !== null &&
-    i.ourShare !== null &&
-    i.siblingTurnouts.length >= 4
-  ) {
-    const top = nearestRank(i.siblingTurnouts, 75);
-    if (top !== null) {
-      turnoutVotes = settle(
-        Math.max(0, ((top - i.turnout) / 100) * i.registered * (i.ourShare / 100)),
-      );
-    }
-  }
-  const persuasion = i.valid === null ? null : settle(i.valid * 0.05);
-  const parts = [turnoutVotes, persuasion].filter((x): x is number => x !== null);
-  const total = parts.length === 0 ? null : settle(parts.reduce((a, b) => a + b, 0));
-  return { turnout: turnoutVotes, persuasion, total };
+const LEVEL_TOTAL: Record<string, string> = {
+  country: "national total",
+  county: "county total",
+  constituency: "constituency total",
+  ward: "ward total",
+};
+
+/** The tag every figure carries: "IEBC · constituency total · 2022", "WorldPop estimate · 2020". */
+export function figureTag(publisher: string, level: string, year: number, estimate = false): string {
+  return estimate
+    ? `${publisher} estimate · ${year}`
+    : `${publisher} · ${LEVEL_TOTAL[level] ?? level} · ${year}`;
 }
 ```
 
-- [ ] **Step 4: Format and lint**
-
-Run: `npx prettier --write src/lib/atlas tests/atlas-advice.test.ts && npx eslint src/lib/atlas tests/atlas-advice.test.ts`
-
-Expected: ESLint prints nothing.
-
-- [ ] **Step 5: Run the tests and watch them pass**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-advice.test.ts`
-
-Expected: `48 passed, 0 failed`
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/lib/atlas/advice.ts tests/atlas-advice.test.ts
-git commit -m "Atlas: what to do in an area and why, and the votes within reach" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+- [ ] **Step 4: Run** it. Expected: all pass. Lint the new files (`--fix`); typecheck.
+- [ ] **Step 5: Commit** `The atlas's arithmetic: turnout, shares, swing, what to do and why, votes within reach`.
 
 ---
 
-### Task 6: Where a figure comes from, and one import
+### Task 3: The data files, their checks and the report
 
 **Files:**
-- Create: `src/lib/atlas/scope.ts`
-- Create: `src/lib/atlas/index.ts`
-- Test: `tests/atlas-scope.test.ts`
+- Create: `src/lib/atlas-files.ts`, `scripts/atlas/read.ts`, `scripts/atlas/areas.ts`,
+  `scripts/atlas/report.ts`, `data/atlas/README.md`, `data/atlas/kenya/areas.csv`
+- Test: `tests/atlas-files.test.ts`, `tests/atlas-data.test.ts`
 
-**Interfaces:** Consumes `type Level` from `./types`. Produces:
-`parentKey(key: string): string | null` (a county's parent is `kenya`; `kenya` has none),
-`levelOfKey(key: string): Level`,
-`resultsArea(key: string, has: (key: string) => boolean): { key: string; inherited: boolean } | null`
-(an area's own results, else a ward's constituency's; nothing else borrows),
-`figureLabel(found: { key: string; inherited: boolean } | null): string | null` (`"constituency figure"`).
-`index.ts` re-exports every module, so a screen writes `import { whatToDo } from "@/lib/atlas"`.
+**Interfaces:** Produces `ATLAS_ELECTIONS`, `type Level`, row types `SourceRow`, `AreaRow`,
+`CandidateRow`, `ResultRow`, `TurnoutRow` (`cast_votes`), `RegisterRow`, `PopulationRow`,
+`DifferenceRow`, `type AtlasFiles`, `type TableName`, `HEADERS`, `FILE_NAMES`, `emptyFiles()`,
+`slugify(s)`, `candidateId(election, seat, name)`, `readTable(table, text, where, into):
+string[]`, `checkAtlas(files, wardSlugs: Record<string, string[]>): string[]`,
+`atlasReport(files): string`; scripts `readAtlas(root, folders)`, `atlasFolders(root)`,
+`wardSlugs()`.
 
-- [ ] **Step 1: Write the failing tests**
-
-The last test pins the public surface of `@/lib/atlas`, so a removed export is noticed.
-
-Create `tests/atlas-scope.test.ts`:
+- [ ] **Step 1: Write the failing test** `tests/atlas-files.test.ts`:
 
 ```ts
-// Checks for where an atlas figure comes from: the key above an area, an area's level, which area
-// holds the results a ward shows (its constituency's, until stations give wards their own), the
-// label that says so, and the public surface of `@/lib/atlas`. Pure; nothing leaves this process.
-// Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-scope.test.ts
+// Checks for reading the atlas's data files and the checks every figure must
+// pass: whole numbers, areas and their parents, seats, blocs, sources, sums
+// that add up, and the report. Pure. Run from the repository root:
+//   npx tsx --tsconfig tsconfig.json tests/atlas-files.test.ts
 
-import * as atlas from "@/lib/atlas";
-import { figureLabel, levelOfKey, parentKey, resultsArea } from "@/lib/atlas";
-
-let pass = 0;
-let fail = 0;
-
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
-function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
-  if (g === w) pass++;
-  else {
-    fail++;
-    console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
-  }
-}
-
-eq(
-  "the key above",
-  [
-    parentKey("nairobi/dagoretti-north/kileleshwa"),
-    parentKey("nairobi/dagoretti-north"),
-    parentKey("nairobi"),
-    parentKey("kenya"),
-  ],
-  ["nairobi/dagoretti-north", "nairobi", "kenya", null],
-);
-eq(
-  "the level of a key",
-  [
-    levelOfKey("kenya"),
-    levelOfKey("nairobi"),
-    levelOfKey("nairobi/dagoretti-north"),
-    levelOfKey("nairobi/dagoretti-north/kileleshwa"),
-  ],
-  ["country", "county", "constituency", "ward"],
-);
-
-// Results are held at the constituency for now.
-const HAS = new Set(["nairobi", "nairobi/dagoretti-north", "nairobi/kibra"]);
-const has = (key: string) => HAS.has(key);
-eq("a constituency's own results", resultsArea("nairobi/kibra", has), {
-  key: "nairobi/kibra",
-  inherited: false,
-});
-eq("a ward shows its constituency's", resultsArea("nairobi/dagoretti-north/kileleshwa", has), {
-  key: "nairobi/dagoretti-north",
-  inherited: true,
-});
-eq(
-  "a ward with results of its own",
-  resultsArea("nairobi/kibra/sarangombe", (k) => k === "nairobi/kibra/sarangombe"),
-  {
-    key: "nairobi/kibra/sarangombe",
-    inherited: false,
-  },
-);
-eq(
-  "a ward's own results come before its constituency's",
-  resultsArea("nairobi/kibra/sarangombe", () => true),
-  { key: "nairobi/kibra/sarangombe", inherited: false },
-);
-eq("a ward whose constituency has none", resultsArea("nairobi/langata/karen", has), null);
-eq(
-  "a constituency with none does not borrow the county's",
-  resultsArea("nairobi/langata", has),
-  null,
-);
-
-eq(
-  "the label for a ward showing its constituency's",
-  figureLabel(resultsArea("nairobi/kibra/sarangombe", has)),
-  "constituency figure",
-);
-eq("no label for an area's own figures", figureLabel(resultsArea("nairobi/kibra", has)), null);
-eq("no label when there is nothing", figureLabel(null), null);
-
-// Everything a screen needs comes from one import.
-eq("the public surface", Object.keys(atlas).sort(), [
-  "MISSING",
-  "blocShares",
-  "estimateTag",
-  "figureLabel",
-  "fmtPoints",
-  "fmtShare",
-  "fmtTurnout",
-  "fmtVotes",
-  "lean",
-  "levelOfKey",
-  "margin",
-  "nearestRank",
-  "notYetRegistered",
-  "ourShare",
-  "parentKey",
-  "registerFlag",
-  "registerGrowth",
-  "registerTag",
-  "resultTag",
-  "resultsArea",
-  "settle",
-  "swing",
-  "turnoutPct",
-  "validVotes",
-  "votesWithinReach",
-  "whatToDo",
-  "youngShare",
-]);
-
-console.log(`${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-scope.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@/lib' imported from .../tests/atlas-scope.test.ts`
-
-- [ ] **Step 3: Write the scope helpers and the barrel**
-
-Create `src/lib/atlas/scope.ts`:
-
-```ts
-// Where an atlas figure comes from. Areas are keyed by a path of slugs (nairobi,
-// nairobi/dagoretti-north, nairobi/dagoretti-north/kileleshwa), so the area above and an area's
-// level can be read from the key. Until polling stations give wards results of their own, a ward
-// shows its constituency's figures, labelled as such. Pure.
-
-import type { Level } from "./types";
-
-/**
- * The key above an area: its path less the last part. A county's is the country's; the country
- * has none.
- */
-export function parentKey(key: string): string | null {
-  if (key === "kenya") return null;
-  const i = key.lastIndexOf("/");
-  return i === -1 ? "kenya" : key.slice(0, i);
-}
-
-/** An area's level, from the shape of its key. */
-export function levelOfKey(key: string): Level {
-  if (key === "kenya") return "country";
-  const parts = key.split("/").length;
-  return parts === 1 ? "county" : parts === 2 ? "constituency" : "ward";
-}
-
-/**
- * Where the results an area shows are held: its own when it has any; a ward with none shows its
- * constituency's. Nothing else borrows, so a constituency without results is simply without.
- */
-export function resultsArea(
-  key: string,
-  has: (key: string) => boolean,
-): { key: string; inherited: boolean } | null {
-  if (has(key)) return { key, inherited: false };
-  if (levelOfKey(key) === "ward") {
-    const above = parentKey(key);
-    if (above !== null && has(above)) return { key: above, inherited: true };
-  }
-  return null;
-}
-
-/**
- * "constituency figure" when an area shows the figures of the area above it; null when they are
- * its own.
- */
-export function figureLabel(found: { key: string; inherited: boolean } | null): string | null {
-  return found && found.inherited ? `${levelOfKey(found.key)} figure` : null;
-}
-```
-
-Create `src/lib/atlas/index.ts`:
-
-```ts
-// The election atlas's rules, from one import: `import { whatToDo } from "@/lib/atlas"`.
-
-export * from "./advice";
-export * from "./format";
-export * from "./measures";
-export * from "./register";
-export * from "./scope";
-export * from "./types";
-```
-
-- [ ] **Step 4: Format and lint**
-
-Run: `npx prettier --write src/lib/atlas tests/atlas-scope.test.ts && npx eslint src/lib/atlas tests/atlas-scope.test.ts`
-
-Expected: ESLint prints nothing.
-
-- [ ] **Step 5: Run every atlas test, and typecheck**
-
-Run: `for t in tests/atlas-measures tests/atlas-register tests/atlas-format tests/atlas-advice tests/atlas-scope; do printf "%-28s" $t; npx -y tsx --tsconfig tsconfig.json $t.test.ts | tail -1; done`
-
-Expected:
-
-```
-tests/atlas-measures        35 passed, 0 failed
-tests/atlas-register        20 passed, 0 failed
-tests/atlas-format          25 passed, 0 failed
-tests/atlas-advice          48 passed, 0 failed
-tests/atlas-scope           12 passed, 0 failed
-```
-
-Run: `npx tsc --noEmit -p tsconfig.json 2>&1 | grep -E "src/lib/atlas|integrations/supabase/types"`
-
-Expected: no output.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/lib/atlas/scope.ts src/lib/atlas/index.ts tests/atlas-scope.test.ts
-git commit -m "Atlas: where a figure comes from, and one import for the rules" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 7: Loading a county's files as an idempotent migration
-
-**Files:**
-- Create: `tests/fixtures/atlas/testland/areas.csv`, `candidates.csv`, `results.csv`, `turnout.csv`, `register.csv`, `population.csv`, `known-differences.csv`
-- Create: `scripts/atlas/test_build_sql.py`
-- Create: `scripts/atlas/build_sql.py`
-- Create: `tests/fixtures/atlas/testland.sql` (generated, then committed as the golden file)
-- Create: `tests/sql/atlas-load.test.sql`
-- Create: `tests/atlas-scripts.test.ts`
-- Create: `scripts/atlas/.gitignore` (Python's bytecode caches stay out of git)
-
-**Interfaces:** Produces `build_sql.FILES` (each file's columns), `build_sql.literal(column, value)`
-(blank is `null`, a number is bare, anything else is quoted text with apostrophes doubled),
-`build_sql.read(directory, name)`, `build_sql.build(directory, title) -> str`,
-`build_sql.main(argv)`. The command is
-`python3 scripts/atlas/build_sql.py DATA_DIR "County name" [OUT_SQL]`. The fictional county
-"Testland" (one county, two constituencies, two wards, three races) that later tasks test against.
-`tests/atlas-scripts.test.ts` runs every `scripts/atlas/test_*.py` as part of `npm test`.
-
-- [ ] **Step 1: Create the fictional county**
-
-Testland cannot be mistaken for real data. It is built to exercise what real files will do: a name
-with a comma and a party with quotes (`Wa Test, Jr.`, `Party "C"`), an apostrophe (`O'Test`), a blank
-party, a real zero (`O'Test` has 0 votes), a turnout row with missing figures, and results that add
-up (the governor's votes in the two constituencies make the county's).
-
-`tests/fixtures/atlas/testland/areas.csv`:
-
-```csv
-key,level,name,parent,iebc_code
-testland,county,Testland,kenya,901
-testland/north-test,constituency,North Test,testland,9101
-testland/south-test,constituency,South Test,testland,
-testland/north-test/ward-one,ward,Ward One,testland/north-test,
-testland/north-test/ward-two,ward,Ward Two,testland/north-test,
-```
-
-`tests/fixtures/atlas/testland/candidates.csv`:
-
-```csv
-id,election_id,seat,name,party,bloc
-2022-governor/testland/a-test,2022-governor,testland,A Test,Party A,Alpha
-2022-governor/testland/b-test,2022-governor,testland,B Test,Party B,Beta
-2022-governor/testland/wa-test-jr,2022-governor,testland,"Wa Test, Jr.","Party ""C""",Gamma
-2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party A,Alpha
-2022-president/kenya/p-two-test,2022-president,kenya,P Two Test,Party B,Beta
-2022-mp/testland/north-test/m-one-test,2022-mp,testland/north-test,M One Test,Party A,Alpha
-2022-mp/testland/north-test/m-two-test,2022-mp,testland/north-test,M Two Test,Party B,Beta
-2022-mp/testland/north-test/otest,2022-mp,testland/north-test,O'Test,,Independent
-```
-
-`tests/fixtures/atlas/testland/results.csv`:
-
-```csv
-candidate_id,area_key,votes
-2022-governor/testland/a-test,testland,600
-2022-governor/testland/a-test,testland/north-test,350
-2022-governor/testland/a-test,testland/south-test,250
-2022-governor/testland/b-test,testland,300
-2022-governor/testland/b-test,testland/north-test,100
-2022-governor/testland/b-test,testland/south-test,200
-2022-governor/testland/wa-test-jr,testland,100
-2022-governor/testland/wa-test-jr,testland/north-test,40
-2022-governor/testland/wa-test-jr,testland/south-test,60
-2022-president/kenya/p-one-test,testland,550
-2022-president/kenya/p-one-test,testland/north-test,300
-2022-president/kenya/p-one-test,testland/south-test,250
-2022-president/kenya/p-two-test,testland,450
-2022-president/kenya/p-two-test,testland/north-test,250
-2022-president/kenya/p-two-test,testland/south-test,200
-2022-mp/testland/north-test/m-one-test,testland/north-test,350
-2022-mp/testland/north-test/m-two-test,testland/north-test,150
-2022-mp/testland/north-test/otest,testland/north-test,0
-```
-
-`tests/fixtures/atlas/testland/turnout.csv`:
-
-```csv
-election_id,area_key,registered,cast_votes,rejected_votes,valid_votes,source,source_url
-2022-governor,testland,2000,1020,20,1000,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
-2022-governor,testland/north-test,1100,500,10,490,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
-2022-governor,testland/south-test,900,520,10,510,"IEBC, Governor results by constituency 2022",https://example.test/governor-2022
-2022-president,testland,2000,1020,20,1000,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
-2022-president,testland/north-test,1100,560,10,550,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
-2022-president,testland/south-test,900,460,10,450,"IEBC, Presidential results by constituency 2022",https://example.test/president-2022
-2022-mp,testland/north-test,1100,510,10,500,"IEBC, MP results by constituency 2022",https://example.test/mp-2022
-2017-mp,testland/north-test,1000,,,,"IEBC, MP results by constituency 2017",
-```
-
-`tests/fixtures/atlas/testland/register.csv`:
-
-```csv
-year,area_key,registered,source,source_url
-2017,testland/north-test/ward-one,550,"IEBC, Registered voters by ward 2017",https://example.test/register-2017
-2022,testland,2000,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
-2022,testland/north-test,1100,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
-2022,testland/south-test,900,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
-2022,testland/north-test/ward-one,600,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
-2022,testland/north-test/ward-two,500,"IEBC, Registered voters by ward 2022",https://example.test/register-2022
-```
-
-`tests/fixtures/atlas/testland/population.csv`:
-
-```csv
-area_key,year,total,adults,young_adults,source,method
-testland/north-test/ward-one,2025,1500,900,400,"WorldPop, Age and sex structures (test)",Test estimate from the age-and-sex grid
-testland/north-test/ward-two,2025,1300,800,350,"WorldPop, Age and sex structures (test)",Test estimate from the age-and-sex grid
-```
-
-`tests/fixtures/atlas/testland/known-differences.csv` (header only: Testland has none):
-
-```csv
-check,election_id,area_key,candidate_id,difference,reason
-```
-
-- [ ] **Step 2: Write the failing tests**
-
-Create `scripts/atlas/test_build_sql.py`:
-
-```python
-"""Tests for build_sql.py: how values become SQL, that a county's files build the golden file,
-and that bad files are refused. Run from the repository root:
-
-  python3 -m unittest discover -s scripts/atlas -p "test_*.py"
-"""
-import shutil
-import tempfile
-import unittest
-from pathlib import Path
-
-import build_sql
-
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = ROOT / "tests" / "fixtures" / "atlas" / "testland"
-GOLDEN = ROOT / "tests" / "fixtures" / "atlas" / "testland.sql"
-
-
-class Literals(unittest.TestCase):
-    def test_text_is_quoted_and_apostrophes_doubled(self):
-        self.assertEqual(build_sql.literal("name", "O'Test"), "'O''Test'")
-
-    def test_blank_is_null(self):
-        self.assertEqual(build_sql.literal("party", ""), "null")
-        self.assertEqual(build_sql.literal("votes", ""), "null")
-
-    def test_numbers_are_bare(self):
-        self.assertEqual(build_sql.literal("votes", "0"), "0")
-        self.assertEqual(build_sql.literal("votes", "1200"), "1200")
-
-    def test_a_number_with_a_separator_is_refused(self):
-        with self.assertRaises(ValueError):
-            build_sql.literal("votes", "1,200")
-
-    def test_text_that_looks_like_a_number_stays_text(self):
-        self.assertEqual(build_sql.literal("iebc_code", "047"), "'047'")
-
-    def test_a_number_must_be_ascii_digits(self):
-        for value in ("٣٠٠", "１２３", "1٣"):
-            with self.assertRaises(ValueError):
-                build_sql.literal("votes", value)
-
-    def test_a_backslash_is_refused(self):
-        with self.assertRaises(ValueError):
-            build_sql.literal("name", "Wa\\Test")
-
-
-class Build(unittest.TestCase):
-    def test_the_fixture_builds_the_golden_file(self):
-        self.assertEqual(build_sql.build(FIXTURE, "Testland"), GOLDEN.read_text(encoding="utf-8"))
-
-    def test_building_twice_gives_the_same_text(self):
-        self.assertEqual(build_sql.build(FIXTURE, "Testland"), build_sql.build(FIXTURE, "Testland"))
-
-    def test_every_table_is_an_upsert(self):
-        sql = build_sql.build(FIXTURE, "Testland")
-        for table in (
-            "atlas_areas",
-            "atlas_candidates",
-            "atlas_results",
-            "atlas_turnout",
-            "atlas_register",
-            "atlas_population",
-        ):
-            self.assertIn(f"insert into public.{table} ", sql)
-        self.assertEqual(sql.count("insert into "), sql.count("on conflict "))
-
-    def test_parents_come_before_children(self):
-        sql = build_sql.build(FIXTURE, "Testland")
-        county = sql.index("'testland', 'county'")
-        constituency = sql.index("'testland/north-test', 'constituency'")
-        ward = sql.index("'testland/north-test/ward-one', 'ward'")
-        self.assertLess(county, constituency)
-        self.assertLess(constituency, ward)
-
-    def test_a_large_table_is_split_into_several_statements(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = Path(tmp) / "testland"
-            shutil.copytree(FIXTURE, copy)
-            rows = "".join(f"2022-governor/testland/a-test,testland/north-test/w{i},{i}\n" for i in range(450))
-            (copy / "results.csv").write_text("candidate_id,area_key,votes\n" + rows)
-            sql = build_sql.build(copy, "Testland")
-            self.assertEqual(sql.count("insert into public.atlas_results "), 3)
-
-    def test_main_writes_the_golden_file_as_utf8_bytes(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "testland.sql"
-            build_sql.main(["build_sql.py", str(FIXTURE), "Testland", str(out)])
-            self.assertEqual(out.read_bytes(), GOLDEN.read_bytes())
-
-
-class Refusals(unittest.TestCase):
-    def copy_fixture(self, tmp):
-        copy = Path(tmp) / "testland"
-        shutil.copytree(FIXTURE, copy)
-        return copy
-
-    def test_wrong_columns_are_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = self.copy_fixture(tmp)
-            (copy / "results.csv").write_text("candidate,area,votes\nx,y,1\n")
-            with self.assertRaisesRegex(ValueError, "results.csv: the columns must be"):
-                build_sql.build(copy, "Testland")
-
-    def test_a_missing_file_is_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = self.copy_fixture(tmp)
-            (copy / "register.csv").unlink()
-            with self.assertRaisesRegex(ValueError, "register.csv is missing"):
-                build_sql.build(copy, "Testland")
-
-    def test_a_short_row_is_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = self.copy_fixture(tmp)
-            (copy / "results.csv").write_text("candidate_id,area_key,votes\n2022-governor/testland/a-test,testland\n")
-            with self.assertRaisesRegex(ValueError, "results.csv row 2: 2 cells, expected 3"):
-                build_sql.build(copy, "Testland")
-
-    def test_a_number_that_is_not_a_number_is_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = self.copy_fixture(tmp)
-            (copy / "results.csv").write_text(
-                "candidate_id,area_key,votes\n2022-governor/testland/a-test,testland,6OO\n"
-            )
-            with self.assertRaisesRegex(ValueError, "results.csv row 2"):
-                build_sql.build(copy, "Testland")
-
-    def test_a_row_listed_twice_is_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            copy = self.copy_fixture(tmp)
-            (copy / "results.csv").write_text(
-                "candidate_id,area_key,votes\n"
-                "2022-governor/testland/a-test,testland,600\n"
-                "2022-governor/testland/a-test,testland,601\n"
-            )
-            with self.assertRaisesRegex(
-                ValueError, "results.csv row 3: the same candidate_id, area_key as row 2"
-            ):
-                build_sql.build(copy, "Testland")
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
-
-- [ ] **Step 3: Run them and watch them fail**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_build_sql.py"`
-
-Expected: `ModuleNotFoundError: No module named 'build_sql'` and `FAILED (errors=1)`.
-
-- [ ] **Step 4: Write the loader**
-
-Create `scripts/atlas/build_sql.py`. It checks only that the files can be read (the right columns,
-whole numbers in ASCII digits where numbers belong, no backslash in a text cell, no row listed
-twice); that they add up is Task 8's job. Areas load a depth at a time, so a parent is always in
-before its children; rows go in key order, so the same files always build the same text.
-
-```python
-"""Turns one county's atlas files into a migration of idempotent upserts.
-
-Usage:
-  python3 scripts/atlas/build_sql.py DATA_DIR "County name" [OUT_SQL]
-
-DATA_DIR holds areas.csv, candidates.csv, results.csv, turnout.csv, register.csv and
-population.csv (the columns of each are in FILES below). The SQL goes to OUT_SQL, or to the
-screen. Every statement upserts, so running the migration again changes nothing, and each
-county is one more migration, applied before the code that needs it.
-
-This only checks that the files can be read: the right columns, whole numbers (ASCII digits)
-where numbers belong, no backslash in a text cell, and no row listed twice. That what they say
-adds up is tests/atlas-data.test.ts's job.
-"""
-import csv
-import re
-import sys
-from pathlib import Path
-
-# The files, in the order they load, with their columns. scripts/atlas/checks.ts has the same
-# lists; tests/atlas-data.test.ts fails if the two ever differ.
-FILES = {
-    "areas": ["key", "level", "name", "parent", "iebc_code"],
-    "candidates": ["id", "election_id", "seat", "name", "party", "bloc"],
-    "results": ["candidate_id", "area_key", "votes"],
-    "turnout": [
-        "election_id",
-        "area_key",
-        "registered",
-        "cast_votes",
-        "rejected_votes",
-        "valid_votes",
-        "source",
-        "source_url",
-    ],
-    "register": ["year", "area_key", "registered", "source", "source_url"],
-    "population": ["area_key", "year", "total", "adults", "young_adults", "source", "method"],
-}
-
-# Each file's table, and the columns that make a row unique: what an upsert matches on.
-TABLES = {
-    "areas": ("atlas_areas", ["key"]),
-    "candidates": ("atlas_candidates", ["id"]),
-    "results": ("atlas_results", ["candidate_id", "area_key"]),
-    "turnout": ("atlas_turnout", ["election_id", "area_key"]),
-    "register": ("atlas_register", ["year", "area_key"]),
-    "population": ("atlas_population", ["area_key", "year"]),
-}
-
-NUMBERS = {
-    "votes",
-    "registered",
-    "cast_votes",
-    "rejected_votes",
-    "valid_votes",
-    "year",
-    "total",
-    "adults",
-    "young_adults",
-}
-
-# Rows per insert, so a county's results are several statements and not one huge one.
-CHUNK = 200
-
-
-def literal(column, value):
-    """One cell as SQL: blank is null, a number is bare, anything else is quoted text."""
-    if value == "":
-        return "null"
-    if column in NUMBERS:
-        # [0-9], not \d: \d also matches Arabic-Indic and full-width digits, which Postgres rejects.
-        if not re.fullmatch(r"[0-9]+", value):
-            raise ValueError(f"{column} must be a whole number, not {value!r}")
-        return value
-    # The quoting below is only right while the server's standard_conforming_strings is on (its
-    # default), and a data cell has no business holding a backslash.
-    if "\\" in value:
-        raise ValueError(f"{column} must not contain a backslash, not {value!r}")
-    return "'" + value.replace("'", "''") + "'"
-
-
-def read(directory, name):
-    """A file's rows as dicts, each with the row number it came from in "_row": the header is
-    row 1, so the first data row is row 2."""
-    path = Path(directory) / f"{name}.csv"
-    if not path.exists():
-        raise ValueError(f"{path.name} is missing")
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.reader(f))
-    want = FILES[name]
-    if not rows or rows[0] != want:
-        found = ",".join(rows[0]) if rows else "nothing"
-        raise ValueError(f"{path.name}: the columns must be {','.join(want)}; found {found}")
-    key = TABLES[name][1]
-    seen = {}  # each row's key cells, as read -> the row number they first appeared on
-    out = []
-    for n, cells in enumerate(rows[1:], start=2):
-        if not any(cell.strip() for cell in cells):
-            continue
-        if len(cells) != len(want):
-            raise ValueError(f"{path.name} row {n}: {len(cells)} cells, expected {len(want)}")
-        row = dict(zip(want, cells))
-        # A repeated row would load silently, the last one winning, when the two fall in different
-        # CHUNKs, and Postgres would refuse it when they fall in the same one.
-        pair = tuple(row[c] for c in key)
-        if pair in seen:
-            first = seen[pair]
-            raise ValueError(f"{path.name} row {n}: the same {', '.join(key)} as row {first}")
-        seen[pair] = n
-        row["_row"] = n
-        out.append(row)
-    return out
-
-
-def sort_key(name):
-    """Rows go in the order of their keys, so the same files always build the same text."""
-    if name == "areas":
-        return lambda r: (r["key"].count("/"), r["key"])
-    return lambda r: tuple(r[c] for c in TABLES[name][1])
-
-
-def upserts(name, rows):
-    """The insert statements for one file: parents first for areas, CHUNK rows at a time."""
-    table, key = TABLES[name]
-    columns = FILES[name]
-    sets = ", ".join(f"{c} = excluded.{c}" for c in columns if c not in key)
-    if name == "areas":
-        by_depth = {}
-        for r in rows:
-            by_depth.setdefault(r["key"].count("/"), []).append(r)
-        groups = [by_depth[depth] for depth in sorted(by_depth)]
-    else:
-        groups = [rows]
-    out = []
-    for group in groups:
-        for i in range(0, len(group), CHUNK):
-            lines = []
-            for r in group[i : i + CHUNK]:
-                try:
-                    cells = [literal(c, r[c]) for c in columns]
-                except ValueError as e:
-                    raise ValueError(f"{name}.csv row {r['_row']}: {e}") from None
-                lines.append("  (" + ", ".join(cells) + ")")
-            out.append(
-                f"insert into public.{table} ({', '.join(columns)}) values\n"
-                + ",\n".join(lines)
-                + f"\non conflict ({', '.join(key)}) do update set {sets};\n"
-            )
-    return out
-
-
-def build(directory, title):
-    """The whole migration for one county's files."""
-    directory = Path(directory)
-    title = re.sub(r"\s+", " ", title).strip()
-    folder = re.sub(r"\s+", " ", directory.name)
-    parts = [
-        f'-- Election atlas: {title}. Generated by scripts/atlas/build_sql.py from the files in "{folder}".\n'
-        "-- Do not edit by hand: change the files and build it again. Every statement upserts,\n"
-        "-- so running it again changes nothing.\n"
-    ]
-    for name in FILES:
-        rows = read(directory, name)
-        rows.sort(key=sort_key(name))
-        if rows:
-            parts.append(f"\n-- {TABLES[name][0]}: {len(rows)} rows\n")
-            parts.extend(upserts(name, rows))
-    return "".join(parts)
-
-
-def main(argv):
-    if len(argv) not in (3, 4):
-        raise SystemExit(__doc__)
-    try:
-        sql = build(argv[1], argv[2])
-    except ValueError as e:
-        raise SystemExit(f"{argv[1]}: {e}")
-    if len(argv) == 4:
-        with Path(argv[3]).open("w", encoding="utf-8", newline="\n") as f:
-            f.write(sql)
-    else:
-        sys.stdout.write(sql)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
-```
-
-- [ ] **Step 5: Run the tests: only the two golden-file tests fail**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_build_sql.py" 2>&1 | tail -5`
-
-Expected: `Ran 18 tests` and `FAILED (errors=2)`, both errors being
-`FileNotFoundError: ... tests/fixtures/atlas/testland.sql`: `test_the_fixture_builds_the_golden_file`
-and `test_main_writes_the_golden_file_as_utf8_bytes`. Every other test passes.
-
-- [ ] **Step 6: Generate the golden file, and read it**
-
-Run: `python3 scripts/atlas/build_sql.py tests/fixtures/atlas/testland Testland tests/fixtures/atlas/testland.sql`
-
-Read the file. It should be 78 lines and open with:
-
-```
--- Election atlas: Testland. Generated by scripts/atlas/build_sql.py from the files in "testland".
--- Do not edit by hand: change the files and build it again. Every statement upserts,
--- so running it again changes nothing.
-
--- atlas_areas: 5 rows
-insert into public.atlas_areas (key, level, name, parent, iebc_code) values
-  ('testland', 'county', 'Testland', 'kenya', '901')
-on conflict (key) do update set level = excluded.level, name = excluded.name, parent = excluded.parent, iebc_code = excluded.iebc_code;
-```
-
-Check the awkward values came through:
-
-Run: `grep -n "O''Test\|Party \"C\"" tests/fixtures/atlas/testland.sql | cut -c1-140`
-
-Expected:
-
-```
-22:  ('2022-governor/testland/wa-test-jr', '2022-governor', 'testland', 'Wa Test, Jr.', 'Party "C"', 'Gamma'),
-25:  ('2022-mp/testland/north-test/otest', '2022-mp', 'testland/north-test', 'O''Test', null, 'Independent'),
-```
-
-Run: `sha256sum tests/fixtures/atlas/testland.sql`
-
-Expected: `298ac28e9540600339b9af5ef3e2e374e66e31369b38e307741451b705e83044`
-
-- [ ] **Step 7: Run the Python tests: all pass**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -4`
-
-Expected: `Ran 18 tests` and `OK`.
-
-- [ ] **Step 8: Write the SQL load test, and run the suite**
-
-The golden file is applied to a real database: it reads back as the files say, applying it again
-changes nothing, and applying it again puts back a figure someone changed.
-
-Create `tests/sql/atlas-load.test.sql`:
-
-```sql
--- Loading a county's atlas files: the SQL scripts/atlas/build_sql.py builds from the fictional
--- Testland files (tests/fixtures/atlas/testland.sql) applies, reads back as the files say,
--- applies again without changing anything, and puts back a figure someone changed. Run with
--- tests/sql/run.sh; each test rolls back.
-
--- test: a county's files load and read back as they were written
-begin;
-\ir ../fixtures/atlas/testland.sql
-do $$ begin
-  assert (select count(*) from public.atlas_areas where key like 'testland%') = 5, 'areas';
-  assert (select count(*) from public.atlas_candidates where id like '%/testland/%' or id like '2022-president/kenya/p-%-test') = 8, 'candidates';
-  assert (select count(*) from public.atlas_results where area_key like 'testland%') = 18, 'results';
-  assert (select count(*) from public.atlas_turnout where area_key like 'testland%') = 8, 'turnout';
-  assert (select count(*) from public.atlas_register where area_key like 'testland%') = 6, 'registers';
-  assert (select count(*) from public.atlas_population where area_key like 'testland%') = 2, 'population';
-  assert (select parent from public.atlas_areas where key = 'testland/north-test/ward-one') = 'testland/north-test', 'a ward''s parent';
-  assert (select iebc_code from public.atlas_areas where key = 'testland') = '901', 'a code is kept as text';
-  assert (select iebc_code from public.atlas_areas where key = 'testland/south-test') is null, 'a blank code is null';
-  assert (select name from public.atlas_candidates where id = '2022-governor/testland/wa-test-jr') = 'Wa Test, Jr.', 'a comma in a name';
-  assert (select party from public.atlas_candidates where id = '2022-governor/testland/wa-test-jr') = 'Party "C"', 'quotes in a party';
-  assert (select name from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') = 'O''Test', 'an apostrophe in a name';
-  assert (select party from public.atlas_candidates where id = '2022-mp/testland/north-test/otest') is null, 'a blank party is null';
-  assert (select votes from public.atlas_results where candidate_id = '2022-mp/testland/north-test/otest') = 0, 'a real zero is kept';
-  assert (select cast_votes from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing figure stays missing';
-  assert (select registered from public.atlas_turnout where election_id = '2017-mp' and area_key = 'testland/north-test') = 1000, 'and the one given is kept';
-  assert (select rejected_votes from public.atlas_turnout
-           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing rejected count stays missing';
-  assert (select valid_votes from public.atlas_turnout
-           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a missing valid count stays missing';
-  assert (select source_url from public.atlas_turnout
-           where election_id = '2017-mp' and area_key = 'testland/north-test') is null, 'a blank link is null';
-  assert (select sum(r.votes) from public.atlas_results r
-            join public.atlas_candidates c on c.id = r.candidate_id
-           where c.election_id = '2022-governor' and r.area_key like 'testland/%') = 1000,
-    'the governor''s votes in the constituencies add up to the county''s';
-end $$;
-rollback;
-
--- test: loading it again changes nothing
-begin;
-\ir ../fixtures/atlas/testland.sql
-create temp view counted as
-  select 'areas' as t, count(*) as n, sum(length(name)) as w from public.atlas_areas
-  union all select 'candidates', count(*), sum(length(name)) from public.atlas_candidates
-  union all select 'results', count(*), sum(votes) from public.atlas_results
-  union all select 'turnout', count(*), sum(coalesce(cast_votes, 0)) from public.atlas_turnout
-  union all select 'register', count(*), sum(registered) from public.atlas_register
-  union all select 'population', count(*), sum(adults) from public.atlas_population;
-create temp table loaded as select * from counted;
-\ir ../fixtures/atlas/testland.sql
-do $$ begin
-  assert (select count(*) from loaded) = 6, 'six tables counted';
-  assert (select count(*) from loaded l join counted c on c.t = l.t and c.n = l.n and c.w = l.w) = 6,
-    'loading twice changed a table';
-end $$;
-rollback;
-
--- test: loading it again puts back a figure that was changed
-begin;
-\ir ../fixtures/atlas/testland.sql
-update public.atlas_areas set name = 'Changed' where key = 'testland';
-update public.atlas_candidates set party = 'Changed' where id = '2022-governor/testland/a-test';
-update public.atlas_results set votes = 1 where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland';
-update public.atlas_turnout set source = 'Someone, changed it' where election_id = '2022-governor' and area_key = 'testland';
-update public.atlas_register set registered = 1 where year = 2022 and area_key = 'testland';
-update public.atlas_population set total = 2000 where area_key = 'testland/north-test/ward-one';
-\ir ../fixtures/atlas/testland.sql
-do $$ begin
-  assert (select name from public.atlas_areas where key = 'testland') = 'Testland', 'a changed area name was kept';
-  assert (select party from public.atlas_candidates where id = '2022-governor/testland/a-test') = 'Party A', 'a changed party was kept';
-  assert (select votes from public.atlas_results
-           where candidate_id = '2022-governor/testland/a-test' and area_key = 'testland') = 600, 'a changed result was kept';
-  assert (select source from public.atlas_turnout
-           where election_id = '2022-governor' and area_key = 'testland') = 'IEBC, Governor results by constituency 2022',
-    'a changed source was kept';
-  assert (select registered from public.atlas_register where year = 2022 and area_key = 'testland') = 2000, 'a changed register was kept';
-  assert (select total from public.atlas_population where area_key = 'testland/north-test/ward-one') = 1500, 'a changed population was kept';
-end $$;
-rollback;
-```
-
-Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-120`
-
-Expected: every line `ok`, including `ok   tests/sql/atlas-load.test.sql (3 tests)`; 13 test files.
-
-- [ ] **Step 9: Run the Python tests from `npm test`**
-
-Create `tests/atlas-scripts.test.ts`:
-
-```ts
-// Runs the Python unit tests for the atlas scripts (scripts/atlas/test_*.py) as part of
-// `npm test`. Skips, as the SQL tests do, when there is no python3. ATLAS_PYTHON names another
-// interpreter (empty counts as unset): the ward population test needs one with rasterio and numpy
-// installed, and skips itself without. Fails if no test ran at all, so a stand-in that exits 0
-// cannot pass, and reports how many ran. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-scripts.test.ts
-
-import { spawnSync } from "node:child_process";
-
-const python = process.env["ATLAS_PYTHON"] || "python3";
-const probe = spawnSync(python, ["--version"], { encoding: "utf8" });
-if (probe.error) {
-  console.log(`SKIP: ${python} not found. Install Python 3 to run the atlas script tests.`);
-  process.exit(0);
-}
-
-const run = spawnSync(
-  python,
-  ["-m", "unittest", "discover", "-s", "scripts/atlas", "-p", "test_*.py"],
-  { encoding: "utf8" },
-);
-process.stdout.write(run.stdout);
-process.stderr.write(run.stderr);
-
-// unittest ends its stderr with "Ran 18 tests in 0.3s". Exit 0 without that line, or with
-// "Ran 0 tests", means nothing was tested, and that must not pass.
-const summary = /^Ran (\d+) tests?/m.exec(run.stderr);
-const count = summary ? Number(summary[1]) : 0;
-if (run.status === 0 && count === 0) {
-  console.log("atlas script tests failed: no test ran");
-  process.exit(1);
-}
-console.log(
-  run.status === 0 ? `atlas script tests passed (${count} tests)` : "atlas script tests failed",
-);
-process.exit(run.status ?? 1);
-```
-
-Run: `npx prettier --write tests/atlas-scripts.test.ts && npx eslint tests/atlas-scripts.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-scripts.test.ts | tail -3`
-
-Expected: ESLint prints nothing; the last lines are `OK` and `atlas script tests passed (18 tests)`.
-
-Running Python's tests leaves `scripts/atlas/__pycache__/` behind. Keep it out of git with a nested
-ignore file (the root `.gitignore` is edited by a later task), `scripts/atlas/.gitignore`, one line:
-
-```
-__pycache__/
-```
-
-- [ ] **Step 10: Commit**
-
-```bash
-git add tests/fixtures/atlas scripts/atlas/build_sql.py scripts/atlas/test_build_sql.py scripts/atlas/.gitignore tests/sql/atlas-load.test.sql tests/atlas-scripts.test.ts
-git commit -m "Atlas: load a county's files as an idempotent migration" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 8: The slug rule and the data checks
-
-**Files:**
-- Create: `tests/fixtures/atlas/slug-cases.csv`
-- Create: `scripts/atlas/test_slug.py`
-- Create: `scripts/atlas/slug.py`
-- Create: `tests/fixtures/atlas/blocs.csv`
-- Create: `tests/atlas-data.test.ts`
-- Create: `scripts/atlas/checks.ts`
-
-**Interfaces:** Produces `slug.slugify(name) -> str` (Python) and `slugify(name: string): string`
-(TypeScript): the name lower-cased, accents and other non-ASCII dropped, `'`, `` ` `` and `.`
-dropped, every other run of non-letters a hyphen (`Lang'ata` is `langata`). Both run the cases in
-`tests/fixtures/atlas/slug-cases.csv`, so they cannot drift apart. In `checks.ts`:
-`COLUMNS` (each file's columns), `type Row`, `type County`, `type WardMaps` (ward slug to its
-constituency's slug, or null where the map names none), `type Blocs`,
-`loadCounty(dir): County`, `listCounties(root): string[]`, `loadWardMaps(geoDir): WardMaps` (it throws
-when one ward slug is given two different constituencies, so a clash is never overwritten silently),
-`loadBlocs(path): Row[]`, `blocMap(rows): Blocs`, `checkBlocs(rows): string[]`,
-`checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[]` (what is wrong, one sentence each;
-empty when the files pass), `slugify`.
-
-What `checkCounty` refuses: the spec's six (a county's constituencies that do not add up to the
-county's, for president and governor, beyond a difference recorded in `known-differences.csv`; a
-share over 100%, which is candidates' votes past the valid votes; cast past registered; valid plus
-rejected differing from cast when all three are given; an area whose parent is not in the files; a
-ward whose slug is not in a ward map under `public/geo`), and the things those need to mean
-anything: no row listed twice, every key and level and parent and seat well formed, a candidate's id
-being `<election>/<seat>/<slug of the name>`, a result inside its candidate's seat, every
-`source` reading "Publisher, document title", `source_url` being https or blank, population parts
-that nest (young adults within adults within the total), and a candidate's bloc being the one
-`blocs.csv` records for their party in that election (else the party itself; an independent stands
-as `Independent`). A recorded difference must say why, and is refused once nothing needs it.
-
-- [ ] **Step 1: Write the slug cases and the failing Python test**
-
-`tests/fixtures/atlas/slug-cases.csv`:
-
-```csv
-name,slug
-Dagoretti North,dagoretti-north
-Lang'ata,langata
-Karatina Town,karatina-town
-Ng'ang'a,nganga
-Ng`ang`a,nganga
-"Wa Test, Jr.",wa-test-jr
-Mũrĩithi,muriithi
-O'Connor-Smith,oconnor-smith
-"  Spaces  ",spaces
-A & B,a-b
-St. Paul's,st-pauls
-J.K. Mwangi,jk-mwangi
-Ward 7,ward-7
-Embakasi East,embakasi-east
-```
-
-`scripts/atlas/test_slug.py`:
-
-```python
-"""Tests for slug.py, against the cases tests/fixtures/atlas/slug-cases.csv shares with
-scripts/atlas/checks.ts. Run from the repository root:
-
-  python3 -m unittest discover -s scripts/atlas -p "test_*.py"
-"""
-import csv
-import re
-import unittest
-from pathlib import Path
-
-import slug
-
-CASES = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "atlas" / "slug-cases.csv"
-
-
-def cases():
-    with CASES.open(newline="", encoding="utf-8") as f:
-        return list(csv.DictReader(f))
-
-
-class Slugs(unittest.TestCase):
-    def test_every_shared_case(self):
-        for row in cases():
-            with self.subTest(name=row["name"]):
-                self.assertEqual(slug.slugify(row["name"]), row["slug"])
-
-    def test_a_slug_is_a_part_of_a_key(self):
-        for row in cases():
-            self.assertRegex(slug.slugify(row["name"]), r"^[a-z0-9]+(-[a-z0-9]+)*$")
-
-    def test_nothing_is_left_to_slugify_twice(self):
-        for row in cases():
-            self.assertEqual(slug.slugify(row["slug"]), row["slug"])
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
-
-- [ ] **Step 2: Run it and watch it fail**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_slug.py"`
-
-Expected: `ModuleNotFoundError: No module named 'slug'` and `FAILED (errors=1)`.
-
-- [ ] **Step 3: Write the Python slug rule**
-
-Create `scripts/atlas/slug.py`:
-
-```python
-"""The slug rule: how a place's or a candidate's name becomes a part of a key.
-
-The name lower-cased, spaces as hyphens, punctuation dropped: "Lang'ata" becomes "langata".
-Accents are dropped, not spelled out: "Mũrĩithi" becomes "muriithi". scripts/atlas/checks.ts
-has the same rule in TypeScript; both run the cases in tests/fixtures/atlas/slug-cases.csv, so
-the two cannot drift apart.
-"""
-import re
-import unicodedata
-
-
-def slugify(name):
-    ascii_only = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
-    without_marks = re.sub(r"['`.]", "", ascii_only.lower())
-    return re.sub(r"[^a-z0-9]+", "-", without_marks).strip("-")
-```
-
-- [ ] **Step 4: Run all the Python tests**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
-
-Expected: `Ran 21 tests` and `OK`.
-
-- [ ] **Step 5: Write the fixture's blocs, and the failing data tests**
-
-`tests/fixtures/atlas/blocs.csv` (Testland's coalitions; the real file lives at `data/atlas/blocs.csv`):
-
-```csv
-year,party,bloc,source,source_url
-2022,Party A,Alpha,"Registrar, Test coalition list",https://example.test/coalitions
-2022,Party B,Beta,"Registrar, Test coalition list",https://example.test/coalitions
-2022,"Party ""C""",Gamma,"Registrar, Test coalition list",https://example.test/coalitions
-```
-
-`tests/atlas-data.test.ts` runs the checker on the fixture and on every county under `data/atlas`
-(none yet, so those cases pass for now), breaks the fixture one way at a time to prove each check
-fires, reads the real ward maps, runs the shared slug cases, and compares the files' columns with
-`build_sql.py`'s (it skips that one case when there is no Python):
-
-```ts
-// Checks for the election atlas's data files: that every county under data/atlas adds up, and
-// that the checker itself catches each thing it is meant to. The fictional Testland files in
-// tests/fixtures/atlas pass; each case below breaks them one way and expects that complaint.
-// Pure apart from reading files. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts
-
-import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { parseCSV } from "../src/lib/csv";
 import {
-  COLUMNS,
-  blocMap,
-  checkBlocs,
-  checkCounty,
-  checkShared,
-  listCounties,
-  loadBlocs,
-  loadCounty,
-  loadWardMaps,
+  atlasReport,
+  candidateId,
+  checkAtlas,
+  emptyFiles,
+  readTable,
   slugify,
-  type Blocs,
-  type County,
-  type Row,
-  type WardMaps,
-} from "../scripts/atlas/checks";
+  type TableName,
+} from "@/lib/atlas-files";
 
 let pass = 0;
 let fail = 0;
 
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
+  const g = JSON.stringify(got);
+  const w = JSON.stringify(want);
   if (g === w) pass++;
   else {
     fail++;
@@ -3455,3051 +795,791 @@ function eq(name: string, got: unknown, want: unknown) {
   }
 }
 
-const FIXTURE = "tests/fixtures/atlas/testland";
-const MAPS: WardMaps = new Map([
-  ["ward-one", "north-test"],
-  ["ward-two", "north-test"],
-]);
-const good = loadCounty(FIXTURE);
-const BLOCS: Blocs = blocMap(loadBlocs("tests/fixtures/atlas/blocs.csv"));
-
-/** The checker's answer for a county, with the fixture's ward maps and blocs unless given. */
-const check = (c: County, maps: WardMaps = MAPS, blocs: Blocs = BLOCS) =>
-  checkCounty(c, maps, blocs);
-
-/** The row of `rows` with these cell values. */
-function find(rows: Row[], where: Row): Row {
-  const hit = rows.find((r) => Object.entries(where).every(([k, v]) => r[k] === v));
-  if (!hit) throw new Error(`no row like ${JSON.stringify(where)}`);
-  return hit;
-}
-/** Sets one cell of the row of `rows` with these cell values. */
-function set(rows: Row[], where: Row, cell: string, value: string) {
-  find(rows, where)[cell] = value;
-}
-/** The row number of the first row of `rows` like `where`, as the complaints count them. */
-const rowOf = (rows: Row[], where: Row) => rows.indexOf(find(rows, where)) + 2;
-/** What the checker says about the fixture after `edit` has broken it. */
-function broken(edit: (c: County) => void, maps: WardMaps = MAPS): string[] {
-  const c = structuredClone(good);
-  edit(c);
-  return check(c, maps);
-}
-/** True when some complaint contains `text`. */
-const says = (problems: string[], text: string) => problems.some((p) => p.includes(text));
-/** What `says` ought to answer, with the case's name. */
-const flags = (name: string, problems: string[], text: string) =>
-  eq(name, says(problems, text) ? text : problems, text);
-
-eq("the fixture county passes", check(good), []);
-
-// Constituencies add up to the county's, for president and governor; an MP race has no county
-// total.
-const P1 = "2022-president/kenya/p-one-test";
-const lowNorth = (c: County) =>
-  set(c.results, { candidate_id: P1, area_key: "testland/north-test" }, "votes", "299");
-eq("constituencies short of the county", broken(lowNorth), [
-  `${P1}: its constituencies add up to 549 but testland says 550`,
-]);
-const A_GOV = "2022-governor/testland/a-test";
-eq(
-  "constituencies short of the county, for a governor",
-  broken((c) =>
-    set(c.results, { candidate_id: A_GOV, area_key: "testland/north-test" }, "votes", "349"),
-  ),
-  [`${A_GOV}: its constituencies add up to 599 but testland says 600`],
-);
-eq(
-  "a county total with no constituency rows to add up is left alone",
-  broken((c) => {
-    // Every governor's constituency rows go, not one candidate's: a candidate with no row where the
-    // others have theirs is refused (see "A missing row is not a zero" below).
-    c.results = c.results.filter(
-      (r) => !r["candidate_id"]?.startsWith("2022-governor/") || r["area_key"] === "testland",
-    );
-  }),
-  [],
-);
-const closes = {
-  check: "county_sum",
-  election_id: "",
-  area_key: "testland",
-  candidate_id: P1,
-  difference: "1",
-  reason: "IEBC's own constituency and county figures differ",
+const BASE: Partial<Record<TableName, string>> = {
+  sources: "id,title,publisher,url,note\niebc-test,Form 37C (test),IEBC,https://example.test/37c,\n",
+  areas: [
+    "key,level,name,parent,iebc_code",
+    "kenya,country,Kenya,,",
+    "nairobi,county,Nairobi,kenya,047",
+    "nairobi/westlands,constituency,Westlands,nairobi,274",
+    "nairobi/kibra,constituency,Kibra,nairobi,278",
+    "nairobi/kibra/sarangombe,ward,Sarangombe,nairobi/kibra,",
+  ].join("\n"),
+  candidates: [
+    "election,seat,name,party,bloc",
+    "2022-governor,nairobi,Johnson Sakaja,UDA,Kenya Kwanza",
+    "2022-governor,nairobi,Polycarp Igathe,Jubilee,Azimio",
+  ].join("\n"),
+  results: [
+    "election,seat,candidate,area,votes,source",
+    "2022-governor,nairobi,Johnson Sakaja,nairobi,300,iebc-test",
+    "2022-governor,nairobi,Johnson Sakaja,nairobi/westlands,100,iebc-test",
+    "2022-governor,nairobi,Johnson Sakaja,nairobi/kibra,200,iebc-test",
+    "2022-governor,nairobi,Polycarp Igathe,nairobi/westlands,80,iebc-test",
+  ].join("\n"),
+  turnout: [
+    "election,area,registered,cast_votes,rejected,valid,source",
+    "2022-governor,nairobi/westlands,400,190,10,180,iebc-test",
+  ].join("\n"),
 };
-eq(
-  "a recorded difference closes the gap",
-  broken((c) => {
-    lowNorth(c);
-    c.knownDifferences.push({ ...closes });
-  }),
-  [],
-);
-flags(
-  "a recorded difference of the wrong size does not",
-  broken((c) => {
-    lowNorth(c);
-    c.knownDifferences.push({ ...closes, difference: "2" });
-  }),
-  "the recorded difference of 2 does not close it",
-);
-flags(
-  "a recorded difference of the wrong sign does not close the gap",
-  broken((c) => {
-    lowNorth(c);
-    c.knownDifferences.push({ ...closes, difference: "-1" });
-  }),
-  "the recorded difference of -1 does not close it",
-);
-flags(
-  "a recorded difference nothing needs is stale",
-  broken((c) => c.knownDifferences.push({ ...closes })),
-  "no longer matches anything",
-);
-flags(
-  "a recorded difference with no reason is refused",
-  broken((c) => c.knownDifferences.push({ ...closes, reason: "" })),
-  "say why",
-);
-flags(
-  "a recorded difference with a nine-character reason is refused",
-  broken((c) => c.knownDifferences.push({ ...closes, reason: "IEBC typo" })),
-  "the reason must say why the figures differ",
-);
-eq(
-  "a recorded difference with a ten-character reason is accepted",
-  broken((c) => {
-    lowNorth(c);
-    c.knownDifferences.push({ ...closes, reason: "IEBC typos" });
-  }),
-  [],
-);
-flags(
-  "a recorded difference with an unknown check is refused",
-  broken((c) => c.knownDifferences.push({ ...closes, check: "nonsense" })),
-  'check must be county_sum or cast_split, not "nonsense"',
-);
-flags(
-  "a recorded difference that is not a number is refused",
-  broken((c) => c.knownDifferences.push({ ...closes, difference: "one" })),
-  "difference must be a whole number",
-);
-eq(
-  "a recorded difference listed twice is refused",
-  broken((c) => {
-    lowNorth(c);
-    c.knownDifferences.push({ ...closes }, { ...closes });
-  }),
-  [`known-differences.csv row 3: county_sum for ${P1} at testland is listed twice`],
-);
+const WARDS = { nairobi: ["sarangombe", "kileleshwa"] };
 
-// Turnout.
-const SOUTH_GOV = { election_id: "2022-governor", area_key: "testland/south-test" };
-const NORTH_GOV = { election_id: "2022-governor", area_key: "testland/north-test" };
-flags(
+/** The base files with some tables replaced, read and checked. */
+function check(over: Partial<Record<TableName, string>> = {}): string[] {
+  const f = emptyFiles();
+  const problems: string[] = [];
+  for (const [table, text] of Object.entries({ ...BASE, ...over }) as [TableName, string][])
+    problems.push(...readTable(table, text, table, f));
+  return [...problems, ...checkAtlas(f, WARDS)];
+}
+const has = (problems: string[], part: string) => problems.some((p) => p.includes(part));
+const swap = (table: TableName, from: string, to: string) => ({ [table]: BASE[table]!.replace(from, to) });
+const DIFF = (n: number) => ({
+  differences: `election,seat,candidate,area,difference,note\n2022-governor,nairobi,Johnson Sakaja,nairobi,${n},IEBC's 37C differs from its 37Bs\n`,
+});
+
+eq("a clean county passes", check(), []);
+eq(
+  "a number with a comma is refused",
+  has(check(swap("results", "nairobi/kibra,200", 'nairobi/kibra,"1,200"')), 'votes "1,200" is not a whole number'),
+  true,
+);
+eq(
+  "a number with a space too",
+  has(check(swap("turnout", ",400,", ",4 00,")), 'registered "4 00" is not a whole number'),
+  true,
+);
+eq(
+  "a wrong header",
+  has(check({ sources: "id,title,publisher\nx,y,z" }), "the header must be id,title,publisher,url,note"),
+  true,
+);
+eq(
+  "constituencies that don't add up to the county",
+  has(check(swap("results", "nairobi,300", "nairobi,310")), "nairobi has 310 but its 2 parts add up to 300"),
+  true,
+);
+eq("a recorded difference passes", check({ ...swap("results", "nairobi,300", "nairobi,310"), ...DIFF(10) }), []);
+eq(
+  "a different amount still fails",
+  has(check({ ...swap("results", "nairobi,300", "nairobi,310"), ...DIFF(9) }), "add up to 300"),
+  true,
+);
+eq(
+  "more candidate votes than valid",
+  has(check(swap("results", "westlands,80", "westlands,90")), "the candidates' votes (190) are more than the valid votes (180)"),
+  true,
+);
+eq("cast must be valid plus rejected", has(check(swap("turnout", "400,190,10", "400,195,10")), "don't make cast (195)"), true);
+eq(
   "more cast than registered",
-  broken((c) => set(c.turnout, SOUTH_GOV, "cast_votes", "901")),
-  "more votes cast than registered (901 against 900)",
-);
-flags(
-  "more valid votes than votes cast",
-  broken((c) => set(c.turnout, SOUTH_GOV, "valid_votes", "521")),
-  "more valid votes than votes cast (521 against 520)",
-);
-// A blank figure is skipped, never read as 0. Each case blanks one figure of a row that has them
-// all (the fixture's one row with blanks has cast, rejected and valid all blank, which reads the
-// same as 0).
-eq(
-  "a blank rejected figure is skipped, not read as 0",
-  broken((c) => set(c.turnout, NORTH_GOV, "rejected_votes", "")),
-  [],
+  has(check(swap("turnout", ",400,190", ",150,190")), "more votes cast (190) than registered (150)"),
+  true,
 );
 eq(
-  "a blank cast figure is skipped, not read as 0",
-  broken((c) => set(c.turnout, NORTH_GOV, "cast_votes", "")),
-  [],
-);
-eq(
-  "a blank valid figure is skipped, not read as 0",
-  broken((c) => set(c.turnout, NORTH_GOV, "valid_votes", "")),
-  [],
-);
-eq(
-  "a blank registered figure is skipped, not read as 0",
-  broken((c) => set(c.turnout, NORTH_GOV, "registered", "")),
-  [],
-);
-eq(
-  "cast equal to registered is fine",
-  broken((c) => {
-    set(c.turnout, SOUTH_GOV, "cast_votes", "900");
-    set(c.turnout, SOUTH_GOV, "valid_votes", "890");
-  }),
-  [],
-);
-const extraRejected = (c: County) => set(c.turnout, NORTH_GOV, "rejected_votes", "11");
-flags(
-  "valid plus rejected differs from cast",
-  broken(extraRejected),
-  "valid plus rejected (501) differs from cast (500)",
-);
-const castGap = {
-  check: "cast_split",
-  election_id: "2022-governor",
-  area_key: "testland/north-test",
-  candidate_id: "",
-  difference: "-1",
-  reason: "IEBC's own valid and rejected figures differ",
-};
-eq(
-  "a recorded cast difference closes it",
-  broken((c) => {
-    extraRejected(c);
-    c.knownDifferences.push({ ...castGap });
-  }),
-  [],
-);
-eq(
-  "a recorded cast difference listed twice is refused",
-  broken((c) => {
-    extraRejected(c);
-    c.knownDifferences.push({ ...castGap }, { ...castGap });
-  }),
-  [
-    "known-differences.csv row 3: cast_split for 2022-governor at testland/north-test " +
-      "is listed twice",
-  ],
-);
-flags(
-  "a recorded cast difference of the wrong size does not close it",
-  broken((c) => {
-    extraRejected(c);
-    c.knownDifferences.push({ ...castGap, difference: "-2" });
-  }),
-  "the recorded difference of -2 does not close it",
-);
-flags(
-  "a recorded cast difference of the wrong sign does not close it",
-  broken((c) => {
-    extraRejected(c);
-    c.knownDifferences.push({ ...castGap, difference: "1" });
-  }),
-  "the recorded difference of 1 does not close it",
-);
-flags(
-  "a recorded cast difference nothing needs is stale",
-  broken((c) => c.knownDifferences.push({ ...castGap })),
-  "no longer matches anything",
-);
-flags(
-  "a share over 100%",
-  broken((c) =>
-    set(
-      c.results,
-      { candidate_id: "2022-governor/testland/a-test", area_key: "testland/north-test" },
-      "votes",
-      "600",
-    ),
+  "a ward the map doesn't know",
+  has(
+    check(swap("areas", "nairobi/kibra/sarangombe,ward,Sarangombe", "nairobi/kibra/laini-saba,ward,Laini Saba")),
+    `the ward "laini-saba" isn't in nairobi's ward map`,
   ),
-  "a share over 100%",
-);
-flags(
-  "a share is measured against votes cast when valid votes are blank",
-  broken((c) => {
-    set(c.turnout, NORTH_GOV, "valid_votes", "");
-    set(
-      c.results,
-      { candidate_id: "2022-governor/testland/a-test", area_key: "testland/north-test" },
-      "votes",
-      "400",
-    );
-  }),
-  "the candidates' votes (540) pass the votes cast (500), a share over 100%",
-);
-flags(
-  "a source with no publisher",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source", "no publisher here")),
-  'must read "Publisher, document title"',
-);
-flags(
-  "a plain http link",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source_url", "http://example.test/a")),
-  "must be an https link",
-);
-flags(
-  "a turnout row for an election the atlas does not hold",
-  broken((c) => set(c.turnout, SOUTH_GOV, "election_id", "2021-governor")),
-  "2021-governor is not an election the atlas holds",
-);
-flags(
-  "a turnout row for an area that is not there",
-  broken((c) => set(c.turnout, SOUTH_GOV, "area_key", "testland/ghost-test")),
-  "testland/ghost-test is not in the files",
-);
-flags(
-  "a turnout row listed twice",
-  broken((c) => c.turnout.push({ ...find(c.turnout, SOUTH_GOV) })),
-  "2022-governor at testland/south-test is listed twice",
-);
-
-// Areas, parents and ward maps.
-flags(
-  "a parent that is not there",
-  broken((c) => {
-    c.areas = c.areas.filter((a) => a["key"] !== "testland/north-test");
-  }),
-  "the parent testland/north-test is not in the files",
-);
-flags(
-  "a parent that is the wrong one",
-  broken((c) =>
-    set(c.areas, { key: "testland/north-test/ward-one" }, "parent", "testland/ghost-test"),
-  ),
-  "parent should be testland/north-test, not testland/ghost-test",
-);
-flags(
-  "a level that is wrong for the key",
-  broken((c) => set(c.areas, { key: "testland/south-test" }, "level", "ward")),
-  "is a constituency, but the file says ward",
-);
-flags(
-  "a ward missing from the ward maps",
-  check(good, new Map([["ward-one", "north-test"]])),
-  "testland/north-test/ward-two is not in a ward map",
-);
-flags(
-  "a ward the map puts in another constituency",
-  check(
-    good,
-    new Map([
-      ["ward-one", "south-test"],
-      ["ward-two", "north-test"],
-    ]),
-  ),
-  "the ward map says ward-one belongs to south-test",
+  true,
 );
 eq(
-  "a ward map that names no constituency accepts the file's",
-  check(
-    good,
-    new Map([
-      ["ward-one", null],
-      ["ward-two", null],
-    ]),
+  "an area under the wrong parent",
+  has(
+    check(swap("areas", "nairobi/kibra,constituency,Kibra,nairobi", "nairobi/kibra,constituency,Kibra,kenya")),
+    `"nairobi/kibra" should have the parent "nairobi"`,
   ),
-  [],
+  true,
 );
-flags(
-  "kenya stays out of the files",
-  broken((c) =>
-    c.areas.push({ key: "kenya", level: "country", name: "Kenya", parent: "", iebc_code: "" }),
+eq(
+  "a bare Independent bloc is refused",
+  has(check(swap("candidates", "Jubilee,Azimio", "Independent,Independent")), 'as "Independent: Polycarp Igathe"'),
+  true,
+);
+eq(
+  "a governor's seat must be a county",
+  has(
+    check({ candidates: `${BASE.candidates}\n2022-governor,nairobi/westlands,Somebody Else,ODM,Azimio` }),
+    "a governor seat must be a county",
   ),
-  "kenya is added by the schema",
+  true,
 );
-flags(
-  "a key that is not lower-case parts joined by a slash",
-  broken((c) =>
-    c.areas.push({
-      key: "Bad Key",
-      level: "county",
-      name: "Bad Key",
-      parent: "kenya",
-      iebc_code: "",
+eq(
+  "results outside the seat",
+  has(
+    check({
+      candidates: `${BASE.candidates}\n2022-mp,nairobi/westlands,Tim Wanyonyi,ODM,Azimio`,
+      results: `${BASE.results}\n2022-mp,nairobi/westlands,Tim Wanyonyi,nairobi/kibra,5,iebc-test`,
     }),
+    'outside the seat "nairobi/westlands"',
   ),
-  '"Bad Key" is not a key: lower-case parts joined by "/"',
+  true,
 );
-const needsName = "needs a name of at least two letters with no stray spaces";
+eq("an unknown source", has(check(swap("results", "kibra,200,iebc-test", "kibra,200,nope")), `source "nope" isn't listed`), true);
 eq(
-  "an area name that is too short, or has stray spaces",
-  broken((c) => {
-    set(c.areas, { key: "testland" }, "name", " Testland");
-    set(c.areas, { key: "testland/south-test" }, "name", "S");
-  }),
-  [`areas.csv row 2: testland ${needsName}`, `areas.csv row 4: testland/south-test ${needsName}`],
-);
-flags(
-  "an IEBC code that is not one to four digits",
-  broken((c) => set(c.areas, { key: "testland" }, "iebc_code", "12345")),
-  "the IEBC code 12345 must be one to four digits",
-);
-flags(
-  "an area listed twice",
-  broken((c) => c.areas.push({ ...find(c.areas, { key: "testland/south-test" }) })),
-  "testland/south-test is listed twice",
-);
-
-// Blocs: one party, one bloc, in an election, as blocs.csv records it. A party with none recorded
-// stands as itself, and an independent (no party) as "Independent".
-flags(
-  "a bloc that is not the one recorded",
-  broken((c) => set(c.candidates, { name: "A Test" }, "bloc", "Beta")),
-  "the bloc should be Alpha, not Beta",
-);
-flags(
-  "a party with no recorded bloc stands as itself",
-  check(good, MAPS, new Map()),
-  "the bloc should be Party A, not Alpha",
-);
-flags(
-  "an independent stands as Independent",
-  broken((c) => set(c.candidates, { name: "O'Test" }, "bloc", "Alpha")),
-  "the bloc should be Independent, not Alpha",
-);
-const blocRows = loadBlocs("tests/fixtures/atlas/blocs.csv");
-const listed = { source: "Registrar, Test coalition list", source_url: "" };
-eq("the fixture's blocs pass", checkBlocs(blocRows), []);
-flags(
-  "a bloc for a year with no election",
-  checkBlocs([...blocRows, { year: "2019", party: "Party A", bloc: "Alpha", ...listed }]),
-  "2019 is not an election year",
-);
-flags(
-  "a party in two blocs in one election",
-  checkBlocs([...blocRows, { year: "2022", party: "Party A", bloc: "Beta", ...listed }]),
-  "is listed twice",
-);
-flags(
-  "a bloc with no source",
-  checkBlocs([
-    { year: "2022", party: "Party A", bloc: "Alpha", source: "no publisher", source_url: "" },
-  ]),
-  'must read "Publisher, document title"',
-);
-flags(
-  "a bloc with no name",
-  checkBlocs([{ year: "2022", party: "Party A", bloc: "", ...listed }]),
-  "needs a bloc",
-);
-eq(
-  "a party with no name, or with stray spaces",
-  checkBlocs([
-    { year: "2022", party: "", bloc: "Alpha", ...listed },
-    { year: "2022", party: " Party A", bloc: "Alpha", ...listed },
-  ]),
-  [
-    "blocs.csv row 2: a party must be named, with no stray spaces",
-    "blocs.csv row 3: a party must be named, with no stray spaces",
-  ],
-);
-eq("no blocs file, no blocs", loadBlocs("tests/fixtures/atlas/nowhere.csv"), []);
-
-// Candidates and their results.
-flags(
-  "a candidate id that is not election, seat and name",
-  broken((c) => set(c.candidates, { name: "A Test" }, "id", "2022-governor/testland/atest")),
-  "the id should be 2022-governor/testland/a-test",
-);
-flags(
-  "an election the atlas does not hold",
-  broken((c) => set(c.candidates, { name: "A Test" }, "election_id", "2021-governor")),
-  "2021-governor is not an election the atlas holds",
-);
-flags(
-  "a seat of the wrong level for the race",
-  broken((c) => set(c.candidates, { name: "A Test" }, "seat", "testland/north-test")),
-  "a governor seat is a county",
-);
-flags(
-  "a seat that is not in the files",
-  broken((c) => set(c.candidates, { name: "A Test" }, "seat", "testland/ghost-test")),
-  "the seat testland/ghost-test is not in the files",
-);
-flags(
-  "a candidate name with stray spaces",
-  broken((c) => set(c.candidates, { name: "A Test" }, "name", " A Test")),
-  "2022-governor/testland/a-test needs a name with no stray spaces",
-);
-flags(
-  "a candidate name that is too short",
-  broken((c) => set(c.candidates, { name: "B Test" }, "name", "B")),
-  "2022-governor/testland/b needs a name with no stray spaces",
-);
-flags(
-  "votes in an area outside the seat",
-  broken((c) =>
-    set(
-      c.results,
-      { candidate_id: "2022-mp/testland/north-test/m-one-test" },
-      "area_key",
-      "testland/south-test",
-    ),
+  "population inside its total",
+  has(
+    check({ population: "area,year,total,adults,young_adults,source\nnairobi/kibra/sarangombe,2020,100,120,10,iebc-test" }),
+    "adults must be within the total",
   ),
-  "testland/south-test is outside the seat testland/north-test",
+  true,
 );
-flags(
-  "votes in an area that is not there",
-  broken((c) =>
-    set(
-      c.results,
-      { candidate_id: P1, area_key: "testland/south-test" },
-      "area_key",
-      "testland/ghost-test",
-    ),
-  ),
-  "testland/ghost-test is not in the files",
-);
-flags(
-  "votes for a candidate nobody lists",
-  broken((c) =>
-    set(
-      c.results,
-      { candidate_id: P1, area_key: "testland" },
-      "candidate_id",
-      "2022-governor/testland/nobody",
-    ),
-  ),
-  "is not in candidates.csv",
-);
-flags(
-  "votes that are not a number",
-  broken((c) => set(c.results, { candidate_id: P1, area_key: "testland" }, "votes", "6OO")),
-  'votes must be a whole number, not "6OO"',
-);
-flags(
-  "a row listed twice",
-  broken((c) => c.results.push({ ...find(c.results, { candidate_id: P1, area_key: "testland" }) })),
-  "is listed twice",
-);
-flags(
-  "a candidate listed twice",
-  broken((c) => c.candidates.push({ ...find(c.candidates, { name: "A Test" }) })),
-  "2022-governor/testland/a-test is listed twice",
+eq(
+  "ids and slugs",
+  [slugify("Ann Ng'ang'a"), candidateId("2022-governor", "nairobi", "Johnson Sakaja")],
+  ["ann-ng-ang-a", "2022-governor:nairobi:johnson-sakaja"],
 );
 
-// A missing row is not a zero. A share of 0 is a count, so where an election has votes, every
-// candidate whose seat covers that place has a row there (kenya covers every area, a county itself
-// and its constituencies, a constituency only itself), and the election has a turnout row there,
-// which is where the votes' source is held: a result row has none of its own. An election with no
-// votes in a place at all is a gap, not a fault.
-const M1 = "2022-mp/testland/north-test/m-one-test";
-const M2 = "2022-mp/testland/north-test/m-two-test";
-const O_TEST = "2022-mp/testland/north-test/otest";
-const B_GOV = "2022-governor/testland/b-test";
-const P2 = "2022-president/kenya/p-two-test";
-/** Takes a candidate's row at an area out of the results. */
-const without = (candidate: string, area: string) => (c: County) => {
-  c.results = c.results.filter((r) => r["candidate_id"] !== candidate || r["area_key"] !== area);
-};
-/** The complaint about a candidate with no row where the election has votes for the others. */
-const noRow = (id: string, area: string, election: string) =>
-  `${id}: no votes for ${area}, where ${election} has votes for other candidates`;
-eq("an MP with no row in their constituency", broken(without(M1, "testland/north-test")), [
-  noRow(M1, "testland/north-test", "2022-mp"),
-]);
-eq("a governor with no county row, the others having theirs", broken(without(B_GOV, "testland")), [
-  noRow(B_GOV, "testland", "2022-governor"),
-]);
-// The county's figure for the candidate no longer has all its constituencies to add up, which is
-// refused on its own account.
-eq("a governor with no row in one constituency", broken(without(B_GOV, "testland/south-test")), [
-  noRow(B_GOV, "testland/south-test", "2022-governor"),
-  `${B_GOV}: its constituencies add up to 100 but testland says 300`,
-]);
-eq("a presidential candidate with no county row", broken(without(P2, "testland")), [
-  noRow(P2, "testland", "2022-president"),
-]);
-// A row whose votes cell is refused is a row all the same, not a missing one.
+const files = emptyFiles();
+for (const [table, text] of Object.entries(BASE) as [TableName, string][]) readTable(table, text, table, files);
+const report = atlasReport(files);
 eq(
-  "a row whose votes are not a number is not a missing row",
-  broken((c) => set(c.results, { candidate_id: P1, area_key: "testland" }, "votes", "6OO")),
+  "the report's rows",
   [
-    `results.csv row ${rowOf(good.results, { candidate_id: P1, area_key: "testland" })}: ` +
-      'votes must be a whole number, not "6OO"',
+    report.includes("| 2022 governor | 2 of 2 | 1 of 2 | yes |"),
+    report.includes("| 2013 mp | 0 of 2 | 0 of 2 | n/a |"),
+    report.includes("Registered voters by ward: 2013: 0 of 1 · 2017: 0 of 1 · 2022: 0 of 1."),
+    report.includes("- `iebc-test`: Form 37C (test), IEBC, https://example.test/37c"),
   ],
+  [true, true, true, true],
 );
-// ... and it makes the place one with votes: the other MPs' rows are still missing.
-eq(
-  "the only row in a place, with a figure that is not a number, still counts",
-  broken((c) => {
-    c.results = c.results.filter(
-      (r) => r["candidate_id"] === M1 || !r["candidate_id"]?.includes("-mp/"),
-    );
-    set(c.results, { candidate_id: M1 }, "votes", "6OO");
-  }),
-  [
-    `results.csv row ${rowOf(good.results, { candidate_id: M1 })}: ` +
-      'votes must be a whole number, not "6OO"',
-    noRow(M2, "testland/north-test", "2022-mp"),
-    noRow(O_TEST, "testland/north-test", "2022-mp"),
-  ],
-);
-eq(
-  "an election with no votes in a place is a gap, not a fault",
-  broken((c) => {
-    c.results = c.results.filter(
-      (r) => !r["candidate_id"]?.startsWith("2022-governor/") || r["area_key"] !== "testland",
-    );
-  }),
-  [],
-);
-// The MP turnout row is for another area, so the MPs' votes at North Test have none. North Test has
-// turnout rows for other elections, and 2022-mp has one elsewhere: neither stands in for it.
-eq(
-  "votes with no turnout row for that election and area have no source",
-  broken((c) => set(c.turnout, { election_id: "2022-mp" }, "area_key", "testland/south-test")),
-  ["2022-mp testland/north-test: votes but no turnout row, so no source"],
-);
-
-// Counties agree on the candidates they share. Every county lists the presidential candidates and
-// each county's migration upserts them, so the last one applied wins: two counties that spell a
-// party or a bloc differently would each pass alone and still overwrite one another's data.
-const countyOf = (name: string, edit?: (candidates: Row[]) => void) => {
-  const candidates = structuredClone(good.candidates);
-  edit?.(candidates);
-  return { name, candidates };
-};
-const respell = (column: string, value: string) => (candidates: Row[]) =>
-  set(candidates, { id: P1 }, column, value);
-const disagree = (column: string, was: string, now: string, one = "alpha", other = "beta") =>
-  `${P1}: ${column} is "${was}" in ${one} but "${now}" in ${other}`;
-eq(
-  "two counties that agree on what they share",
-  checkShared([countyOf("alpha"), countyOf("beta")]),
-  [],
-);
-eq(
-  "a party spelt two ways",
-  checkShared([countyOf("alpha"), countyOf("beta", respell("party", "Party Z"))]),
-  [disagree("party", "Party A", "Party Z")],
-);
-eq(
-  "a bloc spelt two ways",
-  checkShared([countyOf("alpha"), countyOf("beta", respell("bloc", "Zeta"))]),
-  [disagree("bloc", "Alpha", "Zeta")],
-);
-eq(
-  "a party and a bloc that both differ are two complaints",
-  checkShared([
-    countyOf("alpha"),
-    countyOf("beta", (candidates) => {
-      respell("party", "Party Z")(candidates);
-      respell("bloc", "Zeta")(candidates);
-    }),
-  ]),
-  [disagree("party", "Party A", "Party Z"), disagree("bloc", "Alpha", "Zeta")],
-);
-// Every column but the id is compared.
-const P1_ROW = find(good.candidates, { id: P1 });
-for (const [column, value] of [
-  ["election_id", "2017-president"],
-  ["seat", "testland"],
-  ["name", "P One Test, Jr."],
-  ["party", "Party Z"],
-  ["bloc", "Zeta"],
-] as const) {
-  eq(
-    `a candidate whose ${column} differs between counties`,
-    checkShared([countyOf("alpha"), countyOf("beta", respell(column, value))]),
-    [disagree(column, P1_ROW[column] ?? "", value)],
-  );
-}
-eq(
-  "a candidate that only one county lists is not compared",
-  checkShared([
-    countyOf("alpha"),
-    countyOf("beta", (candidates) => {
-      candidates.splice(0, 3, {
-        id: "2022-governor/other-test/d-test",
-        election_id: "2022-governor",
-        seat: "other-test",
-        name: "D Test",
-        party: "Party D",
-        bloc: "Party D",
-      });
-    }),
-  ]),
-  [],
-);
-eq(
-  "three counties, only the third differing",
-  checkShared([
-    countyOf("alpha"),
-    countyOf("beta"),
-    countyOf("gamma", respell("party", "Party Z")),
-  ]),
-  [disagree("party", "Party A", "Party Z", "alpha", "gamma")],
-);
-eq(
-  "each county is compared with the first that lists the candidate",
-  checkShared([
-    countyOf("alpha", respell("party", "Party Z")),
-    countyOf("beta"),
-    countyOf("gamma"),
-  ]),
-  [
-    disagree("party", "Party Z", "Party A", "alpha", "beta"),
-    disagree("party", "Party Z", "Party A", "alpha", "gamma"),
-  ],
-);
-eq(
-  "a candidate a county lists twice is that county's problem, not a disagreement",
-  checkShared([
-    countyOf("alpha", (candidates) => {
-      candidates.push({ ...P1_ROW, party: "Party Z" });
-    }),
-    countyOf("beta"),
-  ]),
-  [],
-);
-
-// Registers and population.
-flags(
-  "a register for a year with no election",
-  broken((c) => set(c.register, { year: "2017" }, "year", "2019")),
-  "2019 is not an election year",
-);
-flags(
-  "a register for an area that is not there",
-  broken((c) => set(c.register, { year: "2017" }, "area_key", "testland/ghost-test")),
-  "testland/ghost-test is not in the files",
-);
-flags(
-  "a registered figure that is not a number",
-  broken((c) => set(c.register, { year: "2017" }, "registered", "55O")),
-  'registered must be a whole number, not "55O"',
-);
-flags(
-  "a register source with no publisher",
-  broken((c) => set(c.register, { year: "2017" }, "source", "no publisher here")),
-  'must read "Publisher, document title"',
-);
-flags(
-  "a register row listed twice",
-  broken((c) => c.register.push({ ...find(c.register, { year: "2017" }) })),
-  "2017 at testland/north-test/ward-one is listed twice",
-);
-const WARD_ONE = { area_key: "testland/north-test/ward-one" };
-const WARD_TWO = { area_key: "testland/north-test/ward-two" };
-flags(
-  "more young adults than adults",
-  broken((c) => set(c.population, WARD_ONE, "young_adults", "901")),
-  "young adults (901) pass the adults (900)",
-);
-flags(
-  "more adults than people",
-  broken((c) => set(c.population, WARD_ONE, "adults", "1501")),
-  "adults (1501) pass the total (1500)",
-);
-flags(
-  "population for an area that is not there",
-  broken((c) => set(c.population, WARD_ONE, "area_key", "testland/ghost-test")),
-  "testland/ghost-test is not in the files",
-);
-eq(
-  "a population year outside 1990 to 2100",
-  broken((c) => {
-    set(c.population, WARD_ONE, "year", "1989");
-    set(c.population, WARD_TWO, "year", "2101");
-  }),
-  ["population.csv row 2: 1989 is not a year", "population.csv row 3: 2101 is not a year"],
-);
-// 02025 reads as 2025 once loaded, so next to a 2025 row for the same ward it is a second row for
-// the same key, which the database refuses; it is not a year as written.
-eq(
-  "a population year written with a leading zero is not a year",
-  broken((c) => c.population.push({ ...find(c.population, WARD_ONE), year: "02025" })),
-  [`population.csv row ${good.population.length + 2}: 02025 is not a year`],
-);
-eq(
-  "population years 1990 and 2100 are accepted",
-  broken((c) => {
-    set(c.population, WARD_ONE, "year", "1990");
-    set(c.population, WARD_TWO, "year", "2100");
-  }),
-  [],
-);
-flags(
-  "a population method that says nothing",
-  broken((c) => set(c.population, WARD_ONE, "method", "short")),
-  "the method must say how it was worked out",
-);
-flags(
-  "a population source with no publisher",
-  broken((c) => set(c.population, WARD_ONE, "source", "no publisher here")),
-  'must read "Publisher, document title"',
-);
-flags(
-  "a population row listed twice",
-  broken((c) => c.population.push({ ...find(c.population, WARD_ONE) })),
-  "testland/north-test/ward-one in 2025 is listed twice",
-);
-
-// The database's limits. A county that passes has to load, so the checker refuses what the CHECK
-// constraints of supabase/migrations/20261007090000_election_atlas.sql refuse: text longer than its
-// column holds (lengths are in characters, with spaces trimmed off the ends, as Postgres counts
-// them), a whole number over the integer maximum, and a key the shape constraint rejects. Each
-// limit is tried one over (refused) and, where it is cheap to show, at the limit (accepted).
-const tooLong = (file: string, row: number, column: string, max: number, n: number) =>
-  `${file}.csv row ${row}: ${column} must be at most ${max} characters, not ${n}`;
-const overMax = (file: string, row: number, column: string) =>
-  `${file}.csv row ${row}: ${column} must be a whole number up to 2147483647, not "2147483648"`;
-const SOUTH = { key: "testland/south-test" };
-const B_TEST = { name: "B Test" };
-const REG_2017 = { year: "2017" };
-const SOUTH_ROW = rowOf(good.areas, SOUTH);
-const B_ROW = rowOf(good.candidates, B_TEST);
-const POP_ROW = rowOf(good.population, WARD_ONE);
-
-// Area names are 2 to 80 characters.
-eq(
-  "an area name of 80 characters",
-  broken((c) => set(c.areas, SOUTH, "name", "x".repeat(80))),
-  [],
-);
-eq(
-  "an area name of 81 characters",
-  broken((c) => set(c.areas, SOUTH, "name", "x".repeat(81))),
-  [tooLong("areas", SOUTH_ROW, "name", 80, 81)],
-);
-
-// Candidate names are 2 to 120. The dots are dropped from the slug, so the id stays right.
-const named = (n: number) =>
-  broken((c) => set(c.candidates, B_TEST, "name", "B Test".padEnd(n, ".")));
-eq("a candidate name of 120 characters", named(120), []);
-eq("a candidate name of 121 characters", named(121), [
-  tooLong("candidates", B_ROW, "name", 120, 121),
-]);
-
-// A party is empty (an independent) or 1 to 120 characters. Each party here has a bloc recorded,
-// so the bloc is right.
-const withParty = (party: string) => {
-  const c = structuredClone(good);
-  set(c.candidates, B_TEST, "party", party);
-  return check(c, MAPS, new Map<string, string>([...BLOCS, [`2022|${party}`, "Beta"]]));
-};
-eq("a party of 120 characters", withParty("P".repeat(120)), []);
-eq("a party of 121 characters", withParty("P".repeat(121)), [
-  tooLong("candidates", B_ROW, "party", 120, 121),
-]);
-// With no bloc recorded the bloc is the party, which is only spaces too.
-eq(
-  "a party of only spaces",
-  broken((c) => {
-    set(c.candidates, B_TEST, "party", "  ");
-    set(c.candidates, B_TEST, "bloc", "  ");
-  }),
-  [
-    `candidates.csv row ${B_ROW}: 2022-governor/testland/b-test: ` +
-      "the party is only spaces; leave it empty for an independent",
-  ],
-);
-
-// A bloc is 1 to 80 characters. Party Q has this bloc recorded, so the bloc is right.
-const withBloc = (bloc: string) => {
-  const c = structuredClone(good);
-  set(c.candidates, B_TEST, "party", "Party Q");
-  set(c.candidates, B_TEST, "bloc", bloc);
-  return check(c, MAPS, new Map<string, string>([...BLOCS, ["2022|Party Q", bloc]]));
-};
-eq("a bloc of 80 characters", withBloc("B".repeat(80)), []);
-eq("a bloc of 81 characters", withBloc("B".repeat(81)), [
-  tooLong("candidates", B_ROW, "bloc", 80, 81),
-]);
-
-// A source is 3 to 200 characters on every table that has one, and a source_url at most 500. The
-// source stays "Publisher, document title" and the link an https link.
-const sourced = (n: number) => `IEBC, ${"x".repeat(n - 6)}`;
-const linked = (n: number) => `https://example.test/${"a".repeat(n - 21)}`;
-eq(
-  "a turnout source of 200 characters",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source", sourced(200))),
-  [],
-);
-const TURNOUT_ROW = rowOf(good.turnout, SOUTH_GOV);
-eq(
-  "a turnout source of 201 characters",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source", sourced(201))),
-  [tooLong("turnout", TURNOUT_ROW, "source", 200, 201)],
-);
-eq(
-  "a register source of 201 characters",
-  broken((c) => set(c.register, REG_2017, "source", sourced(201))),
-  [tooLong("register", rowOf(good.register, REG_2017), "source", 200, 201)],
-);
-eq(
-  "a population source of 201 characters",
-  broken((c) => set(c.population, WARD_ONE, "source", sourced(201))),
-  [tooLong("population", POP_ROW, "source", 200, 201)],
-);
-// Spaces around the comma satisfy "Publisher, document title" but are nothing once trimmed.
-const SPACED = `${" ".repeat(2)}, ${" ".repeat(3)}`;
-eq(
-  "a source that is only spaces around a comma",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source", SPACED)),
-  [`turnout.csv row ${TURNOUT_ROW}: source must read "Publisher, document title", not "${SPACED}"`],
-);
-eq(
-  "a turnout link of 500 characters",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source_url", linked(500))),
-  [],
-);
-eq(
-  "a turnout link of 501 characters",
-  broken((c) => set(c.turnout, SOUTH_GOV, "source_url", linked(501))),
-  [tooLong("turnout", TURNOUT_ROW, "source_url", 500, 501)],
-);
-eq(
-  "a register link of 501 characters",
-  broken((c) => set(c.register, REG_2017, "source_url", linked(501))),
-  [tooLong("register", rowOf(good.register, REG_2017), "source_url", 500, 501)],
-);
-
-// A population method is 10 to 500 characters.
-eq(
-  "a population method of 500 characters",
-  broken((c) => set(c.population, WARD_ONE, "method", "x".repeat(500))),
-  [],
-);
-eq(
-  "a population method of 501 characters",
-  broken((c) => set(c.population, WARD_ONE, "method", "x".repeat(501))),
-  [tooLong("population", POP_ROW, "method", 500, 501)],
-);
-
-// Postgres counts characters, not the UTF-16 units JavaScript counts: a character outside the
-// basic plane is one. Eighty of them fit a name, one is too short for a name and five for a method.
-const FACE = String.fromCodePoint(0x1f600);
-eq(
-  "an area name of 80 characters outside the basic plane",
-  broken((c) => set(c.areas, SOUTH, "name", FACE.repeat(80))),
-  [],
-);
-eq(
-  "one character outside the basic plane is too short for an area name",
-  broken((c) => set(c.areas, SOUTH, "name", FACE)),
-  [`areas.csv row ${SOUTH_ROW}: testland/south-test ${needsName}`],
-);
-flags(
-  "one character outside the basic plane is too short for a candidate name",
-  broken((c) => set(c.candidates, B_TEST, "name", FACE)),
-  "needs a name with no stray spaces",
-);
-eq(
-  "five characters outside the basic plane are too short for a method",
-  broken((c) => set(c.population, WARD_ONE, "method", FACE.repeat(5))),
-  [`population.csv row ${POP_ROW}: the method must say how it was worked out`],
-);
-
-// A whole number is at most 2147483647, Postgres's integer maximum.
-eq(
-  "a registered figure at the integer maximum",
-  broken((c) => set(c.register, REG_2017, "registered", "2147483647")),
-  [],
-);
-const OTEST = { candidate_id: O_TEST };
-type Table = "results" | "turnout" | "register" | "population";
-const overs: [Table, string, Row][] = [
-  ["results", "votes", OTEST],
-  ["turnout", "registered", NORTH_GOV],
-  ["turnout", "cast_votes", NORTH_GOV],
-  ["turnout", "rejected_votes", NORTH_GOV],
-  ["turnout", "valid_votes", NORTH_GOV],
-  ["register", "registered", REG_2017],
-  ["population", "year", WARD_ONE],
-  ["population", "total", WARD_ONE],
-  ["population", "adults", WARD_ONE],
-  ["population", "young_adults", WARD_ONE],
-];
-for (const [file, column, where] of overs) {
-  eq(
-    `${column} one over the integer maximum, in ${file}.csv`,
-    broken((c) => set(c[file], where, column, "2147483648")),
-    [overMax(file, rowOf(good[file], where), column)],
-  );
-}
-
-// A key under kenya: the schema wants a constituency's parent to be a county, never kenya.
-eq(
-  "a constituency keyed under kenya",
-  broken((c) =>
-    c.areas.push({
-      key: "kenya/x-test",
-      level: "constituency",
-      name: "X Test",
-      parent: "kenya",
-      iebc_code: "",
-    }),
-  ),
-  [
-    `areas.csv row ${good.areas.length + 2}: kenya/x-test starts with kenya, ` +
-      "but keys do not begin with the country: a county's key is its own name",
-  ],
-);
-eq(
-  "a county whose key only starts like kenya is fine",
-  broken((c) =>
-    c.areas.push({
-      key: "kenya-west",
-      level: "county",
-      name: "Kenya West",
-      parent: "kenya",
-      iebc_code: "",
-    }),
-  ),
-  [],
-);
-
-// Reading the files.
-function refusal(dir: string): string {
-  try {
-    loadCounty(dir);
-    return "";
-  } catch (e) {
-    return String(e);
-  }
-}
-const tmp = mkdtempSync(join(tmpdir(), "atlas-data-"));
-try {
-  const copy = (name: string) => {
-    const dir = join(tmp, name);
-    cpSync(FIXTURE, dir, { recursive: true });
-    return dir;
-  };
-  const wrong = copy("wrong");
-  writeFileSync(join(wrong, "results.csv"), "candidate,area,votes\nx,y,1\n");
-  eq(
-    "wrong columns are refused",
-    refusal(wrong).includes("results.csv: the columns must be candidate_id,area_key,votes"),
-    true,
-  );
-  const short = copy("short");
-  writeFileSync(
-    join(short, "results.csv"),
-    "candidate_id,area_key,votes\n2022-governor/testland/a-test,testland\n",
-  );
-  eq(
-    "a short row is refused",
-    refusal(short).includes("results.csv row 2: 2 cells, expected 3"),
-    true,
-  );
-  // The reader refuses what build_sql.py refuses, so that a county the checker passes can become a
-  // migration: a header separated by semicolons (src/lib/csv.ts would read it), a file that is not
-  // UTF-8 (it would decode with replacement characters), a backslash in a cell and a header whose
-  // quoted cells only join to the columns.
-  const semicolons = copy("semicolons");
-  writeFileSync(
-    join(semicolons, "results.csv"),
-    "candidate_id;area_key;votes\n2022-governor/testland/a-test;testland;600\n",
-  );
-  eq(
-    "a semicolon-separated file is refused",
-    refusal(semicolons).includes(
-      "results.csv: the header must be separated by commas, not semicolons",
-    ),
-    true,
-  );
-  const areasCsv = readFileSync(join(FIXTURE, "areas.csv"), "utf8");
-  // Characters built from code points, so that this file stays plain ASCII.
-  const BOM = String.fromCharCode(0xfeff);
-  const O_UMLAUT = String.fromCharCode(0xf6); // one byte in Latin-1, not valid UTF-8 alone
-  const legacy = copy("legacy");
-  writeFileSync(
-    join(legacy, "areas.csv"),
-    Buffer.from(areasCsv.replace("North Test", `N${O_UMLAUT}rth Test`), "latin1"),
-  );
-  eq(
-    "a file that is not UTF-8 is refused",
-    refusal(legacy).includes("areas.csv: the file must be UTF-8 text"),
-    true,
-  );
-  const backslash = copy("backslash");
-  writeFileSync(join(backslash, "areas.csv"), areasCsv.replace("North Test", "North\\Test"));
-  eq(
-    "a backslash in a cell is refused",
-    refusal(backslash).includes("areas.csv row 3: the name cell has a backslash"),
-    true,
-  );
-  // build_sql.py compares the header cell by cell: a quoted "key,level" is one cell there, so the
-  // header is four cells over five-cell rows. Joined with commas it reads as the five columns.
-  const merged = copy("merged");
-  writeFileSync(join(merged, "areas.csv"), areasCsv.replace("key,level,", '"key,level",'));
-  eq(
-    "a header whose quoted cells join to the columns is refused",
-    refusal(merged).includes("areas.csv: the columns must be key,level,name,parent,iebc_code"),
-    true,
-  );
-  // ... and takes what build_sql.py takes: a byte-order mark, CRLF line endings, blank rows, and a
-  // semicolon anywhere but the header.
-  const areasRead = (name: string, text: string) => {
-    const dir = copy(name);
-    writeFileSync(join(dir, "areas.csv"), text);
-    try {
-      return loadCounty(dir).areas;
-    } catch (e) {
-      return String(e);
-    }
-  };
-  eq("a byte-order mark is accepted", areasRead("bom", `${BOM}${areasCsv}`), good.areas);
-  eq(
-    "a doubled byte-order mark is refused",
-    String(areasRead("bom2", `${BOM}${BOM}${areasCsv}`)).includes(
-      "areas.csv: the columns must be key,level,name,parent,iebc_code",
-    ),
-    true,
-  );
-  eq(
-    "CRLF line endings are accepted",
-    areasRead("crlf", areasCsv.replace(/\n/g, "\r\n")),
-    good.areas,
-  );
-  eq("blank rows are accepted", areasRead("blank", areasCsv.replace(/\n/g, "\n\n")), good.areas);
-  const semicell = areasCsv.replace("North Test", "North;Test");
-  const northSemicolon = good.areas.map((a) =>
-    a["key"] === "testland/north-test" ? { ...a, name: "North;Test" } : a,
-  );
-  eq(
-    "a semicolon in a cell, not the header, is accepted",
-    areasRead("semicell", semicell),
-    northSemicolon,
-  );
-  eq(
-    "CR line endings and a semicolon in a cell are accepted",
-    areasRead("cr", semicell.replace(/\n/g, "\r")),
-    northSemicolon,
-  );
-  // A line before the header, even a blank one, leaves the header second: build_sql.py reads the
-  // blank line as the first row, and refuses the columns it finds there.
-  const headerFirst = "areas.csv: the first line must be the header, not a blank line";
-  const refusedFirst = (name: string, text: string) =>
-    String(areasRead(name, text)).includes(headerFirst);
-  eq("a blank line before the header is refused", refusedFirst("lead1", `\n${areasCsv}`), true);
-  eq(
-    "two blank lines before the header, in a CRLF file, are refused",
-    refusedFirst("lead2", `\r\n\r\n${areasCsv.replace(/\n/g, "\r\n")}`),
-    true,
-  );
-  eq(
-    "a line of spaces before the header is refused",
-    refusedFirst("lead3", `   \n${areasCsv}`),
-    true,
-  );
-  eq(
-    "a line of commas before the header is refused",
-    refusedFirst("lead4", `,,,,\n${areasCsv}`),
-    true,
-  );
-  eq(
-    "a byte-order mark, a blank line, then the header is refused",
-    refusedFirst("lead5", `${BOM}\n${areasCsv}`),
-    true,
-  );
-  eq(
-    "a byte-order mark, the header, then blank lines are accepted",
-    areasRead("lead6", `${BOM}${areasCsv.replace("\n", "\n\n\n")}\n\n`),
-    good.areas,
-  );
-  const missing = copy("missing");
-  rmSync(join(missing, "register.csv"));
-  eq("a missing file is refused", refusal(missing).includes("register.csv is missing"), true);
-  const plain = copy("plain");
-  rmSync(join(plain, "known-differences.csv"));
-  eq("recorded differences are optional", loadCounty(plain).knownDifferences, []);
-  writeFileSync(join(tmp, "blocs.csv"), "year,party,coalition\n2022,Party A,Alpha\n");
-  let blocsRefusal = "";
-  try {
-    loadBlocs(join(tmp, "blocs.csv"));
-  } catch (e) {
-    blocsRefusal = String(e);
-  }
-  eq(
-    "wrong columns in blocs.csv are refused",
-    blocsRefusal.includes("blocs.csv: the columns must be year,party,bloc,source,source_url"),
-    true,
-  );
-
-  // Which folders are counties.
-  const root = join(tmp, "root");
-  mkdirSync(join(root, "nairobi"), { recursive: true });
-  mkdirSync(join(root, "_sources"), { recursive: true });
-  writeFileSync(join(root, "SOURCES.md"), "x");
-  eq("counties are the folders not starting with an underscore", listCounties(root), ["nairobi"]);
-  eq("no data folder, no counties", listCounties(join(tmp, "nowhere")), []);
-
-  // Ward maps: the slug alone is the key, so a ward slug that two maps (or one map twice) put in
-  // different constituencies is refused, not overwritten. The same ward again is fine.
-  const wardMaps = (name: string, files: Record<string, [string, string | null][]>) => {
-    const dir = join(tmp, name);
-    mkdirSync(dir);
-    for (const [file, wards] of Object.entries(files)) {
-      const features = wards.map(([slug, constituency]) => ({
-        type: "Feature",
-        properties:
-          constituency === null ? { slug, name: slug } : { slug, name: slug, constituency },
-        geometry: null,
-      }));
-      writeFileSync(join(dir, file), JSON.stringify({ type: "FeatureCollection", features }));
-    }
-    return dir;
-  };
-  const wardRefusal = (dir: string): string => {
-    try {
-      loadWardMaps(dir);
-      return "";
-    } catch (e) {
-      return String(e);
-    }
-  };
-  // What loads, or the refusal in its place, so that a wrong refusal fails one case, not the file.
-  const wardEntries = (dir: string) => {
-    try {
-      return [...loadWardMaps(dir)];
-    } catch (e) {
-      return String(e);
-    }
-  };
-  eq(
-    "a ward slug in two constituencies is refused",
-    wardRefusal(
-      wardMaps("clash", {
-        "a-wards.json": [["ward-one", "North Test"]],
-        "b-wards.json": [["ward-one", "South Test"]],
-      }),
-    ),
-    "Error: the ward ward-one is in north-test in a-wards.json " +
-      "but in south-test in b-wards.json: a ward slug has to name one ward",
-  );
-  eq(
-    "a ward slug twice in one map, in two constituencies, is refused",
-    wardRefusal(
-      wardMaps("twice", {
-        "a-wards.json": [
-          ["ward-one", "North Test"],
-          ["ward-one", "South Test"],
-        ],
-      }),
-    ),
-    "Error: the ward ward-one is in north-test in a-wards.json " +
-      "but in south-test in a-wards.json: a ward slug has to name one ward",
-  );
-  eq(
-    "a ward with a constituency in one map and none in another is refused",
-    wardRefusal(
-      wardMaps("none", {
-        "a-wards.json": [["ward-one", null]],
-        "b-wards.json": [["ward-one", "South Test"]],
-      }),
-    ),
-    "Error: the ward ward-one is in no constituency in a-wards.json " +
-      "but in south-test in b-wards.json: a ward slug has to name one ward",
-  );
-  eq(
-    "the same ward again, in the same constituency, is fine",
-    wardEntries(
-      wardMaps("again", {
-        "a-wards.json": [
-          ["ward-one", "North Test"],
-          ["ward-three", null],
-        ],
-        "b-wards.json": [
-          ["ward-one", "North Test"],
-          ["ward-two", "North Test"],
-          ["ward-three", null],
-        ],
-      }),
-    ),
-    [
-      ["ward-one", "north-test"],
-      ["ward-three", null],
-      ["ward-two", "north-test"],
-    ],
-  );
-} finally {
-  rmSync(tmp, { recursive: true, force: true });
-}
-
-// The ward maps under public/geo. Another campaign's ward map would add to them, so Nairobi's and
-// Mathira's are looked at by name, each with the slugs its own file holds, and the total is not
-// pinned.
-const real = loadWardMaps("public/geo");
-const slugsIn = (file: string): Set<string> => {
-  const geo = JSON.parse(readFileSync(join("public/geo", file), "utf8")) as {
-    features: { properties: { slug?: string } }[];
-  };
-  return new Set(geo.features.flatMap((f) => (f.properties.slug ? [f.properties.slug] : [])));
-};
-const nairobiWards = slugsIn("nairobi-wards.json");
-const mathiraWards = slugsIn("mathira-wards.json");
-eq("Nairobi's map holds 85 wards", nairobiWards.size, 85);
-eq("Mathira's map holds 6 wards", mathiraWards.size, 6);
-eq(
-  "every ward of Nairobi's map is among the loaded wards",
-  [...nairobiWards].filter((slug) => !real.has(slug)),
-  [],
-);
-eq(
-  "every ward of Mathira's map is among the loaded wards",
-  [...mathiraWards].filter((slug) => !real.has(slug)),
-  [],
-);
-eq("a Nairobi ward knows its constituency", real.get("umoja-ii"), "embakasi-west");
-eq("Mathira's map names no constituency", real.get("iriaini"), null);
-
-// Every county in data/atlas passes, and so does the blocs file they share.
-const realBlocRows = loadBlocs("data/atlas/blocs.csv");
-const blocProblems = checkBlocs(realBlocRows);
-if (blocProblems.length) console.log(`blocs.csv:\n  ${blocProblems.join("\n  ")}`);
-eq("data/atlas/blocs.csv passes", blocProblems, []);
-const realCounties: { name: string; candidates: Row[] }[] = [];
-for (const name of listCounties("data/atlas")) {
-  const county = loadCounty(join("data/atlas", name));
-  realCounties.push({ name, candidates: county.candidates });
-  const problems = checkCounty(county, real, blocMap(realBlocRows));
-  if (problems.length) console.log(`${name}:\n  ${problems.join("\n  ")}`);
-  eq(`data/atlas/${name} passes`, problems, []);
-}
-// ... and they agree with one another on the candidates they share (with no county yet, this holds
-// for want of any).
-const realShared = checkShared(realCounties);
-if (realShared.length) console.log(`shared candidates:\n  ${realShared.join("\n  ")}`);
-eq("the counties under data/atlas agree on their shared candidates", realShared, []);
-
-// The slug rule is the one scripts/atlas/slug.py runs.
-const cases = parseCSV(readFileSync("tests/fixtures/atlas/slug-cases.csv", "utf8")).slice(1);
-eq("there are slug cases", cases.length > 0, true);
-for (const [name, slug] of cases) eq(`the slug of "${name}"`, slugify(name ?? ""), slug);
-
-// The files and columns are the ones scripts/atlas/build_sql.py loads.
-const python = process.env["ATLAS_PYTHON"] || "python3";
-const asked = spawnSync(
-  python,
-  [
-    "-c",
-    "import json, sys; sys.path.insert(0, 'scripts/atlas'); import build_sql; " +
-      "print(json.dumps(build_sql.FILES))",
-  ],
-  { encoding: "utf8" },
-);
-const spawnError = asked.error as NodeJS.ErrnoException | undefined;
-if (spawnError?.code === "ENOENT") {
-  // There is no such interpreter, so there is nothing to compare with.
-  console.log(`SKIP: ${python} could not say which columns build_sql.py loads.`);
-} else if (spawnError) {
-  // The interpreter is there and could not be run (not executable, say): that is a failure, not a
-  // skip, and the error says why.
-  fail++;
-  console.log(
-    `FAIL the columns match build_sql.py's\n  ${python} could not be run: ${spawnError.message}`,
-  );
-} else if (asked.status !== 0) {
-  // The interpreter ran and build_sql.py did not load (a syntax error, a renamed FILES): that is a
-  // failure, not a skip, and the interpreter says why.
-  fail++;
-  const how = asked.status ?? asked.signal;
-  console.log(
-    `FAIL the columns match build_sql.py's\n  ${python} exited with ${how}\n${asked.stderr}`,
-  );
-} else {
-  const loaded = Object.fromEntries(
-    Object.entries(COLUMNS).filter(([file]) => file !== "known-differences"),
-  );
-  eq("the columns match build_sql.py's", JSON.parse(asked.stdout), loaded);
-}
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
 ```
 
-- [ ] **Step 6: Run it and watch it fail**
+- [ ] **Step 2: Run** `npx -y tsx --tsconfig tsconfig.json tests/atlas-files.test.ts`. Expected:
+      FAIL (module `@/lib/atlas-files` not found).
 
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../scripts/atlas/checks' imported from .../tests/atlas-data.test.ts`
-
-- [ ] **Step 7: Write the checker**
-
-Create `scripts/atlas/checks.ts`. It reads files with the repository's own `parseCSV`
-(`src/lib/csv.ts`) and the area rules from `src/lib/atlas/scope.ts`, so a key means one thing
-everywhere.
+- [ ] **Step 3: Implement** `src/lib/atlas-files.ts`:
 
 ```ts
-// The checks every county's atlas files must pass before they become a migration, and the readers
-// that load them. `checkCounty` takes the parsed files and says, in a sentence each, what is
-// wrong; tests/atlas-data.test.ts runs it on every county under data/atlas. It refuses a missing
-// row (a share of 0 is a count, and a row that is not there is none) and whatever the CHECK
-// constraints of supabase/migrations/20261007090000_election_atlas.sql refuse, so that a county
-// that passes can be applied. `checkShared` compares the counties with one another. A recorded
-// difference (known-differences.csv) is how a county keeps an inconsistency IEBC itself published:
-// it must say why, and it is refused once nothing needs it any more. blocs.csv records, for each
-// election, which coalition (bloc) each party stood in, so a coalition has one name everywhere.
+// The atlas's data files: each folder's CSVs read into rows, the checks every
+// figure must pass before it becomes a migration, and the report of what is
+// loaded. Pure: the scripts and the data test read the files and hand the
+// text in.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { parseCSV } from "@/lib/csv";
 
-import { levelOfKey, parentKey } from "../../src/lib/atlas/scope";
-import { parseCSV } from "../../src/lib/csv";
+export const ATLAS_ELECTIONS = ["2013", "2017", "2022"].flatMap((y) =>
+  ["president", "governor", "mp"].map((r) => `${y}-${r}`),
+);
+const LEVELS = ["country", "county", "constituency", "ward"] as const;
+export type Level = (typeof LEVELS)[number];
+const SEAT_LEVEL: Record<string, Level> = { president: "country", governor: "county", mp: "constituency" };
+const KEY_SHAPE: Record<Level, RegExp> = {
+  country: /^[a-z0-9-]+$/,
+  county: /^[a-z0-9-]+$/,
+  constituency: /^[a-z0-9-]+\/[a-z0-9-]+$/,
+  ward: /^[a-z0-9-]+\/[a-z0-9-]+\/[a-z0-9-]+$/,
+};
+/** Kenya's counties: the national total is only checked against them once all are in. */
+const COUNTIES = 47;
 
-export type Row = Record<string, string>;
-
-/** The files and their columns. scripts/atlas/build_sql.py loads the same first six. */
-export const COLUMNS = {
-  areas: ["key", "level", "name", "parent", "iebc_code"],
-  candidates: ["id", "election_id", "seat", "name", "party", "bloc"],
-  results: ["candidate_id", "area_key", "votes"],
-  turnout: [
-    "election_id",
-    "area_key",
-    "registered",
-    "cast_votes",
-    "rejected_votes",
-    "valid_votes",
-    "source",
-    "source_url",
-  ],
-  register: ["year", "area_key", "registered", "source", "source_url"],
-  population: ["area_key", "year", "total", "adults", "young_adults", "source", "method"],
-  "known-differences": ["check", "election_id", "area_key", "candidate_id", "difference", "reason"],
-} as const;
-
-export type County = {
-  areas: Row[];
-  candidates: Row[];
-  results: Row[];
-  turnout: Row[];
-  register: Row[];
-  population: Row[];
-  knownDifferences: Row[];
+export type SourceRow = { id: string; title: string; publisher: string; url: string | null; note: string | null };
+export type AreaRow = { key: string; level: Level; name: string; parent: string | null; iebc_code: string | null };
+export type CandidateRow = { election: string; seat: string; name: string; party: string | null; bloc: string };
+export type ResultRow = { election: string; seat: string; candidate: string; area: string; votes: number; source: string };
+export type TurnoutRow = {
+  election: string;
+  area: string;
+  registered: number | null;
+  cast_votes: number | null;
+  rejected: number | null;
+  valid: number | null;
+  source: string;
+};
+export type RegisterRow = { year: number; area: string; registered: number; source: string };
+export type PopulationRow = {
+  area: string;
+  year: number;
+  total: number;
+  adults: number;
+  young_adults: number;
+  source: string;
+};
+export type DifferenceRow = {
+  election: string;
+  seat: string;
+  candidate: string;
+  area: string;
+  difference: number;
+  note: string;
 };
 
-/**
- * Every ward slug in the ward maps under public/geo, and the slug of the constituency the map
- * puts it in; null when the map names none (Mathira's does not).
- */
-export type WardMaps = Map<string, string | null>;
+export type AtlasFiles = {
+  sources: SourceRow[];
+  areas: AreaRow[];
+  candidates: CandidateRow[];
+  results: ResultRow[];
+  turnout: TurnoutRow[];
+  register: RegisterRow[];
+  population: PopulationRow[];
+  differences: DifferenceRow[];
+};
+export type TableName = keyof AtlasFiles;
 
-/** `${year}|${party}` to the bloc blocs.csv records for that party in that election. */
-export type Blocs = Map<string, string>;
+export const HEADERS: Record<TableName, string[]> = {
+  sources: ["id", "title", "publisher", "url", "note"],
+  areas: ["key", "level", "name", "parent", "iebc_code"],
+  candidates: ["election", "seat", "name", "party", "bloc"],
+  results: ["election", "seat", "candidate", "area", "votes", "source"],
+  turnout: ["election", "area", "registered", "cast_votes", "rejected", "valid", "source"],
+  register: ["year", "area", "registered", "source"],
+  population: ["area", "year", "total", "adults", "young_adults", "source"],
+  differences: ["election", "seat", "candidate", "area", "difference", "note"],
+};
 
-/** blocs.csv's columns. */
-const BLOC_COLUMNS = ["year", "party", "bloc", "source", "source_url"];
+/** The file each table is read from, inside a folder of data/atlas. */
+export const FILE_NAMES: Record<TableName, string> = {
+  sources: "sources.csv",
+  areas: "areas.csv",
+  candidates: "candidates.csv",
+  results: "results.csv",
+  turnout: "turnout.csv",
+  register: "register.csv",
+  population: "population.csv",
+  differences: "known-differences.csv",
+};
 
-/** The slug rule: lower-case, punctuation dropped, other runs of non-letters a hyphen. */
-export function slugify(name: string): string {
-  return name
-    .normalize("NFKD")
-    .replace(/\P{ASCII}/gu, "")
+export const emptyFiles = (): AtlasFiles => ({
+  sources: [],
+  areas: [],
+  candidates: [],
+  results: [],
+  turnout: [],
+  register: [],
+  population: [],
+  differences: [],
+});
+
+/** Lower case, accents dropped, anything else a dash: "Ann Ng'ang'a" is "ann-ng-ang-a". */
+export const slugify = (s: string) =>
+  s
     .toLowerCase()
-    .replace(/['`.]/g, "")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
 
-/**
- * A CSV file's text, read as scripts/atlas/build_sql.py reads it: as UTF-8, and bytes that are not
- * UTF-8 are refused, not decoded into replacement characters. A byte-order mark is kept, for
- * parseCSV to drop exactly one, as build_sql.py's utf-8-sig does: a doubled mark stays in the
- * first header cell and the columns are refused.
- */
-function readText(path: string): string {
-  // Built outside the try: a runtime that cannot build it should say so, not blame every file.
-  const utf8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
-  const bytes = readFileSync(path);
-  try {
-    return utf8.decode(bytes);
-  } catch {
-    throw new Error(
-      `${basename(path)}: the file must be UTF-8 text; save it as UTF-8, not a legacy code page`,
-    );
-  }
-}
+export const candidateId = (election: string, seat: string, name: string) =>
+  `${election}:${seat}:${slugify(name)}`;
 
-/**
- * A CSV file's rows as objects, refusing what build_sql.py refuses: the wrong columns, a header
- * separated by semicolons (src/lib/csv.ts reads one, build_sql.py reads commas only), a blank line
- * before the header, a row of the wrong length, and a backslash in a cell.
- */
-function readRows(path: string, want: readonly string[]): Row[] {
-  const label = basename(path);
-  const text = readText(path);
-  const first = text.split(/\r\n|\r|\n/, 1)[0] ?? "";
-  if (first.includes(";")) {
-    throw new Error(`${label}: the header must be separated by commas, not semicolons`);
-  }
-  const [head, ...body] = parseCSV(text);
-  // Cell by cell, as build_sql.py compares it: joined with commas, one quoted cell "key,level"
-  // would pass for the two columns key and level.
-  if (!head || head.length !== want.length || head.some((h, j) => h !== want[j])) {
-    throw new Error(
-      `${label}: the columns must be ${want.join(",")}; found ${head ? head.join(",") : "nothing"}`,
-    );
-  }
-  // parseCSV drops blank rows, so a blank line before the header would pass above, where
-  // build_sql.py reads that line as the first row and refuses it. parseCSV says what blank is.
-  if (parseCSV(first).length === 0) {
-    throw new Error(`${label}: the first line must be the header, not a blank line`);
-  }
-  return body.map((cells, i) => {
-    if (cells.length !== want.length) {
-      throw new Error(`${label} row ${i + 2}: ${cells.length} cells, expected ${want.length}`);
-    }
-    const slash = cells.findIndex((cell) => cell.includes("\\"));
-    if (slash !== -1) {
-      throw new Error(
-        `${label} row ${i + 2}: the ${want[slash]} cell has a backslash, ` +
-          "which build_sql.py refuses",
-      );
-    }
-    return Object.fromEntries(want.map((column, j) => [column, cells[j] ?? ""]));
-  });
-}
+const WHOLE = /^(0|[1-9][0-9]*)$/;
+const SIGNED = /^-?(0|[1-9][0-9]*)$/;
 
-function table(dir: string, name: keyof typeof COLUMNS, optional = false): Row[] {
-  const path = join(dir, `${name}.csv`);
-  if (!existsSync(path)) {
-    if (optional) return [];
-    throw new Error(`${name}.csv is missing`);
-  }
-  return readRows(path, COLUMNS[name]);
-}
-
-/** blocs.csv's rows; no file, no rows. */
-export function loadBlocs(path: string): Row[] {
-  return existsSync(path) ? readRows(path, BLOC_COLUMNS) : [];
-}
-
-/** blocs.csv's rows as a lookup. */
-export function blocMap(rows: Row[]): Blocs {
-  return new Map(rows.map((r) => [`${r["year"] ?? ""}|${r["party"] ?? ""}`, r["bloc"] ?? ""]));
-}
-
-/** One county's files. */
-export function loadCounty(dir: string): County {
-  return {
-    areas: table(dir, "areas"),
-    candidates: table(dir, "candidates"),
-    results: table(dir, "results"),
-    turnout: table(dir, "turnout"),
-    register: table(dir, "register"),
-    population: table(dir, "population"),
-    knownDifferences: table(dir, "known-differences", true),
-  };
-}
-
-/** The county folders under a root: folders whose names do not start with an underscore. */
-export function listCounties(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root)
-    .filter((name) => !name.startsWith("_") && statSync(join(root, name)).isDirectory())
-    .sort();
-}
-
-/**
- * The ward maps under a folder like public/geo: every `*-wards.json`. The slug alone is the key,
- * so a slug that two maps (or one map twice) give different constituencies, a constituency in one
- * and none in the other included, is refused rather than overwritten. The same ward again is fine.
- */
-export function loadWardMaps(geoDir: string): WardMaps {
-  const maps: WardMaps = new Map();
-  const firstIn = new Map<string, string>();
-  const named = (constituency: string | null) => constituency ?? "no constituency";
-  for (const file of readdirSync(geoDir)
-    .filter((f) => f.endsWith("-wards.json"))
-    .sort()) {
-    const geo = JSON.parse(readFileSync(join(geoDir, file), "utf8")) as {
-      features: { properties: { slug?: string; constituency?: string } }[];
-    };
-    for (const feature of geo.features) {
-      const { slug, constituency } = feature.properties;
-      if (!slug) continue;
-      const there = constituency ? slugify(constituency) : null;
-      const before = maps.get(slug);
-      if (before !== undefined && before !== there) {
-        throw new Error(
-          `the ward ${slug} is in ${named(before)} in ${firstIn.get(slug)} ` +
-            `but in ${named(there)} in ${file}: a ward slug has to name one ward`,
-        );
+/** Reads one table's CSV text into `into`; returns what stopped rows being read. */
+export function readTable(table: TableName, text: string, where: string, into: AtlasFiles): string[] {
+  const problems: string[] = [];
+  const [head, ...lines] = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ""));
+  const want = HEADERS[table];
+  if (!head || head.map((h) => h.trim()).join(",") !== want.join(","))
+    return [`${where}: the header must be ${want.join(",")}`];
+  lines.forEach((cells, i) => {
+    const at = `${where} line ${i + 2}`;
+    const start = problems.length;
+    const v = (name: string) => (cells[want.indexOf(name)] ?? "").trim();
+    const opt = (name: string) => v(name) || null;
+    const num = (name: string, required: boolean, signed = false): number | null => {
+      const s = v(name);
+      if (!s) {
+        if (required) problems.push(`${at}: ${name} is missing`);
+        return null;
       }
-      maps.set(slug, there);
-      if (!firstIn.has(slug)) firstIn.set(slug, file);
+      if (!(signed ? SIGNED : WHOLE).test(s)) {
+        problems.push(`${at}: ${name} "${s}" is not a whole number (no commas or spaces)`);
+        return null;
+      }
+      return Number(s);
+    };
+    const clean = () => problems.length === start;
+    switch (table) {
+      case "sources":
+        into.sources.push({ id: v("id"), title: v("title"), publisher: v("publisher"), url: opt("url"), note: opt("note") });
+        break;
+      case "areas":
+        into.areas.push({
+          key: v("key"),
+          level: v("level") as Level,
+          name: v("name"),
+          parent: opt("parent"),
+          iebc_code: opt("iebc_code"),
+        });
+        break;
+      case "candidates":
+        into.candidates.push({ election: v("election"), seat: v("seat"), name: v("name"), party: opt("party"), bloc: v("bloc") });
+        break;
+      case "results": {
+        const votes = num("votes", true);
+        if (clean())
+          into.results.push({
+            election: v("election"),
+            seat: v("seat"),
+            candidate: v("candidate"),
+            area: v("area"),
+            votes: votes ?? 0,
+            source: v("source"),
+          });
+        break;
+      }
+      case "turnout": {
+        const row: TurnoutRow = {
+          election: v("election"),
+          area: v("area"),
+          registered: num("registered", false),
+          cast_votes: num("cast_votes", false),
+          rejected: num("rejected", false),
+          valid: num("valid", false),
+          source: v("source"),
+        };
+        if (clean()) into.turnout.push(row);
+        break;
+      }
+      case "register": {
+        const year = num("year", true);
+        const registered = num("registered", true);
+        if (clean()) into.register.push({ year: year ?? 0, area: v("area"), registered: registered ?? 0, source: v("source") });
+        break;
+      }
+      case "population": {
+        const year = num("year", true);
+        const total = num("total", true);
+        const adults = num("adults", true);
+        const young = num("young_adults", true);
+        if (clean())
+          into.population.push({
+            area: v("area"),
+            year: year ?? 0,
+            total: total ?? 0,
+            adults: adults ?? 0,
+            young_adults: young ?? 0,
+            source: v("source"),
+          });
+        break;
+      }
+      case "differences": {
+        const difference = num("difference", true, true);
+        if (clean())
+          into.differences.push({
+            election: v("election"),
+            seat: v("seat"),
+            candidate: v("candidate"),
+            area: v("area"),
+            difference: difference ?? 0,
+            note: v("note"),
+          });
+        break;
+      }
+    }
+  });
+  return problems;
+}
+
+/** Every problem with the figures, one sentence each; none means they can become a migration. */
+export function checkAtlas(f: AtlasFiles, wardSlugs: Record<string, string[]>): string[] {
+  const out: string[] = [];
+  // Differences IEBC's own documents carry, keyed as election|seat|candidate|area
+  // (seat and candidate empty for a turnout row's valid + rejected against cast).
+  const known = new Map(f.differences.map((d) => [`${d.election}|${d.seat}|${d.candidate}|${d.area}`, d.difference]));
+  const allowed = (key: string, diff: number) => diff === 0 || known.get(key) === diff;
+
+  const sources = new Set<string>();
+  for (const s of f.sources) {
+    if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(s.id)) out.push(`sources: "${s.id}" must be lower-case letters, digits and dashes`);
+    if (sources.has(s.id)) out.push(`sources: "${s.id}" is listed twice`);
+    if (!s.title || !s.publisher) out.push(`sources: "${s.id}" needs a title and a publisher`);
+    if (s.url && !/^https?:\/\//.test(s.url)) out.push(`sources: "${s.id}" has a url that doesn't start with http`);
+    sources.add(s.id);
+  }
+  const source = (where: string, id: string) => {
+    if (!sources.has(id)) out.push(`${where}: source "${id}" isn't listed`);
+  };
+
+  const areas = new Map<string, AreaRow>();
+  for (const a of f.areas) {
+    if (areas.has(a.key)) out.push(`areas: "${a.key}" is listed twice`);
+    areas.set(a.key, a);
+  }
+  for (const a of f.areas) {
+    if (!(LEVELS as readonly string[]).includes(a.level)) {
+      out.push(`areas: "${a.key}" has an unknown level "${a.level}"`);
+      continue;
+    }
+    if (!KEY_SHAPE[a.level].test(a.key)) out.push(`areas: "${a.key}" isn't shaped like a ${a.level} key`);
+    if (!a.name) out.push(`areas: "${a.key}" needs a name`);
+    if (a.iebc_code && !/^[0-9]{1,6}$/.test(a.iebc_code)) out.push(`areas: "${a.key}" has an IEBC code that isn't digits`);
+    const parent =
+      a.level === "country" ? null : a.level === "county" ? "kenya" : a.key.split("/").slice(0, -1).join("/");
+    if (a.parent !== parent) out.push(`areas: "${a.key}" should have the parent "${parent ?? ""}"`);
+    else if (parent && !areas.has(parent)) out.push(`areas: "${a.key}"'s parent "${parent}" isn't listed`);
+    if (a.level === "ward") {
+      const [county = "", , slug = ""] = a.key.split("/");
+      const map = wardSlugs[county];
+      if (!map) out.push(`areas: there's no ward map for ${county}, so "${a.key}" can't be checked`);
+      else if (!map.includes(slug)) out.push(`areas: the ward "${slug}" isn't in ${county}'s ward map`);
     }
   }
-  return maps;
-}
+  const area = (where: string, key: string) => {
+    if (areas.has(key)) return true;
+    out.push(`${where}: the area "${key}" isn't listed`);
+    return false;
+  };
 
-const ELECTION_YEARS = ["2013", "2017", "2022"];
-const ELECTIONS = new Set(
-  ELECTION_YEARS.flatMap((y) => ["president", "governor", "mp"].map((race) => `${y}-${race}`)),
-);
-const SEAT_LEVEL: Record<string, string> = {
-  president: "country",
-  governor: "county",
-  mp: "constituency",
-};
-const KEY = /^[a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*){0,2}$/;
-const WHOLE = /^\d+$/;
-const SIGNED = /^-?\d+$/;
-const SOURCE = /^[^,]{2,40}, .{3,}$/;
-const HTTPS = /^https:\/\/\S+$/;
-
-/** The largest value a Postgres `integer` column holds. */
-const INT_MAX = 2147483647;
-
-const cell = (r: Row, column: string): string => r[column] ?? "";
-const whole = (s: string): number | null => (WHOLE.test(s) ? Number(s) : null);
-
-/** Characters as Postgres's length() counts them: one outside the basic plane is one, not two. */
-const chars = (s: string): number => [...s].length;
-/** What Postgres's btrim() leaves: spaces come off both ends, and nothing else (a tab stays). */
-function btrim(s: string): string {
-  let start = 0;
-  let end = s.length;
-  while (start < end && s[start] === " ") start++;
-  while (end > start && s[end - 1] === " ") end--;
-  return s.slice(start, end);
-}
-
-/** Whether a seat takes in an area: the area itself, or one below it. `kenya` takes in them all. */
-const covers = (seat: string, area: string): boolean =>
-  seat === "kenya" || area === seat || area.startsWith(`${seat}/`);
-
-/**
- * What is wrong with a row's source and source_url. A source also has to be three characters once
- * the spaces at its ends are trimmed, as the database wants, which spaces around the comma are not.
- */
-function sourceProblems(r: Row): string[] {
-  const out: string[] = [];
-  if (!SOURCE.test(cell(r, "source")) || chars(btrim(cell(r, "source"))) < 3) {
-    out.push(`source must read "Publisher, document title", not "${cell(r, "source")}"`);
+  const candidates = new Map<string, CandidateRow>();
+  for (const c of f.candidates) {
+    const where = `candidates: ${c.name || "(no name)"} in ${c.election}`;
+    if (!ATLAS_ELECTIONS.includes(c.election)) {
+      out.push(`${where}: unknown election`);
+      continue;
+    }
+    const race = c.election.slice(5);
+    const seat = areas.get(c.seat);
+    if (!seat) out.push(`${where}: the seat "${c.seat}" isn't listed`);
+    else if (seat.level !== SEAT_LEVEL[race])
+      out.push(`${where}: a ${race} seat must be a ${SEAT_LEVEL[race]}, not "${c.seat}"`);
+    if (!c.name) out.push(`${where}: needs a name`);
+    if (!c.bloc) out.push(`${where}: needs a bloc`);
+    else if (/^independent$/i.test(c.bloc)) out.push(`${where}: name the independent's bloc, as "Independent: ${c.name}"`);
+    const id = candidateId(c.election, c.seat, c.name);
+    if (candidates.has(id)) out.push(`${where}: listed twice for ${c.seat}`);
+    candidates.set(id, c);
   }
-  const url = cell(r, "source_url");
-  if (url !== "" && !HTTPS.test(url)) {
-    out.push(`source_url must be an https link or blank, not "${url}"`);
+
+  const votesAt = new Map<string, number>();
+  const sumAt = new Map<string, number>();
+  for (const r of f.results) {
+    const where = `results: ${r.election} ${r.candidate} in ${r.area}`;
+    const id = candidateId(r.election, r.seat, r.candidate);
+    if (!candidates.has(id)) out.push(`${where}: no such candidate for ${r.seat}`);
+    if (area(where, r.area) && !(r.seat === "kenya" || r.area === r.seat || r.area.startsWith(`${r.seat}/`)))
+      out.push(`${where}: the area is outside the seat "${r.seat}"`);
+    source(where, r.source);
+    const k = `${id}|${r.area}`;
+    if (votesAt.has(k)) out.push(`${where}: listed twice`);
+    votesAt.set(k, r.votes);
+    const at = `${r.election}|${r.area}`;
+    sumAt.set(at, (sumAt.get(at) ?? 0) + r.votes);
+  }
+
+  const turnoutAt = new Map<string, TurnoutRow>();
+  for (const t of f.turnout) {
+    const where = `turnout: ${t.election} in ${t.area}`;
+    if (!ATLAS_ELECTIONS.includes(t.election)) out.push(`${where}: unknown election`);
+    area(where, t.area);
+    source(where, t.source);
+    const k = `${t.election}|${t.area}`;
+    if (turnoutAt.has(k)) out.push(`${where}: listed twice`);
+    turnoutAt.set(k, t);
+    if (t.cast_votes !== null && t.registered !== null && t.cast_votes > t.registered)
+      out.push(`${where}: more votes cast (${t.cast_votes}) than registered (${t.registered})`);
+    if (t.valid !== null && t.cast_votes !== null && t.valid > t.cast_votes)
+      out.push(`${where}: more valid votes (${t.valid}) than cast (${t.cast_votes})`);
+    if (
+      t.valid !== null &&
+      t.rejected !== null &&
+      t.cast_votes !== null &&
+      !allowed(`${t.election}|||${t.area}`, t.cast_votes - t.valid - t.rejected)
+    )
+      out.push(`${where}: valid (${t.valid}) and rejected (${t.rejected}) don't make cast (${t.cast_votes})`);
+  }
+  for (const [k, total] of sumAt) {
+    const t = turnoutAt.get(k);
+    const cap = t ? (t.valid ?? t.cast_votes) : null;
+    if (cap !== null && total > cap) {
+      const [election, at] = k.split("|");
+      const what = t?.valid !== null ? "valid votes" : "votes cast";
+      out.push(`results: ${election} in ${at}: the candidates' votes (${total}) are more than the ${what} (${cap})`);
+    }
+  }
+
+  // Each total against its parts, once every part is in.
+  const children = new Map<string, string[]>();
+  for (const a of f.areas) if (a.parent) children.set(a.parent, [...(children.get(a.parent) ?? []), a.key]);
+  for (const r of f.results) {
+    const kids = children.get(r.area) ?? [];
+    if (areas.get(r.area)?.level === "country" && kids.length < COUNTIES) continue;
+    const id = candidateId(r.election, r.seat, r.candidate);
+    const parts = kids.map((k) => votesAt.get(`${id}|${k}`));
+    if (!kids.length || parts.some((p) => p === undefined)) continue;
+    const sum = parts.reduce((t: number, p) => t + (p ?? 0), 0);
+    if (!allowed(`${r.election}|${r.seat}|${r.candidate}|${r.area}`, r.votes - sum))
+      out.push(`results: ${r.election} ${r.candidate}: ${r.area} has ${r.votes} but its ${kids.length} parts add up to ${sum}`);
+  }
+
+  const seen = new Set<string>();
+  for (const r of f.register) {
+    const where = `register: ${r.year} in ${r.area}`;
+    if (![2013, 2017, 2022].includes(r.year)) out.push(`${where}: the year must be 2013, 2017 or 2022`);
+    area(where, r.area);
+    source(where, r.source);
+    if (seen.has(`register|${r.year}|${r.area}`)) out.push(`${where}: listed twice`);
+    seen.add(`register|${r.year}|${r.area}`);
+  }
+  for (const p of f.population) {
+    const where = `population: ${p.area} in ${p.year}`;
+    area(where, p.area);
+    source(where, p.source);
+    if (p.adults > p.total || p.young_adults > p.adults)
+      out.push(`${where}: adults must be within the total, and 18–34 within the adults`);
+    if (seen.has(`population|${p.year}|${p.area}`)) out.push(`${where}: listed twice`);
+    seen.add(`population|${p.year}|${p.area}`);
   }
   return out;
 }
 
-/**
- * What is wrong with blocs.csv: a year with no election, a party twice, a bloc unnamed or
- * unsourced.
- */
-export function checkBlocs(rows: Row[]): string[] {
-  const problems: string[] = [];
-  const seen = new Set<string>();
-  rows.forEach((r, i) => {
-    const bad = (what: string) => problems.push(`blocs.csv row ${i + 2}: ${what}`);
-    const year = cell(r, "year");
-    const party = cell(r, "party");
-    if (!ELECTION_YEARS.includes(year)) bad(`${year} is not an election year`);
-    if (party === "" || party !== party.trim()) bad("a party must be named, with no stray spaces");
-    if (cell(r, "bloc").trim() === "") bad(`${party} needs a bloc`);
-    if (seen.has(`${year}|${party}`)) bad(`${party} in ${year} is listed twice`);
-    seen.add(`${year}|${party}`);
-    sourceProblems(r).forEach(bad);
-  });
-  return problems;
-}
-
-/** The columns of a candidate that two counties listing the same id have to agree on. */
-const SHARED_COLUMNS = COLUMNS.candidates.filter((column) => column !== "id");
-
-/**
- * What is wrong between counties. Every county lists the presidential candidates, and each
- * county's migration upserts the row, so the last one applied wins: a candidate that more than one
- * county lists has to read the same in each. Each county is compared with the first that lists the
- * candidate; a candidate a county lists twice is checkCounty's complaint, not a disagreement.
- */
-export function checkShared(counties: { name: string; candidates: Row[] }[]): string[] {
-  const problems: string[] = [];
-  const first = new Map<string, { county: string; row: Row }>();
-  for (const { name, candidates } of counties) {
-    const listed = new Set<string>();
-    for (const row of candidates) {
-      const id = cell(row, "id");
-      if (listed.has(id)) continue;
-      listed.add(id);
-      const before = first.get(id);
-      if (before === undefined) {
-        first.set(id, { county: name, row });
-        continue;
-      }
-      for (const column of SHARED_COLUMNS) {
-        const was = cell(before.row, column);
-        const now = cell(row, column);
-        if (was !== now) {
-          problems.push(`${id}: ${column} is "${was}" in ${before.county} but "${now}" in ${name}`);
-        }
-      }
+/** What is loaded for each county, what is missing, and every source, as Markdown. */
+export function atlasReport(f: AtlasFiles): string {
+  const name = new Map(f.areas.map((a) => [a.key, a.name]));
+  const counties = f.areas.filter((a) => a.level === "county").map((a) => a.key).sort();
+  const lines = [
+    "# Election atlas: what's loaded",
+    "",
+    "Written by scripts/atlas/report.ts from data/atlas. Each figure's document is listed under Sources; whatever a county lists as missing was not found.",
+    "",
+  ];
+  for (const county of counties) {
+    const consts = f.areas.filter((a) => a.parent === county).map((a) => a.key);
+    const wards = f.areas.filter((a) => a.level === "ward" && a.key.startsWith(`${county}/`)).map((a) => a.key);
+    const missing: string[] = [];
+    lines.push(`## ${name.get(county) ?? county}`, "", "| Election | Constituencies with results | Turnout | County total |", "|---|---|---|---|");
+    for (const e of ATLAS_ELECTIONS) {
+      const label = e.replace("-", " ");
+      const withResults = consts.filter((c) => f.results.some((r) => r.election === e && r.area === c)).length;
+      const withTurnout = consts.filter((c) => f.turnout.some((t) => t.election === e && t.area === c)).length;
+      const countyTotal = e.endsWith("-mp") ? "n/a" : f.results.some((r) => r.election === e && r.area === county) ? "yes" : "no";
+      lines.push(`| ${label} | ${withResults} of ${consts.length} | ${withTurnout} of ${consts.length} | ${countyTotal} |`);
+      if (withResults < consts.length) missing.push(`${label}: results for ${consts.length - withResults} of ${consts.length} constituencies`);
+      if (countyTotal === "no") missing.push(`${label}: the county total`);
     }
+    const reg = [2013, 2017, 2022].map(
+      (y) => `${y}: ${wards.filter((w) => f.register.some((r) => r.year === y && r.area === w)).length} of ${wards.length}`,
+    );
+    const pop = wards.filter((w) => f.population.some((p) => p.area === w)).length;
+    lines.push("", `Registered voters by ward: ${reg.join(" · ")}.`, `Population estimates: ${pop} of ${wards.length} wards.`, "");
+    if (missing.length) lines.push("Missing:", ...missing.map((m) => `- ${m}`), "");
   }
-  return problems;
-}
-
-type Known = { row: number; difference: number; used: boolean };
-
-/**
- * What is wrong with a county's files, one sentence each; empty when they pass. `blocs` is what
- * blocs.csv records: a candidate stands in the bloc recorded for their party in that election,
- * else as their party, and an independent (no party) as "Independent".
- */
-export function checkCounty(c: County, wards: WardMaps, blocs: Blocs): string[] {
-  const problems: string[] = [];
-  const bad = (file: string, i: number, what: string): void => {
-    problems.push(`${file}.csv row ${i + 2}: ${what}`);
-  };
-
-  /**
-   * A figure that must be a whole number the database's integer holds, or blank when `required` is
-   * false. One that is refused answers null, so that nothing is worked out from it.
-   */
-  const figure = (file: string, i: number, r: Row, column: string, required = false) => {
-    const s = cell(r, column);
-    if (s === "" && !required) return null;
-    const n = whole(s);
-    if (n === null) {
-      bad(file, i, `${column} must be a whole number${required ? "" : " or blank"}, not "${s}"`);
-    } else if (n > INT_MAX) {
-      bad(file, i, `${column} must be a whole number up to ${INT_MAX}, not "${s}"`);
-      return null;
-    }
-    return n;
-  };
-  /** A text cell may hold at most `max` characters, as the database counts them. */
-  const atMost = (file: string, i: number, r: Row, column: string, max: number) => {
-    const n = chars(btrim(cell(r, column)));
-    if (n > max) bad(file, i, `${column} must be at most ${max} characters, not ${n}`);
-  };
-  const source = (file: string, i: number, r: Row) => {
-    sourceProblems(r).forEach((what) => bad(file, i, what));
-    atMost(file, i, r, "source", 200);
-    atMost(file, i, r, "source_url", 500);
-  };
-  const unique = (file: string, rows: Row[], key: (r: Row) => string) => {
-    const seen = new Set<string>();
-    rows.forEach((r, i) => {
-      const k = key(r);
-      if (seen.has(k)) bad(file, i, `${k} is listed twice`);
-      seen.add(k);
-    });
-  };
-
-  unique("areas", c.areas, (r) => cell(r, "key"));
-  unique("candidates", c.candidates, (r) => cell(r, "id"));
-  unique("results", c.results, (r) => `${cell(r, "candidate_id")} at ${cell(r, "area_key")}`);
-  unique("turnout", c.turnout, (r) => `${cell(r, "election_id")} at ${cell(r, "area_key")}`);
-  unique("register", c.register, (r) => `${cell(r, "year")} at ${cell(r, "area_key")}`);
-  unique("population", c.population, (r) => `${cell(r, "area_key")} in ${cell(r, "year")}`);
-  // A recorded difference is one per thing it is about, which is how the lookups below find it:
-  // the candidate and county for county_sum, the election and area for cast_split.
-  unique("known-differences", c.knownDifferences, (r) => {
-    const about =
-      cell(r, "check") === "cast_split" ? cell(r, "election_id") : cell(r, "candidate_id");
-    return `${cell(r, "check")} for ${about} at ${cell(r, "area_key")}`;
-  });
-
-  // The differences IEBC itself published, kept on purpose. Each is the figure IEBC gives for the
-  // whole, minus what its parts add up to:
-  // - county_sum is the county's own figure minus its constituencies' sum (549 against 550 is 1).
-  //   Its row names the candidate_id and the county's area_key, and leaves election_id blank.
-  // - cast_split is cast minus valid minus rejected (500, 490 and 11 is -1). Its row names the
-  //   election_id and area_key, and leaves candidate_id blank.
-  const known = new Map<string, Known>();
-  c.knownDifferences.forEach((r, i) => {
-    const check = cell(r, "check");
-    const difference = SIGNED.test(cell(r, "difference")) ? Number(cell(r, "difference")) : null;
-    if (difference === null)
-      return bad("known-differences", i, "difference must be a whole number");
-    if (cell(r, "reason").trim().length < 10) {
-      return bad("known-differences", i, "the reason must say why the figures differ");
-    }
-    if (check === "county_sum") {
-      known.set(`county_sum|${cell(r, "candidate_id")}|${cell(r, "area_key")}`, {
-        row: i,
-        difference,
-        used: false,
-      });
-    } else if (check === "cast_split") {
-      known.set(`cast_split|${cell(r, "election_id")}|${cell(r, "area_key")}`, {
-        row: i,
-        difference,
-        used: false,
-      });
-    } else {
-      bad("known-differences", i, `check must be county_sum or cast_split, not "${check}"`);
-    }
-  });
-
-  // Areas: keys, levels, parents, and the ward maps.
-  const areaKeys = new Set(["kenya", ...c.areas.map((a) => cell(a, "key"))]);
-  c.areas.forEach((a, i) => {
-    const key = cell(a, "key");
-    if (key === "kenya") {
-      return bad("areas", i, "kenya is added by the schema, so it stays out of the files");
-    }
-    if (!KEY.test(key)) {
-      return bad("areas", i, `"${key}" is not a key: lower-case parts joined by "/"`);
-    }
-    if (key.startsWith("kenya/")) {
-      bad(
-        "areas",
-        i,
-        `${key} starts with kenya, but keys do not begin with the country: ` +
-          "a county's key is its own name",
-      );
-    }
-    const level = levelOfKey(key);
-    const parent = parentKey(key);
-    if (cell(a, "level") !== level) {
-      bad("areas", i, `${key} is a ${level}, but the file says ${cell(a, "level")}`);
-    }
-    if (cell(a, "parent") !== parent) {
-      bad("areas", i, `${key}'s parent should be ${parent}, not ${cell(a, "parent")}`);
-    } else if (parent !== null && !areaKeys.has(parent)) {
-      bad("areas", i, `the parent ${parent} is not in the files`);
-    }
-    const name = cell(a, "name");
-    if (chars(name) < 2 || name !== name.trim()) {
-      bad("areas", i, `${key} needs a name of at least two letters with no stray spaces`);
-    }
-    atMost("areas", i, a, "name", 80);
-    const code = cell(a, "iebc_code");
-    if (code !== "" && !/^\d{1,4}$/.test(code)) {
-      bad("areas", i, `the IEBC code ${code} must be one to four digits`);
-    }
-    if (level === "ward") {
-      const [, constituency, slug = ""] = key.split("/");
-      if (!wards.has(slug)) {
-        bad(
-          "areas",
-          i,
-          `${key} is not in a ward map under public/geo (no ward has the slug ${slug})`,
-        );
-      } else {
-        const there = wards.get(slug);
-        if (there !== null && there !== constituency) {
-          bad(
-            "areas",
-            i,
-            `${key} is under ${constituency}, but the ward map says ${slug} belongs to ${there}`,
-          );
-        }
-      }
-    }
-  });
-
-  // Candidates.
-  const candidates = new Map(c.candidates.map((r) => [cell(r, "id"), r]));
-  c.candidates.forEach((r, i) => {
-    const election = cell(r, "election_id");
-    const seat = cell(r, "seat");
-    const name = cell(r, "name");
-    if (!ELECTIONS.has(election)) {
-      bad("candidates", i, `${election} is not an election the atlas holds`);
-    } else if (areaKeys.has(seat)) {
-      const race = election.split("-")[1] ?? "";
-      if (levelOfKey(seat) !== SEAT_LEVEL[race]) {
-        bad("candidates", i, `a ${race} seat is a ${SEAT_LEVEL[race]}, not ${seat}`);
-      }
-    }
-    if (!areaKeys.has(seat)) bad("candidates", i, `the seat ${seat} is not in the files`);
-    const id = `${election}/${seat}/${slugify(name)}`;
-    if (cell(r, "id") !== id) bad("candidates", i, `the id should be ${id}`);
-    if (chars(name) < 2 || name !== name.trim()) {
-      bad("candidates", i, `${id} needs a name with no stray spaces`);
-    }
-    atMost("candidates", i, r, "name", 120);
-    const party = cell(r, "party");
-    if (party !== "" && btrim(party) === "") {
-      bad("candidates", i, `${id}: the party is only spaces; leave it empty for an independent`);
-    }
-    atMost("candidates", i, r, "party", 120);
-    const bloc =
-      party === "" ? "Independent" : (blocs.get(`${election.slice(0, 4)}|${party}`) ?? party);
-    if (cell(r, "bloc") !== bloc) {
-      bad("candidates", i, `${id}: the bloc should be ${bloc}, not ${cell(r, "bloc")}`);
-    } else {
-      // The right bloc still has to fit its column.
-      atMost("candidates", i, r, "bloc", 80);
-    }
-  });
-
-  // Results, what the candidates' votes come to in each area, and who has a row where.
-  const votesAt = new Map<string, number>();
-  const placesOf = new Map<string, Set<string>>(); // election to the areas it has a row in
-  const hasRow = new Set<string>(); // `${candidate_id}|${area_key}`
-  c.results.forEach((r, i) => {
-    const candidate = candidates.get(cell(r, "candidate_id"));
-    const area = cell(r, "area_key");
-    const votes = figure("results", i, r, "votes", true);
-    if (!candidate) bad("results", i, `${cell(r, "candidate_id")} is not in candidates.csv`);
-    if (!areaKeys.has(area)) bad("results", i, `${area} is not in the files`);
-    if (candidate && areaKeys.has(area)) {
-      const seat = cell(candidate, "seat");
-      const election = cell(candidate, "election_id");
-      if (!covers(seat, area)) bad("results", i, `${area} is outside the seat ${seat}`);
-      hasRow.add(`${cell(r, "candidate_id")}|${area}`);
-      placesOf.set(election, (placesOf.get(election) ?? new Set<string>()).add(area));
-      if (votes !== null) {
-        const k = `${election}|${area}`;
-        votesAt.set(k, (votesAt.get(k) ?? 0) + votes);
-      }
-    }
-  });
-
-  // A missing row is not a zero. Where an election has votes, every candidate whose seat covers
-  // that place has a row there, else their share would read as 0 when it is only not found; and
-  // the election has a turnout row there, because that is where the votes' source is held.
-  for (const [id, candidate] of candidates) {
-    const election = cell(candidate, "election_id");
-    for (const area of placesOf.get(election) ?? []) {
-      if (covers(cell(candidate, "seat"), area) && !hasRow.has(`${id}|${area}`)) {
-        problems.push(
-          `${id}: no votes for ${area}, where ${election} has votes for other candidates`,
-        );
-      }
-    }
-  }
-  const turnoutAt = new Set(
-    c.turnout.map((t) => `${cell(t, "election_id")}|${cell(t, "area_key")}`),
+  lines.push(
+    "## Sources",
+    "",
+    ...[...f.sources]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((s) => `- \`${s.id}\`: ${s.title}, ${s.publisher}${s.url ? `, ${s.url}` : ""}${s.note ? `. ${s.note}` : ""}`),
+    "",
   );
-  for (const [election, areas] of placesOf) {
-    for (const area of areas) {
-      if (!turnoutAt.has(`${election}|${area}`)) {
-        problems.push(`${election} ${area}: votes but no turnout row, so no source`);
-      }
-    }
-  }
-
-  // Constituencies add up to their county, for president and governor; an MP race has no
-  // county total.
-  const byCandidate = new Map<string, Row[]>();
-  for (const r of c.results) {
-    const id = cell(r, "candidate_id");
-    byCandidate.set(id, [...(byCandidate.get(id) ?? []), r]);
-  }
-  for (const [id, rows] of byCandidate) {
-    const candidate = candidates.get(id);
-    const race = candidate ? (cell(candidate, "election_id").split("-")[1] ?? "") : "";
-    if (race !== "president" && race !== "governor") continue;
-    for (const countyRow of rows.filter((r) => levelOfKey(cell(r, "area_key")) === "county")) {
-      const county = cell(countyRow, "area_key");
-      const kids = rows.filter(
-        (r) =>
-          levelOfKey(cell(r, "area_key")) === "constituency" &&
-          parentKey(cell(r, "area_key")) === county,
-      );
-      const want = whole(cell(countyRow, "votes"));
-      if (kids.length === 0 || want === null) continue;
-      const sum = kids.reduce((total, r) => total + (whole(cell(r, "votes")) ?? 0), 0);
-      const gap = want - sum;
-      const k = known.get(`county_sum|${id}|${county}`);
-      if (gap !== 0 && (k === undefined || k.difference !== gap)) {
-        problems.push(
-          `${id}: its constituencies add up to ${sum} but ${county} says ${want}` +
-            (k ? ` (the recorded difference of ${k.difference} does not close it)` : ""),
-        );
-      } else if (gap !== 0 && k) {
-        k.used = true;
-      }
-    }
-  }
-
-  // Turnout.
-  c.turnout.forEach((r, i) => {
-    const election = cell(r, "election_id");
-    const area = cell(r, "area_key");
-    if (!ELECTIONS.has(election))
-      bad("turnout", i, `${election} is not an election the atlas holds`);
-    if (!areaKeys.has(area)) bad("turnout", i, `${area} is not in the files`);
-    const registered = figure("turnout", i, r, "registered");
-    const cast = figure("turnout", i, r, "cast_votes");
-    const rejected = figure("turnout", i, r, "rejected_votes");
-    const valid = figure("turnout", i, r, "valid_votes");
-    if (cast !== null && registered !== null && cast > registered) {
-      bad("turnout", i, `more votes cast than registered (${cast} against ${registered})`);
-    }
-    if (valid !== null && cast !== null && valid > cast) {
-      bad("turnout", i, `more valid votes than votes cast (${valid} against ${cast})`);
-    }
-    if (valid !== null && rejected !== null && cast !== null) {
-      const gap = cast - valid - rejected;
-      const k = known.get(`cast_split|${election}|${area}`);
-      if (gap !== 0 && (k === undefined || k.difference !== gap)) {
-        bad(
-          "turnout",
-          i,
-          `valid plus rejected (${valid + rejected}) differs from cast (${cast})` +
-            (k ? `; the recorded difference of ${k.difference} does not close it` : ""),
-        );
-      } else if (gap !== 0 && k) {
-        k.used = true;
-      }
-    }
-    const limit = valid ?? cast;
-    const limitName = valid !== null ? "valid votes" : "votes cast";
-    const total = votesAt.get(`${election}|${area}`);
-    if (limit !== null && total !== undefined && total > limit) {
-      bad(
-        "turnout",
-        i,
-        `the candidates' votes (${total}) pass the ${limitName} (${limit}), a share over 100%`,
-      );
-    }
-    source("turnout", i, r);
-  });
-
-  // Registers.
-  c.register.forEach((r, i) => {
-    const year = cell(r, "year");
-    if (!ELECTION_YEARS.includes(year)) bad("register", i, `${year} is not an election year`);
-    if (!areaKeys.has(cell(r, "area_key")))
-      bad("register", i, `${cell(r, "area_key")} is not in the files`);
-    figure("register", i, r, "registered", true);
-    source("register", i, r);
-  });
-
-  // Population estimates.
-  c.population.forEach((r, i) => {
-    if (!areaKeys.has(cell(r, "area_key")))
-      bad("population", i, `${cell(r, "area_key")} is not in the files`);
-    const year = figure("population", i, r, "year", true);
-    // A year written with a leading zero (02025) is the same key as 2025 once loaded.
-    if (year !== null && (year < 1990 || year > 2100 || String(year) !== cell(r, "year")))
-      bad("population", i, `${cell(r, "year")} is not a year`);
-    const total = figure("population", i, r, "total", true);
-    const adults = figure("population", i, r, "adults", true);
-    const young = figure("population", i, r, "young_adults", true);
-    if (adults !== null && total !== null && adults > total) {
-      bad("population", i, `adults (${adults}) pass the total (${total})`);
-    }
-    if (young !== null && adults !== null && young > adults) {
-      bad("population", i, `young adults (${young}) pass the adults (${adults})`);
-    }
-    if (chars(cell(r, "method").trim()) < 10)
-      bad("population", i, "the method must say how it was worked out");
-    atMost("population", i, r, "method", 500);
-    source("population", i, r);
-  });
-
-  // A recorded difference that nothing needs is out of date.
-  for (const [key, k] of known) {
-    if (!k.used) {
-      bad(
-        "known-differences",
-        k.row,
-        `this difference no longer matches anything: remove it (${key})`,
-      );
-    }
-  }
-  return problems;
+  return lines.join("\n");
 }
 ```
 
-- [ ] **Step 8: Format, lint and run**
+  Run the test. Expected: all pass.
 
-Run: `npx prettier --write scripts/atlas/checks.ts tests/atlas-data.test.ts && npx eslint scripts/atlas/checks.ts tests/atlas-data.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts | tail -3`
-
-Expected: ESLint prints nothing, then `189 passed, 0 failed`.
-
-- [ ] **Step 9: Commit**
-
-```bash
-git add tests/fixtures/atlas/slug-cases.csv tests/fixtures/atlas/blocs.csv scripts/atlas/slug.py scripts/atlas/test_slug.py scripts/atlas/checks.ts tests/atlas-data.test.ts
-git commit -m "Atlas: the slug rule and the data checks" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 9: A county's areas from its ward map
-
-**Files:**
-- Create: `scripts/atlas/test_areas_from_map.py`
-- Create: `scripts/atlas/areas_from_map.py`
-
-**Interfaces:** Consumes `slug.slugify`. Produces `areas_from_map.build_areas(wards_geojson, county, constituency=None, also=()) -> list[list[str]]`
-(`key, level, name, parent, iebc_code` rows in key order; the code is blank) and
-`areas_from_map.main(argv)`. The command is
-`python3 scripts/atlas/areas_from_map.py WARDS_GEOJSON "County name" [OUT_CSV] [--constituency "Name"] [--also "Name"]...`.
-`--constituency` names the one constituency of a map that names none (Mathira's); `--also` lists a
-constituency that has no ward map. Names are the ward map's, which are the names the app uses.
-
-- [ ] **Step 1: Write the failing tests**
-
-They include the real maps: Nairobi must be one county, 17 constituencies and 85 wards, and
-Mathira's six wards must sit under one constituency of a county whose other five are listed bare.
-
-Create `scripts/atlas/test_areas_from_map.py`:
-
-```python
-"""Tests for areas_from_map.py: a county's areas.csv made from its ward map. Run from the
-repository root:
-
-  python3 -m unittest discover -s scripts/atlas -p "test_*.py"
-"""
-import json
-import tempfile
-import unittest
-from pathlib import Path
-
-import areas_from_map as afm
-import slug
-
-ROOT = Path(__file__).resolve().parents[2]
-NAIROBI = ROOT / "public" / "geo" / "nairobi-wards.json"
-MATHIRA = ROOT / "public" / "geo" / "mathira-wards.json"
-
-
-def feature(slug_, name, constituency=None):
-    properties = {"slug": slug_, "name": name}
-    if constituency:
-        properties["constituency"] = constituency
-    return {"type": "Feature", "properties": properties, "geometry": None}
-
-
-class Rows(unittest.TestCase):
-    def geo(self, features):
-        """A ward map holding `features`, in a folder that is removed when the test ends."""
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        path = Path(tmp.name) / "wards.json"
-        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}), encoding="utf-8")
-        return str(path)
-
-    def test_a_map_that_names_constituencies(self):
-        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-two", "Ward Two", "South Test")])
-        rows = afm.build_areas(path, "Testland")
-        self.assertEqual(
-            rows,
-            [
-                ["testland", "county", "Testland", "kenya", ""],
-                ["testland/north-test", "constituency", "North Test", "testland", ""],
-                ["testland/north-test/ward-one", "ward", "Ward One", "testland/north-test", ""],
-                ["testland/south-test", "constituency", "South Test", "testland", ""],
-                ["testland/south-test/ward-two", "ward", "Ward Two", "testland/south-test", ""],
-            ],
-        )
-
-    def test_a_map_that_names_none_takes_the_one_given(self):
-        path = self.geo([feature("ward-one", "Ward One"), feature("ward-two", "Ward Two")])
-        rows = afm.build_areas(path, "Testland", constituency="North Test")
-        self.assertEqual([r[0] for r in rows], ["testland", "testland/north-test", "testland/north-test/ward-one", "testland/north-test/ward-two"])
-
-    def test_a_map_that_names_none_and_is_given_none_is_refused(self):
-        with self.assertRaisesRegex(ValueError, "names no constituency"):
-            afm.build_areas(self.geo([feature("ward-one", "Ward One")]), "Testland")
-
-    def test_constituencies_without_a_ward_map_are_listed_too(self):
-        path = self.geo([feature("ward-one", "Ward One", "North Test")])
-        rows = afm.build_areas(path, "Testland", also=["Far Test", "Away Test"])
-        keys = [r[0] for r in rows]
-        self.assertIn("testland/far-test", keys)
-        self.assertIn("testland/away-test", keys)
-        self.assertEqual([r for r in rows if r[0] == "testland/far-test"], [["testland/far-test", "constituency", "Far Test", "testland", ""]])
-
-    def test_a_constituency_given_twice_is_refused(self):
-        path = self.geo([feature("ward-one", "Ward One", "North Test")])
-        with self.assertRaisesRegex(ValueError, "north-test is listed twice"):
-            afm.build_areas(path, "Testland", also=["North Test"])
-
-    def test_a_repeated_ward_is_refused(self):
-        path = self.geo([feature("ward-one", "Ward One", "North Test"), feature("ward-one", "Ward One", "North Test")])
-        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one is listed twice"):
-            afm.build_areas(path, "Testland")
-
-
-class RealMaps(unittest.TestCase):
-    def test_nairobi_is_one_county_17_constituencies_and_85_wards(self):
-        rows = afm.build_areas(NAIROBI, "Nairobi")
-        levels = [r[1] for r in rows]
-        self.assertEqual((levels.count("county"), levels.count("constituency"), levels.count("ward")), (1, 17, 85))
-        self.assertIn(["nairobi/langata", "constituency", "Langata", "nairobi", ""], rows)
-        self.assertIn(["nairobi/embakasi-west/umoja-ii", "ward", "Umoja II", "nairobi/embakasi-west", ""], rows)
-
-    def test_every_key_is_a_slug_path_under_its_parent(self):
-        for r in afm.build_areas(NAIROBI, "Nairobi"):
-            key, level, name, parent, code = r
-            self.assertEqual(key.split("/")[-1], slug.slugify(name) if level != "ward" else key.split("/")[-1])
-            if level != "county":
-                self.assertTrue(key.startswith(parent + "/"))
-
-    def test_mathira_is_six_wards_in_one_constituency(self):
-        rows = afm.build_areas(MATHIRA, "Nyeri", constituency="Mathira", also=["Kieni", "Mukurweini", "Nyeri Town", "Othaya", "Tetu"])
-        levels = [r[1] for r in rows]
-        self.assertEqual((levels.count("county"), levels.count("constituency"), levels.count("ward")), (1, 6, 6))
-        self.assertIn(["nyeri/mathira/karatina-town", "ward", "Karatina Town", "nyeri/mathira", ""], rows)
-
-    def test_the_csv_it_writes(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        out = Path(tmp.name) / "areas.csv"
-        afm.main(["areas_from_map.py", str(NAIROBI), "Nairobi", str(out)])
-        lines = out.read_text(encoding="utf-8").splitlines()
-        self.assertEqual(lines[0], "key,level,name,parent,iebc_code")
-        self.assertEqual(lines[1], "nairobi,county,Nairobi,kenya,")
-        self.assertEqual(len(lines), 1 + 1 + 17 + 85)
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_areas_from_map.py"`
-
-Expected: `ModuleNotFoundError: No module named 'areas_from_map'` and `FAILED (errors=1)`.
-
-- [ ] **Step 3: Write the generator**
-
-Create `scripts/atlas/areas_from_map.py`:
-
-```python
-"""A county's areas.csv, made from its ward map, so no key is typed by hand.
-
-Usage:
-  python3 scripts/atlas/areas_from_map.py WARDS_GEOJSON "County name" [OUT_CSV]
-      [--constituency "Name"] [--also "Name"]...
-
-WARDS_GEOJSON  a ward map whose features carry a "slug" and a "name", and a "constituency" where
-               the map knows it (public/geo/nairobi-wards.json does; mathira-wards.json does not)
---constituency the constituency every ward is in, for a map that names none
---also         a constituency of the county that has no ward map, so it is listed with no wards
-               (repeat it for each)
-
-Writes the county, its constituencies and its wards as areas.csv rows, keyed by the path of slugs
-(see slug.py); the IEBC code is left blank to be filled in from IEBC's documents. Names are the
-ward map's, which are the names the app uses. To the screen when there is no OUT_CSV.
-"""
-import argparse
-import csv
-import json
-import sys
-from pathlib import Path
-
-from slug import slugify
-
-HEADER = ["key", "level", "name", "parent", "iebc_code"]
-
-
-def build_areas(wards_geojson, county, constituency=None, also=()):
-    """areas.csv's rows, in key order: the county, then its constituencies and wards."""
-    with open(wards_geojson, encoding="utf-8") as f:
-        features = json.load(f)["features"]
-    county_key = slugify(county)
-    rows = {county_key: [county_key, "county", county, "kenya", ""]}
-    for feature in features:
-        props = feature["properties"]
-        name = props.get("constituency") or constituency
-        if not name:
-            raise ValueError(f"the ward map names no constituency for {props['slug']}; give one with --constituency")
-        constituency_key = f"{county_key}/{slugify(name)}"
-        if constituency_key not in rows:
-            rows[constituency_key] = [constituency_key, "constituency", name, county_key, ""]
-        ward_key = f"{constituency_key}/{props['slug']}"
-        if ward_key in rows:
-            raise ValueError(f"{ward_key} is listed twice")
-        rows[ward_key] = [ward_key, "ward", props["name"], constituency_key, ""]
-    for name in also:
-        key = f"{county_key}/{slugify(name)}"
-        if key in rows:
-            raise ValueError(f"{key} is listed twice")
-        rows[key] = [key, "constituency", name, county_key, ""]
-    return [rows[key] for key in sorted(rows)]
-
-
-def main(argv):
-    parser = argparse.ArgumentParser(prog=Path(argv[0]).name, description="A county's areas.csv from its ward map.")
-    parser.add_argument("wards")
-    parser.add_argument("county")
-    parser.add_argument("out", nargs="?")
-    parser.add_argument("--constituency")
-    parser.add_argument("--also", action="append", default=[])
-    args = parser.parse_args(argv[1:])
-    try:
-        rows = build_areas(args.wards, args.county, args.constituency, args.also)
-    except ValueError as e:
-        raise SystemExit(str(e))
-    if args.out:
-        with open(args.out, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f, lineterminator="\n")
-            writer.writerow(HEADER)
-            writer.writerows(rows)
-    else:
-        writer = csv.writer(sys.stdout, lineterminator="\n")
-        writer.writerow(HEADER)
-        writer.writerows(rows)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
-```
-
-- [ ] **Step 4: Run all the Python tests**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
-
-Expected: `Ran 31 tests` and `OK`.
-
-Look at what it makes for Nyeri (Mathira is the one constituency with a ward map):
-
-Run: `python3 scripts/atlas/areas_from_map.py public/geo/mathira-wards.json Nyeri --constituency Mathira --also Kieni --also Mukurweini --also "Nyeri Town" --also Othaya --also Tetu`
-
-Expected: 13 lines after the header: the county `nyeri`, six constituencies (`kieni`, `mathira`,
-`mukurweini`, `nyeri-town`, `othaya`, `tetu`) and Mathira's six wards (`iriaini`, `karatina-town`,
-`kirimukuyu`, `konyu`, `magutu`, `ruguru`).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/atlas/areas_from_map.py scripts/atlas/test_areas_from_map.py
-git commit -m "Atlas: a county's areas from its ward map" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 10: Ward population from WorldPop's grids
-
-**Files:**
-- Create: `scripts/atlas/test_ward_population.py`
-- Create: `scripts/atlas/ward_population.py`
-
-**Interfaces:** Produces `ward_population.parse_raster_name(name) -> (sex, first age, year) | None`,
-`band_ends(starts) -> {first age: where the next band starts | None}`,
-`share_in(lo, hi, start, end=None) -> float` (the part of a band inside a range, people taken as even
-through the band),
-`ward_numbers(sums) -> (total, adults, young_adults)` (whole people),
-`find_rasters(directory, year) -> {(sex, first age): Path}`,
-`check_complete(found, year)`, `ward_sums(geometry, rasters)`,
-`build_rows(wards_geojson, areas_csv, raster_dir, year, source) -> list`, `METHOD`, `main(argv)`.
-The command is
-`python3 scripts/atlas/ward_population.py WARDS_GEOJSON AREAS_CSV RASTER_DIR YEAR SOURCE OUT_CSV`.
-It writes `population.csv`. Each ward is the sum of the grid pixels whose centres fall inside its
-boundary. WorldPop's bands are five years wide, so 18 to 34 is two fifths of 15 to 19 plus 20 to 24,
-25 to 29 and 30 to 34; adults likewise. It refuses what would quietly undercount or mislead: a set
-of grids with a band left out (both sexes for age 0, age 1 and every fifth age up to 80, or the top
-band the series has), a ward with no people, a ward that runs off the grid, a repeated ward slug in
-the map, and an areas.csv with no wards; pixels equal to a grid's declared nodata are left out; and
-its method text says the figures are estimates. It needs rasterio and numpy at run time; the age-band
-arithmetic and the band rule do not, so those tests run anywhere.
-
-- [ ] **Step 1: Write the failing tests**
-
-The grid tests build 36 tiny GeoTIFFs (10 by 10 pixels, one person in each) and a ward over sixteen
-pixel centres, so the answer is known by hand: 16 pixels of 36 bands is 576 people; the adults are
-16 pixels x two sexes x (13 whole bands + two fifths of 15-19) = 428.8, so 429; the young are
-16 x 2 x (3 whole bands + two fifths) = 108.8, so 109. They skip where rasterio is not installed.
-
-Create `scripts/atlas/test_ward_population.py`:
-
-```python
-"""Tests for ward_population.py: reading WorldPop's file names, splitting five-year age bands, and
-summing a grid inside a ward. The grid tests build tiny GeoTIFFs and need rasterio and
-numpy; without them they skip and the rest still run. Run from the repository root:
-
-  python3 -m unittest discover -s scripts/atlas -p "test_*.py"
-"""
-import csv
-import json
-import tempfile
-import unittest
-from pathlib import Path
-
-import ward_population as wp
-
-try:
-    import numpy as np
-    import rasterio
-    from rasterio.transform import from_origin
-
-    HAVE_RASTERIO = True
-except ImportError:
-    HAVE_RASTERIO = False
-
-# WorldPop's bands by their first age: under 1, 1 to 4, then every five years to 80 and over.
-STARTS = [0, 1] + list(range(5, 85, 5))
-
-# An areas.csv with one ward in it, and one with only a county.
-ONE_WARD = "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
-NO_WARDS = "key,level,name,parent,iebc_code\ntestland,county,Testland,kenya,\n"
-
-# Rows 2 to 5 and columns 2 to 5 of the grid: the sixteen pixels of the 16-pixel ward, each
-# holding nothing.
-EMPTY_WARD_PIXELS = {(row, column): 0 for row in range(2, 6) for column in range(2, 6)}
-
-# Wards over the ten by ten grid, as (left, top, right, bottom) in pixels from its top left corner.
-# Four columns or rows against each edge, the outline 0.9 of a pixel past that edge: still on the
-# grid, as a border ward's outline can be a hair outside it. Each holds sixteen pixel centres.
-AT_THE_EDGE = {
-    "the right edge": (6.1, 2.1, 10.9, 5.9),
-    "the left edge": (-0.9, 2.1, 3.9, 5.9),
-    "the top edge": (2.1, -0.9, 5.9, 3.9),
-    "the bottom edge": (2.1, 6.1, 5.9, 10.9),
-}
-# Wards that run past an edge by more than a pixel: half off (columns 8 to 11 of ten, and so on),
-# and 1.1 pixels past.
-PAST_THE_EDGE = {
-    "half off the right edge": (8.1, 2.1, 11.9, 5.9),
-    "half off the left edge": (-1.9, 2.1, 1.9, 5.9),
-    "half off the top edge": (2.1, -1.9, 5.9, 1.9),
-    "half off the bottom edge": (2.1, 8.1, 5.9, 11.9),
-    "1.1 pixels past the right edge": (6.1, 2.1, 11.1, 5.9),
-    "1.1 pixels past the left edge": (-1.1, 2.1, 3.9, 5.9),
-    "1.1 pixels past the top edge": (2.1, -1.1, 5.9, 3.9),
-    "1.1 pixels past the bottom edge": (2.1, 6.1, 5.9, 11.1),
-}
-
-
-def ward_map(*features):
-    """The text of a ward map holding these features."""
-    return json.dumps({"type": "FeatureCollection", "features": list(features)})
-
-
-def ward_feature(slug, geometry):
-    return {"type": "Feature", "properties": {"slug": slug}, "geometry": geometry}
-
-
-class Names(unittest.TestCase):
-    def test_a_worldpop_file_name(self):
-        self.assertEqual(wp.parse_raster_name("ken_f_15_2025_CN_100m_R2025A_v1.tif"), ("f", 15, 2025))
-
-    def test_case_and_short_ages(self):
-        self.assertEqual(wp.parse_raster_name("KEN_M_5_2020.tif"), ("m", 5, 2020))
-        self.assertEqual(wp.parse_raster_name("ken_f_00_2020.tif"), ("f", 0, 2020))
-        self.assertEqual(wp.parse_raster_name("ken_f_1_2020.tif"), ("f", 1, 2020))
-
-    def test_other_files_are_not_grids(self):
-        self.assertIsNone(wp.parse_raster_name("ken_ppp_2020.tif"))
-        self.assertIsNone(wp.parse_raster_name("README.txt"))
-
-
-class Bands(unittest.TestCase):
-    def test_where_each_band_ends(self):
-        ends = wp.band_ends(STARTS)
-        self.assertEqual(ends[0], 1)
-        self.assertEqual(ends[1], 5)
-        self.assertEqual(ends[15], 20)
-        self.assertIsNone(ends[80])
-
-    def test_adults_are_two_fifths_of_15_to_19_and_everyone_older(self):
-        self.assertEqual(wp.share_in(10, 15, 18), 0)
-        self.assertAlmostEqual(wp.share_in(15, 20, 18), 0.4)
-        self.assertEqual(wp.share_in(20, 25, 18), 1)
-        self.assertEqual(wp.share_in(80, None, 18), 1)
-
-    def test_young_adults_are_two_fifths_of_15_to_19_and_the_next_three_bands(self):
-        self.assertAlmostEqual(wp.share_in(15, 20, 18, 35), 0.4)
-        self.assertEqual(wp.share_in(20, 25, 18, 35), 1)
-        self.assertEqual(wp.share_in(30, 35, 18, 35), 1)
-        self.assertEqual(wp.share_in(35, 40, 18, 35), 0)
-        self.assertEqual(wp.share_in(80, None, 18, 35), 0)
-
-    def test_single_year_bands_need_no_splitting(self):
-        self.assertEqual(wp.share_in(17, 18, 18), 0)
-        self.assertEqual(wp.share_in(18, 19, 18), 1)
-        self.assertEqual(wp.share_in(34, 35, 18, 35), 1)
-        self.assertEqual(wp.share_in(35, 36, 18, 35), 0)
-
-
-class Numbers(unittest.TestCase):
-    def test_a_ward_where_every_band_holds_ten_people(self):
-        sums = {(sex, lo): 10.0 for sex in ("f", "m") for lo in STARTS}
-        # 36 grids of ten; adults are the 13 bands from 20 up and two fifths of 15 to 19, for
-        # both sexes; the young are 20 to 34 (three bands) and the same two fifths.
-        self.assertEqual(wp.ward_numbers(sums), (360, 268, 68))
-
-    def test_the_order_survives_rounding(self):
-        total, adults, young = wp.ward_numbers({("f", 15): 10.4, ("f", 20): 0.3, ("f", 35): 0.2})
-        self.assertGreaterEqual(total, adults)
-        self.assertGreaterEqual(adults, young)
-
-
-class Rasters(unittest.TestCase):
-    def folder(self, names):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        for name in names:
-            (Path(tmp.name) / name).write_bytes(b"")
-        return tmp.name
-
-    def grids(self, starts, year=2025):
-        """The year's grids for both sexes at each of these band starts, as find_rasters finds them."""
-        names = [f"ken_{sex}_{lo:02d}_{year}.tif" for sex in ("f", "m") for lo in starts]
-        return wp.find_rasters(self.folder(names), year)
-
-    def test_finds_the_years_grids_by_sex_and_age(self):
-        found = wp.find_rasters(self.folder(["ken_f_0_2025.tif", "ken_m_0_2025.tif", "ken_f_0_2020.tif", "notes.txt"]), 2025)
-        self.assertEqual(sorted(found), [("f", 0), ("m", 0)])
-
-    def test_two_grids_for_one_band_are_refused(self):
-        with self.assertRaisesRegex(ValueError, "two grids"):
-            wp.find_rasters(self.folder(["ken_f_15_2025_a.tif", "ken_f_15_2025_b.tif"]), 2025)
-
-    def test_a_band_missing_for_one_sex_is_refused(self):
-        found = wp.find_rasters(self.folder(["ken_f_0_2025.tif", "ken_m_0_2025.tif", "ken_f_15_2025.tif"]), 2025)
-        with self.assertRaisesRegex(ValueError, "missing grids: m 15"):
-            wp.check_complete(found, 2025)
-
-    def test_grids_must_start_at_age_zero(self):
-        found = wp.find_rasters(self.folder(["ken_f_15_2025.tif", "ken_m_15_2025.tif"]), 2025)
-        with self.assertRaisesRegex(ValueError, "start at age 0"):
-            wp.check_complete(found, 2025)
-
-    def test_no_grids_for_the_year_is_refused(self):
-        found = wp.find_rasters(self.folder(["ken_f_0_2020.tif"]), 2025)
-        with self.assertRaisesRegex(ValueError, "no grids for 2025"):
-            wp.check_complete(found, 2025)
-
-    def test_a_band_missing_for_both_sexes_is_refused(self):
-        # Nothing in the files that are there says a whole band is gone, so the bands WorldPop
-        # publishes are looked for by name: under 1, 1 to 4, then every five years.
-        for gap in (20, 1, 5, 75):
-            with self.subTest(band=gap):
-                found = self.grids([lo for lo in STARTS if lo != gap])
-                with self.assertRaisesRegex(ValueError, f"missing grids: f {gap}, m {gap}"):
-                    wp.check_complete(found, 2025)
-
-    def test_grids_that_stop_short_of_80_and_over_are_refused(self):
-        found = self.grids([lo for lo in STARTS if lo <= 75])
-        with self.assertRaisesRegex(ValueError, "missing grids: f 80, m 80"):
-            wp.check_complete(found, 2025)
-
-    def test_a_gap_below_a_higher_top_band_is_refused(self):
-        # A series that goes on to 90 and over needs every band up to its last, not only to 80.
-        found = self.grids([lo for lo in STARTS + [85, 90] if lo != 85])
-        with self.assertRaisesRegex(ValueError, "missing grids: f 85, m 85"):
-            wp.check_complete(found, 2025)
-
-    def test_whole_sets_are_accepted(self):
-        wp.check_complete(self.grids(STARTS), 2025)
-        wp.check_complete(self.grids(STARTS + [85, 90]), 2025)
-
-
-class Method(unittest.TestCase):
-    def test_it_says_the_figures_are_estimates(self):
-        self.assertIn("estimate", wp.METHOD)
-        self.assertTrue(wp.METHOD.endswith("These are estimates, not counts."))
-        self.assertGreaterEqual(len(wp.METHOD), 10)
-        self.assertLessEqual(len(wp.METHOD), 500)
-
-
-class Inputs(unittest.TestCase):
-    """What build_rows refuses in the ward map and areas.csv, before it looks at a single grid."""
-
-    def files(self, features, areas):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        folder = Path(tmp.name)
-        (folder / "wards.json").write_text(ward_map(*features))
-        (folder / "areas.csv").write_text(areas)
-        return folder / "wards.json", folder / "areas.csv", folder
-
-    def test_a_repeated_slug_in_the_ward_map_is_refused(self):
-        # Two different outlines under one slug: the second would quietly replace the first.
-        first = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
-        second = {"type": "Polygon", "coordinates": [[[37.0, -2.0], [37.1, -2.0], [37.1, -2.1], [37.0, -2.0]]]}
-        geo, areas, folder = self.files([ward_feature("ward-one", first), ward_feature("ward-one", second)], ONE_WARD)
-        with self.assertRaisesRegex(ValueError, "ward-one is listed twice in the ward map"):
-            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
-
-    def test_an_areas_file_with_no_ward_rows_is_refused(self):
-        shape = {"type": "Polygon", "coordinates": [[[36.0, -1.0], [36.1, -1.0], [36.1, -1.1], [36.0, -1.0]]]}
-        geo, areas, folder = self.files([ward_feature("ward-one", shape)], NO_WARDS)
-        with self.assertRaisesRegex(ValueError, "no ward rows in areas.csv"):
-            wp.build_rows(geo, areas, folder, 2025, "WorldPop, Test grids")
-
-
-@unittest.skipUnless(HAVE_RASTERIO, "needs rasterio and numpy")
-class Grids(unittest.TestCase):
-    def write_grids(self, nodata=-99999, pixels=None):
-        """Ten by ten pixels of 0.001 degrees, one person in each pixel of every band's grid.
-
-        nodata is the value the files declare for no data (None declares none). pixels maps a
-        (row, column) to the value that pixel holds instead of one person, in every grid.
-        """
-        values = np.ones((1, 10, 10), dtype="float32")
-        for (row, column), value in (pixels or {}).items():
-            values[0, row, column] = value
-        transform = from_origin(36.0, -1.0, 0.001, 0.001)
-        for sex in ("f", "m"):
-            for lo in STARTS:
-                with rasterio.open(
-                    self.dir / f"ken_{sex}_{lo:02d}_2025_test.tif",
-                    "w",
-                    driver="GTiff",
-                    height=10,
-                    width=10,
-                    count=1,
-                    dtype="float32",
-                    crs="EPSG:4326",
-                    transform=transform,
-                    nodata=nodata,
-                ) as dst:
-                    dst.write(values)
-
-    def sums_over(self, ward):
-        sums = wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
-        self.assertEqual(len(sums), 36)
-        return sums
-
-    def write_inputs(self, ward=None):
-        """wards.json and areas.csv beside the grids, for the one ward, ward-one; returns their paths."""
-        geo = self.dir / "wards.json"
-        geo.write_text(ward_map(ward_feature("ward-one", ward or self.ward)))
-        areas = self.dir / "areas.csv"
-        areas.write_text(ONE_WARD)
-        return geo, areas
-
-    def ward_over(self, left, top, right, bottom):
-        """A ward from pixel column left to right and row top to bottom of the ten by ten grid,
-        counted from its top left corner (fractions allowed)."""
-
-        def corner(column, row):
-            return [round(36.0 + 0.001 * column, 6), round(-1.0 - 0.001 * row, 6)]
-
-        ring = [corner(left, top), corner(right, top), corner(right, bottom), corner(left, bottom), corner(left, top)]
-        return {"type": "Polygon", "coordinates": [ring]}
-
-    def setUp(self):
-        tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(tmp.cleanup)
-        self.dir = Path(tmp.name)
-        self.write_grids()
-        # A ward over four columns and four rows of pixel centres: sixteen pixels.
-        self.ward = {
-            "type": "Polygon",
-            "coordinates": [
-                [[36.0021, -1.0021], [36.0059, -1.0021], [36.0059, -1.0059], [36.0021, -1.0059], [36.0021, -1.0021]]
-            ],
-        }
-
-    def test_a_ward_sums_the_pixels_whose_centres_it_holds(self):
-        rasters = wp.find_rasters(self.dir, 2025)
-        sums = wp.ward_sums(self.ward, rasters)
-        self.assertEqual(len(sums), 36)
-        self.assertTrue(all(v == 16 for v in sums.values()))
-        self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
-
-    def test_a_ward_outside_the_grids_is_refused(self):
-        far = {"type": "Polygon", "coordinates": [[[40, 3], [40.1, 3], [40.1, 3.1], [40, 3.1], [40, 3]]]}
-        with self.assertRaises(ValueError):
-            wp.ward_sums(far, wp.find_rasters(self.dir, 2025))
-
-    def test_the_rows_for_a_county(self):
-        geo = self.dir / "wards.json"
-        geo.write_text(
-            json.dumps(
-                {
-                    "type": "FeatureCollection",
-                    "features": [{"type": "Feature", "properties": {"slug": "ward-one"}, "geometry": self.ward}],
-                }
-            )
-        )
-        areas = self.dir / "areas.csv"
-        areas.write_text(
-            "key,level,name,parent,iebc_code\n"
-            "testland,county,Testland,kenya,\n"
-            "testland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
-        )
-        rows = wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
-        self.assertEqual(
-            rows, [["testland/north-test/ward-one", 2025, 576, 429, 109, "WorldPop, Test grids", wp.METHOD]]
-        )
-
-    def test_a_ward_missing_from_the_map_is_refused(self):
-        geo = self.dir / "wards.json"
-        geo.write_text(json.dumps({"type": "FeatureCollection", "features": []}))
-        areas = self.dir / "areas.csv"
-        areas.write_text(
-            "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
-        )
-        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one is not in the ward map"):
-            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
-
-    def test_the_file_it_writes(self):
-        geo = self.dir / "wards.json"
-        geo.write_text(
-            json.dumps(
-                {
-                    "type": "FeatureCollection",
-                    "features": [{"type": "Feature", "properties": {"slug": "ward-one"}, "geometry": self.ward}],
-                }
-            )
-        )
-        areas = self.dir / "areas.csv"
-        areas.write_text(
-            "key,level,name,parent,iebc_code\ntestland/north-test/ward-one,ward,Ward One,testland/north-test,\n"
-        )
-        out = self.dir / "population.csv"
-        wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
-        with out.open(newline="") as f:
-            rows = list(csv.reader(f))
-        self.assertEqual(rows[0], ["area_key", "year", "total", "adults", "young_adults", "source", "method"])
-        self.assertEqual(rows[1][:6], ["testland/north-test/ward-one", "2025", "576", "429", "109", "WorldPop, Test grids"])
-        self.assertEqual(rows[1][6], wp.METHOD)
-        self.assertGreaterEqual(len(wp.METHOD), 10)
-        self.assertLessEqual(len(wp.METHOD), 500)
-
-    def test_a_pixel_the_ward_only_clips_is_left_out(self):
-        # The same sixteen pixel centres, now with a sliver 0.0001 degrees wide of the pixels all
-        # round them: it touches those pixels but reaches none of their centres, so the answer is
-        # the same. (Counting every pixel the ward touches would make it 36 a grid, not 16.)
-        clipped = {
-            "type": "Polygon",
-            "coordinates": [
-                [[36.0019, -1.0019], [36.0061, -1.0019], [36.0061, -1.0061], [36.0019, -1.0061], [36.0019, -1.0019]]
-            ],
-        }
-        sums = self.sums_over(clipped)
-        self.assertTrue(all(v == 16 for v in sums.values()))
-        self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
-
-    def test_a_positive_value_declared_as_no_data_is_not_people(self):
-        # 9999 is the files' no-data value and one pixel of the ward holds it in every grid:
-        # fifteen people a grid, not 10,014.
-        self.write_grids(nodata=9999, pixels={(3, 3): 9999})
-        sums = self.sums_over(self.ward)
-        self.assertTrue(all(v == 15 for v in sums.values()))
-        self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
-
-    def test_negative_and_nan_pixels_are_not_people(self):
-        # One pixel of the ward holds a number below zero, or NaN, whether the files declare it as
-        # no data or not.
-        for label, nodata, value in (
-            ("a declared negative", -99999, -99999),
-            ("an undeclared negative", None, -99999),
-            ("a declared NaN", float("nan"), float("nan")),
-        ):
-            with self.subTest(label):
-                self.write_grids(nodata=nodata, pixels={(3, 3): value})
-                sums = self.sums_over(self.ward)
-                self.assertTrue(all(v == 15 for v in sums.values()))
-                self.assertEqual(wp.ward_numbers(sums), (540, 402, 102))
-
-    def test_a_ward_with_no_people_is_refused_not_written_as_zero(self):
-        self.write_grids(pixels=EMPTY_WARD_PIXELS)
-        geo, areas = self.write_inputs()
-        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the grids hold no people"):
-            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
-
-    def test_main_stops_for_a_ward_with_no_people_and_writes_no_file(self):
-        self.write_grids(pixels=EMPTY_WARD_PIXELS)
-        geo, areas = self.write_inputs()
-        out = self.dir / "population.csv"
-        with self.assertRaisesRegex(SystemExit, "hold no people"):
-            wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
-        self.assertFalse(out.exists())
-
-    def test_a_ward_that_runs_past_the_grid_is_refused(self):
-        rasters = wp.find_rasters(self.dir, 2025)
-        for what, edges in PAST_THE_EDGE.items():
-            with self.subTest(what):
-                with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
-                    wp.ward_sums(self.ward_over(*edges), rasters)
-
-    def test_a_bbox_in_the_geometry_does_not_hide_a_ward_that_runs_past_the_grid(self):
-        # The coordinates run off the grid while the bbox member says the ward fits inside it.
-        ward = dict(self.ward_over(*PAST_THE_EDGE["half off the right edge"]), bbox=[36.002, -1.006, 36.006, -1.002])
-        with self.assertRaisesRegex(ValueError, "the ward runs past the grid"):
-            wp.ward_sums(ward, wp.find_rasters(self.dir, 2025))
-
-    def test_a_ward_that_runs_past_the_grid_is_named_by_its_key(self):
-        geo, areas = self.write_inputs(self.ward_over(*PAST_THE_EDGE["half off the right edge"]))
-        with self.assertRaisesRegex(ValueError, "testland/north-test/ward-one: the ward runs past the grid"):
-            wp.build_rows(geo, areas, self.dir, 2025, "WorldPop, Test grids")
-
-    def test_a_ward_at_the_edge_of_the_grid_still_works(self):
-        for what, edges in AT_THE_EDGE.items():
-            with self.subTest(what):
-                sums = self.sums_over(self.ward_over(*edges))
-                self.assertTrue(all(v == 16 for v in sums.values()))
-                self.assertEqual(wp.ward_numbers(sums), (576, 429, 109))
-
-    def test_the_file_is_written_with_unix_line_ends(self):
-        geo, areas = self.write_inputs()
-        out = self.dir / "population.csv"
-        wp.main(["ward_population.py", str(geo), str(areas), str(self.dir), "2025", "WorldPop, Test grids", str(out)])
-        raw = out.read_bytes()
-        self.assertNotIn(b"\r", raw)
-        self.assertTrue(raw.endswith(b"\n"))
-
-
-if __name__ == "__main__":
-    unittest.main()
-```
-
-- [ ] **Step 2: Run them and watch them fail**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_ward_population.py"`
-
-Expected: `ModuleNotFoundError: No module named 'ward_population'` and `FAILED (errors=1)`.
-
-- [ ] **Step 3: Write the script**
-
-Create `scripts/atlas/ward_population.py`:
-
-```python
-"""Population estimates for wards, from WorldPop's age-and-sex grids.
-
-Usage:
-  python3 scripts/atlas/ward_population.py WARDS_GEOJSON AREAS_CSV RASTER_DIR YEAR SOURCE OUT_CSV
-
-  WARDS_GEOJSON  a ward map with a "slug" on each feature (public/geo/nairobi-wards.json)
-  AREAS_CSV      the county's areas.csv; every ward in it must be in the ward map
-  RASTER_DIR     WorldPop's 100 m age-and-sex GeoTIFFs for Kenya for YEAR: one per sex and age
-                 band, every band (under 1, 1 to 4, then every five years to 80 and over), named
-                 like ken_f_15_2025_....tif (sex f or m, the band's first age, year)
-  YEAR           the year of the grids
-  SOURCE         the source, written "WorldPop, <dataset title and version>"
-  OUT_CSV        population.csv: area_key, year, total, adults, young_adults, source, method
-
-Each ward is the sum of the grid pixels whose centres fall inside its boundary. WorldPop's age
-bands are five years wide, so 18-34 is two fifths of 15-19 plus 20-24, 25-29 and 30-34, and
-adults (18 and over) likewise: people are taken to be spread evenly through a band. Everything
-here is an estimate and is recorded as one.
-
-Needs rasterio and numpy (pip install rasterio numpy); the age-band arithmetic does not, so the
-tests of it run without.
-"""
-import csv
-import json
-import re
-import sys
-from pathlib import Path
-
-METHOD = (
-    "WorldPop age-and-sex grid at 100 m: the people in the pixels whose centres fall inside the "
-    "ward. Five-year bands are split evenly, so 18-34 is two fifths of 15-19 plus 20-24, 25-29 and "
-    "30-34; adults likewise. These are estimates, not counts."
-)
-
-RASTER_NAME = re.compile(r"(?:^|_)(f|m)_(\d{1,2})_(\d{4})(?:_|\.|$)", re.IGNORECASE)
-
-
-def parse_raster_name(name):
-    """(sex, the band's first age, year) from a WorldPop file name, or None for any other file."""
-    match = RASTER_NAME.search(name)
-    if not match:
-        return None
-    return match.group(1).lower(), int(match.group(2)), int(match.group(3))
-
-
-def band_ends(starts):
-    """Each band's first age mapped to where the next band starts; the last band is open (None)."""
-    ordered = sorted(set(starts))
-    return {lo: (ordered[i + 1] if i + 1 < len(ordered) else None) for i, lo in enumerate(ordered)}
-
-
-def share_in(lo, hi, start, end=None):
-    """The part of the band lo..hi that lies in start..end, taking people as even through the band.
-
-    hi and end are exclusive; None means no upper limit.
-    """
-    if hi is None:
-        return 1.0 if lo >= start and (end is None or lo < end) else 0.0
-    top = hi if end is None else min(hi, end)
-    return max(0, top - max(lo, start)) / (hi - lo)
-
-
-def ward_numbers(sums):
-    """(total, adults, young adults), in whole people, from {(sex, first age): people}."""
-    ends = band_ends(lo for _, lo in sums)
-    total = sum(sums.values())
-    adults = sum(v * share_in(lo, ends[lo], 18) for (_, lo), v in sums.items())
-    young = sum(v * share_in(lo, ends[lo], 18, 35) for (_, lo), v in sums.items())
-    return round(total), round(adults), round(young)
-
-
-def find_rasters(directory, year):
-    """{(sex, first age): path} for the year's grids in a folder; two for one band are refused."""
-    found = {}
-    for path in sorted(Path(directory).glob("*.tif")):
-        parsed = parse_raster_name(path.name)
-        if parsed is None or parsed[2] != year:
-            continue
-        sex, lo, _ = parsed
-        if (sex, lo) in found:
-            raise ValueError(f"two grids for sex {sex}, age {lo}: {found[(sex, lo)].name} and {path.name}")
-        found[(sex, lo)] = path
-    return found
-
-
-def check_complete(found, year):
-    """Both sexes for every band WorldPop publishes, from age 0: under 1, 1 to 4, then every five
-    years to 80 and over (or to the last band, where the series goes on past 80). A band left out
-    would quietly undercount."""
-    if not found:
-        raise ValueError(f"no grids for {year}")
-    ages = {lo for _, lo in found}
-    missing = sorted(f"{sex} {lo}" for lo in ages for sex in ("f", "m") if (sex, lo) not in found)
-    if missing:
-        raise ValueError("missing grids: " + ", ".join(missing))
-    if 0 not in ages:
-        raise ValueError("the grids must start at age 0, so that the total counts everyone")
-    # The checks above only see the bands that are there, so a band missing for both sexes gets
-    # past them: look for each band by name.
-    wanted = [0, 1, *range(5, max(max(ages), 80) + 1, 5)]
-    left_out = [f"{sex} {lo}" for lo in wanted for sex in ("f", "m") if (sex, lo) not in found]
-    if left_out:
-        raise ValueError("missing grids: " + ", ".join(left_out))
-
-
-def ward_sums(geometry, rasters):
-    """{(sex, first age): people inside the ward}: the pixels whose centres fall within it.
-
-    A pixel counts only if it holds more than zero and is not the file's declared no-data value,
-    so a positive sentinel such as 9999 is not taken for people. A ward that runs more than a
-    pixel past the edge of a grid is refused: the part off the grid would quietly be left out.
-    """
-    import rasterio
-    from rasterio.features import bounds
-    from rasterio.mask import mask
-
-    # The outline's own coordinates: a bbox member, if the map has one, is not taken on trust.
-    left, bottom, right, top = bounds({k: v for k, v in geometry.items() if k != "bbox"})
-    sums = {}
-    for key, path in rasters.items():
-        with rasterio.open(path) as src:
-            width, height = src.res
-            if (
-                left < src.bounds.left - width
-                or right > src.bounds.right + width
-                or bottom < src.bounds.bottom - height
-                or top > src.bounds.top + height
-            ):
-                raise ValueError(f"the ward runs past the grid ({path.name})")
-            data, _ = mask(src, [geometry], crop=True, all_touched=False, filled=True)
-            band = data[0]
-            people = band > 0
-            if src.nodata is not None:
-                people &= band != src.nodata
-            sums[key] = float(band[people].sum())
-    return sums
-
-
-def build_rows(wards_geojson, areas_csv, raster_dir, year, source):
-    """population.csv's rows: one for each ward in areas.csv."""
-    shapes = {}
-    with open(wards_geojson, encoding="utf-8") as f:
-        for ft in json.load(f)["features"]:
-            slug = ft["properties"]["slug"]
-            if slug in shapes:
-                raise ValueError(f"{slug} is listed twice in the ward map")
-            shapes[slug] = ft["geometry"]
-    with open(areas_csv, newline="", encoding="utf-8-sig") as f:
-        wards = sorted(row["key"] for row in csv.DictReader(f) if row["level"] == "ward")
-    if not wards:
-        raise ValueError("no ward rows in areas.csv")
-    rasters = find_rasters(raster_dir, year)
-    check_complete(rasters, year)
-    rows = []
-    for key in wards:
-        slug = key.rsplit("/", 1)[-1]
-        if slug not in shapes:
-            raise ValueError(f"{key} is not in the ward map")
-        try:
-            total, adults, young = ward_numbers(ward_sums(shapes[slug], rasters))
-        except ValueError as e:
-            raise ValueError(f"{key}: {e}") from None
-        if total == 0:
-            raise ValueError(f"{key}: the grids hold no people inside it; is the ward map in the right place?")
-        rows.append([key, year, total, adults, young, source, METHOD])
-    return rows
-
-
-def main(argv):
-    if len(argv) != 7:
-        raise SystemExit(__doc__)
-    wards, areas, rasters, year, source, out = argv[1:]
-    try:
-        rows = build_rows(wards, areas, rasters, int(year), source)
-    except ValueError as e:
-        raise SystemExit(str(e))
-    with open(out, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(["area_key", "year", "total", "adults", "young_adults", "source", "method"])
-        writer.writerows(rows)
-
-
-if __name__ == "__main__":
-    main(sys.argv)
-```
-
-- [ ] **Step 4: Run all the Python tests, without and with rasterio**
-
-Run: `python3 -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
-
-Expected: `Ran 67 tests` and `OK (skipped=15)`: the fifteen grid tests skip without rasterio.
-
-Run: `python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy && /tmp/gwvenv/bin/python -m unittest discover -s scripts/atlas -p "test_*.py" 2>&1 | tail -3`
-
-Expected: `Ran 67 tests` and `OK`: nothing skipped.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add scripts/atlas/ward_population.py scripts/atlas/test_ward_population.py
-git commit -m "Atlas: ward population from WorldPop's age-and-sex grids" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
----
-
-### Task 11: The data folder, and the report
-
-**Files:**
-- Create: `tests/atlas-report.test.ts`
-- Create: `scripts/atlas/report.ts`
-- Create: `data/atlas/README.md`
-- Create: `data/atlas/SOURCES.md`
-- Modify: `.gitignore` (the downloaded documents are not committed)
-
-**Interfaces:** Consumes `checkCounty`, `checkBlocs`, `blocMap`, `loadBlocs`, `loadCounty`,
-`loadWardMaps`, `listCounties` from `./checks`; `fmtVotes` from `../../src/lib/atlas/format`;
-`levelOfKey` from `../../src/lib/atlas/scope` (scripts import by relative path). Produces `report(c: County, name: string): string` (how much of each
-election and year a county's files hold, the blocs the candidates stood in, where candidates' votes
-fall short of the valid votes, and the recorded differences), `shortfalls(c: County): string[]`, and
-the command `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts [county...]`, which prints the
-report and the checks' verdict for the counties named, or for every county under `data/atlas`.
-`data/atlas/README.md` says how the files work; `data/atlas/SOURCES.md` is the log Tasks 12 and 13
-fill in.
-
-- [ ] **Step 1: Write the failing tests**
-
-The report for Testland is pinned word for word, so a change to what the user reads is a decision.
-
-Create `tests/atlas-report.test.ts`:
+- [ ] **Step 4: The files on disk.** `scripts/atlas/read.ts`:
 
 ```ts
-// Checks for the data report: how much of each election a county's files hold and what is missing,
-// as the user reads it before any screen work. The report for the fictional Testland files is
-// pinned word for word, so a change to it is a decision. `run`, which builds the whole output of
-// the command and says whether every check passed, is tried on copies of the fixture in a
-// temporary folder that is removed afterwards. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json tests/atlas-report.test.ts
-
-import {
-  appendFileSync,
-  cpSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
+// Reads the atlas's folders from disk for the scripts and the data test.
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  blocMap,
-  checkCounty,
-  loadBlocs,
-  loadCounty,
-  type County,
-  type Row,
-  type WardMaps,
-} from "../scripts/atlas/checks";
-import { report, run, shortfalls } from "../scripts/atlas/report";
+import { emptyFiles, FILE_NAMES, readTable, type AtlasFiles, type TableName } from "@/lib/atlas-files";
+
+/** Every table of the named folders under root, merged; a missing file is an empty table. */
+export function readAtlas(root: string, folders: string[]): { files: AtlasFiles; problems: string[] } {
+  const files = emptyFiles();
+  const problems: string[] = [];
+  for (const folder of folders)
+    for (const table of Object.keys(FILE_NAMES) as TableName[]) {
+      const path = join(root, folder, FILE_NAMES[table]);
+      if (existsSync(path)) problems.push(...readTable(table, readFileSync(path, "utf8"), path, files));
+    }
+  return { files, problems };
+}
+
+/** The folders under root, alphabetically. */
+export const atlasFolders = (root: string): string[] =>
+  existsSync(root)
+    ? readdirSync(root, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name)
+        .sort()
+    : [];
+
+/** The ward slugs each county's ward map knows. Nyeri's map holds Mathira's wards only. */
+export function wardSlugs(): Record<string, string[]> {
+  const slugs = (file: string) =>
+    (JSON.parse(readFileSync(file, "utf8")) as { features: { properties: { slug: string } }[] }).features.map(
+      (f) => f.properties.slug,
+    );
+  return { nairobi: slugs("public/geo/nairobi-wards.json"), nyeri: slugs("public/geo/mathira-wards.json") };
+}
+```
+
+  `scripts/atlas/areas.ts`:
+
+```ts
+// Prints areas.csv rows for every ward in a ward map, under its constituency,
+// to paste into data/atlas/<county>/areas.csv below the county's own row. Run
+// from the repository root, for example:
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/areas.ts public/geo/nairobi-wards.json nairobi
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/areas.ts public/geo/mathira-wards.json nyeri mathira
+// The last argument names the constituency for a map whose wards don't say.
+import { readFileSync } from "node:fs";
+
+import { slugify } from "@/lib/atlas-files";
+import { toCSV } from "@/lib/csv";
+
+const [geoFile, county, constituency] = process.argv.slice(2);
+if (!geoFile || !county) {
+  console.error("usage: areas.ts <ward map> <county key> [constituency key]");
+  process.exit(2);
+}
+const titled = (slug: string) => slug.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+type Ward = { properties: { slug: string; name: string; constituency?: string } };
+const wards = (JSON.parse(readFileSync(geoFile, "utf8")) as { features: Ward[] }).features;
+const rows = new Map<string, string[]>();
+for (const w of wards) {
+  const cName = w.properties.constituency ?? titled(constituency ?? "");
+  const c = constituency ?? slugify(cName);
+  rows.set(`${county}/${c}`, [`${county}/${c}`, "constituency", cName, county, ""]);
+  rows.set(`${county}/${c}/${w.properties.slug}`, [`${county}/${c}/${w.properties.slug}`, "ward", w.properties.name, `${county}/${c}`, ""]);
+}
+console.log(
+  toCSV(["key", "level", "name", "parent", "iebc_code"], [...rows.values()].sort((a, b) => a[0]!.localeCompare(b[0]!))).replace(/\r\n/g, "\n"),
+);
+```
+
+  `scripts/atlas/report.ts`:
+
+```ts
+// Writes data/atlas/REPORT.md: what is loaded for each county, what is
+// missing, and every source. Run from the repository root:
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts
+import { writeFileSync } from "node:fs";
+
+import { atlasReport } from "@/lib/atlas-files";
+
+import { atlasFolders, readAtlas } from "./read";
+
+const { files, problems } = readAtlas("data/atlas", atlasFolders("data/atlas"));
+if (problems.length) {
+  console.error(problems.join("\n"));
+  process.exit(1);
+}
+writeFileSync("data/atlas/REPORT.md", atlasReport(files));
+console.log("wrote data/atlas/REPORT.md");
+```
+
+  `data/atlas/kenya/areas.csv`:
+
+```csv
+key,level,name,parent,iebc_code
+kenya,country,Kenya,,
+```
+
+  `data/atlas/README.md`:
+
+```markdown
+# The election atlas's figures
+
+Public figures only: this repository is public. Each folder is one county (`kenya` holds the
+country itself, the presidential candidates and national totals, and sources several counties
+share). `scripts/atlas/build-sql.ts` turns folders into a migration once
+`tests/atlas-data.test.ts` passes; `scripts/atlas/report.ts` writes `REPORT.md`.
+
+## Files (every one optional, every header exact)
+
+- `sources.csv` — `id,title,publisher,url,note`: one row per document. Ids are lower case with
+  dashes, e.g. `iebc-2022-form-37c-nairobi`.
+- `areas.csv` — `key,level,name,parent,iebc_code`: `kenya`; counties (`nairobi`, parent
+  `kenya`); constituencies (`nairobi/westlands`); wards (`nairobi/westlands/kangemi`, the slug
+  from the ward map). `scripts/atlas/areas.ts` prints the constituency and ward rows.
+- `candidates.csv` — `election,seat,name,party,bloc`: elections are `2013-president` …
+  `2022-mp`; the seat is `kenya` for president, the county for governor, the constituency for
+  MP.
+- `results.csv` — `election,seat,candidate,area,votes,source`: votes where they were counted
+  (a constituency or the county total), whole numbers with no commas.
+- `turnout.csv` — `election,area,registered,cast_votes,rejected,valid,source`: blanks for what
+  the document doesn't give.
+- `register.csv` — `year,area,registered,source`: registered voters, by ward and above.
+- `population.csv` — `area,year,total,adults,young_adults,source`: WorldPop estimates, written
+  by `scripts/atlas/population.ts`.
+- `known-differences.csv` — `election,seat,candidate,area,difference,note`: a sum that doesn't
+  add up in IEBC's own documents, with the exact difference (total minus its parts) and what
+  the documents say. For a turnout row whose valid and rejected don't make cast, leave seat and
+  candidate empty.
+
+## Rules
+
+- A figure comes from a document listed in `sources.csv`, or it isn't entered. Nothing is
+  estimated from other figures, averaged or filled in.
+- Prefer IEBC's own documents (results forms 34B/34C, 35B, 37B/37C; published results and
+  registers; post-election reports) and the Kenya Gazette. A media tally or open dataset is
+  used only to fill a gap, with its own publisher, and the report flags it.
+- List every candidate the document lists. When a document lists only the leaders, enter
+  them and the document's valid votes, so shares stay right.
+- The bloc is the coalition the candidate's party stood in, else the party. An independent
+  is a bloc of their own: `Independent: <name>`. The main coalitions: 2013 Jubilee (TNA, URP
+  and partners), CORD (ODM, Wiper, Ford-K and partners), Amani (UDF, KANU and partners); 2017
+  Jubilee (Jubilee Party), NASA (ODM, Wiper, ANC, Ford-K, CCM); 2022 Kenya Kwanza (UDA, ANC,
+  Ford-K and partners), Azimio (ODM, Jubilee, Wiper, KANU, DAP-K and partners). Where a party's
+  membership is unclear, use the party and say so in the source's note.
+- The 2017 presidential figures are the 8 August vote.
+```
+
+  `tests/atlas-data.test.ts`:
+
+```ts
+// Checks every county's figures in data/atlas before they become a migration:
+// the sums, the shares, the areas and the sources. Run from the repository
+// root:
+//   npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts
+
+import { checkAtlas } from "@/lib/atlas-files";
+
+import { atlasFolders, readAtlas, wardSlugs } from "../scripts/atlas/read";
+
+const folders = atlasFolders("data/atlas");
+const { files, problems } = readAtlas("data/atlas", folders);
+const all = [...problems, ...checkAtlas(files, wardSlugs())];
+for (const p of all) console.log(`FAIL ${p}`);
+console.log(`${folders.length} folders, ${files.results.length} results, ${all.length} problems`);
+process.exit(all.length ? 1 : 0);
+```
+
+- [ ] **Step 5: Run** the files test, the data test (expected: `1 folders, 0 results, 0
+      problems`) and `npx tsx --tsconfig tsconfig.json scripts/atlas/areas.ts
+      public/geo/mathira-wards.json nyeri mathira` (expected: a header, `nyeri/mathira` and six
+      ward rows). Lint the new files (`--fix`); typecheck.
+- [ ] **Step 6: Commit** `The atlas's data files: formats, the checks every figure must pass, and the report`.
+
+---
+
+### Task 4: From files to a migration
+
+**Files:**
+- Create: `src/lib/atlas-sql.ts`, `scripts/atlas/build-sql.ts`
+- Test: `tests/atlas-sql.test.ts`
+
+**Interfaces:** Consumes Task 3's `AtlasFiles`, `candidateId`. Produces `atlasSql(files):
+string` (upserts in foreign-key order, 500 rows a statement) and the script
+`build-sql.ts <migration.sql> <folder>…`.
+
+- [ ] **Step 1: Write the failing test** `tests/atlas-sql.test.ts`:
+
+```ts
+// Checks for turning the atlas's files into a migration: quoting, the order
+// the foreign keys need, ids, upserts and chunking. Pure. Run from the
+// repository root:
+//   npx tsx --tsconfig tsconfig.json tests/atlas-sql.test.ts
+
+import { emptyFiles, readTable } from "@/lib/atlas-files";
+import { atlasSql } from "@/lib/atlas-sql";
 
 let pass = 0;
 let fail = 0;
 
-// JSON.stringify writes NaN and Infinity as null. Spell them out, so that a figure that came out
-// as NaN or Infinity never passes for a missing one.
-const spell = (_key: string, v: unknown) =>
-  typeof v === "number" && !Number.isFinite(v) ? String(v) : v;
-
 function eq(name: string, got: unknown, want: unknown) {
-  const g = JSON.stringify(got, spell);
-  const w = JSON.stringify(want, spell);
+  const g = JSON.stringify(got);
+  const w = JSON.stringify(want);
   if (g === w) pass++;
   else {
     fail++;
@@ -6507,1442 +1587,537 @@ function eq(name: string, got: unknown, want: unknown) {
   }
 }
 
-const FIXTURE = "tests/fixtures/atlas/testland";
-const BLOCS_FILE = "tests/fixtures/atlas/blocs.csv";
-// The ward maps the fixture's wards are checked against, as in tests/atlas-data.test.ts.
-const MAPS: WardMaps = new Map([
-  ["ward-one", "north-test"],
-  ["ward-two", "north-test"],
-]);
-const good = loadCounty(FIXTURE);
-const BLOCS = blocMap(loadBlocs(BLOCS_FILE));
-
-/** The row of `rows` with these cell values. */
-function find(rows: Row[], where: Row): Row {
-  const hit = rows.find((r) => Object.entries(where).every(([k, v]) => r[k] === v));
-  if (!hit) throw new Error(`no row like ${JSON.stringify(where)}`);
-  return hit;
-}
-/** A copy of the fixture county, changed by `edit`. */
-function changed(edit: (c: County) => void): County {
-  const c = structuredClone(good);
-  edit(c);
-  return c;
-}
-/** The lines under a heading of a report, up to the next blank line. */
-function under(text: string, heading: string): string[] {
-  const lines = text.split("\n");
-  const at = lines.indexOf(heading);
-  if (at === -1) return [`no heading "${heading}" in the report`];
-  const end = lines.indexOf("", at);
-  return lines.slice(at + 1, end === -1 ? undefined : end);
-}
-const RESULTS = "Results and turnout, by election (constituencies with figures):";
-const BLOCS_HEADING = "Blocs, by election (candidates):";
-/** The results and turnout line of one election. */
-const electionLine = (text: string, election: string) =>
-  under(text, RESULTS).find((line) => line.startsWith(`  ${election}:`));
-
-eq(
-  "the report for the fixture county",
-  report(good, "Testland"),
-  [
-    "Testland: 1 county, 2 constituencies, 2 wards",
-    "",
-    "Results and turnout, by election (constituencies with figures):",
-    "  2013-president: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2013-governor: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2013-mp: votes in 0 of 2; turnout in 0 of 2",
-    "  2017-president: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2017-governor: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2017-mp: votes in 0 of 2; turnout in 0 of 2",
-    "  2022-president: votes in 2 of 2 and the county; turnout in 2 of 2 and the county",
-    "  2022-governor: votes in 2 of 2 and the county; turnout in 2 of 2 and the county",
-    "  2022-mp: votes in 1 of 2; turnout in 1 of 2",
-    "",
-    "Registered voters, by year:",
-    "  2013: 0 of 2 wards, 0 of 2 constituencies, not the county",
-    "  2017: 1 of 2 wards, 0 of 2 constituencies, not the county",
-    "  2022: 2 of 2 wards, 2 of 2 constituencies, and the county",
-    "",
-    "Population estimates: 2 of 2 wards (2025)",
-    "",
-    "Blocs, by election (candidates):",
-    "  2022-president: Alpha 1, Beta 1",
-    "  2022-governor: Alpha 1, Beta 1, Gamma 1",
-    "  2022-mp: Alpha 1, Beta 1, Independent 1",
-    "",
-    "Candidates' votes short of the valid votes (where both are held): none",
-    "Recorded differences: none",
-  ].join("\n"),
+const f = emptyFiles();
+readTable("sources", "id,title,publisher,url,note\niebc-test,Kenya's register (test),IEBC,,\n", "sources", f);
+readTable(
+  "areas",
+  "key,level,name,parent,iebc_code\nnairobi/kibra,constituency,Kibra,nairobi,\nnairobi,county,Nairobi,kenya,047\nkenya,country,Kenya,,\n",
+  "areas",
+  f,
 );
+readTable("candidates", "election,seat,name,party,bloc\n2022-governor,nairobi,Ann Ng'ang'a,UDA,Kenya Kwanza\n", "candidates", f);
+readTable("results", "election,seat,candidate,area,votes,source\n2022-governor,nairobi,Ann Ng'ang'a,nairobi/kibra,12,iebc-test\n", "results", f);
+const sql = atlasSql(f);
+const at = (s: string) => sql.indexOf(s);
 
-// Turnout is the votes cast over the voters registered, so a row holding only one of the two (the
-// fixture's 2017 MP row has only the register) is not a turnout figure. The votes are not touched.
-const governorNorth = { election_id: "2022-governor", area_key: "testland/north-test" };
+eq("quotes are doubled", sql.includes("'Kenya''s register (test)'"), true);
+eq("parents go in before their children", at("('kenya'") < at("('nairobi'") && at("('nairobi'") < at("('nairobi/kibra'"), true);
+eq("sources and areas before candidates, candidates before results", at("atlas_sources") < at("atlas_areas") && at("atlas_candidates") < at("atlas_results"), true);
+eq("the candidate's id", sql.includes("'2022-governor:nairobi:ann-ng-ang-a'"), true);
 eq(
-  "a turnout row with no registered figure holds no turnout",
-  electionLine(
-    report(
-      changed((c) => {
-        find(c.turnout, governorNorth)["registered"] = "";
-      }),
-      "Testland",
-    ),
-    "2022-governor",
-  ),
-  "  2022-governor: votes in 2 of 2 and the county; turnout in 1 of 2 and the county",
-);
-eq(
-  "a turnout row with no votes cast holds no turnout",
-  electionLine(
-    report(
-      changed((c) => {
-        find(c.turnout, governorNorth)["cast_votes"] = "";
-      }),
-      "Testland",
-    ),
-    "2022-governor",
-  ),
-  "  2022-governor: votes in 2 of 2 and the county; turnout in 1 of 2 and the county",
-);
-eq(
-  "the county's row is held to the same rule",
-  electionLine(
-    report(
-      changed((c) => {
-        find(c.turnout, { election_id: "2022-governor", area_key: "testland" })["cast_votes"] = "";
-      }),
-      "Testland",
-    ),
-    "2022-governor",
-  ),
-  "  2022-governor: votes in 2 of 2 and the county; turnout in 2 of 2, not the county",
-);
-
-eq("no votes short of valid in the fixture", shortfalls(good), []);
-
-// A race whose candidates are not all loaded shows up as a shortfall.
-const missingOne: County = structuredClone(good);
-missingOne.results = missingOne.results.filter(
-  (r: Row) =>
-    r["candidate_id"] !== "2022-governor/testland/wa-test-jr" ||
-    r["area_key"] !== "testland/north-test",
-);
-eq("a missing candidate is a shortfall", shortfalls(missingOne), [
-  "2022-governor testland/north-test: candidates' votes 450 of 490 valid",
-]);
-eq(
-  "and the report says so",
-  report(missingOne, "Testland").includes(
-    "Candidates' votes short of the valid votes (where both are held):\n" +
-      "  2022-governor testland/north-test: candidates' votes 450 of 490 valid",
-  ),
+  "upserts",
+  sql.includes("on conflict (candidate_id, area_key) do update set votes = excluded.votes, source_id = excluded.source_id;"),
   true,
 );
+eq("an empty cell is null", sql.includes("'Kibra', 'nairobi', null)"), true);
+eq("an empty table is left out", sql.includes("atlas_population"), false);
 
-// The shortfalls come out sorted. The turnout rows are given in reverse, so the president's row
-// (a shortfall of its own) comes up before the governor's, and only a sort puts them right.
-const twoShort = changed((c) => {
-  c.results = c.results.filter(
-    (r) =>
-      !(
-        r["candidate_id"] === "2022-governor/testland/wa-test-jr" &&
-        r["area_key"] === "testland/north-test"
-      ) &&
-      !(
-        r["candidate_id"] === "2022-president/kenya/p-two-test" &&
-        r["area_key"] === "testland/south-test"
-      ),
-  );
-  c.turnout.reverse();
-});
-eq("shortfalls come out sorted", shortfalls(twoShort), [
-  "2022-governor testland/north-test: candidates' votes 450 of 490 valid",
-  "2022-president testland/south-test: candidates' votes 250 of 450 valid",
-]);
-
-// Recorded differences are listed, so the user sees what IEBC itself got wrong. Each record is one
-// the checker accepts, which it does only for a gap that is really there.
-const withKnown = changed((c) => {
-  // Valid 490 and rejected 11 make 501 against 500 cast: a gap of -1.
-  find(c.turnout, governorNorth)["rejected_votes"] = "11";
-  c.knownDifferences.push({
-    check: "cast_split",
-    election_id: "2022-governor",
-    area_key: "testland/north-test",
-    candidate_id: "",
-    difference: "-1",
-    reason: "IEBC's own valid and rejected figures differ",
-  });
-});
-eq("the cast_split record closes a real gap", checkCounty(withKnown, MAPS, BLOCS), []);
-eq(
-  "recorded differences are listed",
-  report(withKnown, "Testland").includes(
-    "Recorded differences:\n" +
-      "  cast_split 2022-governor testland/north-test: -1 " +
-      "(IEBC's own valid and rejected figures differ)",
-  ),
-  true,
+const many = emptyFiles();
+readTable(
+  "register",
+  `year,area,registered,source\n${Array.from({ length: 501 }, (_, i) => `2022,w${i},1,s`).join("\n")}`,
+  "register",
+  many,
 );
-const withSum = changed((c) => {
-  // North Test's votes for P One come to 299: its constituencies add up to 549, the county says
-  // 550, a gap of 1.
-  find(c.results, {
-    candidate_id: "2022-president/kenya/p-one-test",
-    area_key: "testland/north-test",
-  })["votes"] = "299";
-  c.knownDifferences.push({
-    check: "county_sum",
-    election_id: "",
-    area_key: "testland",
-    candidate_id: "2022-president/kenya/p-one-test",
-    difference: "1",
-    reason: "IEBC's own constituency and county figures differ",
-  });
-});
-eq("the county_sum record closes a real gap", checkCounty(withSum, MAPS, BLOCS), []);
-eq(
-  "a recorded county_sum difference is listed with its candidate and county",
-  report(withSum, "Testland").includes(
-    "Recorded differences:\n" +
-      "  county_sum 2022-president/kenya/p-one-test testland: 1 " +
-      "(IEBC's own constituency and county figures differ)",
-  ),
-  true,
-);
-
-// A second year of population estimates is a line of its own, the years in order. The later row
-// is for the earlier year, so only a sort puts them right.
-const twoYears = changed((c) => {
-  c.population.push({
-    area_key: "testland/north-test/ward-one",
-    year: "2020",
-    total: "1400",
-    adults: "850",
-    young_adults: "380",
-    source: "WorldPop, Age and sex structures (test)",
-    method: "Test estimate from the age-and-sex grid",
-  });
-});
-eq(
-  "a second year of population estimates is a second line, in order",
-  report(twoYears, "Testland")
-    .split("\n")
-    .filter((line) => line.startsWith("Population estimates:")),
-  ["Population estimates: 1 of 2 wards (2020)", "Population estimates: 2 of 2 wards (2025)"],
-);
-
-// A bloc that is blank is named as blank, not printed as nothing.
-eq(
-  "a blank bloc is named as blank",
-  under(
-    report(
-      changed((c) => {
-        find(c.candidates, { name: "A Test" })["bloc"] = "";
-      }),
-      "Testland",
-    ),
-    BLOCS_HEADING,
-  ),
-  [
-    "  2022-president: Alpha 1, Beta 1",
-    "  2022-governor: (blank) 1, Beta 1, Gamma 1",
-    "  2022-mp: Alpha 1, Beta 1, Independent 1",
-  ],
-);
-
-// A county with only its areas: every other file holds just its header.
-const onlyAreas = changed((c) => {
-  c.candidates = [];
-  c.results = [];
-  c.turnout = [];
-  c.register = [];
-  c.population = [];
-  c.knownDifferences = [];
-});
-eq(
-  "the report for a county with only its areas",
-  report(onlyAreas, "Testland"),
-  [
-    "Testland: 1 county, 2 constituencies, 2 wards",
-    "",
-    "Results and turnout, by election (constituencies with figures):",
-    "  2013-president: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2013-governor: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2013-mp: votes in 0 of 2; turnout in 0 of 2",
-    "  2017-president: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2017-governor: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2017-mp: votes in 0 of 2; turnout in 0 of 2",
-    "  2022-president: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2022-governor: votes in 0 of 2, not the county; turnout in 0 of 2, not the county",
-    "  2022-mp: votes in 0 of 2; turnout in 0 of 2",
-    "",
-    "Registered voters, by year:",
-    "  2013: 0 of 2 wards, 0 of 2 constituencies, not the county",
-    "  2017: 0 of 2 wards, 0 of 2 constituencies, not the county",
-    "  2022: 0 of 2 wards, 0 of 2 constituencies, not the county",
-    "",
-    "Population estimates: none",
-    "",
-    "Blocs, by election (candidates):",
-    "  none",
-    "",
-    "Candidates' votes short of the valid votes (where both are held): none",
-    "Recorded differences: none",
-  ].join("\n"),
-);
-
-// The command's whole output and verdict, on copies of the fixture in a temporary folder.
-const tmp = mkdtempSync(join(tmpdir(), "atlas-report-"));
-try {
-  let made = 0;
-  /** A data folder holding a copy of the fixture as each of `counties`, and blocs.csv. */
-  const makeRoot = (counties: string[], edit?: (root: string) => void): string => {
-    const root = join(tmp, `root-${made++}`);
-    mkdirSync(root);
-    for (const name of counties) cpSync(FIXTURE, join(root, name), { recursive: true });
-    cpSync(BLOCS_FILE, join(root, "blocs.csv"));
-    edit?.(root);
-    return root;
-  };
-  /** Replaces `from` by `to` in a file, which must hold `from` exactly once. */
-  const replaceIn = (path: string, from: string, to: string) => {
-    const text = readFileSync(path, "utf8");
-    if (text.split(from).length !== 2) {
-      throw new Error(`${path} must hold ${JSON.stringify(from)} once`);
-    }
-    writeFileSync(
-      path,
-      text.replace(from, () => to),
-    );
-  };
-  /**
-   * What `run` answers, or the error it throws, so that one failing case does not hide the rest.
-   */
-  const ran = (names: string[], root: string): { text: string; ok: boolean } => {
-    try {
-      return run(names, root, MAPS);
-    } catch (e) {
-      return { text: `threw ${String(e)}`, ok: false };
-    }
-  };
-
-  const only = makeRoot(["testland"]);
-  const checked = `${report(good, "Testland")}\n\nChecks: all pass\n`;
-  eq("a county that passes the checks", ran(["testland"], only), { text: checked, ok: true });
-
-  // One constituency's governor votes lowered, so that the county no longer adds up.
-  const lowered = ran(
-    ["testland"],
-    makeRoot(["testland"], (root) =>
-      replaceIn(
-        join(root, "testland", "results.csv"),
-        "2022-governor/testland/a-test,testland/north-test,350\n",
-        "2022-governor/testland/a-test,testland/north-test,349\n",
-      ),
-    ),
-  );
-  eq("a county that does not add up fails the verdict", lowered.ok, false);
-  eq(
-    "and the verdict says why",
-    lowered.text.endsWith(
-      "\nChecks: 1 problem\n" +
-        "  2022-governor/testland/a-test: its constituencies add up to 599 but testland says 600\n",
-    ),
-    true,
-  );
-
-  // A bad row in blocs.csv: 2019 is not an election year. The county itself passes.
-  const badBlocs = makeRoot(["testland"], (root) =>
-    appendFileSync(
-      join(root, "blocs.csv"),
-      '2019,Party A,Alpha,"Registrar, Test coalition list",\n',
-    ),
-  );
-  eq("a blocs.csv with a problem fails the verdict", ran(["testland"], badBlocs), {
-    text: `blocs.csv: blocs.csv row 5: 2019 is not an election year\n\n${checked}`,
-    ok: false,
-  });
-
-  // A name that is no county folder is said so, not thrown; the other names still run.
-  const two = makeRoot(["testland", "other"]);
-  eq("a county that is not there", ran(["nosuchcounty"], two), {
-    text: "no county folder data/atlas/nosuchcounty; counties: other, testland",
-    ok: false,
-  });
-  eq(
-    "a county that is not there, when there are no counties",
-    ran(["nosuchcounty"], makeRoot([])),
-    {
-      text: "no county folder data/atlas/nosuchcounty; counties: none",
-      ok: false,
-    },
-  );
-  eq("a file is not a county folder", ran(["blocs.csv"], only), {
-    text: "no county folder data/atlas/blocs.csv; counties: testland",
-    ok: false,
-  });
-  eq("the other names still run", ran(["nosuchcounty", "testland"], only), {
-    text: `no county folder data/atlas/nosuchcounty; counties: testland\n${checked}`,
-    ok: false,
-  });
-
-  // With no names, every county runs; with no counties either, there is nothing to say.
-  eq("no names and no counties", ran([], makeRoot([])), {
-    text: "No counties under data/atlas yet.",
-    ok: true,
-  });
-  eq("no names runs every county", ran([], two), { text: `${checked}\n${checked}`, ok: true });
-
-  // Counties that each pass alone but disagree about a candidate they share. Every county's
-  // migration writes the presidential candidates, so this fails the verdict, and for whichever
-  // counties are asked for: beta spells P One Test's party its own way, with no coalition recorded
-  // for that spelling, so its bloc is the party's.
-  const disagreeing = makeRoot(["alpha", "beta"], (root) =>
-    replaceIn(
-      join(root, "beta", "candidates.csv"),
-      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party A,Alpha\n",
-      "2022-president/kenya/p-one-test,2022-president,kenya,P One Test,Party Z,Party Z\n",
-    ),
-  );
-  const betaReport = report(loadCounty(join(disagreeing, "beta")), "Testland");
-  const betaChecked = `${betaReport}\n\nChecks: all pass\n`;
-  const disagreement = [
-    '2022-president/kenya/p-one-test: party is "Party A" in alpha but "Party Z" in beta',
-    '2022-president/kenya/p-one-test: bloc is "Alpha" in alpha but "Party Z" in beta',
-  ];
-  const sharedText = `\nShared candidates: 2 problems\n  ${disagreement.join("\n  ")}\n`;
-  eq("counties that disagree on a shared candidate fail the verdict", ran([], disagreeing), {
-    text: `${checked}\n${betaChecked}\n${sharedText}`,
-    ok: false,
-  });
-  eq(
-    "and the disagreement is found when only one of them is asked for",
-    ran(["alpha"], disagreeing),
-    {
-      text: `${checked}\n${sharedText}`,
-      ok: false,
-    },
-  );
-
-  // The heading is the county's own name from areas.csv; only a county with none falls back to its
-  // folder's name, capitalised.
-  const firstLine = (text: string) => text.split("\n")[0];
-  eq(
-    "the heading is the county's name in areas.csv, not its folder's",
-    firstLine(ran(["other"], two).text),
-    "Testland: 1 county, 2 constituencies, 2 wards",
-  );
-  const noCountyRow = makeRoot(["other"], (root) =>
-    replaceIn(join(root, "other", "areas.csv"), "testland,county,Testland,kenya,901\n", ""),
-  );
-  eq(
-    "with no county row the heading is the folder's name",
-    firstLine(ran(["other"], noCountyRow).text),
-    "Other: 0 counties, 2 constituencies, 2 wards",
-  );
-  const noName = makeRoot(["other"], (root) =>
-    replaceIn(
-      join(root, "other", "areas.csv"),
-      "testland,county,Testland,kenya,901",
-      "testland,county,,kenya,901",
-    ),
-  );
-  eq(
-    "a county row with no name is no name",
-    firstLine(ran(["other"], noName).text),
-    "Other: 1 county, 2 constituencies, 2 wards",
-  );
-} finally {
-  rmSync(tmp, { recursive: true, force: true });
-}
+eq("long tables go in 500 rows at a time", (atlasSql(many).match(/insert into public\.atlas_register/g) ?? []).length, 2);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [ ] **Step 2: Run** it. Expected: FAIL (module `@/lib/atlas-sql` not found).
 
-Run: `npx -y tsx --tsconfig tsconfig.json tests/atlas-report.test.ts`
-
-Expected: `Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../scripts/atlas/report' imported from .../tests/atlas-report.test.ts`
-
-- [ ] **Step 3: Write the data folder's documents**
-
-`data/atlas/README.md` is how the files work: the layout, the columns, the rules (keys, slugs,
-elections, candidates and blocs, blanks, sources, recorded differences), and the commands.
-
-````markdown
-# Election atlas data
-
-Public facts about elections, loaded once into the shared atlas tables (schema 22). This
-repository is public: only public figures go here, and no personal detail beyond a candidate's
-name, party and votes. Nothing records anyone's ethnicity or tribe.
-
-```
-data/atlas/
-  README.md          this file
-  SOURCES.md         every document used, and everything looked for and not found
-  blocs.csv          which coalition each party stood in, election by election (every county)
-  <county>/          one folder per county, named by its key: nairobi, nyeri
-    areas.csv  candidates.csv  results.csv  turnout.csv  register.csv  population.csv
-    known-differences.csv      (optional) differences IEBC itself published, kept on purpose
-  <product>.sha256   the SHA-256 of every file of a many-file product (WorldPop's grids); committed
-  _sources/          the documents downloaded to read figures from; not committed
-```
-
-## The files
-
-| File | Columns |
-|------|---------|
-| `areas.csv` | `key,level,name,parent,iebc_code` |
-| `candidates.csv` | `id,election_id,seat,name,party,bloc` |
-| `results.csv` | `candidate_id,area_key,votes` |
-| `turnout.csv` | `election_id,area_key,registered,cast_votes,rejected_votes,valid_votes,source,source_url` |
-| `register.csv` | `year,area_key,registered,source,source_url` |
-| `population.csv` | `area_key,year,total,adults,young_adults,source,method` |
-| `known-differences.csv` | `check,election_id,area_key,candidate_id,difference,reason` |
-| `blocs.csv` (in `data/atlas/`, not in a county) | `year,party,bloc,source,source_url` |
-
-## Rules
-
-- **Keys** are paths of slugs: `nairobi`, `nairobi/dagoretti-north`,
-  `nairobi/dagoretti-north/kileleshwa`. A slug is the name lower-cased, with accents, apostrophes,
-  backticks and full stops dropped and any other run of characters that are not letters or digits
-  made one hyphen (`Lang'ata` is `langata`, `Mwiyogo/Endarasha` is `mwiyogo-endarasha`);
-  `scripts/atlas/slug.py` is the rule, and `checks.ts` has the same one. `kenya` is added by the
-  schema and stays out of `areas.csv`. A ward's slug is the one in `public/geo/*-wards.json`, and
-  the ward must sit under the constituency that map names (a map that names none, Mathira's,
-  leaves the constituency to the files).
-- **Elections** are `<year>-<race>`: 2013, 2017 and 2022; `president`, `governor`, `mp`. The 2017
-  presidential race is the 8 August vote; the 26 October re-run is not loaded.
-- **Candidates**: `id` is `<election_id>/<seat>/<slug of the name>`. `seat` is the area contested:
-  `kenya` for president, the county for governor, the constituency for MP. `bloc` is the
-  coalition the candidate's party stood in at that election (Jubilee and CORD in 2013, Jubilee and
-  NASA in 2017, Kenya Kwanza and Azimio in 2022), as `blocs.csv` records it, with its source: the
-  Registrar of Political Parties' or the Kenya Gazette's own list. A party with no row stands as
-  itself, and an independent (no party) as `Independent`. The checker refuses any other bloc, so a
-  coalition has one name in every county. Spell a party as the document does; a party spelt two
-  ways needs a `blocs.csv` row for each.
-- **Results** are votes where they were counted: a county or a constituency. A candidate's county
-  row and constituency rows must agree (president and governor).
-- **A blank is "not found"**, never a zero. Write `0` only where the document says 0.
-- **Figures** are whole numbers in ASCII digits, with no separators (a known difference's
-  `difference` may start with `-`). Every `area_key`, `seat` and `candidate_id` must be in the
-  files. The checker refuses: more votes cast than registered; more valid votes than cast; cast
-  not equal to valid plus rejected when all three are given (unless recorded in
-  `known-differences.csv`); candidates' votes above the valid votes.
-- **Complete rows**: where an election has votes in an area, every candidate whose seat covers
-  that area has a row there, and the area has a turnout row (that is where the source is). A
-  candidate whose votes were not found makes the checker refuse the county: find the figure, or
-  leave that election's rows out of the whole area, so that it reads "not found yet" and never 0%.
-- **Shared candidates**: the presidential candidates (seat `kenya`) are in every county's
-  `candidates.csv` and must be identical in all of them. Each county's migration upserts them, so the
-  checker refuses a county that disagrees with another about one.
-- **Limits**: the checker refuses what the database would (text lengths, whole numbers up to
-  2,147,483,647, a key that begins with `kenya`), so a county that passes the checker applies.
-- **File format**: UTF-8, comma-separated, the header on the first line; a text cell holds no
-  backslash; no row is listed twice (the key columns of a file are unique). The checker and
-  `build_sql.py` refuse the same things, so a county that passes the one builds with the other.
-- **Also required**: `level` and `parent` follow the key (one part is a county, under `kenya`; two
-  parts a constituency; three a ward; the parent is the key less its last part); every turnout,
-  register and population row has a `source`; a known difference's `reason` and a population row's
-  `method` are at least 10 characters.
-- **Population figures are estimates**, never counts: WorldPop's grid summed inside each ward. The
-  `method` column says so, and the screens label them as estimates.
-- **`source`** is written "Publisher, document title" (`IEBC, Presidential results by
-  constituency 2022`); the screens keep the publisher. `source_url` is the https page or file, and
-  is blank only where the document has no web address.
-- **Known differences**: `check` is `county_sum` (`difference` is what the county says minus what
-  its constituencies add up to; give `candidate_id` and the county in `area_key`) or `cast_split`
-  (`difference` is cast minus valid minus rejected; give `election_id` and `area_key`). A reason is
-  required, and a difference nothing needs any more is refused.
-- Figures come only from the publisher's own document: IEBC, the Kenya Gazette, WorldPop. A news
-  report or a summary is not a source; what is not found stays blank and is listed in `SOURCES.md`.
-- **Corrections**: loading only inserts and updates. A correction that removes a row, or renames a
-  key (a re-spelt candidate name gives a new id), needs explicit `delete` statements, written by
-  hand, in the new migration; otherwise the old row stays and its votes are counted twice.
-
-## Commands
-
-```
-npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts            # checks every county
-npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi      # what was found, and the checks
-python3 scripts/atlas/areas_from_map.py public/geo/nairobi-wards.json Nairobi data/atlas/nairobi/areas.csv
-# a ward map that names no constituency (Mathira's) needs one named, and the others listed bare
-python3 scripts/atlas/areas_from_map.py public/geo/mathira-wards.json Nyeri data/atlas/nyeri/areas.csv \
-  --constituency Mathira --also Kieni --also Mukurweini --also "Nyeri Town" --also Othaya --also Tetu
-# needs rasterio and numpy (pip install rasterio numpy, in a virtual environment)
-python3 scripts/atlas/ward_population.py public/geo/nairobi-wards.json data/atlas/nairobi/areas.csv \
-  data/atlas/_sources/worldpop-<year> <year> "WorldPop, <dataset title and version>" data/atlas/nairobi/population.csv
-python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migrations/<stamp>_atlas_nairobi.sql
-```
-````
-
-`data/atlas/SOURCES.md` starts empty: Tasks 12 and 13 add a row for every document and every gap.
-
-```markdown
-# Sources
-
-Every document the atlas's figures come from, and everything that was looked for and not found.
-A figure is loaded only from the publisher's own document: IEBC, the Kenya Gazette, WorldPop and,
-for which coalition a party stood in, the Registrar of Political Parties. A news report or a
-summary is not a source here. Downloaded files live in `_sources/` (not committed), so each is
-listed with its SHA-256, to let anyone check they have the same file. A product made of many files
-(WorldPop's grids) gets one row, whose SHA-256 is that of a manifest: the output of `sha256sum`
-over its files, saved as `data/atlas/<product>.sha256` and committed.
-
-In the CSVs a `source` is the Publisher and the Document of the row here, written
-"Publisher, Document", and a `source_url` is the URL column. "Saved as" is the path under
-`data/atlas/_sources/` (a national document used by two counties is saved once, and its "Taken
-from it" says both counties use it). "Retrieved" is the date, written YYYY-MM-DD.
-
-## Documents used
-
-| Document | Publisher | Published | URL | Saved as | Retrieved | Taken from it | Level | SHA-256 |
-|----------|-----------|-----------|-----|----------|-----------|---------------|-------|---------|
-
-## Gaps
-
-| County | What | Where it was looked for | Why it is missing |
-|--------|------|-------------------------|-------------------|
-
-## Notes
-
-Judgment calls and facts about the sources that a later reader needs: which WorldPop product was
-chosen and why, the declared nodata value of its grids, a figure a document gives two ways, a name
-spelt two ways, and anything the user should know before relying on a number.
-```
-
-The downloaded documents are public but large, so they live in `data/atlas/_sources/` and stay out
-of git; `SOURCES.md` records each one's checksum instead.
-
-```diff
---- a/.gitignore
-+++ b/.gitignore
-@@ -38,3 +38,7 @@ dist-ssr
- .env.local
- .env.*.local
- .dev.vars
-+
-+# Election atlas: the documents downloaded to read figures from. They are public but large;
-+# data/atlas/SOURCES.md says where each came from and its checksum.
-+data/atlas/_sources/
-```
-
-- [ ] **Step 4: Write the report**
-
-Create `scripts/atlas/report.ts`:
+- [ ] **Step 3: Implement** `src/lib/atlas-sql.ts`:
 
 ```ts
-// The data report: how much of each election a county's files hold, and what is missing, in the
-// words the user reads before any screen work. `report` is pure; `run` builds the whole output of
-// the command and says whether everything passed. Running this file prints that output for the
-// counties named (default: every county under data/atlas), from any directory, and exits 1 when
-// blocs.csv, a county or the candidates the counties share have a problem, so that a failing
-// verdict fails the command:
-//   npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi nyeri
+// The atlas's figures as a migration: upserts in the order the foreign keys
+// need, so running it twice changes nothing and a corrected file replaces the
+// old figure. Pure.
 
-import { existsSync, realpathSync, statSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { candidateId, type AtlasFiles } from "@/lib/atlas-files";
 
-import { fmtVotes } from "../../src/lib/atlas/format";
-import { levelOfKey } from "../../src/lib/atlas/scope";
-import {
-  blocMap,
-  checkBlocs,
-  checkCounty,
-  checkShared,
-  listCounties,
-  loadBlocs,
-  loadCounty,
-  loadWardMaps,
-  type County,
-  type Row,
-  type WardMaps,
-} from "./checks";
+type Cell = string | number | null;
 
-const YEARS = [2013, 2017, 2022];
-const ELECTIONS = YEARS.flatMap((y) =>
-  ["president", "governor", "mp"].map((race) => `${y}-${race}`),
+const lit = (v: Cell): string =>
+  v === null ? "null" : typeof v === "number" ? String(v) : `'${v.replace(/'/g, "''")}'`;
+
+function upsert(table: string, cols: string[], rows: Cell[][], key: string[]): string {
+  if (!rows.length) return "";
+  const update = cols
+    .filter((c) => !key.includes(c))
+    .map((c) => `${c} = excluded.${c}`)
+    .join(", ");
+  const out: string[] = [];
+  for (let i = 0; i < rows.length; i += 500) {
+    const values = rows
+      .slice(i, i + 500)
+      .map((r) => `  (${r.map(lit).join(", ")})`)
+      .join(",\n");
+    out.push(
+      `insert into public.${table} (${cols.join(", ")}) values\n${values}\non conflict (${key.join(", ")}) do ${update ? `update set ${update}` : "nothing"};\n`,
+    );
+  }
+  return out.join("\n");
+}
+
+const depth = (key: string) => (key === "kenya" ? 0 : key.split("/").length);
+
+export function atlasSql(f: AtlasFiles): string {
+  const areas = [...f.areas].sort((a, b) => depth(a.key) - depth(b.key) || a.key.localeCompare(b.key));
+  return [
+    upsert("atlas_sources", ["id", "title", "publisher", "url", "note"], f.sources.map((s) => [s.id, s.title, s.publisher, s.url, s.note]), ["id"]),
+    upsert("atlas_areas", ["key", "level", "name", "parent", "iebc_code"], areas.map((a) => [a.key, a.level, a.name, a.parent, a.iebc_code]), ["key"]),
+    upsert(
+      "atlas_candidates",
+      ["id", "election_id", "seat", "name", "party", "bloc"],
+      f.candidates.map((c) => [candidateId(c.election, c.seat, c.name), c.election, c.seat, c.name, c.party, c.bloc]),
+      ["id"],
+    ),
+    upsert(
+      "atlas_results",
+      ["candidate_id", "area_key", "votes", "source_id"],
+      f.results.map((r) => [candidateId(r.election, r.seat, r.candidate), r.area, r.votes, r.source]),
+      ["candidate_id", "area_key"],
+    ),
+    upsert(
+      "atlas_turnout",
+      ["election_id", "area_key", "registered", "cast_votes", "rejected", "valid", "source_id"],
+      f.turnout.map((t) => [t.election, t.area, t.registered, t.cast_votes, t.rejected, t.valid, t.source]),
+      ["election_id", "area_key"],
+    ),
+    upsert("atlas_register", ["year", "area_key", "registered", "source_id"], f.register.map((r) => [r.year, r.area, r.registered, r.source]), ["year", "area_key"]),
+    upsert(
+      "atlas_population",
+      ["area_key", "year", "total", "adults", "young_adults", "source_id"],
+      f.population.map((p) => [p.area, p.year, p.total, p.adults, p.young_adults, p.source]),
+      ["area_key", "year"],
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+```
+
+  Run the test. Expected: all pass.
+
+- [ ] **Step 4: The script** `scripts/atlas/build-sql.ts`:
+
+```ts
+// Writes one migration from the atlas folders named on the command line, once
+// their figures pass the checks. Run from the repository root:
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts supabase/migrations/<stamp>_atlas_<name>.sql kenya nairobi nyeri
+import { writeFileSync } from "node:fs";
+
+import { checkAtlas } from "@/lib/atlas-files";
+import { atlasSql } from "@/lib/atlas-sql";
+
+import { readAtlas, wardSlugs } from "./read";
+
+const [out, ...folders] = process.argv.slice(2);
+if (!out || !folders.length) {
+  console.error("usage: build-sql.ts <migration.sql> <folder>...");
+  process.exit(2);
+}
+const { files, problems } = readAtlas("data/atlas", folders);
+const all = [...problems, ...checkAtlas(files, wardSlugs())];
+if (all.length) {
+  console.error(all.join("\n"));
+  process.exit(1);
+}
+writeFileSync(
+  out,
+  `-- The election atlas's figures for ${folders.join(", ")}, from data/atlas.\n` +
+    "-- Written by scripts/atlas/build-sql.ts: change the CSV files and run it again, not this file.\n\n" +
+    atlasSql(files),
+);
+console.log(`wrote ${out}`);
+```
+
+- [ ] **Step 5: Run** the tests; lint the new files (`--fix`); typecheck. Then check the
+      script end to end on the `kenya` folder alone:
+      `npx tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts "$TMPDIR/atlas-try.sql" kenya`
+      (expected: `wrote …`, and the file holds one `insert into public.atlas_areas` for `kenya`);
+      delete the try file.
+- [ ] **Step 6: Commit** `The atlas's figures become a migration, checked first`.
+
+---
+
+### Task 5: Population estimates from WorldPop
+
+**Files:**
+- Create: `src/lib/atlas-population.ts`, `scripts/atlas/population.ts`,
+  `data/atlas/kenya/sources.csv`
+- Test: `tests/atlas-population.test.ts`
+
+**Interfaces:** Produces `type PyramidBand = { age; male; female }`, `bandStart(age)`,
+`fromPyramid(bands): { total; adults; young_adults }`, `simplifyRing(ring, tolerance)`,
+`compactGeometry(geometry, tolerance)`, and the script `population.ts <ward map> <county>
+<out.csv> [constituency]` (env `ATLAS_LIMIT=n` for a trial on the first n wards). The shared
+source `worldpop-2020-agesex` lives in `data/atlas/kenya/sources.csv`.
+
+- [ ] **Step 1: Write the failing test** `tests/atlas-population.test.ts`:
+
+```ts
+// Checks for turning WorldPop's age-and-sex pyramid into the atlas's numbers,
+// and for shrinking a ward's outline to send to WorldPop. Pure. Run from the
+// repository root:
+//   npx tsx --tsconfig tsconfig.json tests/atlas-population.test.ts
+
+import { bandStart, compactGeometry, fromPyramid, simplifyRing } from "@/lib/atlas-population";
+
+let pass = 0;
+let fail = 0;
+
+function eq(name: string, got: unknown, want: unknown) {
+  const g = JSON.stringify(got);
+  const w = JSON.stringify(want);
+  if (g === w) pass++;
+  else {
+    fail++;
+    console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
+  }
+}
+
+eq("a band's first age", ["15 to 19", "15-19", "80+", "0", "x"].map(bandStart), [15, 15, 80, 0, null]);
+eq(
+  "total, adults and 18–34, a band shared evenly across its ages",
+  fromPyramid([
+    { age: "35 to 39", male: 50, female: 50 },
+    { age: "10 to 14", male: 50, female: 50 },
+    { age: "15 to 19", male: 50, female: 50 },
+    { age: "20 to 24", male: 50, female: 50 },
+    { age: "25 to 29", male: 50, female: 50 },
+    { age: "30 to 34", male: 50, female: 50 },
+    { age: "80+", male: 5, female: 5 },
+  ]),
+  { total: 610, adults: 450, young_adults: 340 },
+);
+const square: [number, number][] = [
+  [0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5], [0, 0],
+];
+eq("a square loses its points along straight edges", simplifyRing(square, 0.01), [
+  [0, 0], [1, 0], [1, 1], [0, 1], [0, 0],
+]);
+const spike: [number, number][] = [
+  [0, 0], [1, 0], [1, 0.5], [1.2, 0.55], [1, 0.6], [1, 1], [0, 1], [0, 0],
+];
+eq("but keeps a spike bigger than the tolerance", simplifyRing(spike, 0.05).some(([x]) => x === 1.2), true);
+eq(
+  "compacting rounds to five places",
+  compactGeometry(
+    { type: "Polygon", coordinates: [[[36.123456789, -1.2], [36.2, -1.2], [36.2, -1.3], [36.123456789, -1.2]]] },
+    0.0001,
+  ),
+  { type: "Polygon", coordinates: [[[36.12346, -1.2], [36.2, -1.2], [36.2, -1.3], [36.12346, -1.2]]] },
 );
 
-/**
- * The heading of the line for candidates' votes short of the valid votes. It says what the line
- * covers: an area with valid votes and no candidate rows at all is not listed.
- */
-const SHORT = "Candidates' votes short of the valid votes (where both are held):";
+console.log(`${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);
+```
 
-const cell = (r: Row, column: string): string => r[column] ?? "";
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+- [ ] **Step 2: Run** it. Expected: FAIL (module `@/lib/atlas-population` not found).
 
-/**
- * Where the candidates' votes fall short of the valid votes, which means a candidate is
- * missing.
- */
-export function shortfalls(c: County): string[] {
-  const election = new Map(c.candidates.map((r) => [cell(r, "id"), cell(r, "election_id")]));
-  const counted = new Map<string, number>();
-  for (const r of c.results) {
-    const e = election.get(cell(r, "candidate_id"));
-    if (e === undefined) continue;
-    const key = `${e} ${cell(r, "area_key")}`;
-    counted.set(key, (counted.get(key) ?? 0) + Number(cell(r, "votes")));
-  }
-  const out: string[] = [];
-  for (const t of c.turnout) {
-    const key = `${cell(t, "election_id")} ${cell(t, "area_key")}`;
-    const got = counted.get(key);
-    const valid = cell(t, "valid_votes");
-    if (valid !== "" && got !== undefined && got < Number(valid)) {
-      out.push(`${key}: candidates' votes ${fmtVotes(got)} of ${fmtVotes(Number(valid))} valid`);
-    }
-  }
-  return out.sort();
+- [ ] **Step 3: Implement** `src/lib/atlas-population.ts`:
+
+```ts
+// WorldPop's age-and-sex pyramid for a ward turned into the atlas's three
+// numbers, and a ward's outline shrunk enough to send to WorldPop. Pure.
+
+export type PyramidBand = { age: string; male: number; female: number };
+
+/** The first age in a band's label: "15 to 19", "15-19", "80+" and "0" all work. */
+export function bandStart(age: string): number | null {
+  const m = String(age).match(/\d+/);
+  return m ? Number(m[0]) : null;
 }
 
-/** What one county's files hold, election by election and year by year. */
-export function report(c: County, name: string): string {
-  const keys = c.areas.map((a) => cell(a, "key"));
-  const at = (level: string) => keys.filter((k) => levelOfKey(k) === level);
-  const counties = at("county");
-  const constituencies = at("constituency");
-  const wards = at("ward");
-  const electionOf = new Map(c.candidates.map((r) => [cell(r, "id"), cell(r, "election_id")]));
-  const nConstituencies = plural(constituencies.length, "constituency", "constituencies");
-  const nWards = plural(wards.length, "ward");
-
-  /** "N of M" for the constituencies among `areas`, and whether the county is there too. */
-  const coverage = (areas: Set<string>, race: string) => {
-    const base = `${constituencies.filter((k) => areas.has(k)).length} of ${constituencies.length}`;
-    if (race === "mp") return base;
-    return counties.some((k) => areas.has(k))
-      ? `${base} and the county`
-      : `${base}, not the county`;
-  };
-
-  const lines = [
-    `${name}: ${plural(counties.length, "county", "counties")}, ${nConstituencies}, ${nWards}`,
-    "",
-    "Results and turnout, by election (constituencies with figures):",
-  ];
-  for (const election of ELECTIONS) {
-    const race = election.split("-")[1] ?? "";
-    const votes = new Set(
-      c.results
-        .filter((r) => electionOf.get(cell(r, "candidate_id")) === election)
-        .map((r) => cell(r, "area_key")),
-    );
-    // Turnout is the votes cast over the voters registered: a row without both holds no figure.
-    const turnout = new Set(
-      c.turnout
-        .filter(
-          (r) =>
-            cell(r, "election_id") === election &&
-            cell(r, "cast_votes") !== "" &&
-            cell(r, "registered") !== "",
-        )
-        .map((r) => cell(r, "area_key")),
-    );
-    lines.push(
-      `  ${election}: votes in ${coverage(votes, race)}; turnout in ${coverage(turnout, race)}`,
-    );
-  }
-
-  lines.push("", "Registered voters, by year:");
-  for (const year of YEARS) {
-    const have = new Set(
-      c.register.filter((r) => cell(r, "year") === String(year)).map((r) => cell(r, "area_key")),
-    );
-    const w = wards.filter((k) => have.has(k)).length;
-    const k = constituencies.filter((x) => have.has(x)).length;
-    const county = counties.some((x) => have.has(x)) ? "and the county" : "not the county";
-    lines.push(`  ${year}: ${w} of ${nWards}, ${k} of ${nConstituencies}, ${county}`);
-  }
-
-  lines.push("");
-  const popYears = [...new Set(c.population.map((r) => cell(r, "year")))].sort();
-  if (popYears.length === 0) lines.push("Population estimates: none");
-  for (const year of popYears) {
-    const have = new Set(
-      c.population.filter((r) => cell(r, "year") === year).map((r) => cell(r, "area_key")),
-    );
-    lines.push(
-      `Population estimates: ${wards.filter((k) => have.has(k)).length} of ${nWards} (${year})`,
-    );
-  }
-
-  // The blocs the candidates stood in, so a coalition spelt two ways shows up here.
-  const blocLines = ELECTIONS.flatMap((election) => {
-    const counts = new Map<string, number>();
-    for (const r of c.candidates) {
-      if (cell(r, "election_id") !== election) continue;
-      counts.set(cell(r, "bloc"), (counts.get(cell(r, "bloc")) ?? 0) + 1);
-    }
-    if (counts.size === 0) return [];
-    const parts = [...counts]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([bloc, n]) => `${bloc || "(blank)"} ${n}`);
-    return [`  ${election}: ${parts.join(", ")}`];
+/** Total, adults (18+) and young adults (18–34), each band's people spread evenly over its ages. */
+export function fromPyramid(bands: PyramidBand[]): { total: number; adults: number; young_adults: number } {
+  const rows = bands
+    .map((b) => ({ start: bandStart(b.age), people: (Number(b.male) || 0) + (Number(b.female) || 0) }))
+    .filter((b): b is { start: number; people: number } => b.start !== null)
+    .sort((a, b) => a.start - b.start);
+  let total = 0;
+  let adults = 0;
+  let young = 0;
+  rows.forEach((b, i) => {
+    const end = rows[i + 1]?.start ?? Infinity;
+    // The share of this band's ages that fall in [lo, hi); the oldest band is open-ended.
+    const within = (lo: number, hi: number) =>
+      end === Infinity
+        ? b.start >= lo && b.start < hi
+          ? 1
+          : 0
+        : Math.max(0, Math.min(end, hi) - Math.max(b.start, lo)) / (end - b.start);
+    total += b.people;
+    adults += b.people * within(18, Infinity);
+    young += b.people * within(18, 35);
   });
-  lines.push(
-    "",
-    "Blocs, by election (candidates):",
-    ...(blocLines.length ? blocLines : ["  none"]),
-  );
-
-  const short = shortfalls(c);
-  lines.push("", short.length ? `${SHORT}\n  ${short.join("\n  ")}` : `${SHORT} none`);
-  const known = c.knownDifferences.map((r) => {
-    const where =
-      cell(r, "check") === "county_sum"
-        ? `${cell(r, "candidate_id")} ${cell(r, "area_key")}`
-        : `${cell(r, "election_id")} ${cell(r, "area_key")}`;
-    return `${cell(r, "check")} ${where}: ${cell(r, "difference")} (${cell(r, "reason")})`;
-  });
-  lines.push(
-    known.length ? `Recorded differences:\n  ${known.join("\n  ")}` : "Recorded differences: none",
-  );
-  return lines.join("\n");
+  return { total: Math.round(total), adults: Math.round(adults), young_adults: Math.round(young) };
 }
 
-/** A folder, as against a file or nothing. */
-const isFolder = (path: string): boolean => existsSync(path) && statSync(path).isDirectory();
+type Pt = [number, number];
 
-/**
- * What the heading calls a county: its own name, from the county's row in areas.csv, else its
- * folder's name with the first letter capitalised.
- */
-function headingName(c: County, folder: string): string {
-  const row = c.areas.find((a) => levelOfKey(cell(a, "key")) === "county");
-  const name = row ? cell(row, "name") : "";
-  return name !== "" ? name : folder.charAt(0).toUpperCase() + folder.slice(1);
+function distance(p: Pt, a: Pt, b: Pt): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len)) : 0;
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
 }
 
-/**
- * The whole output of the command for the counties named (every county under `root` when none is),
- * less its last newline, and whether everything passed: blocs.csv, each county's checks and the
- * candidates the counties share. A name that is no county folder is said so and fails; the other
- * names still run. The shared candidates are compared across every county under `root`, not only
- * the ones named, because each county's migration writes them.
- */
-export function run(names: string[], root: string, wards: WardMaps): { text: string; ok: boolean } {
-  const counties = listCounties(root);
-  const asked = names.length ? names : counties;
-  if (asked.length === 0) return { text: "No counties under data/atlas yet.", ok: true };
-  const blocRows = loadBlocs(join(root, "blocs.csv"));
-  const blocProblems = checkBlocs(blocRows);
-  // Each county's files are read once, whether it is named or only compared.
-  const loaded = new Map<string, County>();
-  const load = (name: string): County => {
-    let county = loaded.get(name);
-    if (county === undefined) {
-      county = loadCounty(join(root, name));
-      loaded.set(name, county);
+/** Douglas–Peucker on a closed ring, keeping its ends; never fewer than four points. */
+export function simplifyRing(ring: Pt[], tolerance: number): Pt[] {
+  if (ring.length <= 4) return ring;
+  const keep = ring.map((_, i) => i === 0 || i === ring.length - 1);
+  const stack: [number, number][] = [[0, ring.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop()!;
+    let far = -1;
+    let most = 0;
+    for (let i = a + 1; i < b; i++) {
+      const d = distance(ring[i]!, ring[a]!, ring[b]!);
+      if (d > most) {
+        most = d;
+        far = i;
+      }
     }
-    return county;
-  };
-  // One piece for each thing the command prints, a newline between them.
-  const out: string[] = [];
-  let ok = blocProblems.length === 0;
-  if (blocProblems.length) out.push(`blocs.csv: ${blocProblems.join("\n  ")}\n`);
-  for (const name of asked) {
-    if (!isFolder(join(root, name))) {
-      out.push(`no county folder data/atlas/${name}; counties: ${counties.join(", ") || "none"}`);
-      ok = false;
-      continue;
+    if (far !== -1 && most > tolerance) {
+      keep[far] = true;
+      stack.push([a, far], [far, b]);
     }
-    const county = load(name);
-    out.push(report(county, headingName(county, name)));
-    const problems = checkCounty(county, wards, blocMap(blocRows));
-    out.push(
-      problems.length
-        ? `\nChecks: ${plural(problems.length, "problem")}\n  ${problems.join("\n  ")}\n`
-        : "\nChecks: all pass\n",
-    );
-    if (problems.length) ok = false;
   }
-  const shared = checkShared(counties.map((name) => ({ name, candidates: load(name).candidates })));
-  if (shared.length) {
-    out.push(
-      `\nShared candidates: ${plural(shared.length, "problem")}\n  ${shared.join("\n  ")}\n`,
-    );
-    ok = false;
-  }
-  return { text: out.join("\n"), ok };
+  const out = ring.filter((_, i) => keep[i]);
+  return out.length >= 4 ? out : ring;
 }
 
-const USAGE = [
-  "usage: report.ts [county ...]",
-  "Prints what each county's files hold and what is missing, then the checks' verdict.",
-].join("\n");
+export type Outline =
+  | { type: "Polygon"; coordinates: Pt[][] }
+  | { type: "MultiPolygon"; coordinates: Pt[][][] };
 
-function main(args: string[]) {
-  // `report.ts nairobi | head -1` closes the pipe before the end: that is not an error.
-  process.stdout.on("error", (e: NodeJS.ErrnoException) => {
-    if (e.code !== "EPIPE") throw e;
-  });
-  if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write(`${USAGE}\n`);
-    return;
+const round5 = (x: number) => Math.round(x * 1e5) / 1e5;
+
+/** A ward's outline with every ring simplified and its coordinates rounded to about a metre. */
+export function compactGeometry(g: Outline, tolerance: number): Outline {
+  const ring = (r: Pt[]): Pt[] => simplifyRing(r, tolerance).map(([x, y]) => [round5(x), round5(y)]);
+  return g.type === "Polygon"
+    ? { type: "Polygon", coordinates: g.coordinates.map(ring) }
+    : { type: "MultiPolygon", coordinates: g.coordinates.map((p) => p.map(ring)) };
+}
+```
+
+  Run the test. Expected: all pass.
+
+- [ ] **Step 4: The script** `scripts/atlas/population.ts`:
+
+```ts
+// WorldPop's 2020 age-and-sex estimate for every ward in a ward map, written as
+// an atlas population.csv. Run from the repository root, for example:
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/population.ts public/geo/nairobi-wards.json nairobi data/atlas/nairobi/population.csv
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/population.ts public/geo/mathira-wards.json nyeri data/atlas/nyeri/population.csv mathira
+// The optional last argument names the constituency for a map whose wards
+// don't say. ATLAS_LIMIT=2 tries the first two wards only. A ward WorldPop
+// can't answer for is left out and named at the end: missing stays missing.
+import { readFileSync, writeFileSync } from "node:fs";
+
+import { slugify } from "@/lib/atlas-files";
+import { compactGeometry, fromPyramid, type Outline, type PyramidBand } from "@/lib/atlas-population";
+import { toCSV } from "@/lib/csv";
+
+const YEAR = 2020;
+const SOURCE = "worldpop-2020-agesex";
+const API = "https://api.worldpop.org/v1";
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type Body = { status?: string; taskid?: string; error?: boolean; error_message?: string; data?: { agesexpyramid?: PyramidBand[] } };
+
+async function pyramid(geometry: Outline): Promise<PyramidBand[]> {
+  const geojson = JSON.stringify({ type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry }] });
+  let body = (await (await fetch(`${API}/services/stats?dataset=wpgpas&year=${YEAR}&runasync=false&geojson=${encodeURIComponent(geojson)}`)).json()) as Body;
+  for (let i = 0; body.taskid && body.status !== "finished" && !body.error && i < 90; i++) {
+    await wait(2000);
+    body = (await (await fetch(`${API}/tasks/${body.taskid}`)).json()) as Body;
   }
-  // The data and the ward maps are found from this file, so the command works from any directory.
-  const here = dirname(fileURLToPath(import.meta.url));
-  const wards = loadWardMaps(join(here, "../../public/geo"));
-  const { text, ok } = run(args, join(here, "../../data/atlas"), wards);
-  process.stdout.write(`${text}\n`);
-  process.exitCode = ok ? 0 : 1;
+  if (body.error) throw new Error(body.error_message ?? "WorldPop refused the query");
+  const bands = body.data?.agesexpyramid;
+  if (!Array.isArray(bands)) throw new Error(`no age-sex pyramid in ${JSON.stringify(body).slice(0, 300)}`);
+  return bands;
 }
 
-/** True when this file is the one being run, also when it is reached through a symlink. */
-function isEntry(): boolean {
-  const entry = process.argv[1];
-  if (!entry) return false;
+const [geoFile, county, out, constituency] = process.argv.slice(2);
+if (!geoFile || !county || !out) {
+  console.error("usage: population.ts <ward map> <county key> <out.csv> [constituency key]");
+  process.exit(2);
+}
+type Ward = { properties: { slug: string; constituency?: string }; geometry: Outline };
+const wards = (JSON.parse(readFileSync(geoFile, "utf8")) as { features: Ward[] }).features.slice(
+  0,
+  Number(process.env["ATLAS_LIMIT"]) || undefined,
+);
+const rows: (string | number)[][] = [];
+const failed: string[] = [];
+for (const w of wards) {
+  const key = `${county}/${constituency ?? slugify(w.properties.constituency ?? "")}/${w.properties.slug}`;
   try {
-    return realpathSync(entry) === fileURLToPath(import.meta.url);
-  } catch {
-    return false; // an entry that is no file on disk (stdin, say) is not this one
+    const p = fromPyramid(await pyramid(compactGeometry(w.geometry, 0.0003)));
+    rows.push([key, YEAR, p.total, p.adults, p.young_adults, SOURCE]);
+    console.log(`${key}: ${p.total} people, ${p.adults} adults, ${p.young_adults} aged 18–34`);
+  } catch (e) {
+    failed.push(`${key}: ${e instanceof Error ? e.message : String(e)}`);
   }
+  await wait(1500);
 }
-
-if (isEntry()) main(process.argv.slice(2));
+writeFileSync(out, `${toCSV(["area", "year", "total", "adults", "young_adults", "source"], rows).replace(/\r\n/g, "\n")}\n`);
+console.log(`wrote ${rows.length} wards to ${out}`);
+if (failed.length) console.log(`not answered, left out:\n${failed.join("\n")}`);
 ```
 
-- [ ] **Step 5: Format, lint and run**
+  `data/atlas/kenya/sources.csv`:
 
-Run: `npx prettier --write scripts/atlas/report.ts tests/atlas-report.test.ts && npx eslint scripts/atlas tests/atlas-report.test.ts && npx -y tsx --tsconfig tsconfig.json tests/atlas-report.test.ts | tail -2`
-
-Expected: ESLint prints nothing, then `30 passed, 0 failed`.
-
-Run: `npx -y tsx --tsconfig tsconfig.json scripts/atlas/report.ts`
-
-Expected: `No counties under data/atlas yet.`
-
-- [ ] **Step 6: Run every atlas test together**
-
-Run: `for t in tests/atlas-*.test.ts; do printf "%-34s" $t; npx -y tsx --tsconfig tsconfig.json $t 2>&1 | tail -1; done`
-
-Expected:
-
-```
-tests/atlas-advice.test.ts        48 passed, 0 failed
-tests/atlas-data.test.ts          189 passed, 0 failed
-tests/atlas-format.test.ts        25 passed, 0 failed
-tests/atlas-measures.test.ts      35 passed, 0 failed
-tests/atlas-register.test.ts      20 passed, 0 failed
-tests/atlas-report.test.ts        30 passed, 0 failed
-tests/atlas-scope.test.ts         12 passed, 0 failed
-tests/atlas-scripts.test.ts       atlas script tests passed (67 tests)
+```csv
+id,title,publisher,url,note
+worldpop-2020-agesex,"Age and sex structures, Kenya, 2020, 100 m grid",WorldPop (University of Southampton),https://hub.worldpop.org/geodata/listing?id=65,"Estimates, summed inside each ward's boundary through WorldPop's statistics API (dataset wpgpas); 18–34 counts two fifths of the 15–19 band."
 ```
 
-- [ ] **Step 7: Commit**
-
-```bash
-git add tests/atlas-report.test.ts scripts/atlas/report.ts data/atlas/README.md data/atlas/SOURCES.md .gitignore
-git commit -m "Atlas: the data folder's rules and sources log, and the data report" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+- [ ] **Step 5: Try it on one ward:** `ATLAS_LIMIT=1 npx tsx --tsconfig tsconfig.json
+      scripts/atlas/population.ts public/geo/mathira-wards.json nyeri "$TMPDIR/pop-try.csv"
+      mathira`. Expected: one ward with a few thousand people, adults below the total and 18–34
+      below the adults. If WorldPop answers in another shape (the age list under another name,
+      or other band labels), change `pyramid()`'s reading to match and ledger it as a ruling;
+      if the API is down or refuses, ledger it and leave population out (the report will say
+      so). Delete the try file.
+- [ ] **Step 6: Run** the tests and the data test; lint the new files (`--fix`); typecheck.
+- [ ] **Step 7: Commit** `Population estimates for each ward from WorldPop's open grid`.
 
 ---
 
-### Task 12: Gather Nairobi's figures
-
-This is research, not code. The documents' formats are not known until they are read, so the steps
-give the procedure, the exact files to produce and the checks that decide when it is done; the
-extractor scripts are written against the real documents. The checks from Task 8 are the tests:
-the documents are the specification, and a figure is right when it agrees with the document and the
-sums agree with each other.
+### Task 6: Nairobi's figures
 
 **Files:**
-- Create: `data/atlas/blocs.csv`
-- Create: `data/atlas/nairobi/areas.csv`, `candidates.csv`, `results.csv`, `turnout.csv`, `register.csv`, `population.csv`, `known-differences.csv`
-- Create: `scripts/atlas/extract/*.py` (and any small helpers they share): read the downloaded documents, write the county's CSVs
-- Modify: `data/atlas/SOURCES.md`
-- Not committed: `data/atlas/_sources/` (the downloaded documents; see `.gitignore`)
+- Create: `data/atlas/nairobi/areas.csv`, `sources.csv`, `candidates.csv`, `results.csv`,
+  `turnout.csv`, `register.csv`, `population.csv` (and `known-differences.csv` if needed)
+- Modify: `data/atlas/kenya/sources.csv`, and create `data/atlas/kenya/candidates.csv`,
+  `results.csv`, `turnout.csv` (the presidential candidates and national totals)
 
-**Interfaces:** Consumes `scripts/atlas/areas_from_map.py`, `slug.slugify`, `ward_population.py`,
-`checks.ts` and `report.ts`. Produces a `data/atlas/nairobi/` that passes
-`npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts`; a `data/atlas/blocs.csv` for the
-parties that stood in it; and a `SOURCES.md` that says where every number came from and what was not
-found.
+**Interfaces:** Consumes Tasks 3–5 (formats, checks, scripts). Produces figures that pass
+`tests/atlas-data.test.ts`.
 
-**What to find**, for Nairobi's 17 constituencies (the ward map in `public/geo/nairobi-wards.json`
-lists them and its 85 wards):
-- **Results:** for each of the nine elections (2013, 2017 and 2022; president, governor, MP), every
-  candidate's votes in each constituency, with their party; and the county total for president and
-  governor. The 2017 presidential race is the 8 August vote; the 26 October re-run is not loaded.
-- **Turnout:** for the same elections and areas, registered voters, votes cast, rejected and valid.
-- **Registers:** registered voters by ward for each of 2013, 2017 and 2022 where IEBC published
-  them, with constituency and county totals when published.
-- **Coalitions:** which coalition each party stood in for each election (Jubilee and CORD in 2013,
-  Jubilee and NASA in 2017, Kenya Kwanza and Azimio in 2022, and any others), from the Registrar of
-  Political Parties or the Kenya Gazette.
-- **Population:** WorldPop's age-and-sex grids for Kenya at 100 m, for the latest year offered.
+Rules for every step (also in `data/atlas/README.md`): a figure comes from a listed document or
+it isn't entered; prefer IEBC's documents and the Kenya Gazette; open datasets and media tallies
+only fill gaps and are named as their publisher; list every candidate the document lists, else
+the leaders plus the document's valid votes; blocs as in the README; every independent is
+`Independent: <name>`. Spend about ten searches or fetches on an item; if nothing trustworthy
+turns up, leave it missing and go on (the report lists it). Record how each figure was read in
+its source's note (e.g. "constituency totals read from the scanned Form 37C").
 
-- [ ] **Step 1: Check that the sources can be reached**
-
-Run:
+- [ ] **Step 1: Areas.** Write `data/atlas/nairobi/areas.csv`:
 
 ```bash
-for u in https://www.iebc.or.ke https://forms.iebc.or.ke https://hub.worldpop.org https://data.worldpop.org https://www.worldpop.org https://new.kenyalaw.org https://www.kenyagazette.go.ke https://www.knbs.or.ke; do
-  printf "%-34s" "$u"; curl -sS -m 15 -o /dev/null -w "%{http_code}\n" -I "$u" 2>&1 | tail -1
-done
+{ echo "key,level,name,parent,iebc_code"; echo "nairobi,county,Nairobi,kenya,047"; npx tsx --tsconfig tsconfig.json scripts/atlas/areas.ts public/geo/nairobi-wards.json nairobi | tail -n +2; } > data/atlas/nairobi/areas.csv
 ```
 
-A number (200, 301, even 404) means the host answered. `curl: (56) CONNECT tunnel failed, response 403`
-means this environment's network policy still blocks it. The user chose to allow these hosts in the
-environment's settings (the cloud environment menu in the session's title bar, then Edit, then
-Network access and Allowed domains; steps at https://code.claude.com/docs/en/cloud-environments#network-access).
+  Check: `grep -c ",constituency," data/atlas/nairobi/areas.csv` is 17 and
+  `grep -c ",ward," data/atlas/nairobi/areas.csv` is 85. Run the data test: 0 problems. Add
+  constituency IEBC codes later where a document gives them.
 
-If a host the task needs is blocked, or a document turns out to live on a host not in the list, stop
-and tell the user which host. Do not work around the block: no other proxy, no mirror. `WebFetch`
-goes through the same proxy and is blocked the same way.
+- [ ] **Step 2: Population.** `npx tsx --tsconfig tsconfig.json scripts/atlas/population.ts
+      public/geo/nairobi-wards.json nairobi data/atlas/nairobi/population.csv` (about five
+      minutes). Expected: 85 wards written, or the ones WorldPop didn't answer named. Run the
+      data test.
 
-- [ ] **Step 2: Create the county's folder and its areas**
+- [ ] **Step 3: The presidential race, nationally** (`data/atlas/kenya/`): for 2022, 2017
+      (8 August) and 2013, every presidential candidate in `candidates.csv` (seat `kenya`),
+      their national votes in `results.csv` (area `kenya`) and the national registered, cast,
+      rejected and valid in `turnout.csv`, from IEBC's declarations (Form 34C) or the Gazette.
+      Sources in `data/atlas/kenya/sources.csv`. Run the data test.
 
-Run:
+- [ ] **Step 4: Governor and president in Nairobi, by constituency and for the county,** in this
+      order: 2022, 2017, 2013. Governor candidates go in `nairobi/candidates.csv` (seat
+      `nairobi`); results for each constituency (`nairobi/<constituency>`) and the county
+      (`nairobi`) in `nairobi/results.csv`; each area's registered, cast, rejected and valid for
+      that race in `nairobi/turnout.csv`. Presidential results at the same areas use the
+      candidates in `kenya/candidates.csv` (seat `kenya`). Look first for IEBC's county and
+      constituency forms (34B/34C, 37B/37C) and published results, then openAFRICA or Code for
+      Africa datasets citing IEBC, then a reputable media tally. Run the data test after each
+      election; when a county total differs from its constituencies in the documents
+      themselves, record the exact difference in `known-differences.csv` with a note.
 
-```bash
-mkdir -p data/atlas/nairobi data/atlas/_sources/nairobi
-python3 scripts/atlas/areas_from_map.py public/geo/nairobi-wards.json Nairobi data/atlas/nairobi/areas.csv
-cd data/atlas/nairobi
-printf 'id,election_id,seat,name,party,bloc\n' > candidates.csv
-printf 'candidate_id,area_key,votes\n' > results.csv
-printf 'election_id,area_key,registered,cast_votes,rejected_votes,valid_votes,source,source_url\n' > turnout.csv
-printf 'year,area_key,registered,source,source_url\n' > register.csv
-printf 'area_key,year,total,adults,young_adults,source,method\n' > population.csv
-printf 'check,election_id,area_key,candidate_id,difference,reason\n' > known-differences.csv
-cd ../../..
-[ -f data/atlas/blocs.csv ] || printf 'year,party,bloc,source,source_url\n' > data/atlas/blocs.csv
-npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi | head -1
-npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi | grep Checks
-```
+- [ ] **Step 5: MP in each of the 17 constituencies,** 2022, then 2017, then 2013: candidates
+      with seat `nairobi/<constituency>`, results at the constituency, and the MP race's turnout
+      there (Form 35B or published constituency results). Run the data test after each
+      election.
 
-Expected: `Nairobi: 1 county, 17 constituencies, 85 wards`, then `Checks: all pass` (empty files pass:
-nothing is wrong with nothing). `areas.csv` has 104 lines. The `[ -f ... ] ||` keeps a `blocs.csv`
-that already has rows.
+- [ ] **Step 6: Registered voters by ward,** 2022, 2017, 2013, from IEBC's registers by county
+      assembly ward, in `nairobi/register.csv`. Run the data test.
 
-- [ ] **Step 3: Find the documents, and log each one before reading it**
-
-Use `WebSearch` (load it with ToolSearch if it is not listed) to find the publisher's own documents.
-Queries along the lines of "IEBC 2022 presidential election results by constituency Nairobi",
-"Kenya Gazette declaration of results governor Nairobi 2017", "IEBC registered voters per ward 2022
-Nairobi", "Registrar of Political Parties coalition 2013 Jubilee CORD parties". Search results only
-locate documents: the figures are read from the downloaded file, never from a snippet, a news report
-or a page summary.
-
-A source is IEBC (iebc.or.ke, forms.iebc.or.ke), the Kenya Gazette (Kenya Law's archive or the
-Gazette's own site), the Registrar of Political Parties, or WorldPop. Anything else is not a source:
-if only a secondary report can be found, the figure is a gap.
-
-For each document, add a row to the "Documents used" table in `data/atlas/SOURCES.md` before
-extracting anything: its title, publisher, publication date, URL, the file name it will be saved as
-under `data/atlas/_sources/nairobi/`, the date you retrieve it (YYYY-MM-DD), what is taken from it,
-the level of detail it gives (constituency, ward, county), and (after Step 4) its SHA-256. The title is what goes
-in the CSVs' `source` column, written "Publisher, title" and nothing else, so the screens can tag a
-figure with its publisher.
-
-- [ ] **Step 4: Download each document, and fingerprint it**
-
-Run, for each document:
-
-```bash
-curl -fL --max-time 600 -o "data/atlas/_sources/nairobi/<short-name>.<ext>" "<url>"
-sha256sum "data/atlas/_sources/nairobi/<short-name>.<ext>"
-file "data/atlas/_sources/nairobi/<short-name>.<ext>"
-```
-
-`-f` makes an HTTP error a failure instead of saving an error page; `file` confirms it is the
-PDF, spreadsheet or page it should be. Put the checksum, and the date you downloaded it, in
-`SOURCES.md`.
-
-- [ ] **Step 5: Read each document**
-
-Run: `pdftotext -layout data/atlas/_sources/nairobi/<short-name>.pdf data/atlas/_sources/nairobi/<short-name>.txt && wc -c data/atlas/_sources/nairobi/<short-name>.txt`
-
-Read the text. A spreadsheet or an HTML table is read with whatever parses it reliably (install the
-library into a virtual environment, not the system Python). If the text file is nearly empty the
-PDF is a scan and `pdftotext` has nothing to read: render the pages with
-`pdftoppm -r 150 -png <file>.pdf data/atlas/_sources/nairobi/<short-name>-page` and read the images.
-There is no OCR here, so transcribe only what is legible with certainty, into a CSV committed under
-`scripts/atlas/extract/` with a comment saying it is hand-transcribed and from which page; the sums
-in Step 9 are the safety net. A figure that cannot be read with confidence is left blank and
-becomes a gap.
-
-- [ ] **Step 6: Record the coalitions**
-
-Fill `data/atlas/blocs.csv` (`year,party,bloc,source,source_url`) from the Registrar's or the
-Gazette's lists: one row for each party that stood in Nairobi in each election and belonged to a
-coalition, with the coalition as `bloc`, and the same "Publisher, title" source as in `SOURCES.md`.
-Write each party as the results document spells it; a party spelt two ways needs a row for each. A
-party with no row stands as itself, and an independent (no party) as `Independent`, so leave those
-out. If a coalition's members cannot be established from a primary document, leave its parties out
-(they stand as themselves) and list that as a gap.
-
-- [ ] **Step 7: Write the extractors, and build the CSVs**
-
-Write Python scripts under `scripts/atlas/extract/`, named for what they read (for example
-`nairobi_2022_results.py`), that read `data/atlas/_sources/nairobi/` and write the county's CSVs, so
-every figure can be regenerated and audited. Each script owns the rows for its table and election and
-replaces any earlier ones, so running it twice changes nothing. They must:
-- build a candidate's `id` as `<election_id>/<seat>/<slug of the name>` with `slug.slugify`, where
-  `seat` is `kenya` for president, the county for governor and the constituency for MP;
-- give each candidate's `bloc` from `data/atlas/blocs.csv` (party to bloc), else the party, else
-  `Independent` for a blank party;
-- take area keys from `areas.csv`, matching the document's constituency names with `slugify` and
-  reporting any name that matches nothing instead of guessing;
-- leave a figure the document does not give blank, and write `0` only where the document says 0;
-- write a row for EVERY candidate of an election in every area where that election has votes, and a
-  turnout row (which carries the source) for every area that has votes: the checker refuses an area
-  where some candidates have votes and another has none, so that a candidate whose votes were not
-  found is never read as 0%. If a candidate's votes cannot be found for an area, find them, or leave
-  that election's rows out of the whole area so that it reads "not found yet", and log the gap;
-- write the presidential candidates (seat `kenya`) exactly as every other county does: they are in
-  every county's `candidates.csv`, each county's migration upserts them, and the checker refuses a
-  county that spells one differently from another (Nyeri copies Nairobi's rows for them);
-- set `source` and `source_url` exactly as in `SOURCES.md`.
-
-Run them, then `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi`.
-
-- [ ] **Step 8: Population from WorldPop**
-
-On WorldPop's hub find the age-and-sex structures for Kenya at 100 m for the latest year offered
-(if both a constrained and an unconstrained product are offered, pick one and say which and why in
-the Notes section of `SOURCES.md`). Download every GeoTIFF, one for each sex and age band (in the older series that is 36
-files: under 1, 1 to 4, then every five years up to 80 and over), into
-`data/atlas/_sources/worldpop-<year>/`, checksum them as one product
-(`sha256sum data/atlas/_sources/worldpop-<year>/*.tif > data/atlas/worldpop-<year>.sha256`, committed;
-the one row in `SOURCES.md` carries the SHA-256 of that manifest, `sha256sum data/atlas/worldpop-<year>.sha256`),
-and check the disk first
-(`df -h /home/user` should show several GB free). The script finds a grid by a file name like
-`ken_f_15_2025_....tif` (sex `f` or `m`, the band's first age, the year). It needs both sexes for age 0,
-age 1 and every fifth age after that up to 80 (or the series' top band if it goes further), and it
-refuses a set with any of them missing, naming the missing grids: count the files against the
-publisher's listing before you run it. If the names differ from the pattern, rename copies and leave
-the originals alone; if a complete set from another layout is refused, say so rather than editing the
-script. Look at the declared nodata value of the first grid (`rasterio.open(path).nodata`) and note it
-in the Notes section of `SOURCES.md`; the script leaves out pixels equal to it. Then:
-
-```bash
-python3 -m venv /tmp/gwvenv && /tmp/gwvenv/bin/pip install --quiet rasterio numpy
-/tmp/gwvenv/bin/python scripts/atlas/ward_population.py public/geo/nairobi-wards.json data/atlas/nairobi/areas.csv data/atlas/_sources/worldpop-<year> <year> "WorldPop, <the dataset's exact title and version>" data/atlas/nairobi/population.csv
-```
-
-Expected: 85 rows, `population.csv` with the same `source` text as in `SOURCES.md`. A ward with no
-people in the grids is an error, not a zero: the ward map may be in the wrong place.
-
-- [ ] **Step 9: Make it pass the checks**
-
-Run: `npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts 2>&1 | head -40`
-
-Each complaint names the file and row. Fix it at the source by re-reading the document, never by
-editing a number until a check stops complaining. When IEBC's own document disagrees with itself (its
-constituencies do not add up to its county total, or its valid and rejected votes do not make its
-cast), keep IEBC's figures as published and record the difference in
-`data/atlas/nairobi/known-differences.csv` with a reason that names the document; the report lists
-these for the user. Done is `data/atlas/nairobi passes` and `data/atlas/blocs.csv passes`.
-
-- [ ] **Step 10: Look at the report, and log the gaps**
-
-Run: `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi`
-
-For every gap the report shows (an election with no results, a year with no register, a constituency
-missing, a race whose candidates' votes fall short of the valid votes), add a row to the "Gaps" table
-in `SOURCES.md`: the county, what is missing, where it was looked for, and why it is missing (not
-published, published only as an image, behind a host that was blocked, not found).
-
-A shortfall needs care. If a candidate's row is missing in an area where other candidates of that
-election have votes, the checker refuses the county: find the figure, or leave that election's rows
-out of the whole area (every candidate), so that the atlas says "not found yet" and never reads a
-missing candidate as 0%. If every candidate is present and their votes still fall short of the
-valid votes, the document disagrees with itself: keep the figures as published and log it under
-Gaps as the document's own inconsistency, with both numbers.
-
-- [ ] **Step 11: Commit**
-
-```bash
-git add data/atlas scripts/atlas/extract
-git commit -m "Atlas data: Nairobi's results, turnout, registers and population, with sources" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
-
-`data/atlas/_sources/` is ignored, so only the CSVs, the extractors and the logs are committed. Check
-with `git status --short` that no downloaded document is staged.
+- [ ] **Step 7: Run** `npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts` (0 problems)
+      and `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts`; read `data/atlas/REPORT.md`
+      for Nairobi and check its gaps match what wasn't found.
+- [ ] **Step 8: Commit** `Atlas figures for Nairobi: results, turnout, registers and population, with their sources`.
 
 ---
 
-### Task 13: Gather Nyeri's figures
-
-The same research, with these differences. Read Task 12 first: its checks, rules and commands apply
-unchanged. The first load covers Nyeri County's six constituencies and Mathira's six wards, because
-Mathira's ward map is the only one in the repository.
+### Task 7: Nyeri's figures (Mathira's county)
 
 **Files:**
-- Create: `data/atlas/nyeri/areas.csv`, `candidates.csv`, `results.csv`, `turnout.csv`, `register.csv`, `population.csv`, `known-differences.csv`
-- Create: `scripts/atlas/extract/*.py` for the Nyeri documents
-- Modify: `data/atlas/blocs.csv` (parties and coalitions that stood in Nyeri and not Nairobi), `data/atlas/SOURCES.md`
+- Create: `data/atlas/nyeri/areas.csv`, `sources.csv`, `candidates.csv`, `results.csv`,
+  `turnout.csv`, `register.csv`, `population.csv` (and `known-differences.csv` if needed)
 
-**Interfaces:** As Task 12. Produces `data/atlas/nyeri/` that passes the checks together with
-`data/atlas/nairobi/` and the shared `data/atlas/blocs.csv`.
+**Interfaces:** As Task 6. Same rules.
 
-**What to find**, for Nyeri's six constituencies (Kieni, Mathira, Mukurweini, Nyeri Town, Othaya,
-Tetu):
-- **Results and turnout:** all nine elections, in all six constituencies, with the county total for
-  president and governor.
-- **Registers:** for Mathira's six wards (Iriaini, Karatina Town, Kirimukuyu, Konyu, Magutu, Ruguru)
-  where published, and constituency and county totals for all six constituencies where published.
-- **Population:** Mathira's six wards only (they are the only wards with shapes); a constituency's
-  or the county's population is the sum of its wards' and is left to the screens.
-
-- [ ] **Step 1: Check that the sources can be reached**
-
-Run the same loop as Task 12 Step 1. The same hosts apply.
-
-- [ ] **Step 2: Create the county's folder and its areas**
-
-Run:
+- [ ] **Step 1: Areas.** The county, its six constituencies, and Mathira's six wards (the only
+      Nyeri wards with a map):
 
 ```bash
-mkdir -p data/atlas/nyeri data/atlas/_sources/nyeri
-python3 scripts/atlas/areas_from_map.py public/geo/mathira-wards.json Nyeri data/atlas/nyeri/areas.csv --constituency Mathira --also Kieni --also Mukurweini --also "Nyeri Town" --also Othaya --also Tetu
-cd data/atlas/nyeri
-printf 'id,election_id,seat,name,party,bloc\n' > candidates.csv
-printf 'candidate_id,area_key,votes\n' > results.csv
-printf 'election_id,area_key,registered,cast_votes,rejected_votes,valid_votes,source,source_url\n' > turnout.csv
-printf 'year,area_key,registered,source,source_url\n' > register.csv
-printf 'area_key,year,total,adults,young_adults,source,method\n' > population.csv
-printf 'check,election_id,area_key,candidate_id,difference,reason\n' > known-differences.csv
-cd ../../..
-npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nyeri | head -1
-npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nyeri | grep Checks
+{ echo "key,level,name,parent,iebc_code"; echo "nyeri,county,Nyeri,kenya,019"; printf '%s\n' "nyeri/kieni,constituency,Kieni,nyeri," "nyeri/mukurweini,constituency,Mukurweini,nyeri," "nyeri/nyeri-town,constituency,Nyeri Town,nyeri," "nyeri/othaya,constituency,Othaya,nyeri," "nyeri/tetu,constituency,Tetu,nyeri,"; npx tsx --tsconfig tsconfig.json scripts/atlas/areas.ts public/geo/mathira-wards.json nyeri mathira | tail -n +2; } > data/atlas/nyeri/areas.csv
 ```
 
-Expected: `Nyeri: 1 county, 6 constituencies, 6 wards`, then `Checks: all pass`; `areas.csv` has 14 lines.
+  Check: 6 constituencies, 6 wards. Run the data test.
 
-- [ ] **Step 3: Find, log, download and read the documents**
-
-As Task 12 Steps 3 to 5, with `nyeri` in the paths. Documents that cover the whole country (a
-national results book, a national Gazette notice, the Registrar's coalition lists) are already in
-`SOURCES.md` from Nairobi if they were used there: log them once, and say in the "Taken from it"
-column that both counties use them.
-
-- [ ] **Step 4: Record the coalitions, and extract**
-
-Add to `data/atlas/blocs.csv` any party that stood in Nyeri and is not there yet (Task 12 Step 6
-applies). Write the Nyeri extractors as in Task 12 Step 7; reuse Nairobi's where the documents have
-the same layout, with the county as a parameter.
-
-- [ ] **Step 5: Population from WorldPop**
-
-The grids are already in `data/atlas/_sources/worldpop-<year>/` from Task 12. Run:
-
-```bash
-/tmp/gwvenv/bin/python scripts/atlas/ward_population.py public/geo/mathira-wards.json data/atlas/nyeri/areas.csv data/atlas/_sources/worldpop-<year> <year> "WorldPop, <the dataset's exact title and version>" data/atlas/nyeri/population.csv
-```
-
-Expected: 6 rows.
-
-- [ ] **Step 6: Make it pass the checks, then look at the report and log the gaps**
-
-As Task 12 Steps 9 and 10. Done is `data/atlas/nyeri passes` with Nairobi still passing, and
-`data/atlas/blocs.csv passes`. Expect more gaps here than in Nairobi (only Mathira has wards); list
-them honestly.
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add data/atlas scripts/atlas/extract
-git commit -m "Atlas data: Nyeri's results, turnout, registers and Mathira's population, with sources" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-```
+- [ ] **Step 2: Population:** `npx tsx --tsconfig tsconfig.json scripts/atlas/population.ts
+      public/geo/mathira-wards.json nyeri data/atlas/nyeri/population.csv mathira`. Run the data
+      test.
+- [ ] **Step 3: Governor and president in Nyeri, by constituency and for the county,** 2022,
+      2017, 2013, as Task 6 Step 4 (governor seat `nyeri`).
+- [ ] **Step 4: MP in each of the six constituencies,** 2022, 2017, 2013, as Task 6 Step 5.
+- [ ] **Step 5: Registered voters in Mathira's wards,** 2022, 2017, 2013.
+- [ ] **Step 6: Run** the data test (0 problems) and the report; read Nyeri's section.
+- [ ] **Step 7: Commit** `Atlas figures for Nyeri: results, turnout, Mathira's registers and population, with their sources`.
 
 ---
 
-### Task 14: The data report, for the user to read
-
-**This task ends with a stop.** The spec promises that before any screen work the user gets a report
-of what was found and where. Nothing after this task starts until they have read it and answered.
-
-**Files:** none. The report is a message to the user, built from files already committed.
-
-- [ ] **Step 1: Run the report and every check**
-
-Run: `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts nairobi nyeri`
-
-Expected: for each county the report, then `Checks: all pass`. If it says otherwise, go back to Task
-12 or 13: the user does not read a report on files that fail their own checks.
-
-Run: `npx tsx --tsconfig tsconfig.json tests/atlas-data.test.ts | tail -1`
-
-Expected: `0 failed`.
-
-- [ ] **Step 2: Read `data/atlas/SOURCES.md`**
-
-Every document has a row with its URL, saved file name, retrieval date and checksum; every gap has a
-row with its county, where it was looked for and why it is missing; the Notes section records the
-judgment calls. A document used in a CSV and absent from `SOURCES.md`, or a blank figure with
-no gap row, is a defect: fix it before reporting.
-
-- [ ] **Step 3: Write the message**
-
-In plain language, in this order, short enough to read on a phone, with the full report pasted
-beneath it:
-
-```
-Atlas data report: Nairobi and Nyeri
-
-Found: <the report's counts, in a sentence: which elections and years are complete, which are partial>
-Where it is from: <N documents; list their titles and publishers; data/atlas/SOURCES.md has the links and checksums>
-Not found: <each gap, one line: what, where it was looked for, why it is missing>
-IEBC's own inconsistencies, kept as published: <the recorded differences, or "none">
-Coalitions: <which parties are in which coalition for each election, from data/atlas/blocs.csv; anything uncertain>
-Judgment calls: <from the Notes section of SOURCES.md: for example which WorldPop product and version, and why; any name spelt two ways>
-Question: Is this enough to build the Elections section on, or is there something to chase first?
-```
-
-Then the report output, unedited.
-
-- [ ] **Step 4: Stop**
-
-Send the message and end the turn. Do not generate the county migrations, and do not begin the
-second plan, until the user answers. If they name something to chase, go back to Task 12 or 13 for
-that gap alone and report again.
-
----
-
-### Task 15: The county migrations
-
-**Gate: the user has read the report and said the data is enough.** Not before.
+### Task 8: Load the figures, and the report for the user
 
 **Files:**
-- Create: `supabase/migrations/20261007100000_atlas_nairobi.sql`
-- Create: `supabase/migrations/20261007100100_atlas_nyeri.sql`
-- Create: `tests/sql/atlas-counties.test.sql`
+- Create: `supabase/migrations/<stamp>_atlas_first_counties.sql` (written by the script;
+  `<stamp>` is the UTC time it is built, `YYYYMMDDHHMMSS`, later than `20261007090000`),
+  `data/atlas/REPORT.md`
+- Modify: `tests/sql/atlas.test.sql`
 
-**Interfaces:** Consumes `scripts/atlas/build_sql.py` and the two counties' files. Produces two data
-migrations that sort after schema 22 and change no schema, and a test that loading them again
-changes nothing. Any later timestamp is fine if the date has moved on; they must sort after
-`20261007090000`.
+**Interfaces:** Consumes everything above.
 
-- [ ] **Step 1: Build the two migrations**
-
-Run:
-
-```bash
-python3 scripts/atlas/build_sql.py data/atlas/nairobi Nairobi supabase/migrations/20261007100000_atlas_nairobi.sql
-python3 scripts/atlas/build_sql.py data/atlas/nyeri Nyeri supabase/migrations/20261007100100_atlas_nyeri.sql
-```
-
-Expected: no output, two files. Each opens with `-- Election atlas: <County>. Generated by ...` and
-a `-- atlas_<table>: N rows` line for every table that has rows. Compare those counts with the
-files:
-
-```bash
-for county in nairobi nyeri; do
-  echo "== $county"; grep -E "^-- atlas_" supabase/migrations/*_atlas_$county.sql
-  for t in areas candidates results turnout register population; do
-    printf "%-11s csv rows: %s\n" $t $(( $(grep -c . data/atlas/$county/$t.csv) - 1 ))
-  done
-done
-```
-
-Each `-- atlas_<table>: N rows` equals that file's csv rows.
-
-- [ ] **Step 2: Write the test that loading again changes nothing**
-
-The runner has already applied both migrations once when this test starts. The test applies them
-again and checks that no table changed, and that the areas are all there (Nairobi is 1 county, 17
-constituencies and 85 wards: 103 areas; Nyeri is 1, 6 and 6: 13).
-
-Create `tests/sql/atlas-counties.test.sql`:
+- [ ] **Step 1: Write the failing test.** Append to `tests/sql/atlas.test.sql`:
 
 ```sql
--- The county migrations: the areas are all there, and loading them again changes nothing. Run with
--- tests/sql/run.sh; each test rolls back.
-
--- test: the areas are there
+-- test: the first counties' figures are loaded
 do $$ begin
-  assert (select count(*) from public.atlas_areas where key = 'nairobi' or key like 'nairobi/%') = 103, 'Nairobi''s areas';
-  assert (select count(*) from public.atlas_areas where key = 'nyeri' or key like 'nyeri/%') = 13, 'Nyeri''s areas';
+  assert (select count(*) from public.atlas_areas where level = 'constituency' and parent in ('nairobi', 'nyeri')) = 23,
+    'Nairobi''s 17 and Nyeri''s 6 constituencies';
+  assert (select count(*) from public.atlas_areas where level = 'ward' and parent like 'nairobi/%') = 85, 'Nairobi''s 85 wards';
+  assert exists (select 1 from public.atlas_results), 'and some results';
 end $$;
-
--- test: loading the counties again changes nothing
-begin;
-create temp table loaded as
-  select (select count(*) from public.atlas_areas) as areas,
-         (select count(*) from public.atlas_candidates) as candidates,
-         (select count(*) from public.atlas_results) as results,
-         (select count(*) from public.atlas_turnout) as turnout,
-         (select count(*) from public.atlas_register) as register,
-         (select count(*) from public.atlas_population) as population,
-         (select coalesce(sum(votes), 0) from public.atlas_results) as votes;
-\ir ../../supabase/migrations/20261007100000_atlas_nairobi.sql
-\ir ../../supabase/migrations/20261007100100_atlas_nyeri.sql
-do $$ begin
-  assert (select areas from loaded) = (select count(*) from public.atlas_areas), 'areas';
-  assert (select candidates from loaded) = (select count(*) from public.atlas_candidates), 'candidates';
-  assert (select results from loaded) = (select count(*) from public.atlas_results), 'results';
-  assert (select turnout from loaded) = (select count(*) from public.atlas_turnout), 'turnout';
-  assert (select register from loaded) = (select count(*) from public.atlas_register), 'registers';
-  assert (select population from loaded) = (select count(*) from public.atlas_population), 'population';
-  assert (select votes from loaded) = (select coalesce(sum(votes), 0) from public.atlas_results), 'votes';
-end $$;
-rollback;
 ```
 
-- [ ] **Step 3: Run the SQL suite**
-
-Run: `runuser -u nobody -- env PATH="/usr/lib/postgresql/16/bin:$PATH" HOME=/tmp bash tests/sql/run.sh 2>&1 | cut -c1-140`
-
-Expected: `ok   39 migrations apply cleanly`, every test file `ok`, including
-`ok   tests/sql/atlas-counties.test.sql (2 tests)`.
-
-If a migration fails to apply, the message names the row; the file is wrong, not the migration:
-go back to the data, fix it there and build again.
-
-- [ ] **Step 4: Run every test that runs here**
-
-Run: `for t in tests/atlas-*.test.ts; do printf "%-34s" $t; npx -y tsx --tsconfig tsconfig.json $t 2>&1 | tail -1; done`
-
-Expected: every line ends `0 failed` or `passed`. The `atlas-data` count now includes both counties.
-
-- [ ] **Step 5: Commit, and push the branch**
-
-Nothing is applied to the live database and nothing goes to `main`: the user applies migrations at
-the release, with their OK, before the code that needs them.
-
-```bash
-git add supabase/migrations/20261007100000_atlas_nairobi.sql supabase/migrations/20261007100100_atlas_nyeri.sql tests/sql/atlas-counties.test.sql
-git commit -m "Atlas data: the Nairobi and Nyeri migrations" -m "Co-Authored-By: Claude <noreply@anthropic.com>"
-git push -u origin claude/local-folder-access-qo9pew
-```
-
-- [ ] **Step 6: Hand over to the second plan**
-
-Tell the user what is done and what is next: schema 22, the rules and both counties' data are on
-the branch, tested, unapplied. The next piece is the Elections section, Voters, Home, the diary and
-the War room (spec steps 4 to 6), planned against what the report showed. Say that applying the
-migrations is theirs to do, at the release, with their OK.
-
----
-
-## Spec coverage
-
-| Spec | Where it is built |
-|------|-------------------|
-| 1. The shared atlas: the seven tables, keys, the deliberate exception to `campaign_id` | Task 1 |
-| 2. Each campaign's own: home area, sides, notes; who reads and writes | Task 1 |
-| 3. Files: the six CSVs and `SOURCES.md` | Tasks 7, 9, 11, 12, 13 |
-| 3. Loading: idempotent upserts, one migration per county | Tasks 7, 15 |
-| 3. Checks: sums, shares, cast, valid and rejected, parents, ward maps | Task 8 |
-| 3. Population from WorldPop | Tasks 10, 12, 13 |
-| 3. First load, and the report to the user | Tasks 12, 13, 14, 15 |
-| 4. Calculations: measures, lean, swing, register, what to do, votes within reach, wards before station data, formatting and tags | Tasks 2 to 6 |
-| Privacy and the law | Global Constraints; Task 1's header; `data/atlas/README.md` |
-| Testing: the calculations, the data checks, the SQL | Tasks 1 to 8 |
-| Build order, steps 1 to 3 | Tasks 1, then 12 to 15 (data), then 2 to 6 (calculations) |
-
-Not in this plan, by the spec's own two-plan split: section 5 (the Elections section, its address
-rules, the print brief and the setup panel), section 6 (Voters, Home, the diary, the War room), the
-Errors section's screens, the campaign's own race as the default, and the look in the preview. The
-second plan covers them once the user has seen what was found.
+- [ ] **Step 2: Run** `bash tests/sql/run.sh`. Expected: FAIL in `atlas.test.sql` (0
+      constituencies).
+- [ ] **Step 3: Build the migration:**
+      `npx tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts "supabase/migrations/$(date -u +%Y%m%d%H%M%S)_atlas_first_counties.sql" kenya nairobi nyeri`.
+      Expected: `wrote …`.
+- [ ] **Step 4: Run** `npm test`. Expected: every test passes, the SQL tests applying the new
+      migration. Then `npx tsx --tsconfig tsconfig.json scripts/atlas/report.ts`.
+- [ ] **Step 5: Commit** `The first counties' figures, loaded, with the report of what was found`.
+- [ ] **Step 6: Report to the user,** from `data/atlas/REPORT.md`: what is loaded for each
+      county and election, what is missing and why (not published, not found), which figures
+      came from a media tally or open dataset rather than IEBC, and the known differences in
+      IEBC's own documents. Ask whether to fill any gap differently before part 2 (the screens)
+      is planned. Nothing is pushed.

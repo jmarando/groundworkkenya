@@ -49,15 +49,15 @@ missing.
 
 ## 1. The shared atlas (public facts)
 
-Terms: in the atlas an *election* is one race in one general election, so `2022-president` is
-an election; the three general elections (2013, 2017, 2022) with three races each make nine.
+Terms: in the atlas an _election_ is one race in one general election, so `2022-president` is
+an election; the three general elections (2013, 2017 and 2022) with three races each make nine.
 
 Areas are keyed by a path of slugs, so a key reads as a place and joins the ward maps:
-`kenya`, `nairobi`, `nairobi/dagoretti-north`, `nairobi/dagoretti-north/kileleshwa`. County and
-constituency slugs are the IEBC name lower-cased, spaces as hyphens, punctuation dropped
-(`Lang'ata` becomes `langata`). A ward's slug is the one in `public/geo/*-wards.json` and in
-each campaign's `wards.slug`. Nairobi's ward map names each ward's constituency; Mathira's
-doesn't, so `areas.csv` is what says which constituency a ward is in.
+`kenya`, `nairobi`, `nairobi/dagoretti-north`, `nairobi/dagoretti-north/kileleshwa`. Ward slugs
+are the ones in `public/geo/*-wards.json` and in each campaign's `wards.slug`; a ward sits under
+the constituency its ward map names (Mathira's map names none, so `areas.csv` says).
+
+- `atlas_sources`: `id`, `title`, `publisher`, `url`, `note`: every document a figure comes from.
 
 - `atlas_areas`: `key` (primary), `level` (`country`, `county`, `constituency`, `ward`), `name`,
   `parent` (a key; null for `kenya`), `iebc_code` (when known).
@@ -65,34 +65,35 @@ doesn't, so `areas.csv` is what says which constituency a ward is in.
   (`president`, `governor`, `mp`), `held_on`, `note`. The 2017 presidential note says it is the
   8 August vote, annulled by the Supreme Court; the 26 October re-run was boycotted in
   opposition areas, so it says little about lean and is not loaded.
-- `atlas_candidates`: `id` (election, seat and the name's slug, as in
-  `2022-governor/nairobi/johnson-sakaja`), `election_id`, `seat` (the area contested: `kenya`, a
-  county or a constituency), `name`, `party`, `bloc` (the coalition the party stood in, or the
-  party where there was none: e.g. 2013 Jubilee and CORD, 2017 Jubilee and NASA, 2022 Kenya Kwanza
-  and Azimio; `data/atlas/blocs.csv` records it). Unique by election, seat and name.
+- `atlas_candidates`: `id` (`<election>:<seat>:<the name's slug>`), `election_id`, `seat` (the
+  area contested: `kenya`, a county or a constituency), `name`, `party`, `bloc`. For president
+  and governor the bloc is the coalition the party stood in (2013 Jubilee and CORD, 2017 Jubilee
+  and NASA, 2022 Kenya Kwanza and Azimio), as `data/atlas/blocs.csv` records it, else the party.
+  For MP it is the party: coalition partners stood against each other. An independent is
+  `Independent: <name>`. Unique by election, seat and name.
 - `atlas_results`: `candidate_id`, `area_key` (where the votes were counted: a county or a
   constituency now; wards and polling centres later), `votes`. Primary key: candidate and area.
-- `atlas_turnout`: `election_id`, `area_key`, `registered`, `cast_votes`, `rejected_votes`,
-  `valid_votes` (each may be missing; `cast` itself is a reserved word in SQL), `source` (the
-  document, written "Publisher, title"), `source_url`. Checks: cast ≤ registered, valid ≤ cast.
-- `atlas_register`: `year`, `area_key`, `registered`, `source`, `source_url`: registered voters
-  by ward (and above) for each election year, where IEBC published them.
+- `atlas_turnout`: `election_id`, `area_key`, `registered`, `cast_votes` (`cast` is a reserved
+  word in SQL), `rejected`, `valid` (each may be missing), `source_id`. Checks: cast ≤
+  registered, valid ≤ cast.
+- `atlas_register`: `year`, `area_key`, `registered`, `source_id`: registered voters by ward
+  (and above) for each election year, where IEBC published them.
 - `atlas_population`: `area_key`, `year`, `total`, `adults` (18+), `young_adults` (18–34),
-  `source`, `method`: estimates, never presented as counts.
+  `source_id` (its note says how they were worked out): estimates, never presented as counts.
 
 Every team member of any campaign reads the atlas; no campaign writes it (only migrations
 and the service role do). This is a deliberate exception to "every campaign table has a
-campaign_id": the atlas holds only public facts that are the same for everyone. The seven
-atlas tables join the list of tables with no campaign in `tests/sql/access.test.sql`, which
-otherwise fails on them, and each has row level security on.
+campaign_id": the atlas holds only public facts that are the same for everyone. The atlas
+tables join the list of tables with no campaign in `tests/sql/access.test.sql`, which otherwise
+fails on them.
 
 ## 2. Each campaign's own
 
 - `atlas_settings`: the campaign's home area (an atlas key: a constituency for an MP, a county
   for a governor, `kenya` for a presidential campaign).
-- `atlas_sides`: for each past election (a year and a race, nine in all), the bloc the
-  campaign counts as "our side" (for Sakaja, probably Jubilee in 2013 and 2017 and Kenya Kwanza
-  in 2022; politics has reshuffled since, so the campaign decides).
+- `atlas_sides`: for each of the nine past elections, the bloc the campaign counts as "our side" (for
+  Sakaja, probably Jubilee in 2013 and 2017 and Kenya Kwanza in 2022; politics has reshuffled
+  since, so the campaign decides).
 - `area_notes`: one note per area per campaign, up to 2,000 characters, with who changed it
   and when. The note box says notes are about places, never about a person's tribe.
 
@@ -101,71 +102,79 @@ the candidate or manager sets the home area and sides; staff write notes.
 
 ## 3. Data: sources, files and loading
 
-- **Files.** `data/atlas/<county>/` holds `areas.csv`, `candidates.csv`, `results.csv`,
-  `turnout.csv`, `register.csv` and `population.csv`. `data/atlas/blocs.csv` records which
-  coalition each party stood in, election by election, with its source, so a coalition has one
-  name in every county. `data/atlas/SOURCES.md` lists every document used (title, publisher,
-  URL, what was taken from it) and every gap. The repository is public: only public figures go
-  in.
-- **Loading.** `scripts/atlas/build_sql.py` turns a county's files into a migration of
-  idempotent upserts, so each new county is one more migration, applied before the code that
-  needs it, with the user's OK.
-- **Checks.** `tests/atlas-data.test.ts` reads every county's files and fails when:
-  constituency results don't add up to the county's, for president and governor (an MP race
-  has no county total), beyond a difference recorded in the county's own
-  `data/atlas/<county>/known-differences.csv` for IEBC's own inconsistencies; a share passes 100%;
-  cast passes registered; valid plus rejected differs from cast when all three are given; an
-  area's parent is missing; a ward slug isn't in its ward map.
-- **Population.** `scripts/atlas/ward_population.py` sums WorldPop's open age-and-sex
-  population grid (100 m squares) inside each ward's boundary, for the latest year WorldPop
-  publishes, and records the method. WorldPop's age bands are five years wide, so 18–34 is
-  two fifths of 15–19 plus 20–24, 25–29 and 30–34; adults likewise. The screens call these
-  estimates.
+- **Files.** `data/atlas/<folder>/` (one per county; `kenya` holds the country, the
+  presidential candidates and national totals) holds `sources.csv`, `areas.csv`,
+  `candidates.csv`, `results.csv`, `turnout.csv`, `register.csv`, `population.csv` and, where
+  needed, `known-differences.csv`. `data/atlas/blocs.csv` records which coalition each party
+  stood in, election by election, with its source, so a coalition has one name in every county.
+  `data/atlas/README.md` holds the rules; `data/atlas/REPORT.md` (written by
+  `scripts/atlas/report.ts`) lists what is loaded, every gap and every source. The repository
+  is public: only public figures go in.
+- **Loading.** `scripts/atlas/build-sql.ts` turns folders into a migration of idempotent
+  upserts once they pass the checks, so each new county is one more migration, applied before
+  the code that needs it, with the user's OK.
+- **Checks.** `checkAtlas` (`src/lib/atlas-files.ts`), run by `tests/atlas-data.test.ts` and by
+  the build, fails when: constituency results don't add up to the county's (beyond a
+  difference recorded in the folder's `known-differences.csv`, for IEBC's own
+  inconsistencies; a recorded difference says why, and goes once the figures add up); a share
+  passes 100%; cast passes registered; valid plus rejected differs from cast when all three are
+  given; an area's parent is missing; a ward slug isn't in its ward map, or sits under another
+  constituency than the map names; a candidate's bloc isn't the one the rules above give; a
+  figure's source isn't listed; or a value breaks one of the database's limits (lengths, years,
+  whole numbers the database holds), so a folder that passes can be applied.
+- **Population.** `scripts/atlas/population.ts` asks WorldPop's statistics API for its 2020
+  age-and-sex estimates (dataset wpgpas, 100 m squares) inside each ward's boundary. WorldPop's
+  age bands are five years wide, so 18–34 is two fifths of 15–19 plus 20–24, 25–29 and 30–34;
+  adults likewise. The screens call these estimates.
 - **First load.** Nairobi (county, 17 constituencies, 85 wards) and Nyeri (county, 6
   constituencies, Mathira's 6 wards): president, governor and MP results by constituency and
   county for 2013, 2017 and 2022; registered voters by ward for each year IEBC published
   them; population estimates per ward. Groundwork gathers the figures from IEBC's published
-  results documents and the Kenya Gazette. What isn't found stays missing and is listed in
-  `SOURCES.md`; before any screen work, the user gets a report of what was found and where
-  (`scripts/atlas/report.ts` writes it).
+  results documents and the Kenya Gazette; where those couldn't be had (IEBC's forms portal was
+  down), the user chose press figures, each flagged with its publisher. What isn't found stays
+  missing and is listed in `REPORT.md`; before any screen work, the user gets the report.
 
-## 4. Calculations (`src/lib/atlas/`, one import: `@/lib/atlas`)
+## 4. Calculations (`src/lib/atlas.ts`)
 
 Pure and tested. For an area, an election and the campaign's side:
 
 - **Turnout:** cast ÷ registered; missing when either is.
 - **Share** of a bloc: its votes ÷ valid votes (valid is the sum of candidates' votes when the
   document doesn't give it). **Our share** uses the campaign's side for that election.
+  Where a document lists only some candidates and no valid total (press reports often give
+  the top two), shares are "of the candidates listed" and say so.
 - **Margin:** our share minus the strongest other bloc's share.
 - **Lean:** the margin read as a side: ahead leans ours, behind leans theirs. The map shades
-  it from theirs to ours.
-- **Swing:** our share in one election minus our share in the same race at the previous general
-  election, in points; missing unless both are there (so never for 2013).
+  it from behind by 30 points or more to ahead by 30 or more.
+- **Swing:** our share in one election minus our share in the same race at the previous
+  general election, in points; missing unless both are there (so never for 2013, and never
+  against 2013 when 2017 is missing).
 - **Register growth:** registered voters now minus at the last election, and as a share.
-- **Not yet registered (estimate):** adults minus registered voters (never below zero). It
-  uses the latest register and the latest population estimate, which can be from different
-  years, so the screens name both years.
+- **Not yet registered (estimate):** adults minus registered voters (never below zero). It sets
+  the latest population estimate (2020) against the latest register (2022), so the screens name
+  both years; where the register passes the estimate, it says the estimate can't tell.
 - **Young share (estimate):** 18–34 as a share of the area's adults. It describes the area's
   adults, not who is unregistered: nothing says how old the unregistered are.
 - **What to do**, first match wins, each with a one-line reason built from the numbers:
   1. **Mobilise:** our share is 50% or more and turnout is more than 3 points below the parent
-     area's (constituency against county; ward against constituency once wards have results of
-     their own). Skipped when either turnout is missing.
+     area's (constituency against county; ward against constituency once wards have results
+     of their own). Skipped when either turnout is missing.
   2. **Hold:** our share is 60% or more.
   3. **Cut the gap:** we trail the strongest other bloc by more than 10 points.
   4. **Persuade:** the margin is within 10 points either way (10 included), or the last swing
      was 10 points or more either way.
   5. **Lean ours:** anything else: we are ahead by more than 10 points, short of Hold.
-  The rules follow who is ahead, not the share alone, so a crowded race (45% to 30%) reads
-  Lean ours and a narrow lead on a small share (38% to 30%) reads Persuade. Being behind has
-  no rule of its own: within 10 points is Persuade and beyond that is Cut the gap.
-  Without a side for that election the answer is "Set your side first".
+     The rules follow who is ahead, not the share alone, so a crowded race (45% to 30%) reads
+     Lean ours and a narrow lead on a small share (38% to 30%) reads Persuade. Being behind has
+     no rule of its own: within 10 points is Persuade and beyond that is Cut the gap.
+     Without a side for that election the answer is "Set your side first".
 - **Register flag:** an estimated quarter or more of the area's adults aren't registered.
 - **Votes within reach**, shown as two parts with their sums:
-  - *Turnout:* (the 75th-percentile turnout among the area's siblings, itself included, by
+  - _Turnout:_ (the 75th-percentile turnout among the area's siblings, itself included, by
     nearest rank, − its turnout) × registered × our share, when positive; missing with fewer
-    than four siblings that have a turnout.
-  - *Persuasion:* 5% of valid votes (a 5-point swing to us).
+    than four places that have a turnout, and then the sum is the persuasion part alone and
+    says so.
+  - _Persuasion:_ 5% of valid votes (a 5-point swing to us).
 - **Race:** the campaign's own race by default (MP, governor or president), switchable.
 - **Wards before station data** have no results of their own: they show their
   constituency's figures, labelled "constituency figure", and their own register, population
@@ -173,7 +182,7 @@ Pure and tested. For an area, an election and the campaign's side:
 
 Shares show to one decimal place, turnout as a whole percentage, votes with thousands
 separators, and every figure carries a tag such as "IEBC · constituency total · 2022" or
-"WorldPop estimate · 2025".
+"WorldPop estimate · 2020".
 
 ## 5. The Elections section (`/elections`)
 
@@ -186,14 +195,11 @@ separators, and every figure carries a tag such as "IEBC · constituency total �
 - **Picking an area:** a breadcrumb (Kenya › Nairobi › Dagoretti North › Kileleshwa) and the
   list of the area's children; an area that isn't loaded says "Not loaded yet" and names what
   is.
-- **Country page (`kenya`):** the loaded counties, each with the chosen race's result, turnout
-  and register, and what is loaded. No national total or ranking until every county is loaded
-  for that race: two counties are not the country.
 - **County page:** the race's result in each year (our share, turnout, the register); a map
   of the county with each constituency's wards shaded by the chosen measure (constituency
-  shapes are their wards, from the existing ward maps; a constituency with no ward map, five
-  of Nyeri's six for now, is listed and ranked but not drawn, and the map says which are
-  missing); constituencies ranked by votes within reach, each with what to do and why.
+  shapes are their wards, from the existing ward maps; where a county's map is partial, as
+  Nyeri's holds only Mathira, the map says so); constituencies ranked by votes within reach,
+  each with what to do and why.
 - **Constituency page:** the results of all three races in all three years (candidates,
   party, bloc, votes, share), the chosen race's turnout, register, swing, margin, what to do
   and votes within reach; its wards (register in each year, growth, population, the young
@@ -214,10 +220,9 @@ separators, and every figure carries a tag such as "IEBC · constituency total �
   reach, with what to do and the reason. The areas are those one level below the home area
   that have results of their own: counties for `kenya`, constituencies for a county. A
   constituency's wards have none until station data, so an MP's Home shows the constituency's
-  own what to do and votes within reach, and says ward results come with station data. "Last
-  time" comes from the atlas (the campaign's race in its home area) instead of the `lastTime`
-  hard-coded in the campaign's scenario file (`src/lib/demo/scenarios`); the Briefing's Polls
-  card reads the same value, so it follows.
+  own what to do and votes within reach, and says ward by ward comes with the station results.
+  "Last time" comes from the atlas (the campaign's race in its home area) instead of the demo
+  story.
 - **Diary:** each stop in a ward carries a one-line brief, e.g. "Persuade: 48% to us in 2022,
   turnout 41%".
 - **War room:** each constituency's tally shows its 2022 turnout beside today's.
@@ -244,10 +249,10 @@ version bump. Each county's figures are a separate migration produced by the scr
 
 ## Testing
 
-- `tests/atlas-measures.test.ts`, `atlas-register`, `atlas-format`, `atlas-advice` and
-  `atlas-scope`: every calculation, every what-to-do rule and its precedence, missing data, and
-  the reason lines.
-- `tests/atlas-data.test.ts`: the data checks in section 3.
+- `tests/atlas.test.ts`: every calculation, every what-to-do rule and its precedence, missing
+  data, and the reason lines.
+- `tests/atlas-files.test.ts`: each data check in section 3; `tests/atlas-data.test.ts` runs
+  them on the real files.
 - `tests/sql/atlas.test.sql`: teams read the atlas but can't write it; notes, settings and
   sides stay inside their campaign; only the candidate or manager sets the home area and
   sides.
@@ -265,8 +270,9 @@ version bump. Each county's figures are a separate migration produced by the scr
 5. Across the app: Voters, Home, the diary, the War room.
 6. A look at it.
 
-Two plans: the first (`docs/superpowers/plans/2026-10-07-election-atlas-1.md`) covers steps 1–3
-and ends with the data report; the second covers steps 4–6, once the user has seen what was found.
+Plans: the first (`docs/superpowers/plans/2026-10-07-election-atlas-1.md`) covers steps 1–3
+and ends with the data report; the second covers steps 4–6 once the user has seen what was
+found, in two parts (`-2a`, the Elections section; `-2b`, across the app).
 
 ## Not now
 

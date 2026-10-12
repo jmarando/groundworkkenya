@@ -122,22 +122,25 @@ export type Database = {
       area_notes: {
         Row: {
           area_key: string
+          body: string
           campaign_id: string
-          note: string
+          id: string
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           area_key: string
+          body: string
           campaign_id?: string
-          note: string
+          id?: string
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           area_key?: string
+          body?: string
           campaign_id?: string
-          note?: string
+          id?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -260,8 +263,7 @@ export type Database = {
         Row: {
           adults: number
           area_key: string
-          method: string
-          source: string
+          source_id: string
           total: number
           year: number
           young_adults: number
@@ -269,8 +271,7 @@ export type Database = {
         Insert: {
           adults: number
           area_key: string
-          method: string
-          source: string
+          source_id: string
           total: number
           year: number
           young_adults: number
@@ -278,8 +279,7 @@ export type Database = {
         Update: {
           adults?: number
           area_key?: string
-          method?: string
-          source?: string
+          source_id?: string
           total?: number
           year?: number
           young_adults?: number
@@ -292,28 +292,32 @@ export type Database = {
             referencedRelation: "atlas_areas"
             referencedColumns: ["key"]
           },
+          {
+            foreignKeyName: "atlas_population_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
         ]
       }
       atlas_register: {
         Row: {
           area_key: string
           registered: number
-          source: string
-          source_url: string | null
+          source_id: string
           year: number
         }
         Insert: {
           area_key: string
           registered: number
-          source: string
-          source_url?: string | null
+          source_id: string
           year: number
         }
         Update: {
           area_key?: string
           registered?: number
-          source?: string
-          source_url?: string | null
+          source_id?: string
           year?: number
         }
         Relationships: [
@@ -324,22 +328,32 @@ export type Database = {
             referencedRelation: "atlas_areas"
             referencedColumns: ["key"]
           },
+          {
+            foreignKeyName: "atlas_register_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
         ]
       }
       atlas_results: {
         Row: {
           area_key: string
           candidate_id: string
+          source_id: string
           votes: number
         }
         Insert: {
           area_key: string
           candidate_id: string
+          source_id: string
           votes: number
         }
         Update: {
           area_key?: string
           candidate_id?: string
+          source_id?: string
           votes?: number
         }
         Relationships: [
@@ -355,6 +369,13 @@ export type Database = {
             columns: ["candidate_id"]
             isOneToOne: false
             referencedRelation: "atlas_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_results_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -434,36 +455,57 @@ export type Database = {
           },
         ]
       }
+      atlas_sources: {
+        Row: {
+          id: string
+          note: string | null
+          publisher: string
+          title: string
+          url: string | null
+        }
+        Insert: {
+          id: string
+          note?: string | null
+          publisher: string
+          title: string
+          url?: string | null
+        }
+        Update: {
+          id?: string
+          note?: string | null
+          publisher?: string
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
       atlas_turnout: {
         Row: {
           area_key: string
           cast_votes: number | null
           election_id: string
           registered: number | null
-          rejected_votes: number | null
-          source: string
-          source_url: string | null
-          valid_votes: number | null
+          rejected: number | null
+          source_id: string
+          valid: number | null
         }
         Insert: {
           area_key: string
           cast_votes?: number | null
           election_id: string
           registered?: number | null
-          rejected_votes?: number | null
-          source: string
-          source_url?: string | null
-          valid_votes?: number | null
+          rejected?: number | null
+          source_id: string
+          valid?: number | null
         }
         Update: {
           area_key?: string
           cast_votes?: number | null
           election_id?: string
           registered?: number | null
-          rejected_votes?: number | null
-          source?: string
-          source_url?: string | null
-          valid_votes?: number | null
+          rejected?: number | null
+          source_id?: string
+          valid?: number | null
         }
         Relationships: [
           {
@@ -478,6 +520,13 @@ export type Database = {
             columns: ["election_id"]
             isOneToOne: false
             referencedRelation: "atlas_elections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atlas_turnout_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
             referencedColumns: ["id"]
           },
         ]
@@ -766,6 +815,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      canvass_streets: {
+        Row: {
+          agent_name: string | null
+          agent_phone: string | null
+          campaign_id: string
+          created_at: string
+          id: string
+          name: string
+          sort: number
+          updated_at: string
+          ward_id: string
+        }
+        Insert: {
+          agent_name?: string | null
+          agent_phone?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort?: number
+          updated_at?: string
+          ward_id: string
+        }
+        Update: {
+          agent_name?: string | null
+          agent_phone?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort?: number
+          updated_at?: string
+          ward_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvass_streets_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "canvass_streets_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contributions: {
         Row: {
@@ -1653,6 +1753,7 @@ export type Database = {
           consent_sms: boolean
           consent_whatsapp: boolean
           created_at: string
+          door_no: number | null
           email: string | null
           full_name: string | null
           id: string
@@ -1668,6 +1769,7 @@ export type Database = {
           placed_at: string | null
           segment: string | null
           source: string
+          street_id: string | null
           support_score: number
           tags: string[]
           updated_at: string
@@ -1680,6 +1782,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          door_no?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -1695,6 +1798,7 @@ export type Database = {
           placed_at?: string | null
           segment?: string | null
           source?: string
+          street_id?: string | null
           support_score?: number
           tags?: string[]
           updated_at?: string
@@ -1707,6 +1811,7 @@ export type Database = {
           consent_sms?: boolean
           consent_whatsapp?: boolean
           created_at?: string
+          door_no?: number | null
           email?: string | null
           full_name?: string | null
           id?: string
@@ -1722,6 +1827,7 @@ export type Database = {
           placed_at?: string | null
           segment?: string | null
           source?: string
+          street_id?: string | null
           support_score?: number
           tags?: string[]
           updated_at?: string
@@ -1733,6 +1839,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_street_id_fkey"
+            columns: ["street_id"]
+            isOneToOne: false
+            referencedRelation: "canvass_streets"
             referencedColumns: ["id"]
           },
           {
@@ -2844,6 +2957,20 @@ export type Database = {
         Returns: undefined
       }
       site_editor: { Args: never; Returns: string }
+      street_walk: {
+        Args: { _street_id: string }
+        Returns: {
+          door_no: number
+          full_name: string
+          id: string
+          last_contacted_at: string
+          last_outcome: string
+          last_visit_at: string
+          phone_masked: string
+          segment: string
+          support_score: number
+        }[]
+      }
       take_social_credits: {
         Args: { _budget: string; _cap: number; _n: number }
         Returns: boolean

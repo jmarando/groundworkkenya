@@ -54,6 +54,12 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
+- [x] Repair map zoom and simplify the ward-to-building workflow with clear in-map guidance and larger controls
+- [x] Surface one-person WhatsApp/message, poll and phone-call actions; keep the selected person's Call button prominent in the Inbox header
+- [x] Group inbox categories, repair conversation rows, separate message timestamps/status and compact calling controls
+- [x] Allow confirmed individual demo poll invitations without requiring stored WhatsApp consent; retain opt-outs and campaign isolation
+- [x] Add individual WhatsApp/email poll recipients, consent checks, and invitation tracking; dialog and validation verified without sending
+- [x] Upgrade Home readout voice and factual news-and-priorities format; verify playback and Stop
 - [x] Multi-campaign: Kalonzo, Sakaja, Waruru Gikandi; per-campaign roles; Campaigns + invites
 - [x] Campaign addresses connected; campaign-specific home and sign-in screens identify Kalonzo, Sakaja and Mathira
 - [x] Chrome tab and installed-app icons shared across the main site and all campaign addresses
@@ -61,3 +67,4 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Map outline per campaign (Mathira/Kalonzo still show Nairobi base map)
 - [x] Confirm the latest GitHub-synced changes are present in this workspace
 - [ ] Rate limit /p/* at the edge (Cloudflare rule) before a web poll goes wide
+- Street-by-street canvassing ✓

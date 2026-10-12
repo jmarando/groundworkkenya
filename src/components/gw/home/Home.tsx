@@ -75,7 +75,6 @@ export function Home({
       />
       {editing === "story" && <StoryEditor view={d.story} onClose={() => setEditing(null)} />}
       <RaceSection
-        s={s}
         mode={modes.race}
         race={d.race}
         mind={d.mind}

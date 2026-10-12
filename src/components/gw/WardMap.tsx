@@ -28,6 +28,8 @@ type Props = {
   wards: WardsGeo;
   /** Share of each ward's win number already found, 0-1, by ward slug. */
   coverage: Record<string, number>;
+  /** A fill colour per ward slug that takes the place of coverage (how places voted). */
+  wardColours?: Record<string, string> | undefined;
   selectedWard: string | null;
   wardBox: Box | null;
   buildings: BuildingCollection | null;
@@ -56,6 +58,8 @@ const NAIROBI: LngLatBoundsLike = [
 ];
 const EMPTY = { type: "FeatureCollection" as const, features: [] };
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
+const MIN_ZOOM = 10;
+const MAX_ZOOM = 19;
 
 function styleUrl(basemap: Basemap, key: string | null): string {
   if (!key) return OPENFREEMAP;
@@ -92,15 +96,20 @@ function addOverlays(map: MlMap, basemap: Basemap): void {
     source: "gw-wards",
     paint: {
       "fill-color": [
-        "interpolate",
-        ["linear"],
-        ["coalesce", ["feature-state", "cov"], 0],
-        0,
-        "hsl(0, 72%, 52%)",
-        0.5,
-        "hsl(40, 92%, 52%)",
-        1,
-        "hsl(142, 62%, 40%)",
+        "case",
+        ["!=", ["coalesce", ["feature-state", "fill"], ""], ""],
+        ["to-color", ["feature-state", "fill"]],
+        [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["feature-state", "cov"], 0],
+          0,
+          "hsl(0, 72%, 52%)",
+          0.5,
+          "hsl(40, 92%, 52%)",
+          1,
+          "hsl(142, 62%, 40%)",
+        ],
       ],
       "fill-opacity": [
         "case",
@@ -108,6 +117,8 @@ function addOverlays(map: MlMap, basemap: Basemap): void {
         0,
         ["boolean", ["feature-state", "dim"], false],
         0.1,
+        ["!=", ["coalesce", ["feature-state", "fill"], ""], ""],
+        0.6,
         0.36,
       ],
     },
@@ -203,12 +214,14 @@ function hasLayer(map: MlMap, id: string): boolean {
 export function WardMap(props: Props) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
+  const initialCameraSet = useRef(false);
   const latest = useRef(props);
   latest.current = props;
   // loaded: the first style is up (camera may move); styleRev: bumps after every
   // style load so data and states are put back on the new basemap.
   const [loaded, setLoaded] = useState(false);
   const [styleRev, setStyleRev] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(10);
   const [drag, setDrag] = useState<{
     x0: number;
     y0: number;
@@ -223,23 +236,35 @@ export function WardMap(props: Props) {
     void import("maplibre-gl").then((ml) => {
       if (dead || !host.current) return;
       ml.setWorkerUrl(maplibreWorker);
+      const initialWard = latest.current.wardBox;
       map = new ml.Map({
         container: host.current,
         style: styleUrl(latest.current.basemap, latest.current.maptilerKey),
-        bounds: NAIROBI,
-        fitBoundsOptions: { padding: 24 },
+        bounds: initialWard
+          ? [
+              [initialWard.west, initialWard.south],
+              [initialWard.east, initialWard.north],
+            ]
+          : NAIROBI,
+        fitBoundsOptions: { padding: initialWard ? 36 : 24, maxZoom: 16.5 },
         attributionControl: { compact: true },
         dragRotate: false,
         pitchWithRotate: false,
-        maxZoom: 20,
+        minZoom: MIN_ZOOM,
+        maxZoom: MAX_ZOOM,
       });
       map.touchZoomRotate.disableRotation();
+      map.scrollZoom.enable();
+      map.doubleClickZoom.enable();
       map.addControl(new ml.ScaleControl({ maxWidth: 110, unit: "metric" }), "bottom-right");
       map.on("style.load", () => {
         if (!map) return;
         addOverlays(map, latest.current.basemap);
         setStyleRev((r) => r + 1);
         setLoaded(true);
+      });
+      map.on("zoom", () => {
+        if (map) setZoomLevel(map.getZoom());
       });
       map.on("error", (e) => {
         const status = (e.error as { status?: number } | undefined)?.status;
@@ -248,14 +273,14 @@ export function WardMap(props: Props) {
       map.on("click", (e) => {
         if (!map) return;
         const p = latest.current;
+        if (p.tool === "select") return;
         const b = hasLayer(map, "gw-buildings-fill")
           ? map.queryRenderedFeatures(e.point, { layers: ["gw-buildings-fill"] })[0]
           : undefined;
         if (b) {
           const id = String(b.properties?.["pc"] ?? "");
           if (!id) return;
-          if (p.tool === "select") p.onToggle(id);
-          else p.onBuilding(id);
+          p.onBuilding(id);
           return;
         }
         const w = hasLayer(map, "gw-wards-fill")
@@ -305,12 +330,13 @@ export function WardMap(props: Props) {
         { source: "gw-wards", id: slug },
         {
           cov: props.coverage[slug] ?? 0,
+          fill: props.wardColours?.[slug] ?? "",
           sel: slug === props.selectedWard,
           dim: Boolean(props.selectedWard) && slug !== props.selectedWard,
         },
       );
     }
-  }, [styleRev, props.wards, props.coverage, props.selectedWard]);
+  }, [styleRev, props.wards, props.coverage, props.wardColours, props.selectedWard]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -350,6 +376,10 @@ export function WardMap(props: Props) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
+    if (!initialCameraSet.current) {
+      initialCameraSet.current = true;
+      return;
+    }
     const b = props.wardBox;
     if (b) {
       map.fitBounds(
@@ -374,8 +404,10 @@ export function WardMap(props: Props) {
   function zoom(by: number) {
     const map = mapRef.current;
     if (!map) return;
-    if (by > 0) map.zoomIn();
-    else map.zoomOut();
+    map.easeTo({
+      zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, map.getZoom() + by)),
+      duration: 240,
+    });
   }
 
   function fit() {
@@ -401,6 +433,7 @@ export function WardMap(props: Props) {
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
   function boxDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!(e.target as HTMLElement).closest(".vmap-canvas")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = local(e);
     setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y, add: e.shiftKey });
@@ -432,45 +465,53 @@ export function WardMap(props: Props) {
   }
 
   return (
-    <div className={`vmap${props.tool === "select" ? " is-select" : ""}`}>
+    <div
+      className={`vmap${props.tool === "select" ? " is-select" : ""}`}
+      onPointerDown={props.tool === "select" ? boxDown : undefined}
+      onPointerMove={props.tool === "select" ? boxMove : undefined}
+      onPointerUp={props.tool === "select" ? boxUp : undefined}
+      onPointerCancel={props.tool === "select" ? () => setDrag(null) : undefined}
+    >
       <div ref={host} className="vmap-canvas" aria-label="Map of Nairobi's wards and buildings" />
-      {props.tool === "select" && (
-        <div
-          className="vmap-select"
-          onPointerDown={boxDown}
-          onPointerMove={boxMove}
-          onPointerUp={boxUp}
-          onPointerCancel={() => setDrag(null)}
-        >
-          {drag && (
-            <span
-              className="vmap-selbox"
-              style={{
-                left: Math.min(drag.x0, drag.x1),
-                top: Math.min(drag.y0, drag.y1),
-                width: Math.abs(drag.x1 - drag.x0),
-                height: Math.abs(drag.y1 - drag.y0),
-              }}
-            />
-          )}
-        </div>
+      {drag && (
+        <span
+          className="vmap-selbox"
+          style={{
+            left: Math.min(drag.x0, drag.x1),
+            top: Math.min(drag.y0, drag.y1),
+            width: Math.abs(drag.x1 - drag.x0),
+            height: Math.abs(drag.y1 - drag.y0),
+          }}
+        />
       )}
       {!loaded && <div className="vmap-loading meta">Loading the map…</div>}
       {props.children}
-      <div className="vglass vzoom">
-        <button type="button" aria-label="Zoom in" onClick={() => zoom(1)}>
+      <div className="vglass vzoom" aria-label="Map zoom controls">
+        <button
+          type="button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          disabled={!loaded || zoomLevel >= MAX_ZOOM - 0.01}
+          onClick={() => zoom(1)}
+        >
           +
         </button>
-        <button type="button" aria-label="Zoom out" onClick={() => zoom(-1)}>
+        <button
+          type="button"
+          aria-label="Zoom out"
+          title="Zoom out"
+          disabled={!loaded || zoomLevel <= MIN_ZOOM + 0.01}
+          onClick={() => zoom(-1)}
+        >
           −
         </button>
         <button
           type="button"
           aria-label={props.wardBox ? "Fit the ward" : "Fit the county"}
-          style={{ fontSize: 12 }}
+          title={props.wardBox ? "Show the whole ward" : "Show all wards"}
           onClick={fit}
         >
-          ⤢
+          <span aria-hidden="true">⌖</span>
         </button>
       </div>
       {props.maptilerKey && (

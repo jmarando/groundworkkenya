@@ -20,6 +20,7 @@ import { Route as AuthenticatedBroadcastRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
 import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authenticated/canvassing'
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
+import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
@@ -34,6 +35,7 @@ import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/t
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
 import { Route as AuthenticatedWebsiteRouteImport } from './routes/_authenticated/website'
+import { Route as ApiSpeechRouteImport } from './routes/api/speech'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
@@ -109,6 +111,11 @@ const AuthenticatedDiaryRoute = AuthenticatedDiaryRouteImport.update({
   path: '/diary',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
+  id: '/elections',
+  path: '/elections',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
   id: '/field',
   path: '/field',
@@ -179,6 +186,11 @@ const AuthenticatedWebsiteRoute = AuthenticatedWebsiteRouteImport.update({
   id: '/website',
   path: '/website',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiSpeechRoute = ApiSpeechRouteImport.update({
+  id: '/api/speech',
+  path: '/api/speech',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
@@ -295,6 +307,7 @@ export interface FileRoutesByFullPath {
   '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/diary': typeof AuthenticatedDiaryRoute
+  '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -309,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -341,6 +355,7 @@ export interface FileRoutesByTo {
   '/campaigns': typeof AuthenticatedCampaignsRoute
   '/canvassing': typeof AuthenticatedCanvassingRoute
   '/diary': typeof AuthenticatedDiaryRoute
+  '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
@@ -355,6 +370,7 @@ export interface FileRoutesByTo {
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -389,6 +405,7 @@ export interface FileRoutesById {
   '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
   '/_authenticated/canvassing': typeof AuthenticatedCanvassingRoute
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
+  '/_authenticated/elections': typeof AuthenticatedElectionsRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
@@ -403,6 +420,7 @@ export interface FileRoutesById {
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
   '/_authenticated/website': typeof AuthenticatedWebsiteRoute
+  '/api/speech': typeof ApiSpeechRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
   '/api/public/health': typeof ApiPublicHealthRoute
@@ -437,6 +455,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/canvassing'
     | '/diary'
+    | '/elections'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -451,6 +470,7 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -483,6 +503,7 @@ export interface FileRouteTypes {
     | '/campaigns'
     | '/canvassing'
     | '/diary'
+    | '/elections'
     | '/field'
     | '/finance'
     | '/foundations'
@@ -497,6 +518,7 @@ export interface FileRouteTypes {
     | '/voters'
     | '/warroom'
     | '/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -530,6 +552,7 @@ export interface FileRouteTypes {
     | '/_authenticated/campaigns'
     | '/_authenticated/canvassing'
     | '/_authenticated/diary'
+    | '/_authenticated/elections'
     | '/_authenticated/field'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
@@ -544,6 +567,7 @@ export interface FileRouteTypes {
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
     | '/_authenticated/website'
+    | '/api/speech'
     | '/p/$code'
     | '/s/$slug'
     | '/api/public/health'
@@ -572,6 +596,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PrivacyRoute: typeof PrivacyRoute
   SetPasswordRoute: typeof SetPasswordRoute
+  ApiSpeechRoute: typeof ApiSpeechRoute
   PCodeRoute: typeof PCodeRoute
   SSlugRoute: typeof SSlugRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
@@ -673,6 +698,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDiaryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/elections': {
+      id: '/_authenticated/elections'
+      path: '/elections'
+      fullPath: '/elections'
+      preLoaderRoute: typeof AuthenticatedElectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/field': {
       id: '/_authenticated/field'
       path: '/field'
@@ -770,6 +802,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/website'
       preLoaderRoute: typeof AuthenticatedWebsiteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/speech': {
+      id: '/api/speech'
+      path: '/api/speech'
+      fullPath: '/api/speech'
+      preLoaderRoute: typeof ApiSpeechRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/p/$code': {
       id: '/p/$code'
@@ -921,6 +960,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCampaignsRoute: typeof AuthenticatedCampaignsRoute
   AuthenticatedCanvassingRoute: typeof AuthenticatedCanvassingRoute
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
+  AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
@@ -944,6 +984,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCampaignsRoute: AuthenticatedCampaignsRoute,
   AuthenticatedCanvassingRoute: AuthenticatedCanvassingRoute,
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
+  AuthenticatedElectionsRoute: AuthenticatedElectionsRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,
@@ -969,6 +1010,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PrivacyRoute: PrivacyRoute,
   SetPasswordRoute: SetPasswordRoute,
+  ApiSpeechRoute: ApiSpeechRoute,
   PCodeRoute: PCodeRoute,
   SSlugRoute: SSlugRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,

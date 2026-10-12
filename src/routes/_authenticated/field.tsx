@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { FieldApp } from "@/components/gw/FieldApp";
+import { StreetPlan } from "@/components/gw/StreetPlan";
 import { getVoters } from "@/lib/console.functions";
 
 export const Route = createFileRoute("/_authenticated/field")({
@@ -48,7 +49,7 @@ function Field() {
             Built for the door, <span className="serif">not the desk.</span>
           </h1>
           <p className="meta">
-            Pick a ward, knock, tap what happened. Visits save on the phone when there is no signal
+            Pick a ward and your street, walk door by door, tap what happened. Visits save on the phone when there is no signal
             and sync when it comes back.
           </p>
         </div>
@@ -67,6 +68,14 @@ function Field() {
             <span className="mono">works without signal</span>
           </div>
           {data ? <FieldApp wards={allWards} /> : <p className="f-note">Loading wards…</p>}
+        </div>
+
+        <div className="card" style={{ minWidth: 0 }}>
+          <div className="card-head">
+            <h2>Street plan</h2>
+            <span className="mono">organisers assign streets</span>
+          </div>
+          {data ? <StreetPlan wards={allWards} /> : <p className="f-note">Loading wards…</p>}
         </div>
 
         <div className="card" style={{ minWidth: 0 }}>

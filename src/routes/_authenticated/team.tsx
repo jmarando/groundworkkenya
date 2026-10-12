@@ -20,6 +20,10 @@ export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({
     meta: [
       { title: "Team · Groundwork" },
+      { property: "og:title", content: "Team · Groundwork" },
+      { property: "og:description", content: "Who is on the campaign, what they can reach, and who is waiting to be let in." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
       {
         name: "description",
         content: "Who is on the campaign, what they can reach, and who is waiting to be let in.",

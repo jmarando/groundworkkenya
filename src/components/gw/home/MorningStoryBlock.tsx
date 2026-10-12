@@ -96,24 +96,30 @@ export function MorningStoryBlock({
           This morning&apos;s top stories
         </h2>
       )}
-      {st.also.length ? (
-        <>
-          {st.kind === "written" ? <h3 className="mb-sub">Also this morning</h3> : null}
-          <ul className="mb-news">
-            {st.also.map((n) => (
-              <li key={n.url}>
-                <p className="mb-news-meta">{n.source}</p>
-                <p className="mb-news-h">
-                  <a href={n.url} target="_blank" rel="noopener noreferrer">
-                    {n.title}
-                  </a>
-                </p>
-                {n.soWhat ? <p className="mb-news-so">{n.soWhat}</p> : null}
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
     </article>
+  );
+}
+
+/** The other headlines span Home beneath the lead story and diary. */
+export function MorningNews({ view }: { view: StoryView | null }) {
+  if (!view?.story.also.length) return null;
+  const st = view.story;
+  return (
+    <section aria-label={st.kind === "written" ? "Also this morning" : "Morning headlines"}>
+      {st.kind === "written" ? <h3 className="text-[15px] font-bold">Also this morning</h3> : null}
+      <ul className="mb-news grid grid-cols-1 gap-x-8 md:grid-cols-2">
+        {st.also.map((n) => (
+          <li key={n.url} className="min-w-0">
+            <p className="mb-news-meta">{n.source}</p>
+            <p className="mb-news-h break-words">
+              <a href={n.url} target="_blank" rel="noopener noreferrer">
+                {n.title}
+              </a>
+            </p>
+            {n.soWhat ? <p className="mb-news-so">{n.soWhat}</p> : null}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

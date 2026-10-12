@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +11,7 @@ export function CampaignSwitcher({ current }: { current: string | null }) {
   const fetchCampaigns = useServerFn(listCampaigns);
   const focus = useServerFn(focusCampaign);
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const { data } = useQuery({ queryKey: ["campaigns"], queryFn: () => fetchCampaigns() });
 
@@ -17,10 +19,11 @@ export function CampaignSwitcher({ current }: { current: string | null }) {
     setBusy(true);
     try {
       await focus({ data: { campaignId: id } });
-      // Everything on screen belonged to the old campaign.
+      // Everything on screen belonged to the old campaign. Reset (not remove)
+      // so queries still on screen refetch at once, then re-run route loaders.
       await queryClient.cancelQueries();
-      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== "campaigns" });
-      await queryClient.invalidateQueries();
+      await queryClient.resetQueries({ predicate: (q) => q.queryKey[0] !== "campaigns" });
+      await router.invalidate();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not switch campaign.");
     } finally {

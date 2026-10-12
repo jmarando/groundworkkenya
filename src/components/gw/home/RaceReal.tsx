@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 
+import { LastResultCard, MovesCard } from "@/components/gw/home/AtlasCards";
 import { PollChart } from "@/components/gw/home/PollChart";
 import { SearchCard } from "@/components/gw/home/SearchCard";
 import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
-import type { Scenario } from "@/lib/demo/types";
 import type { RaceView } from "@/lib/home";
 import {
   byRecency,
@@ -22,7 +22,6 @@ const nf = new Intl.NumberFormat("en-KE");
 
 /** The race as it stands: published polls, who's running, the week's issues, last time. */
 export function RaceReal({
-  s,
   race,
   mind,
   search,
@@ -30,7 +29,6 @@ export function RaceReal({
   onEdit,
   onRemovePoll,
 }: {
-  s: Scenario;
   race: RaceView;
   mind: TopOfMind;
   search: SearchRead | null;
@@ -51,7 +49,8 @@ export function RaceReal({
         <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
         <TopOfMindCard mind={mind} />
       </div>
-      {s.lastTime.official ? <OfficialResult s={s} /> : null}
+      <MovesCard />
+      <LastResultCard />
     </>
   );
 }
@@ -235,42 +234,6 @@ function RivalsCard({
       ) : (
         <p className="meta">No candidates on record yet.</p>
       )}
-    </section>
-  );
-}
-
-/** The last election's official result; the sample's lessons and what-if stay out. */
-export function OfficialResult({ s }: { s: Scenario }) {
-  const lt = s.lastTime;
-  const top = Math.max(...lt.results.map((r) => r.votes));
-  const total = lt.results.reduce((t, r) => t + r.votes, 0);
-  return (
-    <section className="card mb-last" aria-labelledby="home-last-h">
-      <div className="card-head">
-        <h2 id="home-last-h">Last time</h2>
-        <span className="mb-src is-official">IEBC official</span>
-      </div>
-      <p className="mb-label">{lt.title}</p>
-      <ul className="mb-results">
-        {lt.results.map((r) => (
-          <li key={r.name}>
-            <span className="mb-results-n">{r.name}</span>
-            <span className="mb-results-bar" aria-hidden="true">
-              <i style={{ width: `${(r.votes / top) * 100}%` }} />
-            </span>
-            <b>{nf.format(r.votes)}</b>
-            <small className="dim">
-              {r.share !== undefined
-                ? `${r.share}%`
-                : `${((r.votes / total) * 100).toFixed(1)}% of top two`}
-            </small>
-          </li>
-        ))}
-      </ul>
-      <p className="mb-note">
-        {lt.turnout !== null ? `Turnout ${Math.round(lt.turnout * 1000) / 10}%. ` : ""}
-        {lt.source}.
-      </p>
     </section>
   );
 }

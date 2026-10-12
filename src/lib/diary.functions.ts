@@ -73,7 +73,8 @@ export type DiaryWeek = {
   days: string[];
   today: string;
   entries: DiaryEntry[];
-  wards: { id: string; name: string }[];
+  /** With the slug and constituency that place each ward in the election atlas. */
+  wards: { id: string; name: string; slug: string | null; constituency: string | null }[];
 };
 
 /** The week that holds `anyDay`, and the campaign's wards to file entries under. */
@@ -81,13 +82,18 @@ export async function loadWeek(sb: Sb, anyDay: string): Promise<DiaryWeek> {
   const days = weekOf(anyDay);
   const [entries, wards] = await Promise.all([
     loadDiary(sb, days[0]!, days[6]!),
-    sb.from("wards").select("id, name").order("name"),
+    sb.from("wards").select("id, name, slug, constituency").order("name"),
   ]);
   return {
     days,
     today: nairobiToday(),
     entries,
-    wards: (wards.data ?? []).map((w) => ({ id: String(w.id), name: String(w.name) })),
+    wards: (wards.data ?? []).map((w) => ({
+      id: String(w.id),
+      name: String(w.name),
+      slug: w.slug ? String(w.slug) : null,
+      constituency: w.constituency ? String(w.constituency) : null,
+    })),
   };
 }
 
