@@ -42,7 +42,7 @@ export function TodaySection({
     <section className="home-sec" aria-labelledby="home-today">
       <div className="morning-tools">
         <Button variant="ghost" size="sm" asChild><Link to="/archive" search={{ month: new Date().toISOString().slice(0, 7) }}><Archive /> News & diary archive</Link></Button>
-        {canEdit && !story && <Button variant="outline" size="sm" disabled={catchUp.isPending} onClick={() => catchUp.mutate()}><RefreshCw /> {catchUp.isPending ? "Checking…" : "Check morning run"}</Button>}
+        {canEdit && (!story || !story.story.from) && <Button variant="outline" size="sm" disabled={catchUp.isPending} onClick={() => catchUp.mutate()}><RefreshCw /> {catchUp.isPending ? "Checking…" : "Check morning run"}</Button>}
         {catchUp.isError && <p role="alert">{catchUp.error.message}</p>}
       </div>
       <div className="mb-three">

@@ -199,8 +199,11 @@ export async function runMorningStory(
   if (!claim.data) return out;
   out.ran = true;
   const { data: collection } = await sb.from("listening_jobs").select("status, paused_reason").eq("key", "listening_scan").maybeSingle();
-  const { data: aiJob } = await sb.from("listening_jobs").select("status, paused_reason").eq("key", "morning_story").maybeSingle();
-  let paused: string | null = aiJob?.status === "paused" ? aiJob.paused_reason : null;
+  let paused: string | null = null;
+  if (collection?.status === "paused" && /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))) {
+    await sb.from("listening_jobs").update({ status: "paused", paused_reason: collection.paused_reason, locked_until: null }).eq("key", JOB_KEY);
+    return out;
+  }
 
   const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(5);
   if (campaignError) throw new Error("Could not read campaigns for the morning briefing.");
@@ -211,7 +214,7 @@ export async function runMorningStory(
       .eq("campaign_id", c.id)
       .eq("day", day)
       .maybeSingle();
-    if (have && (have.written_by === "team" || Number(have.story?.from) > 0)) {
+    if (have && (have.written_by === "team" || have.story?.kind === "written" || Number(have.story?.from) > 0)) {
       out.kept++;
       continue;
     }

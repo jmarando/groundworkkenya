@@ -1989,6 +1989,7 @@ figure { margin: 0; }
 
 /* Top of mind: each issue with a bar for each source's share. */
 .home-mind { padding:24px 0; border-top:1px solid var(--border); }
+.home-mind h2,.home-rival-activity h2 { font-size:19px; font-weight:600; letter-spacing:0; }
 .home-mind-list { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 28px; }
 .home-mind-list > li { padding:18px 0; border-top:1px solid var(--border); min-width:0; }
 .home-mind-list > li:first-child { border-top:0; }

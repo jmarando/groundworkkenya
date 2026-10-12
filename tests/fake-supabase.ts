@@ -181,7 +181,11 @@ export function fakeSupabase(
         return q;
       },
       eq(c: string, v: unknown) {
-        filters.push((r) => r[c] === v);
+        filters.push((r) => {
+          const [column, key] = c.split("->>");
+          if (column && key) return String((r[column] as Row | undefined)?.[key]) === String(v);
+          return r[c] === v;
+        });
         return q;
       },
       neq(c: string, v: unknown) {
