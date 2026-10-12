@@ -221,12 +221,15 @@ export async function runMorningStory(
     const g = await gather(sb, c.id, now);
     if (!g.items.length) {
       out.quiet++;
-      if (!have) {
+      {
         const quiet = headlinesStory([]);
         quiet.summary = collection?.status === "paused"
           ? "News collection is paused. Today's briefing has no fresh sources; this does not mean there was no news. Open Listening to resolve the collection problem."
           : "No fresh source items were collected for this campaign. This morning's check is saved; new sources will be picked up on the next scheduled run.";
-        const { error } = await sb.from("morning_stories").upsert({ campaign_id: c.id, day, story: quiet, written_by: "groundwork", edited_by: null }, { onConflict: "campaign_id,day", ignoreDuplicates: true });
+        const quietRow = { campaign_id: c.id, day, story: quiet, written_by: "groundwork", edited_by: null };
+        const { error } = have
+          ? await sb.from("morning_stories").update(quietRow).eq("id", have.id).eq("written_by", "groundwork").eq("story->>from", "0")
+          : await sb.from("morning_stories").upsert(quietRow, { onConflict: "campaign_id,day", ignoreDuplicates: true });
         if (error) out.notes.push("A briefing status could not be stored.");
       }
       continue;
