@@ -135,6 +135,8 @@ export type PersonRow = {
   lastTouch: string | null;
   createdAt: string;
   notes: string | null;
+  /** Plus code of the house the field app placed them at; null when not placed. */
+  house: string | null;
 };
 
 export type PeopleData = {
@@ -159,7 +161,7 @@ export const getPeople = createServerFn({ method: "GET" })
         sb
           .from("people")
           .select(
-            "id, full_name, phone, ward_id, segment, source, support_score, tags, language, consent_sms, consent_whatsapp, consent_call, opted_out, last_contacted_at, created_at, notes",
+            "id, full_name, phone, ward_id, segment, source, support_score, tags, language, consent_sms, consent_whatsapp, consent_call, opted_out, last_contacted_at, created_at, notes, building_id",
           )
           .order("last_contacted_at", { ascending: false, nullsFirst: false })
           .range(from, to),
@@ -193,6 +195,7 @@ export const getPeople = createServerFn({ method: "GET" })
         lastTouch: (p.last_contacted_at as string | null) ?? null,
         createdAt: p.created_at as string,
         notes: p.notes,
+        house: p.building_id ?? null,
       };
     });
 

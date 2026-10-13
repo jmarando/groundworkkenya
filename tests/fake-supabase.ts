@@ -257,20 +257,48 @@ export function fakeSupabase(
     return q;
   }
 
-  const rpc = (name: string, args: Row = {}) => {
+  const call = (name: string, args: Row): Result => {
     if (name === "claim_morning_job") {
       const existing = rows("listening_jobs").find((j) => j["key"] === args["_key"]);
-      if (existing && (existing["status"] === "paused" || String(existing["locked_until"] ?? "") > String(args["_now"]))) return Promise.resolve({ data: false, error: null });
-      const lease = { key: args["_key"], status: "running", locked_until: new Date(Date.parse(String(args["_now"])) + 600_000).toISOString() };
-      if (existing) Object.assign(existing, lease); else rows("listening_jobs").push(lease);
-      return Promise.resolve({ data: true, error: null });
+      if (
+        existing &&
+        (existing["status"] === "paused" ||
+          String(existing["locked_until"] ?? "") > String(args["_now"]))
+      )
+        return { data: false, error: null };
+      const lease = {
+        key: args["_key"],
+        status: "running",
+        locked_until: new Date(Date.parse(String(args["_now"])) + 600_000).toISOString(),
+      };
+      if (existing) Object.assign(existing, lease);
+      else rows("listening_jobs").push(lease);
+      return { data: true, error: null };
     }
     const fn = rpcs[name];
-    return Promise.resolve(
-      fn
-        ? { data: fn(args), error: null }
-        : { data: null, error: { message: `no function ${name}` } },
-    );
+    return fn
+      ? { data: fn(args), error: null }
+      : { data: null, error: { message: `no function ${name}` } };
+  };
+
+  /** Runs the function now, as the database would; .range() pages a set it returns. */
+  const rpc = (name: string, args: Row = {}) => {
+    const result = call(name, args);
+    let page: [number, number] | null = null;
+    const q = {
+      range(from: number, to: number) {
+        page = [from, to];
+        return q;
+      },
+      then<T>(resolve: (r: Result) => T, reject?: (e: unknown) => T) {
+        const r =
+          page && Array.isArray(result.data)
+            ? { ...result, data: result.data.slice(page[0], page[1] + 1) }
+            : result;
+        return Promise.resolve(r).then(resolve, reject);
+      },
+    };
+    return q;
   };
 
   return { from, rpc, tables };
