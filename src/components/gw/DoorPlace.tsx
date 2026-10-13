@@ -1,16 +1,17 @@
 // Where the door is, as the agent sees it at the door: what the phone found,
-// and a small map drawn from the building outlines alone (no tiles, so it
-// works with no signal) to tap the right building.
+// and a small map drawn from the house outlines alone (no map tiles, so it
+// works with no signal) to tap the right house.
 
 import { useMemo, useState } from "react";
 
 import { type DoorPlaceState, type Fix } from "@/hooks/useDoorPlace";
+import type { HouseStatus } from "@/hooks/useHousesAround";
 import { buildingsNear, toLocalM, type Building, type LngLat, type Ring } from "@/lib/geo";
 
 /** How far around the agent the picker shows, in metres. */
 const PICK_RADIUS_M = 80;
 
-function describe(door: DoorPlaceState, outlines: "none" | "loading" | "ready"): string {
+function describe(door: DoorPlaceState, outlines: HouseStatus): string {
   const { geo, chosen } = door;
   if (door.skipped) return "Not placed on the map: this isn't their home.";
   if (geo.status === "none")
@@ -27,21 +28,13 @@ function describe(door: DoorPlaceState, outlines: "none" | "loading" | "ready"):
       ? `At the building you're in · GPS${within}`
       : `At the building ${Math.round(chosen.distanceM)} m from you · GPS${within}`;
   if (door.gpsOnly || outlines === "none") return `Placed by GPS${within}`;
-  if (outlines === "loading") return `Placed by GPS${within} · loading the ward's buildings…`;
+  if (outlines === "loading") return `Placed by GPS${within} · loading the houses around you…`;
   return `No building picked yet · GPS${within}. Tap Change to pick it.`;
 }
 
-export function DoorPlace({
-  door,
-  buildings,
-  outlines,
-}: {
-  door: DoorPlaceState;
-  buildings: Building[];
-  /** Whether this ward has building outlines, and whether they have arrived. */
-  outlines: "none" | "loading" | "ready";
-}) {
+export function DoorPlace({ door }: { door: DoorPlaceState }) {
   const [picking, setPicking] = useState(false);
+  const { buildings, status: outlines } = door.houses;
   const fix = door.geo.fix;
 
   return (
@@ -78,8 +71,8 @@ export function DoorPlace({
           ) : (
             <p className="f-note">
               {outlines === "loading"
-                ? "Loading the ward's buildings…"
-                : "This ward's buildings aren't on the map yet, so the visit is placed by GPS."}
+                ? "Loading the houses around you…"
+                : "This place isn't on the campaign's house map, so the visit is placed by GPS."}
             </p>
           )}
           <div className="dp-actions">

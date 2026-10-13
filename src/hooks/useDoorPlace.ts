@@ -1,11 +1,14 @@
 // Where the door is. While a visit is open the phone watches its GPS (which
-// needs no data signal) and matches the fix to a building outline, unless the
-// agent picks the building or says it isn't the person's home.
+// needs no data signal) and matches the fix to a house outline from the
+// campaign's house file, unless the agent picks the house or says it isn't
+// the person's home.
 
 import { useEffect, useMemo, useState } from "react";
 
+import { useHousesAround, type HouseStatus } from "@/hooks/useHousesAround";
 import type { Place } from "@/lib/field";
 import { distanceM, inPolygon, nearestBuilding, type Building, type LngLat } from "@/lib/geo";
+import type { MapArea } from "@/lib/map-areas";
 
 /** A fix vaguer than this doesn't pick a building on its own. */
 const AUTO_PICK_M = 50;
@@ -58,6 +61,8 @@ function useFix(): Geo {
 
 export type DoorPlaceState = {
   geo: Geo;
+  /** The houses around the phone, and whether they are known yet. */
+  houses: { buildings: Building[]; status: HouseStatus };
   /** The building the visit is recorded against, and how far the agent is from it. */
   chosen: { building: Building; distanceM: number } | null;
   /** The agent said their building isn't on the map: record the GPS point alone. */
@@ -103,18 +108,20 @@ export function resolvePlace(
   };
 }
 
-export function useDoorPlace(buildings: Building[]): DoorPlaceState {
+export function useDoorPlace(area: MapArea | null): DoorPlaceState {
   const geo = useFix();
+  const houses = useHousesAround(area, geo.fix ? [geo.fix.lng, geo.fix.lat] : null);
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
   const [skipped, setSkipped] = useState(false);
 
   const { chosen, place } = useMemo(
-    () => resolvePlace(geo.fix, buildings, picked, skipped),
-    [geo.fix, buildings, picked, skipped],
+    () => resolvePlace(geo.fix, houses.buildings, picked, skipped),
+    [geo.fix, houses.buildings, picked, skipped],
   );
 
   return {
     geo,
+    houses,
     chosen,
     gpsOnly: picked === null,
     skipped,

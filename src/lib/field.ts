@@ -49,7 +49,7 @@ export type Place = {
   lng: number;
   /** Metres, as the phone reports it; null if unknown. */
   accuracy: number | null;
-  /** Plus code of the building outline, from public/geo/buildings. */
+  /** Plus code of the house, from the area's house file (public/tiles). */
   buildingId: string | null;
 };
 
