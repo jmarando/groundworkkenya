@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { useHousesAround, type HouseStatus } from "@/hooks/useHousesAround";
+import { useHousesAround, type HousesAround } from "@/hooks/useHousesAround";
 import type { Place } from "@/lib/field";
 import { distanceM, inPolygon, nearestBuilding, type Building, type LngLat } from "@/lib/geo";
 import type { MapArea } from "@/lib/map-areas";
@@ -61,8 +61,8 @@ function useFix(): Geo {
 
 export type DoorPlaceState = {
   geo: Geo;
-  /** The houses around the phone, and whether they are known yet. */
-  houses: { buildings: Building[]; status: HouseStatus };
+  /** The houses around the phone, whether they are known yet, and whether all were read. */
+  houses: HousesAround;
   /** The building the visit is recorded against, and how far the agent is from it. */
   chosen: { building: Building; distanceM: number } | null;
   /** The agent said their building isn't on the map: record the GPS point alone. */
@@ -79,18 +79,22 @@ export type DoorPlaceState = {
 /**
  * The building and place a visit is recorded with. `picked` is undefined to
  * choose automatically, null for the GPS point alone, or the agent's choice.
+ * The automatic choice waits until `complete` (every tile around the phone is
+ * read): from half a neighbourhood the nearest house read may not be the
+ * nearest there is. The agent's own choice works from the houses read so far.
  */
 export function resolvePlace(
   fix: Fix | null,
   buildings: Building[],
   picked: string | null | undefined,
   skipped: boolean,
+  complete = true,
 ): { chosen: { building: Building; distanceM: number } | null; place: Place | null } {
   if (!fix) return { chosen: null, place: null };
   const at: LngLat = [fix.lng, fix.lat];
   let chosen: { building: Building; distanceM: number } | null = null;
   if (picked === undefined) {
-    if ((fix.accuracy ?? 0) <= AUTO_PICK_M) chosen = nearestBuilding(at, buildings);
+    if (complete && (fix.accuracy ?? 0) <= AUTO_PICK_M) chosen = nearestBuilding(at, buildings);
   } else if (picked !== null) {
     const b = buildings.find((x) => x.id === picked);
     if (b)
@@ -108,15 +112,19 @@ export function resolvePlace(
   };
 }
 
-export function useDoorPlace(area: MapArea | null): DoorPlaceState {
+/**
+ * `area` is the campaign's map area: null when it has none, so visits are
+ * placed by GPS alone; undefined while its map config hasn't arrived.
+ */
+export function useDoorPlace(area: MapArea | null | undefined): DoorPlaceState {
   const geo = useFix();
   const houses = useHousesAround(area, geo.fix ? [geo.fix.lng, geo.fix.lat] : null);
   const [picked, setPicked] = useState<string | null | undefined>(undefined);
   const [skipped, setSkipped] = useState(false);
 
   const { chosen, place } = useMemo(
-    () => resolvePlace(geo.fix, houses.buildings, picked, skipped),
-    [geo.fix, houses.buildings, picked, skipped],
+    () => resolvePlace(geo.fix, houses.buildings, picked, skipped, houses.complete),
+    [geo.fix, houses.buildings, picked, skipped, houses.complete],
   );
 
   return {

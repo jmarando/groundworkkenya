@@ -125,14 +125,15 @@ export function FieldApp({
 
   const ward = wards.find((w) => w.id === wardId);
 
-  // The campaign's map area, whose house file places a visit at a house.
+  // The campaign's map area, whose house file places a visit at a house. Undefined until the
+  // config arrives, which is not the same as null: a campaign with no map area.
   const fetchMapConfig = useServerFn(getMapConfig);
   const { data: mapConfig } = useQuery({
     queryKey: ["map-config"],
     queryFn: () => fetchMapConfig(),
     staleTime: Infinity,
   });
-  const area = mapAreaFor(mapConfig?.mapArea);
+  const area = mapConfig ? mapAreaFor(mapConfig.mapArea) : undefined;
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -422,8 +423,11 @@ function VisitSheet({
 }: {
   person: WalkEntry | null;
   wardId: string;
-  /** The campaign's map area; null when it has none, and visits are placed by GPS alone. */
-  area: MapArea | null;
+  /**
+   * The campaign's map area: null when it has none, and visits are placed by GPS alone;
+   * undefined while its map config hasn't arrived.
+   */
+  area: MapArea | null | undefined;
   /** Resolves to a reason if the server refused the visit; the sheet then stays open. */
   onSave: (v: Visit) => Promise<string | null>;
   onClose: () => void;
