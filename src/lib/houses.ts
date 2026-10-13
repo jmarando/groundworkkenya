@@ -42,6 +42,13 @@ export const PLAIN = "hsl(0, 0%, 100%)";
 /** An outline at least this big is often several homes: a block of flats, a plot of rooms. */
 export const BLOCK_M2 = 200;
 
+/** The house card's note for an outline big enough to be several homes; null below BLOCK_M2. */
+export function blockNote(m2: number | null): string | null {
+  return m2 !== null && m2 >= BLOCK_M2
+    ? `This outline covers ${new Intl.NumberFormat("en-KE").format(m2)} m², often several homes: log each household as its own visit.`
+    : null;
+}
+
 export const OUTCOME_LABEL: Record<Outcome, string> = {
   spoke: "Spoke",
   not_home: "Not home",

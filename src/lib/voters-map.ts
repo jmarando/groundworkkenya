@@ -6,7 +6,7 @@
 import { wardAt, type Box, type LngLat, type WardShape } from "@/lib/geo";
 import type { Top } from "@/lib/map-areas";
 import { plusCodeCentre } from "@/lib/pluscode";
-import type { Area } from "@/lib/voters-view";
+import type { Area, SearchChanges } from "@/lib/voters-view";
 
 export type Basemap = "satellite" | "streets";
 export type Level = "area" | "constituency" | "ward" | "street";
@@ -18,6 +18,8 @@ export const STREET_ZOOM = 16;
 export const MAX_ZOOM = 20;
 /** A house opens close enough to see its neighbours. */
 export const HOUSE_ZOOM_OPEN = 18;
+/** A place from the search opens at street level, with the houses around it. */
+export const PLACE_ZOOM = 16.5;
 
 /** The level a zoom shows. A constituency's map (Mathira) starts at the constituency. */
 export function levelFor(zoom: number, top: Top): Level {
@@ -220,6 +222,33 @@ export function searchHits(
       })),
   );
   return out;
+}
+
+/**
+ * What choosing a search hit does: a ward or constituency becomes the area on
+ * show; a person with a house opens it, in the ward it stands in; a person
+ * without one opens their record on the People tab; a place opens the ward
+ * there, with the camera on the place (outside every ward, the area stays).
+ */
+export function searchGo(
+  hit: SearchHit,
+  shapes: WardShape[],
+): { changes: SearchChanges; camera: CameraTarget | null } {
+  if (hit.kind === "ward")
+    return { changes: { area: `w:${hit.slug}`, house: undefined }, camera: null };
+  if (hit.kind === "constituency")
+    return { changes: { area: `c:${hit.name}`, house: undefined }, camera: null };
+  if (hit.kind === "person") {
+    if (!hit.house) return { changes: { tab: "people", person: hit.id }, camera: null };
+    const at = plusCodeCentre(hit.house);
+    const slug = (at ? wardAt(at, shapes)?.slug : undefined) ?? hit.wardSlug;
+    return { changes: { ...(slug ? { area: `w:${slug}` } : {}), house: hit.house }, camera: null };
+  }
+  const ward = wardAt(hit.center, shapes);
+  return {
+    changes: { ...(ward ? { area: `w:${ward.slug}` } : {}), house: undefined },
+    camera: { kind: "point", center: hit.center, zoom: PLACE_ZOOM },
+  };
 }
 
 /** MapTiler's search for places and streets inside the map area; null without a key or for under 3 letters. */

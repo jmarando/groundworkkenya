@@ -5,6 +5,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/houses.test.ts
 
 import {
+  blockNote,
   doorsFirst,
   doorTotals,
   houseColour,
@@ -159,6 +160,16 @@ eq("door totals; an agent in two wards counts once", doorTotals(WARDS, HOUSES, D
   doorsWeek: 15,
   agentsToday: 2,
 });
+eq(
+  "the house card's note for an outline big enough to be several homes",
+  [blockNote(199), blockNote(200), blockNote(1250), blockNote(null)],
+  [
+    null,
+    "This outline covers 200 m², often several homes: log each household as its own visit.",
+    "This outline covers 1,250 m², often several homes: log each household as its own visit.",
+    null,
+  ],
+);
 
 eq(
   "bad rows are left out",

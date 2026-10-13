@@ -9,7 +9,7 @@ import { gzipSync } from "node:zlib";
 
 import { houseStatus } from "@/hooks/useHousesAround";
 import type { Ring } from "@/lib/geo";
-import { houseArchive, housesInTile, readRange } from "@/lib/house-source";
+import { houseArchive, houseAt, housesInTile, readRange } from "@/lib/house-source";
 import { encodeTile, toTileHouse, toTileSpace } from "@/lib/house-tiles";
 import { mapAreaFor, type MapArea } from "@/lib/map-areas";
 import { writeArchive } from "@/lib/pmtiles";
@@ -109,6 +109,27 @@ const areaAt = (url: string): MapArea => ({ ...NAIROBI, houses: url });
   const before = h.reads();
   await housesInTile(areaAt("mem://ranges"), x, y, h.fetch);
   eq("the file is opened once: a tile is one more read", h.reads() - before, 1);
+}
+{
+  const h = host("ranges");
+  const tile = await housesInTile(areaAt("mem://at"), x, y, h.fetch);
+  const house = await houseAt(areaAt("mem://at"), PC.toLowerCase(), h.fetch);
+  eq(
+    "a house by its plus code, with its footprint, from the tile its centre is in",
+    [house?.id, house?.area],
+    [PC, tile[0]?.area],
+  );
+  eq(
+    "a plus code the file has no house for",
+    await houseAt(areaAt("mem://at"), "6GCRPQM6+X95Q", h.fetch),
+    null,
+  );
+  const before = h.reads();
+  eq(
+    "not a plus code: nothing read",
+    [await houseAt(areaAt("mem://at"), "hello", h.fetch), h.reads() - before],
+    [null, 0],
+  );
 }
 {
   const h = host("whole");

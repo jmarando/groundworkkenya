@@ -2,6 +2,9 @@
 // and what happened here last time, then its doors (houses knocked, support
 // found, doors this week, agents out today) and "Do this next", the wards with
 // the most houses not knocked in 30 days. In a ward, the way down to its houses.
+// An open house's card comes first: on a phone the sheet shows the panel's top.
+
+import type { ReactNode } from "react";
 
 import { LastTimeHere } from "@/components/gw/voters/LastTimeHere";
 import type { CanvassData } from "@/lib/console.functions";
@@ -31,6 +34,7 @@ export function MapPanel({
   isAgent,
   onArea,
   onSearch,
+  card,
 }: {
   area: Area;
   wards: WardInfo[];
@@ -45,6 +49,8 @@ export function MapPanel({
   onArea: (a: Area) => void;
   /** Opens the People tab with its filters; agents don't get it. */
   onSearch: (changes: SearchChanges) => void;
+  /** The open house's card. */
+  card?: ReactNode;
 }) {
   const inside = wardsIn(area, wards);
   const n = areaNumbers(area, wards, canvass?.wards ?? [], canvass?.unplaced);
@@ -97,6 +103,7 @@ export function MapPanel({
 
   return (
     <>
+      {card}
       <div className="ladder vt-numbers">
         {figures.map((f) => {
           const inner = (

@@ -8,11 +8,21 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+  type ReactNode,
+} from "react";
 
 import { AddPerson } from "@/components/gw/AddPerson";
+import { HouseCard } from "@/components/gw/voters/HouseCard";
 import { ManageRecords } from "@/components/gw/voters/ManageRecords";
 import { MapPanel } from "@/components/gw/voters/MapPanel";
+import { MapSearch } from "@/components/gw/voters/MapSearch";
 import { PeopleView } from "@/components/gw/voters/PeopleView";
 import { VotersCanvas, type WardsGeo } from "@/components/gw/voters/VotersCanvas";
 import { useAccess } from "@/hooks/useAccess";
@@ -38,7 +48,15 @@ import { getAreaDoors, getWardHouses } from "@/lib/houses.functions";
 import { getMapConfig } from "@/lib/map.functions";
 import { mapAreaFor, type HouseCounts, type MapArea } from "@/lib/map-areas";
 import { plusCodeCentre } from "@/lib/pluscode";
-import { cameraFor, hintFor, type Basemap, type CameraTarget, type Level } from "@/lib/voters-map";
+import {
+  cameraFor,
+  hintFor,
+  searchGo,
+  type Basemap,
+  type CameraTarget,
+  type Level,
+  type SearchHit,
+} from "@/lib/voters-map";
 import {
   areaParam,
   areaTitle,
@@ -152,6 +170,8 @@ function Voters() {
   });
   const [adding, setAdding] = useState(false);
   const [level, setLevel] = useState<Level>("area");
+  // The search box sits in the bar; the map, which owns the camera, takes what it picks.
+  const pick = useRef<(hit: SearchHit) => void>(() => undefined);
 
   const wards = useMemo(() => data?.wards ?? [], [data]);
   const rows = useMemo(() => {
@@ -194,7 +214,17 @@ function Voters() {
             tab,
             onTab: (t: "map" | "people") => go({ tab: t === "people" ? "people" : undefined }),
           })}
-    />
+    >
+      {tab === "map" && mapArea ? (
+        <MapSearch
+          mapArea={mapArea}
+          maptilerKey={config?.maptilerKey ?? null}
+          wards={wards}
+          people={isAgent ? [] : (people?.rows ?? [])}
+          onPick={(hit) => pick.current(hit)}
+        />
+      ) : null}
+    </Bar>
   );
   const modals = (
     <>
@@ -270,6 +300,16 @@ function Voters() {
     );
   }
 
+  const card =
+    search.house && mapArea ? (
+      <HouseCard
+        pc={search.house}
+        mapArea={mapArea}
+        people={isAgent ? null : (people?.rows ?? [])}
+        onClose={() => go({ house: undefined })}
+        {...(isAgent ? {} : { onPerson: (id: string) => go({ tab: "people", person: id }) })}
+      />
+    ) : null;
   const panel = (
     <MapPanel
       area={area}
@@ -281,6 +321,7 @@ function Voters() {
       isAgent={isAgent}
       onArea={setArea}
       onSearch={go}
+      card={card}
     />
   );
   return (
@@ -303,6 +344,7 @@ function Voters() {
             onMapMove={(changes) =>
               void navigate({ search: (prev) => nextSearch(prev, changes), replace: true })
             }
+            pick={pick}
             panel={panel}
           />
         ) : (
@@ -391,6 +433,7 @@ function MapScreen({
   onLevel,
   onGo,
   onMapMove,
+  pick,
   panel,
 }: {
   mapArea: MapArea;
@@ -406,6 +449,8 @@ function MapScreen({
   onGo: (changes: SearchChanges) => void;
   /** The person moved the map: the address follows, replacing the step. */
   onMapMove: (changes: SearchChanges) => void;
+  /** Where the search box's picks go. */
+  pick: RefObject<(hit: SearchHit) => void>;
   panel: ReactNode;
 }) {
   const { campaign } = useAccess();
@@ -473,9 +518,11 @@ function MapScreen({
 
   // The camera follows the address: a new area, or a house opened from outside
   // the map, is flown to. What the map wrote itself (fromMap) isn't, and
-  // closing a house leaves the camera where it is.
+  // closing a house leaves the camera where it is. A place from the search
+  // leaves its own camera (pending) for the flight its new area starts.
   const key = addressKey(search);
   const fromMap = useRef<string | null>(null);
+  const pending = useRef<CameraTarget | null>(null);
   const last = useRef<{ area: string | undefined; house: string | undefined } | null>(null);
   const [camera, setCamera] = useState<{ seq: number; target: CameraTarget } | null>(null);
   useEffect(() => {
@@ -488,11 +535,27 @@ function MapScreen({
     const areaChanged = !prev || prev.area !== search.area;
     const houseOpened = Boolean(search.house) && prev?.house !== search.house;
     if (!areaChanged && !houseOpened) return;
-    const target = cameraFor({ area, house: search.house ?? null }, wards, shapes, mapArea);
+    const target =
+      pending.current ?? cameraFor({ area, house: search.house ?? null }, wards, shapes, mapArea);
+    pending.current = null;
     setCamera((c) => ({ seq: (c?.seq ?? 0) + 1, target }));
     // The camera follows the address and the ward shapes, not every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, geo]);
+
+  // A search hit: its address, and for a place its own camera, flown even when the area stays.
+  useEffect(() => {
+    pick.current = (hit) => {
+      const { changes, camera: target } = searchGo(hit, shapes);
+      if (!target) onGo(changes);
+      else if (addressKey(nextSearch(search, changes)) === key)
+        setCamera((c) => ({ seq: (c?.seq ?? 0) + 1, target }));
+      else {
+        pending.current = target;
+        onGo(changes);
+      }
+    };
+  });
 
   /** A change the map made: kept from being flown, as a step or replacing it. */
   function fromTheMap(changes: SearchChanges, step: boolean) {

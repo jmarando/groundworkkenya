@@ -15,8 +15,11 @@ import {
   hintFor,
   levelFor,
   placeHits,
+  searchGo,
   searchHits,
+  type SearchHit,
 } from "@/lib/voters-map";
+import { nextSearch } from "@/lib/voters-view";
 
 let pass = 0;
 let fail = 0;
@@ -250,6 +253,55 @@ eq(
   [{ kind: "place", label: "Ngong Road", sub: "Kilimani, Nairobi", center: [36.78, -1.3] }],
 );
 eq("a reply that isn't one", placeHits({ error: "bad key" }), []);
+
+{
+  // Choosing a hit, from a house open in Kawangware.
+  const FROM = { area: "w:kawangware", house: "6GCRPQM6+X95Q" };
+  const go = (hit: SearchHit) => {
+    const { changes, camera } = searchGo(hit, SHAPES);
+    return [nextSearch(FROM, changes), camera];
+  };
+  const NGONG_ROAD: [number, number] = [36.787, -1.2921];
+  eq(
+    "a ward or a constituency is the area on show, and the house closes",
+    [
+      go({ kind: "ward", slug: "kileleshwa", label: "Kileleshwa ward", sub: "" }),
+      go({ kind: "constituency", name: "Dagoretti North", label: "Dagoretti North", sub: "" }),
+    ],
+    [
+      [{ area: "w:kileleshwa" }, null],
+      [{ area: "c:Dagoretti North" }, null],
+    ],
+  );
+  eq(
+    "a person with a house: their house, in the ward it stands in",
+    go({ kind: "person", id: "p1", label: "Faith Chebet", sub: "", house: HOUSE, wardSlug: null }),
+    [{ area: "w:kileleshwa", house: HOUSE }, null],
+  );
+  eq(
+    "a person without one: their record on the People tab",
+    go({ kind: "person", id: "p2", label: "Kamau Njoroge", sub: "", house: null, wardSlug: null }),
+    [{ area: "w:kawangware", tab: "people", house: "6GCRPQM6+X95Q", person: "p2" }, null],
+  );
+  {
+    const [address, camera] = go({
+      kind: "place",
+      label: "Ngong Road",
+      sub: "",
+      center: NGONG_ROAD,
+    });
+    eq(
+      "a place: the ward there, and the camera close in on the place",
+      [address, camera],
+      [{ area: "w:kilimani" }, { kind: "point", center: NGONG_ROAD, zoom: 16.5 }],
+    );
+  }
+  eq(
+    "a place outside every ward keeps the area",
+    go({ kind: "place", label: "Thika", sub: "", center: [37.0693, -1.0388] })[0],
+    { area: "w:kawangware" },
+  );
+}
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
