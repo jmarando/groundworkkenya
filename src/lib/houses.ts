@@ -1,15 +1,18 @@
 // The Voters map's colours and counts for houses and wards. A house takes the
-// outcome, or the score, of its latest visit in 30 days; a ward is shaded by
-// the share of its houses knocked, or by the supporters among its doors that
-// gave a score. "Doors first" ranks wards by houses not yet knocked. Nothing
-// is guessed: no data is grey, and the legend says so. Pure.
+// outcome of its latest visit in 30 days, and the last score it gave in them; a
+// ward is shaded by the share of its houses knocked, or by the supporters among
+// its doors that gave a score. "Doors first" ranks wards by houses not yet
+// knocked. Nothing is guessed: no data is grey, and the legend says so. Pure.
 
 import { BAND_COLOUR } from "@/lib/wardmap";
 
 export type Outcome = "spoke" | "not_home" | "refused";
 export type Colour = "doors" | "support" | "vote";
 
-/** A ward's doors: each house's latest visit in 30 days, and the visits of this week. */
+/**
+ * A ward's doors: each house's latest outcome and last score in 30 days, and the
+ * visits of this week.
+ */
 export type WardDoors = {
   wardId: string;
   knocked: number;
@@ -19,7 +22,7 @@ export type WardDoors = {
   agentsToday: string[];
 };
 
-/** A house's latest visit in 30 days. */
+/** A house's latest visit in 30 days, with the last score it gave in them. */
 export type HouseState = { pc: string; at: string; outcome: Outcome; support: number | null };
 
 /** One visit at a house, for its card. */

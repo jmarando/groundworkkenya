@@ -23,20 +23,38 @@ export type MapConfig = {
   mapArea: string | null;
 };
 
-/** The campaign's map area; null on any failure, so the screen says there's no map yet. */
+/**
+ * The campaign's map area; null on any failure, which is logged, so the screen says there's no
+ * map yet. A campaign with no map area, or a person with no campaign, is not a failure.
+ */
 export async function readMapArea(sb: Client): Promise<string | null> {
   try {
-    const { data: id, error } = (await sb.rpc("my_campaign")) as { data: unknown; error: unknown };
-    if (error || typeof id !== "string") return null;
+    const { data: id, error } = (await sb.rpc("my_campaign")) as {
+      data: unknown;
+      error: { message: string } | null;
+    };
+    if (error) {
+      console.error(`Could not read the campaign's map area: ${error.message}`);
+      return null;
+    }
+    if (typeof id !== "string") return null;
     const { data, error: failed } = (await sb
       .from("campaigns")
       .select("map_area")
       .eq("id", id)
-      .maybeSingle()) as { data: { map_area?: unknown } | null; error: unknown };
-    if (failed) return null;
+      .maybeSingle()) as {
+      data: { map_area?: unknown } | null;
+      error: { message: string } | null;
+    };
+    if (failed) {
+      console.error(`Could not read the campaign's map area: ${failed.message}`);
+      return null;
+    }
     const area = data?.map_area;
     return typeof area === "string" && area ? area : null;
-  } catch {
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    console.error(`Could not read the campaign's map area: ${why}`);
     return null;
   }
 }

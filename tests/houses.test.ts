@@ -1,7 +1,8 @@
 // Checks for the Voters map's houses: the colours and legends, "Doors first",
 // the door totals, and the server reads against an in-memory Supabase,
-// including reads that fail before the voters-map migration is applied. Run
-// from the repository root:
+// including reads that fail, before the voters-map migration is applied or from
+// a fault after it, and say why in the server log. Run from the repository
+// root:
 //   npx tsx --tsconfig tsconfig.json tests/houses.test.ts
 
 import {
@@ -19,7 +20,7 @@ import {
   wardShade,
   type WardDoors,
 } from "@/lib/houses";
-import { readAreaDoors, readHouse, readWardHouses } from "@/lib/houses.functions";
+import { readAreaDoors, readHouse, readWardHouses, type Client } from "@/lib/houses.functions";
 import { readMapArea } from "@/lib/map.functions";
 import { BAND_COLOUR } from "@/lib/wardmap";
 
@@ -35,6 +36,24 @@ function eq(name: string, got: unknown, want: unknown) {
   else {
     fail++;
     console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
+  }
+}
+
+/**
+ * Runs a read with console.error caught, so this file prints only its check
+ * lines: gives the read's answer, and the first argument of each console.error
+ * call it made.
+ */
+async function logged<T>(read: () => Promise<T>): Promise<[T, unknown[]]> {
+  const lines: unknown[] = [];
+  const original = console.error;
+  console.error = (first?: unknown) => {
+    lines.push(first);
+  };
+  try {
+    return [await read(), lines];
+  } finally {
+    console.error = original;
   }
 }
 
@@ -279,23 +298,127 @@ eq(
 }
 
 {
-  // Before the migration: no functions, no house_visits table, no map_area column.
+  // Before the migration: the database functions don't exist (the fake answers
+  // "no function ..." to each), so every read fails soft and says why, once.
   const sb = fakeSupabase({}, {});
-  eq("door counts that can't be read are null", await readAreaDoors(sb), null);
-  eq("a ward's houses that can't be read are none", await readWardHouses(sb, "w-a"), []);
-  eq("no campaign function, no map area", await readMapArea(sb), null);
+  const [doors, doorsLog] = await logged(() => readAreaDoors(sb));
+  const [houses, housesLog] = await logged(() => readWardHouses(sb, "w-a"));
+  const [area, areaLog] = await logged(() => readMapArea(sb));
+  eq("door counts that can't be read are null", doors, null);
+  eq("a ward's houses that can't be read are none", houses, []);
+  eq("no campaign function, no map area", area, null);
+  eq("door counts that can't be read are logged, once", doorsLog, [
+    "Could not read the door counts: no function house_doors",
+  ]);
+  eq("a ward's houses that can't be read are logged, once", housesLog, [
+    "Could not read a ward's houses: no function ward_houses",
+  ]);
+  eq("no campaign function is logged, once", areaLog, [
+    "Could not read the campaign's map area: no function my_campaign",
+  ]);
 }
+
+{
+  // After the migration a real fault (a missing grant, a row level security or SQL
+  // error, a mistyped column) fails soft the same way, and the log says what it
+  // was. This client is a database that is up but faulty: my_campaign answers,
+  // ward_houses gives a full first page and then times out, and every table
+  // read is refused.
+  const fault = (message: string) => ({ data: null, error: { message } });
+  // What the Supabase builder gives once awaited, however it was built up.
+  const answers = (answer: unknown) => {
+    const q: Record<string, unknown> = {};
+    for (const method of ["select", "eq", "order", "limit"]) q[method] = () => q;
+    q["maybeSingle"] = () => Promise.resolve(answer);
+    q["then"] = (resolve: (a: unknown) => unknown) => Promise.resolve(answer).then(resolve);
+    return q;
+  };
+  const fullPage = Array.from({ length: 1000 }, (_, i) => ({
+    pc: `HOUSE-${i}`,
+    visited_at: "2026-10-09T08:00:00Z",
+    outcome: "spoke",
+    support: 3,
+  }));
+  const faulty: Client = {
+    from: (table) => answers(fault(`permission denied for table ${table}`)),
+    rpc: (fn) =>
+      fn === "my_campaign"
+        ? answers({ data: "c1", error: null })
+        : {
+            range: (from: number) =>
+              answers(
+                from === 0
+                  ? { data: fullPage, error: null }
+                  : fault("canceling statement due to statement timeout"),
+              ),
+          },
+  };
+  const [visits, visitsLog] = await logged(() => readHouse(faulty, "6GCRPQM6+V9F4"));
+  const [area, areaLog] = await logged(() => readMapArea(faulty));
+  const [houses, housesLog] = await logged(() => readWardHouses(faulty, "w-a"));
+  eq("a house whose visits can't be read is null", visits, null);
+  eq("a campaign whose row can't be read has no map area", area, null);
+  eq("a ward's houses are none when the second page fails", houses.length, 0);
+  eq("a house's visits that can't be read are logged, once", visitsLog, [
+    "Could not read a house's visits: permission denied for table house_visits",
+  ]);
+  eq("a campaign row that can't be read is logged, once", areaLog, [
+    "Could not read the campaign's map area: permission denied for table campaigns",
+  ]);
+  eq("a second page that fails is logged, once", housesLog, [
+    "Could not read a ward's houses: canceling statement due to statement timeout",
+  ]);
+
+  // And a client that throws instead of answering: an Error, or anything else.
+  const down = (thrown: unknown): Client => ({
+    from: () => {
+      throw thrown;
+    },
+    rpc: () => {
+      throw thrown;
+    },
+  });
+  const [byError, byErrorLog] = await logged(() =>
+    readMapArea(down(new Error("connection reset"))),
+  );
+  const [byText, byTextLog] = await logged(() => readMapArea(down("socket hang up")));
+  eq("a client that throws gives no map area", [byError, byText], [null, null]);
+  eq(
+    "and what it threw is logged, once each",
+    [byErrorLog, byTextLog],
+    [
+      ["Could not read the campaign's map area: connection reset"],
+      ["Could not read the campaign's map area: socket hang up"],
+    ],
+  );
+}
+
 {
   const withArea = fakeSupabase(
     { campaigns: [{ id: "c1", map_area: "nairobi" }] },
     { my_campaign: () => "c1" },
   );
   const without = fakeSupabase({ campaigns: [{ id: "c1" }] }, { my_campaign: () => "c1" });
-  eq(
-    "the campaign's map area",
-    [await readMapArea(withArea), await readMapArea(without)],
-    ["nairobi", null],
+  const empty = fakeSupabase(
+    { campaigns: [{ id: "c1", map_area: "" }] },
+    { my_campaign: () => "c1" },
   );
+  const nobody = fakeSupabase(
+    { campaigns: [{ id: "c1", map_area: "nairobi" }] },
+    { my_campaign: () => null },
+  );
+  const [areas, quiet] = await logged(async () => [
+    await readMapArea(withArea),
+    await readMapArea(without),
+    await readMapArea(empty),
+    await readMapArea(nobody),
+  ]);
+  eq("the campaign's map area", areas.slice(0, 2), ["nairobi", null]);
+  eq("an empty map area, or a person with no campaign, is no map area", areas.slice(2), [
+    null,
+    null,
+  ]);
+  eq("and none of those is a fault, so nothing is logged", quiet, []);
 }
 
 console.log(`${pass} passed, ${fail} failed`);

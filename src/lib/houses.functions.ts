@@ -2,7 +2,9 @@
 // decides whose doors they count (the office every door in the campaign, an
 // agent the doors they knocked). Every read fails soft: before the voters-map
 // migration is applied there is no house_visits table, and the screen says the
-// door counts aren't in yet instead of breaking.
+// door counts aren't in yet instead of breaking. A failed read writes one line
+// to the server log with the error's message (never the rows), so a real fault
+// doesn't pass for a migration not yet applied.
 
 import { createServerFn } from "@tanstack/react-start";
 
@@ -29,20 +31,32 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Doors per ward in the campaign; null when they can't be read (the migration isn't in yet). */
 export async function readAreaDoors(sb: Client): Promise<WardDoors[] | null> {
-  const { data, error } = (await sb.rpc("house_doors")) as { data: unknown; error: unknown };
-  if (error) return null;
+  const { data, error } = (await sb.rpc("house_doors")) as {
+    data: unknown;
+    error: { message: string } | null;
+  };
+  if (error) {
+    console.error(`Could not read the door counts: ${error.message}`);
+    return null;
+  }
   return toWardDoors(data);
 }
 
-/** Each house in a ward with a visit in 30 days, its latest; nothing when they can't be read. */
+/**
+ * Each house in a ward with a visit in 30 days: the outcome of its latest visit,
+ * and the last score it gave in them; nothing when they can't be read.
+ */
 export async function readWardHouses(sb: Client, wardId: string): Promise<HouseState[]> {
   let failed = false;
   const rows = await pageAll<unknown>(async (from, to) => {
     const { data, error } = (await sb.rpc("ward_houses", { _ward_id: wardId }).range(from, to)) as {
       data: unknown[] | null;
-      error: unknown;
+      error: { message: string } | null;
     };
-    if (error) failed = true;
+    if (error) {
+      failed = true;
+      console.error(`Could not read a ward's houses: ${error.message}`);
+    }
     return { data: error ? [] : data };
   });
   return failed ? [] : toHouseStates(rows);
@@ -64,8 +78,11 @@ export async function readHouse(sb: Client, pc: string): Promise<HouseVisit[] | 
     .select("visited_at, actor, outcome, support, issue, person_id")
     .eq("pc", pc)
     .order("visited_at", { ascending: false })
-    .limit(50)) as { data: VisitRow[] | null; error: unknown };
-  if (error) return null;
+    .limit(50)) as { data: VisitRow[] | null; error: { message: string } | null };
+  if (error) {
+    console.error(`Could not read a house's visits: ${error.message}`);
+    return null;
+  }
   const rows = (data ?? []).filter((r) => isOutcome(r.outcome));
   const actors = [...new Set(rows.map((r) => r.actor).filter((a): a is string => Boolean(a)))];
   const people = [...new Set(rows.map((r) => r.person_id).filter((p): p is string => Boolean(p)))];
