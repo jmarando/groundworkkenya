@@ -28,6 +28,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
       { to: "/archive", label: "News & diary archive" },
       { to: "/voters", label: "Voters", faint: "MAP" },
       { to: "/elections", label: "Elections", faint: "ATLAS" },
+      { to: "/strategy", label: "Strategy", faint: "SO WHAT" },
       { to: "/polling", label: "Polling", faint: "LIVE" },
       { to: "/agents", label: "Agents & stipends", faint: "§3.4" },
     ],
@@ -209,7 +210,12 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                 </div>
               ))}
               <div className="mobile-menu-footer">
-                <Button type="button" variant="ghost" className="mobile-menu-signout" onClick={signOut}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="mobile-menu-signout"
+                  onClick={signOut}
+                >
                   Sign out
                 </Button>
               </div>

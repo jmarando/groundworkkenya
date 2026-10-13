@@ -2230,3 +2230,20 @@ figure { margin: 0; }
 .place-count { font-size:11px; color:var(--muted-foreground); text-align:right; }
 .place-error { color:var(--destructive); font-size:12.5px; margin:0; }
 @media (max-width:600px) { .place-dl { grid-template-columns:1fr; } }
+
+/* Findings: Strategy, Home, Elections, Voters and the Diary */
+.fd-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+.fd-item { display:flex; gap:10px; align-items:flex-start; }
+.fd-n { flex:none; min-width:1.6rem; height:1.6rem; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; background:var(--muted); color:var(--foreground); }
+.fd-body { min-width:0; flex:1; }
+.fd-line { margin:0 0 6px; font-size:14px; line-height:1.45; }
+.fd-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.fd-figs { display:grid; grid-template-columns:minmax(0, 15rem) minmax(0, 1fr); gap:4px 12px; margin:8px 0 0; font-size:12.5px; }
+.fd-figs dt { color:var(--muted-foreground); }
+.fd-figs dd { margin:0; }
+.fd-group + .fd-group { margin-top:16px; }
+.fd-place { display:flex; flex-direction:column; gap:4px; font-size:12.5px; }
+.fd-place select { font:inherit; padding:6px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:inherit; max-width:100%; }
+.fd-waiting { margin:0 0 12px; }
+.diary-find { margin:2px 0 0; font-size:12px; color:var(--muted-foreground); }
+@media (max-width:600px) { .fd-figs { grid-template-columns:1fr; } }

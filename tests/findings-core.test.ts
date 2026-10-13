@@ -11,6 +11,7 @@ import {
   finding,
   firstOfEach,
   forPlace,
+  knownPlace,
   orderFindings,
   percent,
   placeParam,
@@ -145,6 +146,18 @@ eq(
     [null, KEYS.kawangware, "nairobi/dagoretti-north", "not in the atlas", "not in the atlas"],
   );
 }
+
+eq(
+  "the page's place: one the atlas holds, else none, so everything shows",
+  [
+    knownPlace("nairobi/westlands", ATLAS.areas),
+    knownPlace("nairobi/nowhere", ATLAS.areas),
+    knownPlace("../x", ATLAS.areas),
+    knownPlace("nairobi/westlands", undefined),
+    knownPlace(undefined, ATLAS.areas),
+  ],
+  ["nairobi/westlands", null, null, "nairobi/westlands", null],
+);
 
 // ---------------------------------------------------------------- the figures check
 

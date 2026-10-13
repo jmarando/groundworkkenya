@@ -235,6 +235,17 @@ export function votersPlace(
 export const placeParam = (raw: unknown): string | null =>
   validateElectionsSearch({ area: raw }).area ?? null;
 
+/**
+ * The place a page shows: a well-formed one the atlas holds (any well-formed
+ * one until the atlas loads); otherwise none, so every finding shows. The
+ * router passes the raw address through, so a page can't rely on its own
+ * search check to drop a bad one.
+ */
+export function knownPlace(raw: unknown, areas: { key: string }[] | undefined): string | null {
+  const place = placeParam(raw);
+  return place && (!areas || areas.some((a) => a.key === place)) ? place : null;
+}
+
 /** The digits in a line that no figure accounts for: each figure's text is taken out, longest first. */
 export function unaccounted(f: Pick<Finding, "line" | "figures">): string[] {
   let rest = f.line;
