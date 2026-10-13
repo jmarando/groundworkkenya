@@ -31,3 +31,4 @@ Use a grouped, dismissible menu below 1100px and retain the fixed sidebar above 
 - The hourly callback catches collection failures and checks morning records before rival work. Why: a failed search must not skip the daily briefing check.
 - The shared archive reads monthly morning stories and diary through authenticated user-scoped clients. Why: historical campaign records retain the same isolation as current records.
 - Scope public layout to `.gw-landing`; use landing-specific workload and phone classes to prevent console style collisions.
+- Findings are plain-code rules (`src/lib/findings/`) over counts from database functions (`ward_issues`, `issue_weeks`, `rival_mention_weeks`, `ward_spend`, `ward_supporters`, `house_doors`) that return counts only and nothing to field agents; every number in a finding's line is one of its figures. Why: part 3's AI writes only from findings, and a checker can hold it to them.
