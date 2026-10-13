@@ -72,7 +72,8 @@ export function ConstituencyView({
         </section>
         <div className="el-side">
           <PeopleCard f={f} />
-          <PlaceCard d={d} area={area} canEdit={canEditProfile} />
+          {/* A fresh card for each place, so one place's draft profile never lands on another. */}
+          <PlaceCard key={area.key} d={d} area={area} canEdit={canEditProfile} />
           {area.parent ? (
             <section className="card">
               <AreaMap
