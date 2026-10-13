@@ -8,6 +8,7 @@ import {
   type FindingsInput,
   type RuleId,
 } from "@/lib/findings/core";
+import { issueRising, oneSeatDifferentPlaces, wardTopIssue } from "@/lib/findings/message";
 import { notVisited, timeInSafeSeats } from "@/lib/findings/time";
 
 export type Rule = (i: FindingsInput) => Finding[];
@@ -16,6 +17,9 @@ export type Rule = (i: FindingsInput) => Finding[];
 export const RULE_FNS: Partial<Record<RuleId, Rule>> = {
   "not-visited": notVisited,
   "time-in-safe-seats": timeInSafeSeats,
+  "ward-top-issue": wardTopIssue,
+  "issue-rising": issueRising,
+  "one-seat-different-places": oneSeatDifferentPlaces,
 };
 
 export function findings(
