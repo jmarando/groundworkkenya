@@ -8,6 +8,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 import { cleanContent, starterContent, type SiteContent } from "@/lib/site/content";
 import type { SiteCampaign } from "@/lib/site/render";
+import { siteWards } from "@/lib/site/wards";
 
 export type SiteVersion = { id: string; publishedAt: string; by: string | null };
 
@@ -40,7 +41,7 @@ export const getSite = createServerFn({ method: "GET" })
     const [campaign, site, versions, wards] = await Promise.all([
       sb
         .from("campaigns")
-        .select("id, slug, name, candidate, seat")
+        .select("id, slug, name, candidate, seat, level")
         .eq("id", campaignId)
         .maybeSingle(),
       sb
@@ -88,7 +89,7 @@ export const getSite = createServerFn({ method: "GET" })
         publishedAt: v.published_at,
         by: (v.published_by && nameOf.get(v.published_by)) || null,
       })),
-      wards: wards.data && wards.data.length <= 150 ? wards.data : [],
+      wards: siteWards(c.level, wards.data),
     };
   });
 

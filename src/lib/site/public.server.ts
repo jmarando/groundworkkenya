@@ -3,11 +3,9 @@
 
 import { cleanContent, type Lang, type SiteContent } from "@/lib/site/content";
 import type { SiteCampaign } from "@/lib/site/render";
+import { MAX_WARDS, siteWards } from "@/lib/site/wards";
 
 const SLUG = /^[a-z0-9-]{2,40}$/;
-
-/** A ward list longer than this is too heavy a page for 2G: leave the question out. */
-const MAX_WARDS = 150;
 
 export type PublishedSite = {
   campaign: SiteCampaign;
@@ -21,7 +19,7 @@ export async function loadPublishedSite(slug: string): Promise<PublishedSite | n
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: campaign } = await supabaseAdmin
     .from("campaigns")
-    .select("id, slug, name, candidate, seat")
+    .select("id, slug, name, candidate, seat, level")
     .eq("slug", slug)
     .maybeSingle();
   if (!campaign) return null;
@@ -42,7 +40,7 @@ export async function loadPublishedSite(slug: string): Promise<PublishedSite | n
       .eq("campaign_id", campaign.id)
       .order("name")
       .limit(MAX_WARDS + 1);
-    wards = data && data.length <= MAX_WARDS ? data : [];
+    wards = siteWards(campaign.level, data);
   }
   return { campaign, content, wards };
 }
