@@ -16,6 +16,7 @@ import {
   votesWithinReach,
 } from "@/lib/findings/field";
 import { issueRising, oneSeatDifferentPlaces, wardTopIssue } from "@/lib/findings/message";
+import { pollMove, rivalInNews } from "@/lib/findings/rivals";
 import { notVisited, timeInSafeSeats } from "@/lib/findings/time";
 
 export type Rule = (i: FindingsInput) => Finding[];
@@ -32,6 +33,8 @@ export const RULE_FNS: Partial<Record<RuleId, Rule>> = {
   "short-of-target": shortOfTarget,
   "unregistered-adults": unregisteredAdults,
   "spend-out-of-line": spendOutOfLine,
+  "poll-move": pollMove,
+  "rival-in-news": rivalInNews,
 };
 
 export function findings(

@@ -574,10 +574,22 @@ eq("a small change is not a move", rivalMove(RIVALS, POLLS, "2026-09-29", 4), nu
     ["Johnson Sakaja", 22, "s"],
     ["Babu Owino", 27.5, "b"],
   ]);
-  eq("our own drop is not a rival's move", rivalMove(RIVALS, [before, after], "2026-09-29"), {
-    title: "Babu Owino down 2.5 points in Poll Co's latest poll",
-    detail: "From 30% in Aug 2026 to 27.5% in Sep 2026.",
+  eq("our own move counts too", rivalMove(RIVALS, [before, after], "2026-09-29"), {
+    title: "We're down 8.0 points in Poll Co's latest poll",
+    detail: "From 30% in Aug 2026 to 22% in Sep 2026.",
   });
+}
+{
+  const before = poll("o", "Poll Co", null, null, "2026-08-01", [["Babu Owino", 30, "b"]]);
+  const after = {
+    ...poll("n", "Poll Co", null, null, "2026-09-20", [["Babu Owino", 32, "b"]]),
+    margin: 2.5,
+  };
+  eq(
+    "a move within the margin of error says so",
+    rivalMove(RIVALS, [before, after], "2026-09-29")?.detail,
+    "From 30% in Aug 2026 to 32% in Sep 2026. That's within the poll's margin of error (±2.5).",
+  );
 }
 eq("one poll per pollster, no move", rivalMove(RIVALS, [ISS, CAP], "2026-09-29"), null);
 
