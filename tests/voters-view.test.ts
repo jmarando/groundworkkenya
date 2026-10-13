@@ -1,6 +1,6 @@
-// Checks for the Voters screen's rules: the address's area, view and filters,
-// an area's numbers, who matches, what an agent sees, and the links in and
-// out. Pure; nothing leaves this process. Run from the repository root:
+// Checks for the Voters screen's rules: the address's area, tab, house and
+// filters, an area's numbers, who matches, and the links in and out. Pure;
+// nothing leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/voters-view.test.ts
 
 import {
@@ -19,11 +19,9 @@ import {
   share,
   stepFor,
   pageWithin,
-  walkNote,
   validateVotersSearch,
-  viewOf,
-  viewsFor,
   wardsIn,
+  type VotersSearch,
   type WardInfo,
 } from "@/lib/voters-view";
 
@@ -67,7 +65,10 @@ eq(
   "an address, cleaned",
   validateVotersSearch({
     area: "w:kileleshwa",
-    view: "doors",
+    tab: "people",
+    house: " 6gcrpqm6+v9f4 ",
+    colour: "support",
+    base: "streets",
     support: "strong",
     consent: "sms",
     contact: "week",
@@ -77,7 +78,10 @@ eq(
   }),
   {
     area: "w:kileleshwa",
-    view: "doors",
+    tab: "people",
+    house: "6GCRPQM6+V9F4",
+    colour: "support",
+    base: "streets",
     support: "strong",
     consent: "sms",
     contact: "week",
@@ -85,8 +89,30 @@ eq(
     manage: true,
   },
 );
-eq("an unknown view is dropped", validateVotersSearch({ view: "nonsense", support: "max" }), {});
+eq(
+  "unknown values are dropped",
+  validateVotersSearch({ tab: "doors", colour: "red", base: "moon", support: "max" }),
+  {},
+);
+eq(
+  "a bad house is dropped, so the map opens the area instead",
+  [
+    validateVotersSearch({ house: "hello" }),
+    validateVotersSearch({ house: "6GCRPQM6+V9F4;x" }),
+    validateVotersSearch({ house: 42 }),
+  ],
+  [{}, {}, {}],
+);
 eq("manage from a link", validateVotersSearch({ manage: 1 }).manage, true);
+eq(
+  "old links: view=people is the People tab; view=doors and view=wards open the map",
+  [
+    validateVotersSearch({ view: "people", person: "p-9" }),
+    validateVotersSearch({ view: "doors" }),
+    validateVotersSearch({ view: "wards", area: "c:Westlands" }),
+  ],
+  [{ tab: "people", person: "p-9" }, {}, { area: "c:Westlands" }],
+);
 
 eq("the county", parseArea(undefined, WARDS), { level: "county" });
 eq("a constituency", parseArea("c:Dagoretti North", WARDS), {
@@ -127,6 +153,27 @@ eq(
     ["Kileleshwa ward", "w:kileleshwa"],
   ],
 );
+{
+  const MATHIRA = { name: "Mathira", top: "constituency" } as const;
+  const wards = [ward("m1", "konyu", "Konyu", "Mathira", 2)];
+  eq(
+    "a constituency's map: its name on top, and no crumb for itself",
+    [
+      areaTitle({ level: "county" }, wards, MATHIRA),
+      crumbsOf({ level: "ward", slug: "konyu" }, wards, MATHIRA).map((c) => [
+        c.label,
+        areaParam(c.area) ?? null,
+      ]),
+    ],
+    [
+      "Mathira",
+      [
+        ["Mathira", null],
+        ["Konyu ward", "w:konyu"],
+      ],
+    ],
+  );
+}
 
 const DOORS = [
   { id: "w1", people: 100, knocked: 40, doors30: 55 },
@@ -148,14 +195,6 @@ eq("a ward nobody has knocked", areaNumbers({ level: "ward", slug: "mabatini" },
   doors: 0,
   coverage: 0,
 });
-
-eq("the views above a ward", viewsFor(false, DN), ["people", "doors", "wards"]);
-eq("in a ward, no wards view", viewsFor(false, KILE), ["people", "doors"]);
-eq("an agent sees doors only", viewsFor(true, DN), ["doors"]);
-eq("an agent asks for People and gets Doors", viewOf({ view: "people" }, true, DN), "doors");
-eq("the default above a ward", viewOf({}, false, DN), "wards");
-eq("the default in a ward", viewOf({}, false, KILE), "people");
-eq("a wards view asked for inside a ward", viewOf({ view: "wards" }, false, KILE), "people");
 
 const NOW = Date.UTC(2026, 9, 4, 9);
 const daysAgo = (d: number) => new Date(NOW - d * 864e5).toISOString();
@@ -215,18 +254,23 @@ eq("Broadcast with nothing chosen keeps its defaults", parseBroadcastSearch({}),
   persuadable: true,
 });
 eq("an old People link keeps its person", peopleForward({ person: "p-9" }), {
-  view: "people",
+  tab: "people",
   person: "p-9",
 });
-eq("an old People link without one", peopleForward({}), { view: "people" });
+eq("an old People link without one", peopleForward({}), { tab: "people" });
 
 eq(
   "a change to the address; undefined removes",
   nextSearch(
-    { area: "w:kileleshwa", view: "people", person: "p-1" },
+    { area: "w:kileleshwa", tab: "people", person: "p-1" },
     { area: "c:Mathare", person: undefined },
   ),
-  { area: "c:Mathare", view: "people" },
+  { area: "c:Mathare", tab: "people" },
+);
+eq(
+  "an old view=people still in the address doesn't hold the People tab open",
+  nextSearch({ view: "people", area: "c:Mathare" } as VotersSearch, { tab: undefined }),
+  { area: "c:Mathare" },
 );
 eq(
   "what came up at the door across an area",
@@ -265,15 +309,19 @@ eq(
 );
 
 eq(
-  "only a new area goes back to the top; a filter stays put and replaces the step",
+  "a new area, tab or house is a step Back undoes; only a new area or tab goes back to the top",
   [
-    stepFor({ area: "c:Mathare", person: undefined }),
-    stepFor({ view: "doors" }),
+    stepFor({ area: "c:Mathare", house: undefined }),
+    stepFor({ tab: undefined }),
+    stepFor({ house: "6GCRPQM6+V9F4" }),
+    stepFor({ colour: "support" }),
     stepFor({ support: "strong" }),
   ],
   [
     { replace: false, resetScroll: true },
+    { replace: false, resetScroll: true },
     { replace: false, resetScroll: false },
+    { replace: true, resetScroll: false },
     { replace: true, resetScroll: false },
   ],
 );
@@ -292,15 +340,6 @@ eq(
   "a constituency doesn't",
   areaNumbers(DN, WARDS, DOORS, { people: 50, knocked: 10, doors30: 7 }).onFile,
   250,
-);
-eq(
-  "the walk-list note only when the list is cut",
-  [walkNote(6), walkNote(60), walkNote(61)],
-  [
-    null,
-    null,
-    'Showing the first 60 of 61. "Walk list · CSV" above hands the whole list to a canvasser.',
-  ],
 );
 eq("a group in the address", validateVotersSearch({ segment: "boda" }).segment, "boda");
 eq("a group that isn't a slug is dropped", validateVotersSearch({ segment: "Boda Riders!" }), {});

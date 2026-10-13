@@ -331,6 +331,7 @@ export function VotersCanvas(props: Props) {
         setLoaded(true);
       });
       let level = levelFor(map.getZoom(), p.mapArea.top);
+      p.onLevel(level);
       map.on("zoom", () => {
         if (!map) return;
         const z = map.getZoom();
@@ -450,7 +451,11 @@ export function VotersCanvas(props: Props) {
   }, [loaded, props.camera?.seq]);
 
   useEffect(() => {
-    mapRef.current?.setPadding({ top: 0, right: 0, left: 0, bottom: props.padding.bottom });
+    const map = mapRef.current;
+    // setPadding jumps the camera, which would stop a flight under way: only when it changed,
+    // and marked as the app's move, so it isn't reported as the person's.
+    if (!map || map.getPadding().bottom === props.padding.bottom) return;
+    map.setPadding({ top: 0, right: 0, left: 0, bottom: props.padding.bottom }, { app: true });
   }, [props.padding.bottom, loaded]);
 
   function zoom(by: number) {

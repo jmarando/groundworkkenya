@@ -2065,6 +2065,47 @@ figure { margin: 0; }
   .vt-actions { justify-content:flex-start; }
 }
 
+/* Voters: the map owns the screen below the app's header, with the crumbs and tabs above
+   it and the panel beside it (a sheet on phones); the People tab is a page. */
+.vscreen { position:fixed; inset:0 0 0 256px; z-index:20; display:flex; flex-direction:column; background:var(--gw-paper); }
+.vbar { display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; }
+.vscreen .vbar { padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card); }
+.vbar-place { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+.vbar h1 { font-size:22px; font-weight:600; line-height:1.2; }
+.vbar .spacer { flex:1; }
+.vbody { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) clamp(340px, 30vw, 440px); }
+.vbody .vmap { height:100%; border:0; border-radius:0; }
+.vmap--none { background:var(--muted); }
+.vmap--none .vmap-loading { color:var(--muted-foreground); padding:24px; text-align:center; }
+.vpanel { min-height:0; overflow-y:auto; overscroll-behavior:contain; border-left:1px solid var(--border); padding:16px 18px 28px; display:flex; flex-direction:column; gap:18px; }
+/* A scrolling column: its parts keep their height (the ladder clips, so it would otherwise shrink to nothing). */
+.vpanel > * { flex-shrink:0; }
+.vpanel h2 { font-size:15px; font-weight:600; }
+.vpanel .card-head { margin-bottom:6px; }
+.vpanel .ladder { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.vpanel .ladder > * { border-top:1px solid var(--border); }
+.vpanel .ladder > :nth-child(odd) { border-left:0; }
+.vpanel .ladder > :nth-child(-n+2) { border-top:0; }
+.vpanel .ladder > :last-child:nth-child(odd) { grid-column:1 / -1; }
+.vnext { display:flex; flex-direction:column; gap:8px; }
+.vnext-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.vnext-what { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.vnext-what .meta { font-size:12px; }
+.vnext-row .btn { flex:none; white-space:nowrap; }
+.vtag { align-self:flex-start; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:600; padding:2px 7px; border-radius:999px; background:hsl(15 77% 52% / .12); color:hsl(15 70% 38%); }
+/* The switches, the hint and the legend sit at the top, clear of the credits along the bottom. */
+.vbody .vtop { flex-direction:column; align-items:flex-start; }
+.vtop-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; pointer-events:none; }
+.vtop-row > * { pointer-events:auto; }
+.vtop .vhint { position:static; transform:none; white-space:normal; }
+.vtop .vleg { position:static; max-width:100%; }
+.vt-actions--page { display:flex; justify-content:flex-start; gap:8px; margin-top:14px; }
+@media (max-width:1100px) {
+  .vscreen { inset:64px 0 0 0; }
+  .vbody { grid-template-columns:1fr; grid-template-rows:minmax(0, 1fr) minmax(0, 40%); }
+  .vpanel { border-left:0; border-top:1px solid var(--border); }
+}
+
 /* Elections: the switches, what to do, the results, the map, notes, and the printed brief */
 .el-switches { display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 16px; }
 .el-actions { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
