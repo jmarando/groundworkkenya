@@ -8,6 +8,7 @@ import { CountyView } from "@/components/gw/elections/CountyView";
 import { SetupPanel } from "@/components/gw/elections/SetupPanel";
 import { WardView } from "@/components/gw/elections/WardView";
 import { useAccess } from "@/hooks/useAccess";
+import { PROFILE_EDITORS } from "@/lib/area-profile";
 import { RACES, YEARS, type Race } from "@/lib/atlas";
 import { getAtlas } from "@/lib/atlas.functions";
 import { RACE_NAMES } from "@/lib/atlas-view";
@@ -51,7 +52,9 @@ const SHADE_NAMES: Record<Shade, string> = {
 function Elections() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const { campaign, isPrincipal } = useAccess();
+  const { campaign, isPrincipal, access } = useAccess();
+  // Profiles are for the whole team but field agents; notes and sides stay with the candidate and manager.
+  const canEditProfile = (PROFILE_EDITORS as readonly string[]).includes(String(access?.role));
   const fetchAtlas = useServerFn(getAtlas);
   const { data, isError, refetch } = useQuery({ queryKey: ["atlas"], queryFn: () => fetchAtlas() });
   const [setup, setSetup] = useState(false);
@@ -193,11 +196,19 @@ function Elections() {
           race={race}
           year={year}
           canEdit={isPrincipal}
+          canEditProfile={canEditProfile}
           onArea={(k) => go({ area: k })}
           onSetup={() => setSetup(true)}
         />
       ) : area.level === "ward" ? (
-        <WardView d={data} area={area} race={race} year={year} canEdit={isPrincipal} />
+        <WardView
+          d={data}
+          area={area}
+          race={race}
+          year={year}
+          canEdit={isPrincipal}
+          canEditProfile={canEditProfile}
+        />
       ) : (
         <CountyView
           d={data}

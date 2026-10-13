@@ -1,6 +1,7 @@
 import { AreaMap } from "@/components/gw/elections/AreaMap";
 import { NoteBox } from "@/components/gw/elections/NoteBox";
 import { PeopleCard } from "@/components/gw/elections/PeopleCard";
+import { PlaceCard } from "@/components/gw/elections/PlaceCard";
 import { ResultList } from "@/components/gw/elections/ResultList";
 import type { Race } from "@/lib/atlas";
 import {
@@ -19,12 +20,14 @@ export function WardView({
   race,
   year,
   canEdit,
+  canEditProfile,
 }: {
   d: AtlasData;
   area: AtlasArea;
   race: Race;
   year: number;
   canEdit: boolean;
+  canEditProfile: boolean;
 }) {
   const f = figuresFor(d, area.key, race, year);
   const parent = d.areas.find((a) => a.key === area.parent);
@@ -34,6 +37,7 @@ export function WardView({
     <>
       <div className="el-grid">
         <PeopleCard f={f} />
+        <PlaceCard d={d} area={area} canEdit={canEditProfile} />
         <section className="card">
           <div className="card-head">
             <h2>
