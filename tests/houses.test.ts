@@ -5,6 +5,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/houses.test.ts
 
 import {
+  BAND_COLOUR,
   blockNote,
   doorsFirst,
   doorTotals,
@@ -22,7 +23,6 @@ import {
 } from "@/lib/houses";
 import { readAreaDoors, readHouse, readWardHouses } from "@/lib/houses.functions";
 import { readMapArea } from "@/lib/map.functions";
-import { BAND_COLOUR } from "@/lib/wardmap";
 
 import { fakeSupabase } from "./fake-supabase";
 

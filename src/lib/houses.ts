@@ -4,10 +4,28 @@
 // gave a score. "Doors first" ranks wards by houses not yet knocked. Nothing
 // is guessed: no data is grey, and the legend says so. Pure.
 
-import { BAND_COLOUR } from "@/lib/wardmap";
-
 export type Outcome = "spoke" | "not_home" | "refused";
 export type Colour = "doors" | "support" | "vote";
+
+export type Band = 0 | 1 | 2 | 3 | 4 | 5;
+
+/** The 0-100 score back on the 1-5 door scale; 0 when unknown. The inverse of SUPPORT_SCORE. */
+export function band(score: number): Band {
+  if (!score || score <= 0) return 0;
+  if (score >= 85) return 5;
+  if (score >= 62) return 4;
+  if (score >= 40) return 3;
+  if (score >= 20) return 2;
+  return 1;
+}
+
+export const BAND_COLOUR: Record<Exclude<Band, 0>, string> = {
+  1: "hsl(0, 80%, 55%)",
+  2: "hsl(22, 90%, 57%)",
+  3: "hsl(45, 95%, 56%)",
+  4: "hsl(95, 60%, 48%)",
+  5: "hsl(142, 70%, 42%)",
+};
 
 /** A ward's doors: each house's latest visit in 30 days, and the visits of this week. */
 export type WardDoors = {

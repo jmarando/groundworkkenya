@@ -7,11 +7,10 @@ import { useServerFn } from "@tanstack/react-start";
 
 import type { PersonRow } from "@/lib/console.functions";
 import { houseAt } from "@/lib/house-source";
-import { blockNote, OUTCOME_COLOUR, OUTCOME_LABEL } from "@/lib/houses";
+import { band, BAND_COLOUR, blockNote, OUTCOME_COLOUR, OUTCOME_LABEL } from "@/lib/houses";
 import { getHouse } from "@/lib/houses.functions";
 import type { MapArea } from "@/lib/map-areas";
 import { maskPhone } from "@/lib/phone";
-import { band, BAND_COLOUR } from "@/lib/wardmap";
 
 const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string) =>

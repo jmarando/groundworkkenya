@@ -1,20 +1,9 @@
-// Geometry for the ward map and the field app. Small, pure and tested: no
+// Geometry for the Voters map and the field app. Small, pure and tested: no
 // map library needed, so the field app can match a GPS fix to a building
 // on a phone with no signal.
 
 export type LngLat = [number, number];
 export type Ring = LngLat[];
-
-export type BuildingCollection = {
-  type: "FeatureCollection";
-  attribution?: string;
-  ward?: string;
-  features: {
-    type: "Feature";
-    properties: { pc: string; a: number };
-    geometry: { type: "Polygon"; coordinates: Ring[] };
-  }[];
-};
 
 /** A building outline with its plus code (the id visits are recorded against). */
 export type Building = { id: string; area: number; centre: LngLat; rings: Ring[] };
@@ -91,17 +80,6 @@ export function ringAreaM2(ring: Ring): number {
     twice += x1 * y2 - x2 * y1;
   }
   return Math.abs(twice) / 2;
-}
-
-export function toBuildings(fc: BuildingCollection): Building[] {
-  return fc.features
-    .filter((f) => f.geometry?.type === "Polygon" && f.geometry.coordinates[0]?.length)
-    .map((f) => ({
-      id: f.properties.pc,
-      area: f.properties.a,
-      rings: f.geometry.coordinates,
-      centre: ringCentre(f.geometry.coordinates[0]!),
-    }));
 }
 
 /**

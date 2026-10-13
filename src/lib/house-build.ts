@@ -1,7 +1,7 @@
 // Building the house files from Google Open Buildings v3 (CC BY 4.0): a row is
 // kept when Google is at least 65% sure it is a building and its centre is in
-// one of the area's wards, as scripts/geo/ward_buildings.py did for one ward.
-// Pure; scripts/geo/house-tiles.ts reads the CSV and writes the files.
+// one of the area's wards. Pure; scripts/geo/house-tiles.ts reads the CSV and
+// writes the files.
 
 import { inBox, wardAt, type Box, type LngLat, type Ring, type WardShape } from "@/lib/geo";
 import { encodeTile, HOUSE_ZOOM, tilesOf, toTileHouse, type TileHouse } from "@/lib/house-tiles";
