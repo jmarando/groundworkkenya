@@ -26,6 +26,22 @@ const KEY_SHAPE: Record<Level, RegExp> = {
 const COUNTIES = 47;
 /** The largest whole number the database's integer columns hold. */
 const INT_MAX = 2147483647;
+/** The measured indicators an area can carry (atlas_indicators.indicator). */
+export const INDICATORS = [
+  "area_km2",
+  "buildings",
+  "buildings_per_km2",
+  "median_building_m2",
+  "small_building_share",
+  "large_building_share",
+] as const;
+export type IndicatorId = (typeof INDICATORS)[number];
+const WHOLE_INDICATORS: readonly string[] = [
+  "buildings",
+  "buildings_per_km2",
+  "median_building_m2",
+];
+const SHARE_INDICATORS: readonly string[] = ["small_building_share", "large_building_share"];
 
 export type SourceRow = {
   id: string;
@@ -91,6 +107,15 @@ export type BlocRow = {
   source_url: string | null;
 };
 
+/** A measured figure for an area, from indicators.csv. */
+export type IndicatorRow = {
+  area: string;
+  indicator: string;
+  year: number;
+  value: number;
+  source: string;
+};
+
 export type AtlasFiles = {
   sources: SourceRow[];
   areas: AreaRow[];
@@ -101,6 +126,7 @@ export type AtlasFiles = {
   population: PopulationRow[];
   differences: DifferenceRow[];
   blocs: BlocRow[];
+  indicators: IndicatorRow[];
 };
 export type TableName = keyof AtlasFiles;
 
@@ -114,6 +140,7 @@ export const HEADERS: Record<TableName, string[]> = {
   population: ["area", "year", "total", "adults", "young_adults", "source"],
   differences: ["election", "seat", "candidate", "area", "difference", "note"],
   blocs: ["year", "party", "bloc", "source", "source_url"],
+  indicators: ["area", "indicator", "year", "value", "source"],
 };
 
 /** The file each table is read from, inside a folder of data/atlas (blocs.csv: data/atlas itself). */
@@ -127,6 +154,7 @@ export const FILE_NAMES: Record<TableName, string> = {
   population: "population.csv",
   differences: "known-differences.csv",
   blocs: "blocs.csv",
+  indicators: "indicators.csv",
 };
 /** Tables kept once for every county, in data/atlas itself rather than a county's folder. */
 export const ROOT_TABLES: TableName[] = ["blocs"];
@@ -141,6 +169,7 @@ export const emptyFiles = (): AtlasFiles => ({
   population: [],
   differences: [],
   blocs: [],
+  indicators: [],
 });
 
 /** Lower case, accents dropped, anything else a dash: "Ann Ng'ang'a" is "ann-ng-ang-a". */
@@ -157,6 +186,7 @@ export const candidateId = (election: string, seat: string, name: string) =>
 
 const WHOLE = /^(0|[1-9][0-9]*)$/;
 const SIGNED = /^-?(0|[1-9][0-9]*)$/;
+const DECIMAL = /^(0|[1-9][0-9]*)(\.[0-9]+)?$/;
 
 /** Reads one table's CSV text into `into`; returns what stopped rows being read. */
 export function readTable(
@@ -297,6 +327,24 @@ export function readTable(
             bloc: v("bloc"),
             source: v("source"),
             source_url: opt("source_url"),
+          });
+        break;
+      }
+      case "indicators": {
+        const year = num("year", true);
+        const s = v("value");
+        let value = 0;
+        if (!s) problems.push(`${at}: value is missing`);
+        else if (!DECIMAL.test(s))
+          problems.push(`${at}: value "${s}" is not a number (a point for decimals, no commas)`);
+        else value = Number(s);
+        if (clean())
+          into.indicators.push({
+            area: v("area"),
+            indicator: v("indicator"),
+            year: year ?? 0,
+            value,
+            source: v("source"),
           });
         break;
       }
@@ -537,6 +585,23 @@ export function checkAtlas(
     if (seen.has(`population|${p.year}|${p.area}`)) out.push(`${where}: listed twice`);
     seen.add(`population|${p.year}|${p.area}`);
   }
+  for (const r of f.indicators) {
+    const where = `indicators: ${r.indicator} for ${r.area} in ${r.year}`;
+    if (!(INDICATORS as readonly string[]).includes(r.indicator)) {
+      out.push(`${where}: unknown indicator`);
+      continue;
+    }
+    area(where, r.area);
+    source(where, r.source);
+    if (r.year < 2000 || r.year > 2030) out.push(`${where}: the year must be 2000 to 2030`);
+    if (WHOLE_INDICATORS.includes(r.indicator) && !Number.isInteger(r.value))
+      out.push(`${where}: must be a whole number`);
+    if (SHARE_INDICATORS.includes(r.indicator) && r.value > 1)
+      out.push(`${where}: a share must be between 0 and 1`);
+    const k = `indicator|${r.area}|${r.indicator}|${r.year}`;
+    if (seen.has(k)) out.push(`${where}: listed twice`);
+    seen.add(k);
+  }
   for (const d of f.differences) {
     const where = `known-differences: ${d.election} ${d.candidate || "turnout"} in ${d.area}`;
     if (chars(d.note) < 10) out.push(`${where}: the note must say why the figures differ`);
@@ -598,10 +663,14 @@ export function atlasReport(f: AtlasFiles): string {
         `${y}: ${wards.filter((w) => f.register.some((r) => r.year === y && r.area === w)).length} of ${wards.length}`,
     );
     const pop = wards.filter((w) => f.population.some((p) => p.area === w)).length;
+    const measuredWards = wards.filter((w) =>
+      f.indicators.some((r) => r.area === w && r.indicator === "buildings"),
+    ).length;
     lines.push(
       "",
       `Registered voters by ward: ${reg.join(" · ")}.`,
       `Population estimates: ${pop} of ${wards.length} wards.`,
+      `Buildings measured: ${measuredWards} of ${wards.length} wards.`,
     );
     // Where more are registered than the estimate has adults, it can't say who isn't registered.
     const below = wards.filter((w) => {

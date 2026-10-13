@@ -1,6 +1,6 @@
 // Writes one migration from the atlas folders named on the command line, once
 // their figures pass the checks. Run from the repository root:
-//   npx tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts supabase/migrations/<stamp>_atlas_<name>.sql kenya nairobi nyeri
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts supabase/migrations/<stamp>_atlas_<name>.sql kenya nairobi nyeri [--indicators]
 import { writeFileSync } from "node:fs";
 
 import { checkAtlas } from "@/lib/atlas-files";
@@ -8,9 +8,11 @@ import { atlasSql } from "@/lib/atlas-sql";
 
 import { readAtlas, wardMaps } from "./read";
 
-const [out, ...folders] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const part = args.includes("--indicators") ? "indicators" : "figures";
+const [out, ...folders] = args.filter((a) => a !== "--indicators");
 if (!out || !folders.length) {
-  console.error("usage: build-sql.ts <migration.sql> <folder>...");
+  console.error("usage: build-sql.ts <migration.sql> <folder>... [--indicators]");
   process.exit(2);
 }
 const { files, problems } = readAtlas("data/atlas", folders);
@@ -21,8 +23,8 @@ if (all.length) {
 }
 writeFileSync(
   out,
-  `-- The election atlas's figures for ${folders.join(", ")}, from data/atlas.\n` +
+  `-- The election atlas's ${part === "indicators" ? "measured indicators" : "figures"} for ${folders.join(", ")}, from data/atlas.\n` +
     "-- Written by scripts/atlas/build-sql.ts: change the CSV files and run it again, not this file.\n\n" +
-    atlasSql(files),
+    atlasSql(files, part),
 );
 console.log(`wrote ${out}`);

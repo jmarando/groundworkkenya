@@ -387,5 +387,62 @@ eq(
   true,
 );
 
+const IND = "area,indicator,year,value,source";
+const indProblems = (rows: string[]) => check({ indicators: [IND, ...rows].join("\n") });
+eq(
+  "indicators: clean rows pass, a share of exactly 0 or 1 included",
+  indProblems([
+    "nairobi/kibra,buildings,2023,1200,iebc-test",
+    "nairobi/kibra,small_building_share,2023,1,iebc-test",
+    "nairobi/kibra,large_building_share,2023,0,iebc-test",
+    "nairobi/kibra,area_km2,2023,2.345,iebc-test",
+  ]),
+  [],
+);
+eq(
+  "indicators: the checks",
+  [
+    has(
+      indProblems(["nairobi/kibra,trees,2023,1,iebc-test"]),
+      "indicators: trees for nairobi/kibra in 2023: unknown indicator",
+    ),
+    has(
+      indProblems(["nairobi/nowhere,buildings,2023,1,iebc-test"]),
+      `the area "nairobi/nowhere" isn't listed`,
+    ),
+    has(
+      indProblems(["nairobi/kibra,large_building_share,2023,1.2,iebc-test"]),
+      "a share must be between 0 and 1",
+    ),
+    has(indProblems(["nairobi/kibra,buildings,2023,-3,iebc-test"]), `value "-3" is not a number`),
+    has(indProblems(["nairobi/kibra,buildings,2023,12.5,iebc-test"]), "must be a whole number"),
+    has(
+      indProblems([
+        "nairobi/kibra,buildings,2023,1,iebc-test",
+        "nairobi/kibra,buildings,2023,2,iebc-test",
+      ]),
+      "listed twice",
+    ),
+    has(indProblems(["nairobi/kibra,buildings,2023,1,nope"]), `source "nope" isn't listed`),
+    has(indProblems(["nairobi/kibra,buildings,1990,1,iebc-test"]), "the year must be 2000 to 2030"),
+    has(
+      indProblems(['nairobi/kibra,area_km2,2023,"1,234",iebc-test']),
+      `value "1,234" is not a number`,
+    ),
+  ],
+  [true, true, true, true, true, true, true, true, true],
+);
+const measured = emptyFiles();
+for (const [table, text] of Object.entries({
+  ...BASE,
+  indicators: `${IND}\nnairobi/kibra/sarangombe,buildings,2023,900,iebc-test`,
+}) as [TableName, string][])
+  readTable(table, text, table, measured);
+eq(
+  "the report says how many wards are measured",
+  atlasReport(measured).includes("Buildings measured: 1 of 1 wards."),
+  true,
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
