@@ -5,7 +5,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { inBox, wardShapes } from "@/lib/geo";
+import { inBox, ringCentre, wardShapes } from "@/lib/geo";
 import { mapAreaFor } from "@/lib/map-areas";
 import {
   areaAt,
@@ -150,6 +150,22 @@ eq(
     },
   ],
 );
+{
+  // A hand-edited address can name any plus code on Earth; this one is in London.
+  const LONDON = "9C3XGV4V+XX";
+  const kileleshwa = { level: "ward" as const, slug: "kileleshwa" };
+  eq(
+    "a house outside the map area is no house: the same target as without one",
+    [
+      cameraFor({ area: { level: "county" }, house: LONDON }, WARDS, SHAPES, AREA),
+      cameraFor({ area: kileleshwa, house: LONDON }, WARDS, SHAPES, AREA),
+    ],
+    [
+      cameraFor({ area: { level: "county" } }, WARDS, SHAPES, AREA),
+      cameraFor({ area: kileleshwa }, WARDS, SHAPES, AREA),
+    ],
+  );
+}
 eq(
   "a constituency's map opens to ward zoom",
   (cameraFor({ area: { level: "county" } }, [], [], MATHIRA) as { maxZoom: number }).maxZoom,
@@ -180,6 +196,44 @@ eq(
     "in the middle of its wards",
     dn ? [dn.geometry.coordinates[0] > 36.7 && dn.geometry.coordinates[0] < 36.8] : null,
     [true],
+  );
+  // Clicked, a name must open its own constituency: list the ones that don't.
+  eq(
+    "every name sits inside its own constituency",
+    labels.features
+      .filter((f) => {
+        const area = areaAt("constituency", f.geometry.coordinates, SHAPES, WARDS, "county");
+        const own = { level: "constituency", name: f.properties.name };
+        return JSON.stringify(area) !== JSON.stringify(own);
+      })
+      .map((f) => f.properties.name),
+    [],
+  );
+  // The middle of the box around a constituency's wards, where a name goes if it can.
+  const middleOf = (name: string): [number, number] => {
+    const boxes = SHAPES.filter(
+      (s) => WARDS.find((w) => w.slug === s.slug)?.constituency === name,
+    ).map((s) => s.box);
+    return [
+      (Math.min(...boxes.map((b) => b.west)) + Math.max(...boxes.map((b) => b.east))) / 2,
+      (Math.min(...boxes.map((b) => b.south)) + Math.max(...boxes.map((b) => b.north))) / 2,
+    ];
+  };
+  // The middle of Mathare's wards is in Ruaraka's Utalii, so its name goes to the centre of
+  // Mabatini, the ward whose own box is centred nearest that middle.
+  const mabatini = ringCentre(SHAPES.find((s) => s.slug === "mabatini")!.polygons[0]![0]!);
+  eq(
+    "only Mathare's name leaves the middle, for the centre of Mabatini, the ward nearest it",
+    labels.features
+      .filter((f) => {
+        const [x, y] = middleOf(f.properties.name);
+        return (
+          Math.abs(f.geometry.coordinates[0] - x) > 1e-9 ||
+          Math.abs(f.geometry.coordinates[1] - y) > 1e-9
+        );
+      })
+      .map((f) => [f.properties.name, f.geometry.coordinates]),
+    [["Mathare", mabatini]],
   );
 }
 
@@ -224,6 +278,35 @@ eq(
   searchHits("0733 44", WARDS, PEOPLE, "county").map((h) => [h.kind, h.label]),
   [["person", "Kamau Njoroge"]],
 );
+eq(
+  "the 0 or 254 typed first is not one of the four digits",
+  ["0733", "2547"].map((q) => searchHits(q, WARDS, PEOPLE, "county")),
+  [[], []],
+);
+eq(
+  "but four digits after it find the number",
+  ["07334", "2547334", "7334"].map((q) =>
+    searchHits(q, WARDS, PEOPLE, "county").map((h) => [h.kind, h.label]),
+  ),
+  [[["person", "Kamau Njoroge"]], [["person", "Kamau Njoroge"]], [["person", "Kamau Njoroge"]]],
+);
+{
+  // An accent at the end of a part of a name, and one inside a word.
+  const jose = { id: "p3", name: "José Ochieng", phone: "+254711000111", ward: null, house: null };
+  const renee = { id: "p4", name: "Renée Akinyi", phone: "+254722000222", ward: null, house: null };
+  const found = (q: string) =>
+    searchHits(q, WARDS, [...PEOPLE, jose, renee], "county").map((h) => [h.kind, h.label]);
+  eq(
+    "a name typed without accents finds one written with them, and the reverse",
+    ["jose", "José", "renee", "RENÉE"].map(found),
+    [
+      [["person", "José Ochieng"]],
+      [["person", "José Ochieng"]],
+      [["person", "Renée Akinyi"]],
+      [["person", "Renée Akinyi"]],
+    ],
+  );
+}
 eq("nothing typed, nothing found", searchHits("  ", WARDS, PEOPLE, "county"), []);
 
 eq(
@@ -250,6 +333,18 @@ eq(
   [{ kind: "place", label: "Ngong Road", sub: "Kilimani, Nairobi", center: [36.78, -1.3] }],
 );
 eq("a reply that isn't one", placeHits({ error: "bad key" }), []);
+eq(
+  "a bad entry in the reply is skipped, like one without a name or centre",
+  placeHits({
+    features: [
+      null,
+      "Ngong Road",
+      7,
+      { text: "Ngong Road", place_name: "Ngong Road, Kilimani, Nairobi", center: [36.78, -1.3] },
+    ],
+  }),
+  [{ kind: "place", label: "Ngong Road", sub: "Kilimani, Nairobi", center: [36.78, -1.3] }],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

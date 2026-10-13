@@ -3,7 +3,15 @@
 // map, as AGENTS.md asks), the constituency names drawn at the top level, and
 // search. Pure, so the map component only draws.
 
-import { wardAt, type Box, type LngLat, type WardShape } from "@/lib/geo";
+import {
+  distanceM,
+  inBox,
+  ringCentre,
+  wardAt,
+  type Box,
+  type LngLat,
+  type WardShape,
+} from "@/lib/geo";
 import type { Top } from "@/lib/map-areas";
 import { plusCodeCentre } from "@/lib/pluscode";
 import type { Area } from "@/lib/voters-view";
@@ -66,14 +74,20 @@ const union = (boxes: Box[]): Box | null =>
       }
     : null;
 
-/** Where the camera goes: a house, a ward, a constituency, else the whole map area. */
+/**
+ * Where the camera goes: a house in the map area, a ward, a constituency, else the whole
+ * map area. A house outside the map area (a plus code typed into the address) is no house.
+ */
 export function cameraFor(
   at: { area: Area; house?: string | null },
   wards: WardRef[],
   shapes: WardShape[],
   mapArea: { bounds: [number, number, number, number]; top: Top },
 ): CameraTarget {
-  const centre = at.house ? plusCodeCentre(at.house) : null;
+  const [west, south, east, north] = mapArea.bounds;
+  const bounds = { west, south, east, north };
+  const found = at.house ? plusCodeCentre(at.house) : null;
+  const centre = found && inBox(found, bounds) ? found : null;
   if (centre) return { kind: "point", center: centre, zoom: HOUSE_ZOOM_OPEN };
   const { area } = at;
   if (area.level === "ward") {
@@ -85,10 +99,9 @@ export function cameraFor(
     const box = union(shapes.filter((s) => slugs.has(s.slug)).map((s) => s.box));
     if (box) return { kind: "box", box, minZoom: CONSTITUENCY_ZOOM, maxZoom: WARD_ZOOM - 0.1 };
   }
-  const [west, south, east, north] = mapArea.bounds;
   return {
     kind: "box",
-    box: { west, south, east, north },
+    box: bounds,
     minZoom: MIN_ZOOM,
     maxZoom: (mapArea.top === "constituency" ? WARD_ZOOM : CONSTITUENCY_ZOOM) - 0.1,
   };
@@ -111,28 +124,39 @@ export type LabelPoints = {
   }[];
 };
 
-/** A point in the middle of each constituency's wards, for its name at the top level. */
+const centreOf = (b: Box): LngLat => [(b.west + b.east) / 2, (b.south + b.north) / 2];
+
+/**
+ * Where a constituency's name goes, so that clicking it opens that constituency: the middle
+ * of the box around its wards, or, when that falls outside every one of them (Mathare's does,
+ * in Ruaraka), the centre of the ward whose own box is centred nearest it.
+ */
+function labelPoint(own: WardShape[]): LngLat {
+  const middle = centreOf(union(own.map((s) => s.box))!);
+  if (wardAt(middle, own)) return middle;
+  const [nearest] = [...own].sort(
+    (a, b) => distanceM(centreOf(a.box), middle) - distanceM(centreOf(b.box), middle),
+  );
+  const outline = nearest?.polygons[0]?.[0];
+  return outline ? ringCentre(outline) : middle;
+}
+
+/** A point for each constituency's name at the top level, in name order; labelPoint says where. */
 export function constituencyLabels(shapes: WardShape[], wards: WardRef[]): LabelPoints {
-  const boxes = new Map<string, Box[]>();
+  const members = new Map<string, WardShape[]>();
   for (const s of shapes) {
     const name = wards.find((w) => w.slug === s.slug)?.constituency;
-    if (name) boxes.set(name, [...(boxes.get(name) ?? []), s.box]);
+    if (name) members.set(name, [...(members.get(name) ?? []), s]);
   }
   return {
     type: "FeatureCollection",
-    features: [...boxes.entries()]
+    features: [...members.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([name, bs]) => {
-        const b = union(bs)!;
-        return {
-          type: "Feature" as const,
-          properties: { name },
-          geometry: {
-            type: "Point" as const,
-            coordinates: [(b.west + b.east) / 2, (b.south + b.north) / 2] as LngLat,
-          },
-        };
-      }),
+      .map(([name, own]) => ({
+        type: "Feature" as const,
+        properties: { name },
+        geometry: { type: "Point" as const, coordinates: labelPoint(own) },
+      })),
   };
 }
 
@@ -158,15 +182,19 @@ type SearchPerson = {
   house: string | null;
 };
 
+/** Lower case, without accents, and only a to z and 0 to 9 with single spaces between. */
 const fold = (s: string) =>
   s
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
 /**
  * Wards and constituencies by name, and people by name, or by their number
- * when four or more digits are typed. At most `max` of each kind.
+ * when four or more digits are typed after its 0 or 254. Names match without
+ * capitals or accents. At most `max` of each kind.
  */
 export function searchHits(
   q: string,
@@ -178,7 +206,8 @@ export function searchHits(
   const needle = fold(q);
   if (!needle) return [];
   const digits = q.replace(/\D/g, "");
-  // Typed the local way (0733…) or the international way (254733…), numbers are kept +254….
+  // Typed the local way (0733…) or the international way (254733…), numbers are kept +254…;
+  // the four digits that start a number search are counted after that 0 or 254.
   const local = digits.replace(/^(?:254|0)/, "");
   const out: SearchHit[] = [];
   out.push(
@@ -205,7 +234,7 @@ export function searchHits(
   out.push(
     ...people
       .filter((p) =>
-        digits.length >= 4
+        local.length >= 4
           ? p.phone.replace(/\D/g, "").includes(local)
           : fold(p.name).includes(needle),
       )
@@ -239,12 +268,17 @@ export function geocodeUrl(
   return `https://api.maptiler.com/geocoding/${encodeURIComponent(text)}.json?${params.toString()}`;
 }
 
-/** Places from a MapTiler search reply; anything without a name and a centre is left out. */
+/**
+ * Places from a MapTiler search reply; anything that isn't an object with a name
+ * and a centre is left out.
+ */
 export function placeHits(json: unknown): SearchHit[] {
   const features = (json as { features?: unknown } | null)?.features;
   if (!Array.isArray(features)) return [];
   const out: SearchHit[] = [];
-  for (const f of features as Record<string, unknown>[]) {
+  for (const entry of features as unknown[]) {
+    if (!entry || typeof entry !== "object") continue;
+    const f = entry as Record<string, unknown>;
     const c = f["center"];
     const label = typeof f["text"] === "string" ? f["text"] : null;
     if (!label || !Array.isArray(c) || typeof c[0] !== "number" || typeof c[1] !== "number")
