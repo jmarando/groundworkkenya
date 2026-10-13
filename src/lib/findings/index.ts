@@ -8,11 +8,15 @@ import {
   type FindingsInput,
   type RuleId,
 } from "@/lib/findings/core";
+import { notVisited, timeInSafeSeats } from "@/lib/findings/time";
 
 export type Rule = (i: FindingsInput) => Finding[];
 
 /** Each rule's function; a rule without one is skipped. */
-export const RULE_FNS: Partial<Record<RuleId, Rule>> = {};
+export const RULE_FNS: Partial<Record<RuleId, Rule>> = {
+  "not-visited": notVisited,
+  "time-in-safe-seats": timeInSafeSeats,
+};
 
 export function findings(
   i: FindingsInput,
