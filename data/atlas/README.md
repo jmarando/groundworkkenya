@@ -22,6 +22,15 @@ share). `scripts/atlas/build-sql.ts` turns folders into a migration once
 - `register.csv` — `year,area,registered,source`: registered voters, by ward and above.
 - `population.csv` — `area,year,total,adults,young_adults,source`: WorldPop estimates, written
   by `scripts/atlas/population.ts`.
+- `indicators.csv` — `area,indicator,year,value,source`: measured figures for an area, written
+  by `scripts/atlas/buildings.ts` from the Voters map's house file for that map area
+  (`public/tiles`, Google Open Buildings v3 at confidence 0.65 or more) and the ward map:
+  `area_km2` (geoBoundaries, 2020), and `buildings`, `buildings_per_km2`, `median_building_m2`,
+  `small_building_share` (under 40 m²) and `large_building_share` (200 m² or more) from Open
+  Buildings (2023). A building counts in the ward its centre falls in. Values are decimals with
+  a point; counts and medians are whole; shares are between 0 and 1. A constituency is measured
+  from all its wards' buildings together, and only when all its wards are mapped.
+  `build-sql.ts … --indicators` writes them as a migration of their own.
 - `known-differences.csv` — `election,seat,candidate,area,difference,note`: a sum that doesn't
   add up in IEBC's own documents, with the exact difference (total minus its parts) and what
   the documents say. For a turnout row whose valid and rejected don't make cast, leave seat and
