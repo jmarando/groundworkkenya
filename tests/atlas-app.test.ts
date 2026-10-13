@@ -97,6 +97,8 @@ const D: AtlasData = {
   homeArea: null,
   sides: { "2022-governor": "Kenya Kwanza" },
   notes: {},
+  indicators: [],
+  profiles: {},
 };
 const NO_SIDE: AtlasData = { ...D, sides: {} };
 

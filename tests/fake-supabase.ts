@@ -26,6 +26,7 @@ const KEYS: Record<string, string[][]> = {
   atlas_settings: [["campaign_id"]],
   atlas_sides: [["campaign_id", "election_id"]],
   area_notes: [["campaign_id", "area_key"]],
+  area_profiles: [["campaign_id", "area_key"]],
 };
 
 const PARENTS: [string, string][] = [
