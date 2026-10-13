@@ -71,7 +71,9 @@ type Finding = {
 ## 2. Terms the rules share
 
 - **Your area:** the campaign's home area in Elections (`homeAreaFor`), and everything inside
-  it. **Seats** are its constituencies; an MP campaign's seat is its home area itself.
+  it. **Seats** are the places votes are weighed in, as Home's Moves card does: a county's
+  constituencies, and Kenya's counties for a presidential campaign; an MP campaign's seat is
+  its home area itself.
 - **Your race and side:** the campaign's race (`defaultRace`) and its side in 2022. Rules that
   need a side stay quiet until it is set, and their group says "Set your side in Elections
   first".
@@ -98,10 +100,12 @@ quarter" and "top half" round up, so there is always at least one place in them.
    Stops are diary entries with a ward, of any kind but "To watch". [votes within reach, or
    registered voters]
 
-   > Dagoretti North: no diary stop in 63 days and none planned, with about 9,400 votes within
-   > reach.
+   > Dagoretti North: no diary stop in the last 60 days and none planned, with about 9,400
+   > votes within reach.
 
-   Next: add a stop, the diary's form opened with the place's biggest ward.
+   Next: plan a visit (`/diary?add=<ward id>`). For those who can change the diary (the
+   candidate, manager and super admin) it opens today's form with the place's biggest ward
+   chosen; for organisers it opens the diary.
 
 2. **Time in safe seats** (`time-in-safe-seats`, campaign; not for an MP). Over the last 30
    days and the next 14, at least 6 stops with a ward, half or more of them in seats whose what
@@ -115,16 +119,17 @@ quarter" and "top half" round up, so there is always at least one place in them.
 
 ### What to say where
 
-3. **Top issue in a ward** (`ward-top-issue`, ward). Issues raised in the ward in 30 days, at
-   the door, in messages to the campaign and in news and social mentions tagged with the ward,
-   each counted as Home's top of mind counts it and named with `issueKey`. Fires at 10 or more
-   issues raised, when one issue takes 30% or more. [that issue's count]
+3. **Top issue in a ward** (`ward-top-issue`, ward). Issues raised in the ward in 30 days: at
+   the door and in messages to the campaign (in the ward of the person spoken to), and in news
+   and social mentions tagged with the ward, each counted as Home's top of mind counts it and
+   named with `issueKey`. Fires at 10 or more issues raised, when one issue takes 30% or more.
+   [that issue's count]
 
    > Kawangware: water is 38% of the 52 issues raised in 30 days (door 31, messages 15, news
    > and social 6).
 
-   A source with none is left out of the brackets. Next: write to the ward, Broadcast opened
-   with the ward chosen.
+   The brackets count every issue raised, by where; a source with none is left out. Next:
+   write to the ward, Broadcast opened with the ward chosen.
 
 4. **Issue rising** (`issue-rising`, campaign, one per issue). An issue's share in a period is
    its share of each source's issues, averaged over the sources that count, as top of mind
@@ -149,8 +154,8 @@ quarter" and "top half" round up, so there is always at least one place in them.
 ### Field work and money
 
 6. **Votes within reach** (`votes-within-reach`, seat). Every seat in your area with a 2022
-   result for your race, once your side is set: its what to do, the rule's reason and the
-   votes within reach. ("At least" where the turnout part can't be worked out.) [votes within
+   result for your race, once your side is set: its what to do, the rule's reason (whose
+   numbers become the finding's figures, from `whatToDoFigures`) and the votes within reach. ("At least" where the turnout part can't be worked out.) [votes within
    reach]
 
    > Dagoretti North: Persuade. 2022 was close: 46.1% to us against 48.0% for Bloc B. About
@@ -186,13 +191,13 @@ quarter" and "top half" round up, so there is always at least one place in them.
    Next: the ward in Elections.
 
 10. **Spend out of line** (`spend-out-of-line`, ward). Needs KES 10,000 or more of stipends
-    across the campaign in 30 days. Among wards in the top half by registered voters, fires
-    when a ward's share of that spend is under half its share of your wards' registered
-    voters. [voter share less spend share]
+    across the campaign in 30 days (owed, approved or paid; dated by payment, else by entry).
+    Among wards in the top half by registered voters, fires when a ward's share of that spend
+    is under half its share of your wards' registered voters. [voter share less spend share]
 
     > Kawangware: 1% of stipend spend in 30 days, for 4% of your registered voters.
 
-    Next: Finance.
+    Next: Agents & stipends, where stipends are kept.
 
 ### Rivals and polls
 
@@ -203,13 +208,15 @@ quarter" and "top half" round up, so there is always at least one place in them.
 
     > Challenger A up 4.0 points in Pollster B's latest poll, from 31% to 35%.
 
-    Home's Today line uses the same extended function, so the two never disagree. Next: the
-    race on Home.
+    Home's Today line uses the same extended function, so it now shows our own moves too and
+    the two never disagree. Next: the race on Home.
 
 12. **Rival in the news** (`rival-in-news`, campaign, one per rival). A rival's share of all
     news and social mentions this week is 10 points or more above its share over the previous
     four weeks taken together, with 20 or more mentions this week. Silent when the previous
-    four weeks have fewer than 20 mentions in all. [the rise]
+    four weeks have fewer than 20 mentions in all. A mention is about a rival when the Listening
+    keyword that found it is one of the team's rival keywords, labelled with the rival's name or
+    the name they're searched by. Rivals' own posts aren't news about them. [the rise]
 
     > Challenger A was in 41% of news and social mentions this week, up from 18% over the
     > previous four weeks.
@@ -233,9 +240,9 @@ piece of work).
   decision (up to four), each with its next step, and "See all findings". The Race section's
   Moves card goes; its seats are rule 6. Today is unchanged; when its rival line is a poll
   move, the block leaves rule 11 out. The spoken briefing is unchanged.
-- **Elections:** a "So what here" card on ward, constituency and county pages: up to five
-  findings about the place and the places inside it, and "See all" to Strategy filtered to
-  the place.
+- **Elections:** a "So what here" card under the page's heading, for wards, constituencies
+  and counties alike: up to five findings about the place and the places inside it, and "See
+  all" to Strategy filtered to the place.
 - **Voters:** the map's panel shows up to three field and message findings about the place in
   view and the places inside it.
 - **Diary:** the week opens with the time findings (up to three). Each stop in the next seven
@@ -251,9 +258,11 @@ and returns no rows to a field agent. None returns a name, a phone number or a p
   `news`, each read as top of mind reads it; a mention's ward is matched to the campaign's
   ward by name.
 - `issue_weeks(_weeks integer)`: `week, source, issue, n`, week 0 being the last 7 days.
-- `rival_mention_weeks(_weeks integer)`: `week, rival_id, n`; a null `rival_id` row holds all
-  mentions that week.
-- `ward_spend(_days integer)`: `ward_id, kes`, from `agent_stipends`.
+- `rival_mention_weeks(_weeks integer)`: `week, rival_id, n`; a rival's row counts the news
+  and social mentions their rival keyword found, and a null `rival_id` row holds all mentions
+  that week. Rivals' own posts are left out of both.
+- `ward_spend(_days integer)`: `ward_id, kes`, from `agent_stipends`: owed, approved or paid,
+  dated by payment, else by entry.
 - `ward_supporters()`: `ward_id, supporters`, as the Overview counts them.
 
 Doors come from the existing `house_doors()`. The diary, the race, the campaign's wards and the
