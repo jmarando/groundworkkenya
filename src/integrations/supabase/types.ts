@@ -161,6 +161,60 @@ export type Database = {
           },
         ]
       }
+      area_profiles: {
+        Row: {
+          area_key: string
+          campaign_id: string
+          communities: string | null
+          id: string
+          institutions: string | null
+          issues: string | null
+          languages: string[]
+          settlement: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          area_key: string
+          campaign_id?: string
+          communities?: string | null
+          id?: string
+          institutions?: string | null
+          issues?: string | null
+          languages?: string[]
+          settlement?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          area_key?: string
+          campaign_id?: string
+          communities?: string | null
+          id?: string
+          institutions?: string | null
+          issues?: string | null
+          languages?: string[]
+          settlement?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "area_profiles_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "area_profiles_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atlas_areas: {
         Row: {
           iebc_code: string | null
@@ -258,6 +312,45 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      atlas_indicators: {
+        Row: {
+          area_key: string
+          indicator: string
+          source_id: string
+          value: number
+          year: number
+        }
+        Insert: {
+          area_key: string
+          indicator: string
+          source_id: string
+          value: number
+          year: number
+        }
+        Update: {
+          area_key?: string
+          indicator?: string
+          source_id?: string
+          value?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atlas_indicators_area_key_fkey"
+            columns: ["area_key"]
+            isOneToOne: false
+            referencedRelation: "atlas_areas"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "atlas_indicators_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "atlas_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       atlas_population: {
         Row: {
