@@ -332,7 +332,8 @@ begin
                            'social_credits',
                            -- The election atlas: public figures every campaign reads; only migrations write them
                            'atlas_sources', 'atlas_areas', 'atlas_elections', 'atlas_candidates',
-                           'atlas_results', 'atlas_turnout', 'atlas_register', 'atlas_population');
+                           'atlas_results', 'atlas_turnout', 'atlas_register', 'atlas_population',
+                           'atlas_indicators');
   assert t is null, 'new tables with no campaign: decide whether they belong to one: ' || t;
 end $$;
 
