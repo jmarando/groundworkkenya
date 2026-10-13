@@ -14,12 +14,13 @@ import {
   turnout,
   validVotes,
   votesWithinReach,
-  whatToDo,
+  whatToDoFigures,
   TODO_NAMES,
   YEARS,
   type AreaCount,
   type Race,
   type Reach,
+  type ReasonFigure,
   type Todo,
 } from "@/lib/atlas";
 
@@ -153,7 +154,7 @@ export type AreaFigures = {
   yearBefore: number | null;
   /** Our side at `yearBefore`; swing needs it. */
   sideBefore: string | null;
-  todo: { todo: Todo; reason: string } | null;
+  todo: { todo: Todo; reason: string; figures: ReasonFigure[] } | null;
   reach: Reach | null;
   /** The latest register: 2022's, else the election's own. */
   registered: number | null;
@@ -259,7 +260,7 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
     sideBefore: before?.side ?? null,
     todo:
       count && counted
-        ? whatToDo({
+        ? whatToDoFigures({
             year,
             count,
             side,

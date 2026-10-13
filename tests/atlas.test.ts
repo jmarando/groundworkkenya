@@ -17,6 +17,7 @@ import {
   validVotes,
   votesWithinReach,
   whatToDo,
+  whatToDoFigures,
   type AreaCount,
 } from "@/lib/atlas";
 
@@ -328,5 +329,112 @@ eq(
   ["IEBC · constituency total · 2022", "WorldPop estimate · 2020"],
 );
 
+// What to do, with every number its reason prints: findings carry them as figures.
+const todoFigures = (
+  cands: [string, number][],
+  parentTurnout: number | null = 0.5,
+  before: AreaCount | null = null,
+) =>
+  whatToDoFigures({
+    year: 2022,
+    count: count(cands),
+    side: KK,
+    parentTurnout,
+    parentName: "Nairobi",
+    before: before ? { year: 2017, count: before, side: "Jubilee" } : null,
+  });
+/** The digits a reason prints that none of its figures accounts for. */
+const leftOver = (r: { reason: string; figures: { text: string }[] }) => {
+  let rest = r.reason;
+  for (const f of [...r.figures].sort((a, b) => b.text.length - a.text.length))
+    rest = rest.split(f.text).join(" ");
+  return rest.match(/[0-9][0-9,.]*/g) ?? [];
+};
+eq(
+  "mobilise's figures",
+  todoFigures(
+    [
+      [KK, 30_000],
+      [AZ, 20_000],
+    ],
+    0.6,
+  ).figures,
+  [
+    { label: "Our share", value: 0.6, text: "60.0%" },
+    { label: "Election", value: 2022, text: "2022" },
+    { label: "Turnout", value: 0.5, text: "50%" },
+    { label: "Points below Nairobi", value: 10, text: "10" },
+  ],
+);
+eq(
+  "every reason's numbers are among its figures",
+  [
+    todoFigures(
+      [
+        [KK, 30_000],
+        [AZ, 20_000],
+      ],
+      0.6,
+    ),
+    todoFigures(
+      [
+        [KK, 30_000],
+        [AZ, 20_000],
+      ],
+      0.52,
+    ),
+    todoFigures([
+      [KK, 15_000],
+      [AZ, 33_000],
+      [IND, 2_000],
+    ]),
+    todoFigures([
+      [KK, 24_000],
+      [AZ, 22_500],
+      [IND, 3_500],
+    ]),
+    todoFigures(
+      [
+        [KK, 27_500],
+        [AZ, 17_500],
+        [IND, 5_000],
+      ],
+      0.5,
+      count([
+        ["Jubilee", 21_000],
+        ["NASA", 29_000],
+      ]),
+    ),
+    todoFigures([
+      [KK, 27_500],
+      [AZ, 17_500],
+      [IND, 5_000],
+    ]),
+  ].map((r) => [r.todo, leftOver(r)]),
+  [
+    ["mobilise", []],
+    ["hold", []],
+    ["cut", []],
+    ["persuade", []],
+    ["persuade", []],
+    ["lean-ours", []],
+  ],
+);
+eq(
+  "no side: the year alone",
+  whatToDoFigures({
+    year: 2022,
+    count: count([[KK, 1_000]]),
+    side: null,
+    parentTurnout: null,
+    parentName: null,
+    before: null,
+  }),
+  {
+    todo: "no-side",
+    reason: "Set your side in 2022 first.",
+    figures: [{ label: "Election", value: 2022, text: "2022" }],
+  },
+);
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

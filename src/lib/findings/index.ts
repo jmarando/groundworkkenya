@@ -8,6 +8,13 @@ import {
   type FindingsInput,
   type RuleId,
 } from "@/lib/findings/core";
+import {
+  doorsBehind,
+  shortOfTarget,
+  spendOutOfLine,
+  unregisteredAdults,
+  votesWithinReach,
+} from "@/lib/findings/field";
 import { issueRising, oneSeatDifferentPlaces, wardTopIssue } from "@/lib/findings/message";
 import { notVisited, timeInSafeSeats } from "@/lib/findings/time";
 
@@ -20,6 +27,11 @@ export const RULE_FNS: Partial<Record<RuleId, Rule>> = {
   "ward-top-issue": wardTopIssue,
   "issue-rising": issueRising,
   "one-seat-different-places": oneSeatDifferentPlaces,
+  "votes-within-reach": votesWithinReach,
+  "doors-behind": doorsBehind,
+  "short-of-target": shortOfTarget,
+  "unregistered-adults": unregisteredAdults,
+  "spend-out-of-line": spendOutOfLine,
 };
 
 export function findings(
