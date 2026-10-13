@@ -19,6 +19,7 @@ export function TodaySection({
   time,
   plan,
   watch,
+  upcoming,
   canEdit,
   onEditStory,
 }: {
@@ -32,6 +33,7 @@ export function TodaySection({
   /** Today's stops from the diary, and what to watch over the next three days. */
   plan: DiaryEntry[];
   watch: DiaryEntry[];
+  upcoming: DiaryEntry[];
   canEdit: boolean;
   onEditStory: () => void;
 }) {
@@ -68,7 +70,7 @@ export function TodaySection({
           onEdit={onEditStory}
         />
         <aside className="mb-side" aria-label="Today's plan">
-          <DiaryPlan plan={plan} watch={watch} loading={loading} canEdit={canEdit} />
+          <DiaryPlan plan={plan} watch={watch} upcoming={upcoming} loading={loading} canEdit={canEdit} />
         </aside>
       </div>
       <MorningNews view={story} />
