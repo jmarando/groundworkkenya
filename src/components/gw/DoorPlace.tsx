@@ -34,7 +34,7 @@ function describe(door: DoorPlaceState, outlines: HouseStatus): string {
 
 export function DoorPlace({ door }: { door: DoorPlaceState }) {
   const [picking, setPicking] = useState(false);
-  const { buildings, status: outlines } = door.houses;
+  const { buildings, status: outlines, complete } = door.houses;
   const fix = door.geo.fix;
 
   return (
@@ -65,6 +65,7 @@ export function DoorPlace({ door }: { door: DoorPlaceState }) {
             <PickMap
               fix={fix}
               buildings={buildings}
+              complete={complete}
               chosenId={door.chosen?.building.id ?? null}
               onPick={door.pick}
             />
@@ -123,11 +124,14 @@ function outlinePath(rings: Ring[], origin: LngLat): string {
 function PickMap({
   fix,
   buildings,
+  complete,
   chosenId,
   onPick,
 }: {
   fix: Fix;
   buildings: Building[];
+  /** Every tile around the phone is read; if not, a house may be missing here. */
+  complete: boolean;
   chosenId: string | null;
   onPick: (id: string) => void;
 }) {
@@ -173,7 +177,9 @@ function PickMap({
       <p className="f-note">
         {near.length
           ? "You are the blue dot, north is up. Tap their building."
-          : "No buildings within 80 m of you on the map."}
+          : complete
+            ? "No buildings within 80 m of you on the map."
+            : "Some of the houses around you are still loading…"}
       </p>
     </>
   );
