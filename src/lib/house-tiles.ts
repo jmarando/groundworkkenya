@@ -191,8 +191,10 @@ class Reader {
 
   skip(wire: number): void {
     if (wire === 0) this.varint();
-    else if (wire === 2) this.at.pos += this.varint();
-    else if (wire === 1) this.at.pos += 8;
+    else if (wire === 2) {
+      const n = this.varint();
+      this.at.pos += n;
+    } else if (wire === 1) this.at.pos += 8;
     else if (wire === 5) this.at.pos += 4;
     else throw new Error(`Not a vector tile (wire type ${wire}).`);
   }

@@ -73,8 +73,13 @@ eq(
     plusCodeCentre("6GCRPQM6V9F4"),
     plusCodeCentre("hello"),
     plusCodeCentre(""),
+    // Made of code digits, but no place on Earth: the latitude digit goes only as far as C,
+    // the longitude digit as far as V.
+    plusCodeCentre("XXXXXXXX+XX"),
+    plusCodeCentre("FFFFFFFF+FF"),
+    plusCodeCentre("6WWWWWWW+WW"),
   ],
-  [null, null, null, null],
+  [null, null, null, null, null, null, null],
 );
 
 {
@@ -103,6 +108,16 @@ eq(
 );
 eq("its footprint, to within 10%", Math.abs(back[0]!.area - 110) <= 11, true);
 eq("its centre, to within a metre", near(back[0]!.centre, ringCentre(RING), 1), true);
+
+{
+  // A tile from another tool can carry a field we don't read: field 9, 3 bytes, before the layer.
+  const withExtra = new Uint8Array([0x4a, 3, 1, 2, 3, ...bytes]);
+  eq(
+    "an unknown field in a tile is skipped",
+    decodeTile(x, y, withExtra).map((b) => b.id),
+    back.map((b) => b.id),
+  );
+}
 
 {
   const tile = new VectorTile(new PbfReader(bytes));

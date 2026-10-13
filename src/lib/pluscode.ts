@@ -6,8 +6,12 @@ import type { LngLat } from "@/lib/geo";
 
 const DIGITS = "23456789CFGHJMPQRVWX";
 
-/** A full plus code as Open Buildings gives each house: 8 digits, "+", then 2 to 7. */
-export const PLUS_CODE = /^[23456789CFGHJMPQRVWX]{8}\+[23456789CFGHJMPQRVWX]{2,7}$/;
+/**
+ * A full plus code as Open Buildings gives each house: 8 digits, "+", then 2 to 7;
+ * the first two (latitude, then longitude) only as far as the world goes.
+ */
+export const PLUS_CODE =
+  /^[23456789C][23456789CFGHJMPQRV][23456789CFGHJMPQRVWX]{6}\+[23456789CFGHJMPQRVWX]{2,7}$/;
 
 /** The centre of the area a full plus code names; null if it isn't one. */
 export function plusCodeCentre(code: string): LngLat | null {
