@@ -76,6 +76,19 @@ export function ringCentre(ring: Ring): LngLat {
   return [cx / (3 * a), cy / (3 * a)];
 }
 
+/** The area inside a closed ring, in square metres (flat: well under 1% off for a house). */
+export function ringAreaM2(ring: Ring): number {
+  const origin = ring[0];
+  if (!origin) return 0;
+  let twice = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = toLocalM(ring[i]!, origin);
+    const [x2, y2] = toLocalM(ring[i + 1]!, origin);
+    twice += x1 * y2 - x2 * y1;
+  }
+  return Math.abs(twice) / 2;
+}
+
 export function toBuildings(fc: BuildingCollection): Building[] {
   return fc.features
     .filter((f) => f.geometry?.type === "Polygon" && f.geometry.coordinates[0]?.length)
@@ -146,4 +159,29 @@ export function boundsOf(geometry: { type: string; coordinates: unknown }): Box 
   };
   walk(geometry.coordinates);
   return box;
+}
+
+/** A ward's outline and slug, for finding the ward a point is in. */
+export type WardShape = { slug: string; polygons: Ring[][]; box: Box };
+
+type ShapeFile = {
+  features: { properties: { slug: string }; geometry: { type: string; coordinates: unknown } }[];
+};
+
+/** The wards of a ward file (public/geo/*-wards.json), Polygon or MultiPolygon. */
+export function wardShapes(geo: ShapeFile): WardShape[] {
+  return geo.features.map((f) => ({
+    slug: f.properties.slug,
+    polygons: (f.geometry.type === "MultiPolygon"
+      ? f.geometry.coordinates
+      : [f.geometry.coordinates]) as Ring[][],
+    box: boundsOf(f.geometry),
+  }));
+}
+
+/** The ward a point is in, if any. */
+export function wardAt(p: LngLat, shapes: WardShape[]): WardShape | null {
+  return (
+    shapes.find((w) => inBox(p, w.box) && w.polygons.some((rings) => inPolygon(p, rings))) ?? null
+  );
 }
