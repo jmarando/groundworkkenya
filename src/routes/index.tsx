@@ -458,8 +458,8 @@ function Landing() {
               </p>
             </div>
             <div className="three">
-              <div className="wl">
-                <span className="tag">The long game · 18 months</span>
+              <div className="workload-card">
+                <span className="workload-tag">The long game · 18 months</span>
                 <h3>Organise</h3>
                 <p>Know who lives where, who's with you, and who still needs a knock.</p>
                 <ul>
@@ -477,8 +477,8 @@ function Landing() {
                   </li>
                 </ul>
               </div>
-              <div className="wl">
-                <span className="tag">The conversation · every day</span>
+              <div className="workload-card">
+                <span className="workload-tag">The conversation · every day</span>
                 <h3>Talk and listen</h3>
                 <p>
                   Every message in one inbox, every broadcast to the right doors, every trend before
@@ -499,8 +499,8 @@ function Landing() {
                   </li>
                 </ul>
               </div>
-              <div className="wl">
-                <span className="tag">The 48 hours · election day</span>
+              <div className="workload-card">
+                <span className="workload-tag">The 48 hours · election day</span>
                 <h3>Protect the vote</h3>
                 <p>Agents on every station, forms photographed, a parallel tally you can defend.</p>
                 <ul>
@@ -803,15 +803,13 @@ Nini kirekebishwe kwanza mtaani kwako?
                   </li>
                 </ul>
               </div>
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <div className="duo" style={{ gridTemplateColumns: "260px" }}>
-                  <div className="phone" style={{ borderColor: "#000" }}>
+              <div className="field-preview">
+                  <div className="landing-phone">
                     <img
                       src={shot8}
                       alt="Field app on a phone: agent's walk list stop with household, script and outcome buttons"
                     />
                   </div>
-                </div>
               </div>
             </div>
           </div>
