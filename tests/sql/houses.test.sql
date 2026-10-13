@@ -158,3 +158,136 @@ begin
     'and not the manager''s door in Kawangware';
 end $$;
 rollback;
+
+-- test: a house keeps its last score when a later visit finds no one home
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
+insert into public.house_visits (client_id, pc, ward_id, outcome, support, visited_at)
+select gen_random_uuid(), '6GCRPQM6+6E', w.id, v.outcome, v.support, now() - v.age
+  from (values ('spoke', 4, interval '10 days'),
+               ('not_home', null, interval '1 day')
+       ) as v(outcome, support, age)
+  join public.wards w on w.slug = 'kileleshwa' and w.campaign_id = 'ca000000-0000-4000-8000-000000000002';
+do $$
+declare
+  kile uuid := (select id from public.wards
+                 where slug = 'kileleshwa' and campaign_id = 'ca000000-0000-4000-8000-000000000002');
+  d record;
+  h record;
+begin
+  select * into d from public.house_doors() where ward_id = kile;
+  assert d.knocked = 1 and d.rated = 1 and d.supporters = 1,
+    'one house, knocked, and still a supporter by the score it gave ten days ago';
+  assert (select count(*) from public.ward_houses(kile)) = 1, 'the house once';
+  select * into h from public.ward_houses(kile);
+  assert h.pc = '6GCRPQM6+6E' and h.outcome = 'not_home' and h.support = 4,
+    'the latest outcome, and the score from the visit before';
+end $$;
+rollback;
+
+-- test: a retried sync is a repeat when only house_visits has the visit
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+-- A visit on a house with no event behind it (part 3 adds doors with no person).
+insert into public.house_visits (client_id, pc, outcome, visited_at)
+values (gen_random_uuid(), '6GCRPQM6+7F', 'not_home', now());
+do $$
+declare
+  visit uuid := (select client_id from public.house_visits where pc = '6GCRPQM6+7F');
+  people_before bigint := (select count(*) from public.people);
+  events_before bigint := (select count(*) from public.person_events);
+  r jsonb;
+begin
+  assert not exists (select 1 from public.person_events where client_id = visit),
+    'person_events has no row for this visit';
+  r := public.record_door(visit, null, '{"phone": "+254722000333", "name": "Wanjiru"}',
+         'spoke', 4, 'Water', '{}', null, now(),
+         '{"lat": -1.26532, "lng": 36.76093, "accuracy": 8, "buildingId": "6GCRPQM6+7F"}');
+  assert (r ->> 'repeat')::boolean, 'the visit on the house makes it a repeat';
+  assert (select count(*) from public.people) = people_before, 'no person added';
+  assert (select count(*) from public.person_events) = events_before, 'no person event added';
+  assert (select count(*) from public.house_visits) = 1, 'no house visit added';
+end $$;
+rollback;
+
+-- test: a visit with no ward is left out of the ward counts
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
+insert into public.house_visits (client_id, pc, ward_id, outcome, support, visited_at)
+select gen_random_uuid(), v.pc, w.id, v.outcome, v.support, now() - v.age
+  from (values ('6GCRPQM6+2A', 'kileleshwa', 'spoke', 4, interval '3 days'),
+               ('6GCRPQM6+5D', 'kawangware', 'refused', null, interval '2 days')
+       ) as v(pc, ward, outcome, support, age)
+  join public.wards w on w.slug = v.ward and w.campaign_id = 'ca000000-0000-4000-8000-000000000002';
+-- Someone with no ward on file answered at these: a house that also has a visit
+-- with a ward (the newer visit changes nothing for it), and a house with none.
+insert into public.house_visits (client_id, pc, outcome, support, visited_at)
+values (gen_random_uuid(), '6GCRPQM6+2A', 'not_home', null, now() - interval '1 day'),
+       (gen_random_uuid(), '6GCRPQM6+8G', 'spoke', 5, now() - interval '1 day');
+do $$
+declare
+  kile uuid := (select id from public.wards
+                 where slug = 'kileleshwa' and campaign_id = 'ca000000-0000-4000-8000-000000000002');
+  kawa uuid := (select id from public.wards
+                 where slug = 'kawangware' and campaign_id = 'ca000000-0000-4000-8000-000000000002');
+  d record;
+begin
+  assert not exists (select 1 from public.house_doors() where ward_id is null), 'no row without a ward';
+  assert (select count(*) from public.house_doors()) = 2, 'a row for each of the two wards';
+  select * into d from public.house_doors() where ward_id = kile;
+  assert d.knocked = 1 and d.rated = 1 and d.supporters = 1 and d.doors_week = 1,
+    'Kileleshwa counts only the visit that has a ward';
+  select * into d from public.house_doors() where ward_id = kawa;
+  assert d.knocked = 1 and d.rated = 0 and d.supporters = 0 and d.doors_week = 1, 'Kawangware as it was';
+  assert (select string_agg(pc || ' ' || outcome, ', ' order by pc) from public.ward_houses(kile))
+         = '6GCRPQM6+2A spoke', 'and the house keeps the visit that has a ward';
+end $$;
+rollback;
+
+-- test: visits at the same moment resolve the same way every time
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
+-- Three visits at each of three houses, all at the same moment. The one created
+-- last wins; of two created together, the one with the higher id. The ids run
+-- against the creation order and go in lowest first, so neither the order of
+-- the rows nor either rule alone picks the right visit.
+--   2A: not_home wins over spoke and refused (the outcome).
+--   3B: the score 5 wins over 2 and 1.
+--   5E: the visit in Kileleshwa wins over two in Kawangware (the ward).
+insert into public.house_visits (id, client_id, pc, ward_id, outcome, support, visited_at, created_at)
+select ('00000000-0000-4000-8000-0000000000' || v.n)::uuid, gen_random_uuid(), v.pc, w.id,
+       v.outcome, v.support, now() - interval '2 days', now() - v.made
+  from (values ('21', '6GCRPQM6+2A', 'kileleshwa', 'spoke', null, interval '60 minutes'),
+               ('22', '6GCRPQM6+2A', 'kileleshwa', 'not_home', null, interval '60 minutes'),
+               ('23', '6GCRPQM6+2A', 'kileleshwa', 'refused', null, interval '90 minutes'),
+               ('31', '6GCRPQM6+3B', 'kileleshwa', 'spoke', 2, interval '60 minutes'),
+               ('32', '6GCRPQM6+3B', 'kileleshwa', 'spoke', 5, interval '60 minutes'),
+               ('33', '6GCRPQM6+3B', 'kileleshwa', 'spoke', 1, interval '90 minutes'),
+               ('51', '6GCRPQM6+5E', 'kawangware', 'refused', null, interval '60 minutes'),
+               ('52', '6GCRPQM6+5E', 'kileleshwa', 'refused', null, interval '60 minutes'),
+               ('53', '6GCRPQM6+5E', 'kawangware', 'refused', null, interval '90 minutes')
+       ) as v(n, pc, ward, outcome, support, made)
+  join public.wards w on w.slug = v.ward and w.campaign_id = 'ca000000-0000-4000-8000-000000000002'
+ order by v.n;
+do $$
+declare
+  kile uuid := (select id from public.wards
+                 where slug = 'kileleshwa' and campaign_id = 'ca000000-0000-4000-8000-000000000002');
+  kawa uuid := (select id from public.wards
+                 where slug = 'kawangware' and campaign_id = 'ca000000-0000-4000-8000-000000000002');
+  d record;
+begin
+  select * into d from public.house_doors() where ward_id = kile;
+  assert d.knocked = 3, 'all three houses are in Kileleshwa, 5E by its visit created last';
+  assert d.rated = 1 and d.supporters = 1, '3B is scored 5, by the visit created last';
+  assert coalesce((select knocked from public.house_doors() where ward_id = kawa), 0) = 0,
+    'and none is in Kawangware';
+  assert (select string_agg(pc || ' ' || outcome || ' ' || coalesce(support::text, '-'), ', ' order by pc)
+            from public.ward_houses(kile))
+         = '6GCRPQM6+2A not_home -, 6GCRPQM6+3B spoke 5, 6GCRPQM6+5E refused -';
+end $$;
+rollback;
