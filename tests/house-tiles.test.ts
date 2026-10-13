@@ -66,6 +66,21 @@ eq("the house's footprint", Math.round(ringAreaM2(RING)), 110);
   );
   eq("lower case is the same code", plusCodeCentre(PC.toLowerCase()), c);
 }
+{
+  // A 1.5 m square at real Nairobi coordinates. Worked out from whole degrees (about 36.9 by
+  // -1.3) the cross products cancel badly, and an outline this small has its centre metres off.
+  const MIDDLE: LngLat = [36.87716, -1.28963];
+  const [mx, my] = MIDDLE;
+  const d = 0.0000068;
+  const SMALL: Ring = [
+    [mx - d, my - d],
+    [mx + d, my - d],
+    [mx + d, my + d],
+    [mx - d, my + d],
+    [mx - d, my - d],
+  ];
+  eq("a small house's centre, to within 10 cm", near(ringCentre(SMALL), MIDDLE, 0.1), true);
+}
 eq(
   "not plus codes",
   [

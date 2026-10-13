@@ -58,12 +58,16 @@ export function inPolygon(p: LngLat, rings: Ring[]): boolean {
 
 /** Area-weighted centre of an outline; the vertex average if it is degenerate. */
 export function ringCentre(ring: Ring): LngLat {
+  // Measured from the first vertex: products of whole degrees would lose metres to rounding.
+  const [ox, oy] = ring[0] ?? [0, 0];
   let a = 0;
   let cx = 0;
   let cy = 0;
   for (let i = 0; i < ring.length - 1; i++) {
-    const [x1, y1] = ring[i]!;
-    const [x2, y2] = ring[i + 1]!;
+    const x1 = ring[i]![0] - ox;
+    const y1 = ring[i]![1] - oy;
+    const x2 = ring[i + 1]![0] - ox;
+    const y2 = ring[i + 1]![1] - oy;
     const f = x1 * y2 - x2 * y1;
     a += f;
     cx += (x1 + x2) * f;
@@ -73,7 +77,7 @@ export function ringCentre(ring: Ring): LngLat {
     const n = Math.max(ring.length, 1);
     return [ring.reduce((s, c) => s + c[0], 0) / n, ring.reduce((s, c) => s + c[1], 0) / n];
   }
-  return [cx / (3 * a), cy / (3 * a)];
+  return [ox + cx / (3 * a), oy + cy / (3 * a)];
 }
 
 /** The area inside a closed ring, in square metres (flat: well under 1% off for a house). */
