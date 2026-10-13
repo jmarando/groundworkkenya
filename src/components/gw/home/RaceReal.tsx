@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { LastResultCard, MovesCard } from "@/components/gw/home/AtlasCards";
+import { LastResultCard } from "@/components/gw/home/AtlasCards";
 import { PollChart } from "@/components/gw/home/PollChart";
 import { SearchCard } from "@/components/gw/home/SearchCard";
 import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
@@ -48,7 +48,6 @@ export function RaceReal({
       <SearchCard read={search} rivals={race.rivals} />
       <RivalsCard race={race} canEdit={canEdit} onEdit={() => onEdit("rivals")} />
       <TopOfMindCard mind={mind} />
-      <MovesCard />
       <LastResultCard />
     </>
   );

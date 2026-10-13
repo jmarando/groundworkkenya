@@ -4,24 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { ResultList } from "@/components/gw/elections/ResultList";
 import { useAccess } from "@/hooks/useAccess";
-import { TODO_NAMES } from "@/lib/atlas";
-import { topMoves } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
-import {
-  electionOf,
-  figuresFor,
-  RACE_NAMES,
-  raceInText,
-  rankChildren,
-  resultBlocks,
-  TODO_COLOURS,
-  votes,
-} from "@/lib/atlas-view";
+import { raceInText, resultBlocks } from "@/lib/atlas-view";
 import { defaultRace, homeAreaFor } from "@/lib/elections-view";
 
 /** The atlas as Home reads it: the campaign's home area and race. Null until it loads. */
 function useAtlasHome() {
-  const { campaign, isPrincipal } = useAccess();
+  const { campaign } = useAccess();
   const fetchAtlas = useServerFn(getAtlas);
   const { data } = useQuery({
     queryKey: ["atlas"],
@@ -35,7 +24,6 @@ function useAtlasHome() {
     home,
     homeName: data.areas.find((a) => a.key === home)?.name ?? "your area",
     race: defaultRace(campaign?.level),
-    canSet: isPrincipal,
   };
 }
 
@@ -62,80 +50,6 @@ export function LastResultCard() {
           </Link>
         </p>
       )}
-    </section>
-  );
-}
-
-/** The home area's parts with the most votes within reach, each with what to do and why. */
-export function MovesCard() {
-  const a = useAtlasHome();
-  if (!a) return null;
-  const side = a.d.sides[electionOf(a.race, 2022)];
-  const level = a.d.areas.find((x) => x.key === a.home)?.level;
-  // An MP's constituency is read as a whole: its wards have no results until station data.
-  const whole = level === "constituency";
-  const parts = level === "county" ? "constituencies" : "counties";
-  // Nothing to set a side for until the home area (or some part of it) has a count.
-  const counted = whole
-    ? Boolean(figuresFor(a.d, a.home, a.race, 2022).count?.candidates.length)
-    : rankChildren(a.d, a.home, a.race, 2022).some((f) => f.count?.candidates.length);
-  const moves = topMoves(a.d, a.home, a.race);
-  return (
-    <section className="card" aria-labelledby="home-moves-h">
-      <div className="card-head">
-        <h2 id="home-moves-h">Where votes can move</h2>
-        <span className="mono">{RACE_NAMES[a.race]} · 2022</span>
-      </div>
-      {!counted ? (
-        <p className="f-note">
-          {whole
-            ? `Not found yet: ${a.homeName}'s 2022 ${raceInText(a.race)} result isn't in the atlas.`
-            : `Not found yet: ${a.homeName}'s ${parts} have no 2022 ${raceInText(a.race)} results in the atlas.`}
-        </p>
-      ) : !side ? (
-        <p className="f-note">
-          {a.canSet ? (
-            <>
-              Set your side in 2022 in{" "}
-              <Link to="/elections" search={{ area: a.home }}>
-                Elections
-              </Link>{" "}
-              to see where votes can move.
-            </>
-          ) : (
-            "Once the candidate or campaign manager sets your side in 2022 in Elections, the places where votes can move show here."
-          )}
-        </p>
-      ) : moves.length ? (
-        <ol className="home-moves">
-          {moves.map((f) => (
-            <li key={f.key}>
-              <div className="home-moves-h">
-                <Link to="/elections" search={{ area: f.key }}>
-                  {f.name}
-                </Link>
-                {f.todo ? (
-                  <span className="el-chip" style={{ background: TODO_COLOURS[f.todo.todo] }}>
-                    {TODO_NAMES[f.todo.todo]}
-                  </span>
-                ) : null}
-                <span className="home-moves-n">
-                  <b>{f.reach ? votes(f.reach.total) : "—"}</b> within reach
-                </span>
-              </div>
-              <p className="meta">{f.todo?.reason}</p>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="f-note">Nothing to rank yet: no part has votes within reach.</p>
-      )}
-      <p className="meta">
-        {whole ? "Ward by ward comes with the polling-station results. " : null}
-        <Link to="/elections" search={{ area: a.home }}>
-          All of it in Elections
-        </Link>
-      </p>
     </section>
   );
 }
