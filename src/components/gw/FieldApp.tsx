@@ -21,8 +21,8 @@ import {
 } from "@/lib/field";
 import { getWalkList, recordVisit, type WalkEntry } from "@/lib/field.functions";
 import { getStreetWalk, listStreets } from "@/lib/streets.functions";
-import { toBuildings, type Building } from "@/lib/geo";
-import { buildingsIndexQuery, wardBuildingsQuery } from "@/lib/geo-files";
+import { mapAreaFor, type MapArea } from "@/lib/map-areas";
+import { getMapConfig } from "@/lib/map.functions";
 import { normalizeKePhone } from "@/lib/phone";
 
 const WARD_KEY = "gw-field-ward";
@@ -125,16 +125,14 @@ export function FieldApp({
 
   const ward = wards.find((w) => w.id === wardId);
 
-  // Building outlines, so a visit lands on the right building. Fetched once
-  // while there is signal and kept for the session.
-  const { data: index } = useQuery(buildingsIndexQuery);
-  const slug = ward?.slug ?? "";
-  const hasOutlines = Boolean(slug && index?.wards[slug]);
-  const { data: outlines } = useQuery({ ...wardBuildingsQuery(slug), enabled: hasOutlines });
-  const buildings = useMemo(
-    () => (hasOutlines && outlines ? toBuildings(outlines) : []),
-    [hasOutlines, outlines],
-  );
+  // The campaign's map area, whose house file places a visit at a house.
+  const fetchMapConfig = useServerFn(getMapConfig);
+  const { data: mapConfig } = useQuery({
+    queryKey: ["map-config"],
+    queryFn: () => fetchMapConfig(),
+    staleTime: Infinity,
+  });
+  const area = mapAreaFor(mapConfig?.mapArea);
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -404,8 +402,7 @@ export function FieldApp({
         <VisitSheet
           person={open.person}
           wardId={wardId}
-          buildings={buildings}
-          outlines={!hasOutlines ? "none" : outlines ? "ready" : "loading"}
+          area={area}
           onSave={save}
           onClose={() => setOpen(null)}
         />
@@ -419,15 +416,14 @@ const CONSENT_SOURCES = ["Told us at the door", "Signed a sign-up form"];
 function VisitSheet({
   person,
   wardId,
-  buildings,
-  outlines,
+  area,
   onSave,
   onClose,
 }: {
   person: WalkEntry | null;
   wardId: string;
-  buildings: Building[];
-  outlines: "none" | "loading" | "ready";
+  /** The campaign's map area; null when it has none, and visits are placed by GPS alone. */
+  area: MapArea | null;
   /** Resolves to a reason if the server refused the visit; the sheet then stays open. */
   onSave: (v: Visit) => Promise<string | null>;
   onClose: () => void;
@@ -446,7 +442,7 @@ function VisitSheet({
   const [language, setLanguage] = useState<"sw" | "en">("sw");
   const [saving, setSaving] = useState(false);
   const [refused, setRefused] = useState<string | null>(null);
-  const door = useDoorPlace(buildings);
+  const door = useDoorPlace(area);
 
   const anyConsent = sms || whatsapp || call;
   const problem = !outcome
@@ -496,7 +492,7 @@ function VisitSheet({
         </div>
 
         <div className="pb-body">
-          <DoorPlace door={door} buildings={buildings} outlines={outlines} />
+          <DoorPlace door={door} />
 
           {isNew ? (
             <>
