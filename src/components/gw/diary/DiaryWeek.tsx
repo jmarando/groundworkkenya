@@ -91,7 +91,8 @@ export function DiaryWeek({
     <div className="diary-days">
       {week.days.map((day) => (
         <DiaryDay
-          key={day}
+          // A new "Plan a visit" opens today's form afresh, even with the diary already open.
+          key={day === week.today && addWard ? `${day}:${addWard}` : day}
           day={day}
           isToday={day === week.today}
           entries={week.entries.filter((e) => e.day === day)}
