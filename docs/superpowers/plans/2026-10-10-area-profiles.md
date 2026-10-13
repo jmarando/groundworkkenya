@@ -15,6 +15,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-09-area-profiles-design.md`
 
+**Revised 2026-10-13**, before building: the Voters map took schema 23, so this is schema 24 with migrations dated 13 October (after `20261012090000_voters_map.sql`). The building figures come from the Voters map's house files instead of Google's 1.76 GB CSV, as the user chose, and the ward lookup is the Voters map's (Tasks 3 and 4).
+
 ## Global Constraints
 
 - **Tribe:**
@@ -38,7 +40,7 @@
   - `area_km2` and the shares have three decimals.
 - **Missing figures never read as zero:** "not measured yet", "There's no ward map for this place yet", or an invitation to fill in an empty profile.
 - **Downloads and pushes:**
-  - Ask the user before downloading Google's Nairobi tile (tile 183, 1.76 GB) or any other tile.
+  - No download: the building figures come from the house files in `public/tiles` (the Voters map's, from Google Open Buildings v3).
   - Ask before pushing anything to GitHub.
   - Lovable applies migrations, in timestamp order, before the code that needs them ships.
 - **House style:**
@@ -57,10 +59,10 @@
 
 ---
 
-### Task 1: Schema 23, with its SQL tests
+### Task 1: Schema 24, with its SQL tests
 
 **Files:**
-- Create: `supabase/migrations/20261010090000_area_profiles.sql`
+- Create: `supabase/migrations/20261013090000_area_profiles.sql`
 - Create: `tests/sql/profiles.test.sql`
 - Modify: `tests/sql/access.test.sql` (the list of tables with no campaign, around line 334)
 
@@ -68,7 +70,7 @@
 - Produces:
   - Table `public.area_profiles`: `id`, `campaign_id`, `area_key`, `settlement`, `communities`, `languages text[]`, `institutions`, `issues`, `updated_by`, `updated_at`; unique `(campaign_id, area_key)`.
   - Table `public.atlas_indicators`: `area_key`, `indicator`, `year`, `value numeric`, `source_id`; primary key `(area_key, indicator, year)`.
-  - `public.groundwork_schema_version()` returns 23.
+  - `public.groundwork_schema_version()` returns 24.
 
 - [ ] **Step 1: Write the failing SQL test**
 
@@ -105,9 +107,9 @@ insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000a7
 insert into public.campaign_members (campaign_id, user_id, role)
   values ('ca000000-0000-4000-8000-000000000002', '00000000-0000-0000-0000-0000000000a7', 'organiser');
 
--- test: the schema is at version 23 or later
+-- test: the schema is at version 24 or later
 do $$ begin
-  assert public.groundwork_schema_version() >= 23, 'schema 23';
+  assert public.groundwork_schema_version() >= 24, 'schema 24';
 end $$;
 
 -- test: an organiser writes a profile, the manager reads and changes it, and it says who wrote it
@@ -196,10 +198,10 @@ Expected: `FAIL tests/sql/profiles.test.sql`, reporting that the relation "publi
 
 - [ ] **Step 3: Write the migration**
 
-Create `supabase/migrations/20261010090000_area_profiles.sql`:
+Create `supabase/migrations/20261013090000_area_profiles.sql`:
 
 ```sql
--- Area profiles and measured indicators. Schema version 23.
+-- Area profiles and measured indicators. Schema version 24.
 --
 -- Each campaign's own profile of a place: its settlement type, the communities
 -- that live there, the languages used, its institutions and influencers, and
@@ -262,7 +264,7 @@ create or replace function public.groundwork_schema_version()
 returns integer
 language sql
 immutable
-as $$ select 23 $$;
+as $$ select 24 $$;
 
 revoke all on function public.groundwork_schema_version() from public, anon, authenticated;
 grant execute on function public.groundwork_schema_version() to service_role;
@@ -287,9 +289,9 @@ Expected: every migration applies, the existing files pass, and `ok   tests/sql/
 - [ ] **Step 6: Commit**
 
 ```bash
-git add supabase/migrations/20261010090000_area_profiles.sql tests/sql/profiles.test.sql tests/sql/access.test.sql
+git add supabase/migrations/20261013090000_area_profiles.sql tests/sql/profiles.test.sql tests/sql/access.test.sql
 git commit -m "$(cat <<'EOF'
-Schema 23: each campaign's area profiles and the atlas's measured indicators
+Schema 24: each campaign's area profiles and the atlas's measured indicators
 
 Profiles are read and written by the candidate, manager and organisers, never
 by field agents, and stay inside their campaign; indicators are public
@@ -514,7 +516,7 @@ In `src/lib/atlas-sql.ts`, replace the signature line and the start of the body 
  * The atlas's files as a migration. "figures" (the default) writes everything
  * but the measured indicators, as the first counties' migration has it;
  * "indicators" writes only the indicators and the sources they cite, for a
- * migration of their own after schema 23.
+ * migration of their own after schema 24.
  */
 export function atlasSql(f: AtlasFiles, part: "figures" | "indicators" = "figures"): string {
   if (part === "indicators") {
@@ -597,17 +599,18 @@ EOF
 
 ### Task 3: The building arithmetic
 
+(Revised 2026-10-13: the figures come from the house files, which hold only buildings at confidence 0.65 or more, so Google's CSV reader, `parseBuilding` and `MIN_CONFIDENCE`, is gone; the ward lookup is the Voters map's, `wardAt` in `geo.ts`.)
+
 **Files:**
 - Create: `src/lib/building-stats.ts`
 - Test: `tests/building-stats.test.ts`
 
 **Interfaces:**
-- Consumes: `type Ring = [number, number][]` from `@/lib/area-map`.
+- Consumes: `Ring`, `WardShape`, `boundsOf` and `wardAt` from `@/lib/geo`.
 - Produces, from `@/lib/building-stats`:
-  - Constants: `MIN_CONFIDENCE = 0.65`, `SMALL_M2 = 40`, `LARGE_M2 = 200`.
+  - Constants: `SMALL_M2 = 40`, `LARGE_M2 = 200`.
   - `areaKm2(polygons: Ring[][]): number`.
   - `makeLocator(areas: { key: string; polygons: Ring[][] }[]): (lon: number, lat: number) => string | null`.
-  - `parseBuilding(line: string): { lat: number; lon: number; m2: number; confidence: number } | null`.
   - `type BuildingStats = { buildings; buildings_per_km2; median_building_m2; small_building_share; large_building_share }`, all numbers.
   - `buildingStats(sizes: number[], km2: number): BuildingStats | null`.
   - `type AreaBuildings = { key: string; km2: number; sizes: number[] }`.
@@ -621,18 +624,17 @@ Create `tests/building-stats.test.ts`:
 
 ```ts
 // Checks for the building arithmetic: an area's size from its map, which ward
-// a building's centre falls in, a line of Google's tile, the building figures,
+// a building's centre falls in, the building figures,
 // constituencies from whole wards, and the rows for indicators.csv. Pure. Run
 // from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/building-stats.test.ts
 
-import type { Ring } from "@/lib/area-map";
+import type { Ring } from "@/lib/geo";
 import {
   areaKm2,
   buildingStats,
   indicatorRows,
   makeLocator,
-  parseBuilding,
   withConstituencies,
 } from "@/lib/building-stats";
 
@@ -670,15 +672,6 @@ eq(
   "which ward a building's centre is in: none in a hole or outside",
   [locate(36.805, -1.295), locate(36.812, -1.295), locate(36.82, -1.295), locate(36.9, -1.295)],
   ["x/c/a", "x/c/b", null, null],
-);
-
-eq(
-  "a building from a line of the tile, and the header is none",
-  [
-    parseBuilding('-1.2949,36.8051,35.4,0.71,"POLYGON((36.80 -1.29, 36.81 -1.29))",6GCRPQ2W+2F'),
-    parseBuilding("latitude,longitude,area_in_meters,confidence,geometry,full_plus_code"),
-  ],
-  [{ lat: -1.2949, lon: 36.8051, m2: 35.4, confidence: 0.71 }, null],
 );
 
 eq("the building figures", buildingStats([250, 10, 50, 30], 1.2306), {
@@ -754,14 +747,13 @@ Expected: FAIL with `Cannot find module '@/lib/building-stats'`.
 Create `src/lib/building-stats.ts`:
 
 ```ts
-// How a place lives, from its buildings: Google Open Buildings' footprints
-// counted inside each ward, with the ward's size from its map. Pure: the script
-// (scripts/atlas/buildings.ts) streams Google's tile and hands each building in.
+// How a place lives, from its buildings: the footprints in the house files
+// (public/tiles, from Google Open Buildings v3) counted inside each ward, with
+// the ward's size from its map. Pure: the script (scripts/atlas/buildings.ts)
+// reads a house file and hands each building in.
 
-import type { Ring } from "@/lib/area-map";
+import { boundsOf, wardAt, type Ring, type WardShape } from "@/lib/geo";
 
-/** Google's suggested threshold: below it a footprint is too likely not a building. */
-export const MIN_CONFIDENCE = 0.65;
 /** Under this a building is a small structure: a single room, a kiosk, a shack. */
 export const SMALL_M2 = 40;
 /** From this a building is a large house or block. */
@@ -794,60 +786,16 @@ export function areaKm2(polygons: Ring[][]): number {
   }, 0);
 }
 
-function inRing(x: number, y: number, ring: Ring): boolean {
-  let hit = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]!;
-    const [xj, yj] = ring[j]!;
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
-  }
-  return hit;
-}
-
-const inPolygon = (x: number, y: number, [outer, ...holes]: Ring[]): boolean =>
-  Boolean(outer && inRing(x, y, outer)) && !holes.some((h) => inRing(x, y, h));
-
-type Box = [number, number, number, number];
-function boxOf(polygons: Ring[][]): Box {
-  const box: Box = [Infinity, Infinity, -Infinity, -Infinity];
-  for (const polygon of polygons)
-    for (const ring of polygon)
-      for (const [x, y] of ring) {
-        box[0] = Math.min(box[0], x);
-        box[1] = Math.min(box[1], y);
-        box[2] = Math.max(box[2], x);
-        box[3] = Math.max(box[3], y);
-      }
-  return box;
-}
-
-/** Which area a point falls in, or null. Each area's box is checked before its outline. */
+/** Which area a point falls in, or null: the Voters map's ward lookup, keyed by atlas key. */
 export function makeLocator(
   areas: { key: string; polygons: Ring[][] }[],
 ): (lon: number, lat: number) => string | null {
-  const boxed = areas.map((a) => ({ ...a, box: boxOf(a.polygons) }));
-  return (lon, lat) => {
-    for (const a of boxed) {
-      const [x0, y0, x1, y1] = a.box;
-      if (lon < x0 || lon > x1 || lat < y0 || lat > y1) continue;
-      if (a.polygons.some((p) => inPolygon(lon, lat, p))) return a.key;
-    }
-    return null;
-  };
-}
-
-/**
- * A building from one line of Google's CSV (latitude, longitude, area_in_meters,
- * confidence, geometry, full_plus_code); null for the header or a bad line. Only
- * the first four columns are read: the quoted geometry holds commas of its own.
- */
-export function parseBuilding(
-  line: string,
-): { lat: number; lon: number; m2: number; confidence: number } | null {
-  const cells = line.split(",", 4).map(Number);
-  if (cells.length < 4 || cells.some((n) => !Number.isFinite(n))) return null;
-  const [lat, lon, m2, confidence] = cells as [number, number, number, number];
-  return { lat, lon, m2, confidence };
+  const shapes: WardShape[] = areas.map((a) => ({
+    slug: a.key,
+    polygons: a.polygons,
+    box: boundsOf({ type: "MultiPolygon", coordinates: a.polygons }),
+  }));
+  return (lon, lat) => wardAt([lon, lat], shapes)?.slug ?? null;
 }
 
 export type BuildingStats = {
@@ -934,7 +882,7 @@ export function indicatorRows(
 - [ ] **Step 4: Run it to see it pass**
 
 Run: `npx -y tsx --tsconfig tsconfig.json tests/building-stats.test.ts`
-Expected: `7 passed, 0 failed`.
+Expected: `6 passed, 0 failed`.
 
 - [ ] **Step 5: Typecheck, format, lint, commit**
 
@@ -944,8 +892,9 @@ git add src/lib/building-stats.ts tests/building-stats.test.ts
 git commit -m "$(cat <<'EOF'
 Building arithmetic: a ward's size, its buildings, density, median size and shares
 
-Pure: sizes from the ward map, buildings assigned by where their centre falls,
-constituencies only from wholly mapped wards, and the rows for indicators.csv.
+Pure: sizes from the ward map, buildings assigned by where their centre falls
+(the Voters map's ward lookup), constituencies only from wholly mapped wards,
+and the rows for indicators.csv.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -954,19 +903,22 @@ EOF
 
 ---
 
-### Task 4: The real figures: the script, the download, the data and its migration
+### Task 4: The real figures: the script, the data and its migration
+
+(Revised 2026-10-13: measured from the house files in `public/tiles` instead of Google's 1.76 GB CSV, as the user chose. They hold every Open Buildings house at confidence 0.65 or more in Nairobi's 85 wards and Mathira's 6, the same houses the Voters map draws. Footprints come from the drawn outlines, on a 0.6 m grid, within a few percent of Google's own figures. No download.)
 
 **Files:**
 - Create: `scripts/atlas/buildings.ts`
 - Modify: `data/atlas/kenya/sources.csv` (two sources)
 - Create (generated): `data/atlas/nairobi/indicators.csv`, `data/atlas/nyeri/indicators.csv`
-- Create (generated): `supabase/migrations/20261010100000_atlas_indicators.sql`
+- Create (generated): `supabase/migrations/20261013100000_atlas_indicators.sql`
 - Modify (generated): `data/atlas/REPORT.md`
 
 **Interfaces:**
 - Consumes:
-  - From Task 3: `areaKm2`, `makeLocator`, `parseBuilding`, `MIN_CONFIDENCE`, `withConstituencies`, `indicatorRows`.
+  - From Task 3: `areaKm2`, `makeLocator`, `withConstituencies`, `indicatorRows`.
   - From Task 2: `HEADERS.indicators` and `build-sql.ts --indicators`.
+  - From the Voters map: `mapAreaFor` (`@/lib/map-areas`), `openArchive` and `gunzip` (`@/lib/pmtiles`), `decodeTile`, `toTileSpace` and `HOUSE_ZOOM` (`@/lib/house-tiles`).
   - `wardShapes` from `@/lib/area-map`; `readAtlas` from `scripts/atlas/read.ts`.
 - Produces: the source ids `google-open-buildings-v3` and `geoboundaries-ken-adm3`; the indicators for every mapped Nairobi and Mathira ward and their constituencies.
 
@@ -975,7 +927,7 @@ EOF
 Append to `data/atlas/kenya/sources.csv`:
 
 ```csv
-google-open-buildings-v3,Open Buildings v3: building footprints,Google Open Buildings,https://sites.research.google/gr/open-buildings/,"Footprints at confidence 0.65 or more, each counted in the ward its centre falls in (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more."
+google-open-buildings-v3,Open Buildings v3: building footprints,Google Open Buildings,https://sites.research.google/gr/open-buildings/,"Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map's house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more."
 geoboundaries-ken-adm3,geoBoundaries Kenya ADM3 (wards),geoBoundaries,https://www.geoboundaries.org/,"Ward boundaries (Omare & Omare 2020, CC BY 4.0), simplified to about 3 m for the ward maps; areas are measured from them."
 ```
 
@@ -984,58 +936,63 @@ geoboundaries-ken-adm3,geoBoundaries Kenya ADM3 (wards),geoBoundaries,https://ww
 Create `scripts/atlas/buildings.ts`:
 
 ```ts
-// Building figures for one county's mapped wards from one Google Open Buildings
-// v3 tile: each ward's size from its map, and the count, density, median size
-// and shares of small and large buildings; each constituency from all its
-// wards when all are mapped. Writes data/atlas/<county>/indicators.csv. Run
-// from the repository root:
-//   npx tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts <tile.csv.gz> <county> <wards.geojson>
-import { createReadStream, readFileSync, writeFileSync } from "node:fs";
-import { createInterface } from "node:readline";
-import { createGunzip } from "node:zlib";
+// Building figures for one map area's wards, from its house file
+// (public/tiles/houses-<id>.pmtiles: Google Open Buildings v3, CC BY 4.0):
+// each ward's size from its map, and the count, density, median size and
+// shares of small and large buildings; each constituency from all its wards
+// when all are mapped. Writes data/atlas/<county>/indicators.csv. Run from the
+// repository root:
+//   npx tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts <map area: nairobi | nyeri/mathira>
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { wardShapes } from "@/lib/area-map";
 import { HEADERS } from "@/lib/atlas-files";
-import {
-  areaKm2,
-  indicatorRows,
-  makeLocator,
-  MIN_CONFIDENCE,
-  parseBuilding,
-  withConstituencies,
-} from "@/lib/building-stats";
+import { areaKm2, indicatorRows, makeLocator, withConstituencies } from "@/lib/building-stats";
+import { decodeTile, HOUSE_ZOOM, toTileSpace } from "@/lib/house-tiles";
+import { mapAreaFor, type HouseCounts } from "@/lib/map-areas";
+import { gunzip, openArchive } from "@/lib/pmtiles";
 
 import { readAtlas } from "./read";
 
-const [tile, county, wardsFile] = process.argv.slice(2);
-if (!tile || !county || !wardsFile) {
-  console.error("usage: buildings.ts <tile.csv.gz> <county> <wards.geojson>");
+const area = mapAreaFor(process.argv[2]);
+if (!area) {
+  console.error("usage: buildings.ts <map area: nairobi | nyeri/mathira>");
   process.exit(2);
 }
+const county = area.key.split("/")[0]!;
 
 const { files } = readAtlas("data/atlas", [county]);
 const wardKey = new Map(
   files.areas.filter((a) => a.level === "ward").map((a) => [a.key.split("/")[2] ?? "", a.key]),
 );
-const shapes = wardShapes(JSON.parse(readFileSync(wardsFile, "utf8")))
+const shapes = wardShapes(JSON.parse(readFileSync(`public${area.wards}`, "utf8")))
   .filter((s) => wardKey.has(s.slug))
   .map((s) => ({ key: wardKey.get(s.slug)!, polygons: s.polygons }));
 const unmapped = [...wardKey.values()].filter((k) => !shapes.some((s) => s.key === k));
 if (unmapped.length) console.error(`no ward map for: ${unmapped.join(", ")}`);
 
+// Every zoom-16 tile over the area; a house on a tile edge is in both, so each plus code counts once.
+const file = new Uint8Array(readFileSync(`public${area.houses}`));
+const archive = await openArchive(async (o, l) => file.subarray(o, o + l), gunzip);
+const [west, south, east, north] = area.bounds;
+const [x0, y0] = toTileSpace([west, north]).map(Math.floor) as [number, number];
+const [x1, y1] = toTileSpace([east, south]).map(Math.floor) as [number, number];
 const locate = makeLocator(shapes);
 const sizes = new Map(shapes.map((s) => [s.key, [] as number[]]));
-let lines = 0;
-for await (const line of createInterface({
-  input: createReadStream(tile).pipe(createGunzip()),
-  crlfDelay: Infinity,
-})) {
-  lines++;
-  const b = parseBuilding(line);
-  if (!b || b.confidence < MIN_CONFIDENCE) continue;
-  const key = locate(b.lon, b.lat);
-  if (key) sizes.get(key)!.push(b.m2);
-}
+const seen = new Set<string>();
+let outside = 0;
+for (let x = x0; x <= x1; x++)
+  for (let y = y0; y <= y1; y++) {
+    const bytes = await archive.getTile(HOUSE_ZOOM, x, y);
+    if (!bytes) continue;
+    for (const h of decodeTile(x, y, bytes)) {
+      if (seen.has(h.id)) continue;
+      seen.add(h.id);
+      const key = locate(h.centre[0], h.centre[1]);
+      if (key) sizes.get(key)!.push(h.area);
+      else outside++;
+    }
+  }
 
 const areas = withConstituencies(
   shapes.map((s) => ({ key: s.key, km2: areaKm2(s.polygons), sizes: sizes.get(s.key)! })),
@@ -1060,53 +1017,49 @@ writeFileSync(
     ...rows.map((r) => [r.area, r.indicator, r.year, r.value, r.source].join(",")),
   ].join("\n") + "\n",
 );
-console.log(`${lines} lines read; wrote ${rows.length} rows to ${out}`);
+
+// The house file's own count per ward, made from Google's centre points: the
+// outlines' centres can fall the other side of a ward's edge, so a few differ.
+const counts = JSON.parse(readFileSync(`public${area.counts}`, "utf8")) as HouseCounts;
+const differ = shapes.flatMap((s) => {
+  const slug = s.key.split("/")[2]!;
+  const d = sizes.get(s.key)!.length - (counts.wards[slug] ?? 0);
+  return d ? [`${slug} ${d > 0 ? "+" : ""}${d}`] : [];
+});
+console.log(
+  `${seen.size} houses read (the house file counts ${counts.total}); ${outside} outside every ward; wrote ${rows.length} rows to ${out}`,
+);
+console.log(differ.length ? `  against the house file's ward counts: ${differ.join(", ")}` : "  every ward's count matches the house file's");
 for (const [k, v] of sizes) console.log(`  ${k}: ${v.length} buildings`);
 ```
 
-- [ ] **Step 3: Ask before downloading**
+- [ ] **Step 3: Measure Nairobi**
 
-Ask the user, in these words: "OK to download Google Open Buildings tile 183 (183_buildings.csv.gz, 1.76 GB, from storage.googleapis.com/open-buildings-data) into the session's scratchpad? It's used once to measure the wards and never committed." Wait for a yes before Step 4.
-
-- [ ] **Step 4: Download the tile into its own folder**
-
-```bash
-mkdir -p "$SCRATCH/openbuildings" && python3 -I -c "
-import urllib.request, sys
-urllib.request.urlretrieve('https://storage.googleapis.com/open-buildings-data/v3/polygons_s2_level_4_gzip/183_buildings.csv.gz', sys.argv[1])
-" "$SCRATCH/openbuildings/183_buildings.csv.gz" && ls -la "$SCRATCH/openbuildings"
-```
-
-`$SCRATCH` is the session's scratchpad directory. Expected: the file is about 1,760,000,000 bytes.
-
-- [ ] **Step 5: Measure Nairobi**
-
-Run: `npx tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts "$SCRATCH/openbuildings/183_buildings.csv.gz" nairobi public/geo/nairobi-wards.json`
+Run: `npx -y tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts nairobi`
 Expected:
 - no "no ward map for" line
+- `805208 houses read (the house file counts 805208)`, a handful (or none) outside every ward, and any ward whose count differs from the house file's by at most a few houses
 - every one of the 85 wards with thousands of buildings
 - 612 rows in `data/atlas/nairobi/indicators.csv`: 85 wards and 17 constituencies, 6 each
 
 Check that Kileleshwa and Kawangware differ: `grep -E "kileleshwa|kawangware" data/atlas/nairobi/indicators.csv`. Kawangware's buildings per km² should be several times Kileleshwa's, and its median building much smaller.
 
-- [ ] **Step 6: Measure Mathira**
+- [ ] **Step 4: Measure Mathira**
 
-Run: `npx tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts "$SCRATCH/openbuildings/183_buildings.csv.gz" nyeri public/geo/mathira-wards.json`
+Run: `npx -y tsx --tsconfig tsconfig.json scripts/atlas/buildings.ts nyeri/mathira`
 Expected:
+- a "no ward map for" line listing Nyeri's wards outside Mathira (they have no ward map yet)
+- `141690 houses read (the house file counts 141690)`
 - every one of Mathira's 6 wards has buildings
 - 42 rows: 6 wards and Mathira itself; Nyeri's other constituencies have no mapped wards, so they get no rows
 
-If every Mathira ward shows 0 buildings, tile 183 doesn't cover Mathira:
-- Open the tile index at https://openbuildings-public-dot-gweb-research.uw.r.appspot.com/public/tiles.geojson and find the tile whose polygon contains about lat −0.45, lon 37.05.
-- Ask the user before downloading that tile, as in Step 3, then rerun this step with it.
-
-- [ ] **Step 7: Check the data, rebuild the report, write the migration**
+- [ ] **Step 5: Check the data, rebuild the report, write the migration**
 
 ```bash
 npx -y tsx --tsconfig tsconfig.json tests/atlas-data.test.ts
 npx -y tsx --tsconfig tsconfig.json scripts/atlas/report.ts
-npx -y tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts supabase/migrations/20261010100000_atlas_indicators.sql kenya nairobi nyeri --indicators
-grep -c "insert into public.atlas_indicators" supabase/migrations/20261010100000_atlas_indicators.sql
+npx -y tsx --tsconfig tsconfig.json scripts/atlas/build-sql.ts supabase/migrations/20261013100000_atlas_indicators.sql kenya nairobi nyeri --indicators
+grep -c "insert into public.atlas_indicators" supabase/migrations/20261013100000_atlas_indicators.sql
 bash tests/sql/run.sh
 ```
 
@@ -1114,20 +1067,21 @@ Expected:
 - atlas-data reports `0 problems`
 - REPORT.md says `Buildings measured: 85 of 85 wards.` for Nairobi and `Buildings measured: 6 of 6 wards.` for Nyeri
 - the migration holds two insert statements, since its 654 rows go in 500 at a time
-- the SQL tests pass, with the indicators migration applying after schema 23
+- the SQL tests pass, with the indicators migration applying after schema 24
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 6: Commit**
 
 Don't run prettier on `data/atlas/REPORT.md` (see `.prettierignore`).
 
 ```bash
 npx prettier --write scripts/atlas/buildings.ts && npx eslint scripts/atlas/buildings.ts
-git add scripts/atlas/buildings.ts data/atlas/kenya/sources.csv data/atlas/nairobi/indicators.csv data/atlas/nyeri/indicators.csv data/atlas/REPORT.md supabase/migrations/20261010100000_atlas_indicators.sql
+git add scripts/atlas/buildings.ts data/atlas/kenya/sources.csv data/atlas/nairobi/indicators.csv data/atlas/nyeri/indicators.csv data/atlas/REPORT.md supabase/migrations/20261013100000_atlas_indicators.sql
 git commit -m "$(cat <<'EOF'
 Atlas data: building density and size for Nairobi's 85 wards and Mathira's 6
 
-From Google Open Buildings v3 (CC BY 4.0), with each ward's size from its map
-(geoBoundaries). Loaded by a migration of its own after schema 23.
+Measured from the Voters map's house files (Google Open Buildings v3, CC BY
+4.0), with each ward's size from its map (geoBoundaries). Loaded by a
+migration of its own after schema 24.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -2407,7 +2361,7 @@ EOF
 
 Don't push. Tell the user the branch is ready, and that Lovable must apply these migrations in this order before the code ships:
 1. `20261007100000_atlas_first_counties.sql`, if it still isn't applied
-2. `20261010090000_area_profiles.sql`
-3. `20261010100000_atlas_indicators.sql`
+2. `20261013090000_area_profiles.sql`
+3. `20261013100000_atlas_indicators.sql`
 
 Give them the prompt to paste into Lovable's chat. Push only when they say so (use the superpowers:finishing-a-development-branch skill).
