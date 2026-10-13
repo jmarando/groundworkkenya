@@ -195,7 +195,7 @@ export function oneSeatDifferentPlaces(i: FindingsInput): Finding[] {
       finding(
         "one-seat-different-places",
         seat,
-        `${name}'s wards live differently: ${hi.w.name} has ${count(hi.m!.value)} buildings per km², ${lo.w.name} ${count(lo.m!.value)}. One message won't fit both.`,
+        `${name.endsWith("s") ? `${name}'` : `${name}'s`} wards live differently: ${hi.w.name} has ${count(hi.m!.value)} buildings per km², ${lo.w.name} ${count(lo.m!.value)}. One message won't fit both.`,
         [fig(hi), fig(lo)],
         { label: "Compare its wards", to: "/elections", search: { area: seat } },
         hi.m!.value / lo.m!.value,

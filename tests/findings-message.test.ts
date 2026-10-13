@@ -153,6 +153,20 @@ eq(
   oneSeatDifferentPlaces(input({ home: "nairobi/dagoretti-north" })).length,
   1,
 );
+eq(
+  "a seat whose name ends in s takes the apostrophe alone",
+  oneSeatDifferentPlaces(
+    input({
+      atlas: {
+        ...ATLAS,
+        areas: ATLAS.areas.map((a) =>
+          a.key === "nairobi/dagoretti-north" ? { ...a, name: "Westlands" } : a,
+        ),
+      },
+    }),
+  ).map((x) => x.line.slice(0, x.line.indexOf(" wards"))),
+  ["Westlands'"],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

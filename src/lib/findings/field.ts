@@ -69,7 +69,7 @@ export function doorsBehind(i: FindingsInput): Finding[] {
       finding(
         "doors-behind",
         null,
-        `${count(total)} houses knocked across your ${count(i.wards.length)} wards in the last 30 days.`,
+        `${count(total)} ${total === 1 ? "house" : "houses"} knocked across your ${count(i.wards.length)} ${i.wards.length === 1 ? "ward" : "wards"} in the last 30 days.`,
         [
           {
             label: "Houses knocked",
@@ -170,7 +170,7 @@ export function shortOfTarget(i: FindingsInput): Finding[] {
       finding(
         "short-of-target",
         w.key,
-        `${w.name}: ${count(found)} supporters found of a ${count(target)} target, ${count(gap)} short.`,
+        `${w.name}: ${count(found)} ${found === 1 ? "supporter" : "supporters"} found of a ${count(target)} target, ${count(gap)} short.`,
         [
           {
             label: "Supporters found",

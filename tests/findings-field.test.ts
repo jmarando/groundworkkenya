@@ -111,6 +111,25 @@ eq(
   );
   eq("every number is a figure", quiet.map(unaccounted), [[]]);
 }
+eq(
+  "one house, one ward",
+  doorsBehind(
+    input({
+      wards: FULL.wards.slice(0, 1),
+      doors: [
+        {
+          wardId: "w-kawangware",
+          knocked: 1,
+          rated: 0,
+          supporters: 0,
+          doorsWeek: 0,
+          agentsToday: [],
+        },
+      ],
+    }),
+  ).map((x) => x.line),
+  ["1 house knocked across your 1 ward in the last 30 days."],
+);
 eq("no house file: quiet", doorsBehind(input({ houses: null })), []);
 eq("doors not read: quiet", doorsBehind(input({ doors: null })), []);
 
@@ -134,6 +153,16 @@ eq("doors not read: quiet", doorsBehind(input({ doors: null })), []);
   eq("every number is a figure", out.map(unaccounted), [[], []]);
 }
 eq("before the update: quiet", shortOfTarget(input({ supporters: null })), []);
+eq(
+  "one supporter, not one supporters",
+  shortOfTarget(
+    input({
+      wards: FULL.wards.filter((w) => w.slug === "kangemi"),
+      supporters: [{ wardId: "w-kangemi", supporters: 1 }],
+    }),
+  ).map((x) => x.line),
+  ["Kangemi: 1 supporter found of a 4,000 target, 3,999 short."],
+);
 
 // ---------------------------------------------------------------- 9. unregistered adults
 
