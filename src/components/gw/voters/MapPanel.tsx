@@ -7,7 +7,10 @@
 import type { ReactNode } from "react";
 
 import { LastTimeHere } from "@/components/gw/voters/LastTimeHere";
+import { PlaceFindings } from "@/components/gw/findings/SoWhat";
+import { useFindings } from "@/hooks/useFindings";
 import type { CanvassData } from "@/lib/console.functions";
+import { votersPlace } from "@/lib/findings/core";
 import { doorsFirst, doorTotals, type WardDoors } from "@/lib/houses";
 import type { Level } from "@/lib/voters-map";
 import {
@@ -124,6 +127,7 @@ export function MapPanel({
       </div>
 
       {isAgent ? null : <LastTimeHere area={area} wards={wards} />}
+      {isAgent ? null : <VotersFindings area={area} wards={wards} />}
 
       <section aria-label="Doors">
         <div className="card-head">
@@ -219,4 +223,12 @@ export function MapPanel({
       ) : null}
     </>
   );
+}
+
+/** The map's few field and message findings for the area in view; none for a place the atlas doesn't hold. */
+function VotersFindings({ area, wards }: { area: Area; wards: WardInfo[] }) {
+  const { data } = useFindings();
+  const place = data ? votersPlace(area, wards, data.wardKeys) : undefined;
+  if (place === undefined) return null;
+  return <PlaceFindings place={place} max={3} decisions={["field", "message"]} card={false} />;
 }

@@ -5,6 +5,7 @@ import { Fragment, useState } from "react";
 
 import { ConstituencyView } from "@/components/gw/elections/ConstituencyView";
 import { CountyView } from "@/components/gw/elections/CountyView";
+import { PlaceFindings } from "@/components/gw/findings/SoWhat";
 import { SetupPanel } from "@/components/gw/elections/SetupPanel";
 import { WardView } from "@/components/gw/elections/WardView";
 import { useAccess } from "@/hooks/useAccess";
@@ -189,6 +190,7 @@ function Elections() {
           </div>
         ) : null}
       </div>
+      <PlaceFindings place={area.key} max={5} />
       {area.level === "constituency" ? (
         <ConstituencyView
           d={data}
