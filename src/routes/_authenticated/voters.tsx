@@ -14,6 +14,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type RefObject,
   type ReactNode,
 } from "react";
@@ -24,6 +25,7 @@ import { ManageRecords } from "@/components/gw/voters/ManageRecords";
 import { MapPanel } from "@/components/gw/voters/MapPanel";
 import { MapSearch } from "@/components/gw/voters/MapSearch";
 import { PeopleView } from "@/components/gw/voters/PeopleView";
+import { Sheet } from "@/components/gw/voters/Sheet";
 import { VotersCanvas, type WardsGeo } from "@/components/gw/voters/VotersCanvas";
 import { useAccess } from "@/hooks/useAccess";
 import { wardKey } from "@/lib/atlas-app";
@@ -358,9 +360,7 @@ function Voters() {
                     : "No map for this campaign yet: its area's houses aren't loaded. The People tab works as before."}
               </p>
             </div>
-            <aside className="vpanel" aria-label="This area">
-              {panel}
-            </aside>
+            <Sheet label="This area">{panel}</Sheet>
           </div>
         )}
       </div>
@@ -457,6 +457,8 @@ function MapScreen({
   const fetchHouses = useServerFn(getWardHouses);
   const fetchAtlas = useServerFn(getAtlas);
   const [tilesRefused, setTilesRefused] = useState(false);
+  // The room the panel's sheet takes from the bottom of the map, on a narrow screen.
+  const [room, setRoom] = useState(0);
   const colour: Colour = search.colour ?? "doors";
   const keyOk = Boolean(maptilerKey) && !tilesRefused;
   const base: Basemap = keyOk ? (search.base ?? "satellite") : "streets";
@@ -567,7 +569,7 @@ function MapScreen({
   }
 
   return (
-    <div className="vbody">
+    <div className="vbody" style={{ "--vsheet": `${room}px` } as CSSProperties}>
       {geo ? (
         <VotersCanvas
           mapArea={mapArea}
@@ -581,7 +583,7 @@ function MapScreen({
           houseColours={houseColours}
           house={search.house ?? null}
           camera={camera}
-          padding={{ bottom: 0 }}
+          padding={{ bottom: room }}
           onMoved={(a, at) =>
             fromTheMap(
               {
@@ -662,7 +664,12 @@ function MapScreen({
           </p>
         </div>
       )}
-      <aside className="vpanel" aria-label="This area">
+      <Sheet
+        label="This area"
+        raiseOn={search.house ?? null}
+        lowerOn={search.area ?? ""}
+        onRoom={setRoom}
+      >
         {panel}
         {tilesRefused ? (
           <p className="f-note">
@@ -670,7 +677,7 @@ function MapScreen({
             its allowed domains in MapTiler.
           </p>
         ) : null}
-      </aside>
+      </Sheet>
     </div>
   );
 }

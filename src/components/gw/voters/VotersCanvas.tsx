@@ -259,10 +259,17 @@ function withMargin([w, s, e, n]: [number, number, number, number]): LngLatBound
   ];
 }
 
-/** The app moves the camera: flown, and marked so moveend doesn't report it as the person's move. */
-function fly(map: MlMap, t: CameraTarget, duration = 800): void {
+/**
+ * The app moves the camera: flown with the panel's room at the bottom as padding, and marked
+ * so moveend doesn't report it as the person's move.
+ */
+function fly(map: MlMap, t: CameraTarget, bottom: number, duration = 800): void {
+  const padding = { top: 0, right: 0, left: 0, bottom };
   if (t.kind === "point") {
-    map.flyTo({ center: t.center, zoom: t.zoom, duration, essential: true }, { app: true });
+    map.flyTo(
+      { center: t.center, zoom: t.zoom, padding, duration, essential: true },
+      { app: true },
+    );
     return;
   }
   const c = map.cameraForBounds(
@@ -274,7 +281,16 @@ function fly(map: MlMap, t: CameraTarget, duration = 800): void {
   );
   if (!c?.center || c.zoom === undefined) return;
   const zoom = Math.min(Math.max(c.zoom, t.minZoom), t.maxZoom);
-  map.flyTo({ center: c.center, zoom, duration, essential: true }, { app: true });
+  map.flyTo({ center: c.center, zoom, padding, duration, essential: true }, { app: true });
+}
+
+/**
+ * The panel's room at the bottom, as padding. setPadding jumps the camera, which would stop a
+ * flight under way (it carries its own padding), so not while moving, and as the app's move.
+ */
+function applyPadding(map: MlMap, bottom: number): void {
+  if (map.getPadding().bottom === bottom || map.isMoving()) return;
+  map.setPadding({ top: 0, right: 0, left: 0, bottom }, { app: true });
 }
 
 export function VotersCanvas(props: Props) {
@@ -342,8 +358,20 @@ export function VotersCanvas(props: Props) {
           latest.current.onLevel(next);
         }
       });
+      // A new size (the bar wrapping onto another line, a phone turned round)
+      // ends with a moveend of its own, which isn't the person's move.
+      let resized = false;
+      map.on("resize", () => {
+        resized = map ? !map.isMoving() : false;
+      });
       map.on("moveend", (e) => {
-        if (!map || (e as { app?: boolean }).app) return;
+        const sized = resized;
+        resized = false;
+        if (!map) return;
+        // A room that changed while the camera moved goes in now.
+        const m = map;
+        requestAnimationFrame(() => applyPadding(m, latest.current.padding.bottom));
+        if (sized || (e as { app?: boolean }).app) return;
         const q = latest.current;
         const at = levelFor(map.getZoom(), q.mapArea.top);
         const c = map.getCenter();
@@ -445,17 +473,14 @@ export function VotersCanvas(props: Props) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded || !props.camera) return;
-    fly(map, props.camera.target);
+    fly(map, props.camera.target, props.padding.bottom);
     // Only a new seq sends the camera again.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, props.camera?.seq]);
 
   useEffect(() => {
     const map = mapRef.current;
-    // setPadding jumps the camera, which would stop a flight under way: only when it changed,
-    // and marked as the app's move, so it isn't reported as the person's.
-    if (!map || map.getPadding().bottom === props.padding.bottom) return;
-    map.setPadding({ top: 0, right: 0, left: 0, bottom: props.padding.bottom }, { app: true });
+    if (map && loaded) applyPadding(map, props.padding.bottom);
   }, [props.padding.bottom, loaded]);
 
   function zoom(by: number) {
@@ -467,7 +492,12 @@ export function VotersCanvas(props: Props) {
   function fit() {
     const map = mapRef.current;
     if (!map) return;
-    fly(map, cameraFor({ area: props.area }, props.wardInfo, props.shapes, props.mapArea), 600);
+    fly(
+      map,
+      cameraFor({ area: props.area }, props.wardInfo, props.shapes, props.mapArea),
+      props.padding.bottom,
+      600,
+    );
   }
 
   return (
