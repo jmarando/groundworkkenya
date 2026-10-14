@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 
 import { GwMark } from "./GwMark";
 import { InstallApp } from "./offline/InstallApp";
+import { OfflineBar } from "./offline/OfflineBar";
 import { Button } from "@/components/ui/button";
 import { useAccess } from "@/hooks/useAccess";
 import { useSignOut } from "@/hooks/useSignOut";
@@ -215,7 +216,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
             </nav>
           </div>
         )}
-        <div className="wrap">{children}</div>
+        <div className="wrap">
+          <OfflineBar />
+          {children}
+        </div>
       </div>
     </div>
   );

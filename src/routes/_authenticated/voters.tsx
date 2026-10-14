@@ -20,6 +20,7 @@ import {
 } from "react";
 
 import { AddPerson } from "@/components/gw/AddPerson";
+import { OfflineBar } from "@/components/gw/offline/OfflineBar";
 import { HouseCard } from "@/components/gw/voters/HouseCard";
 import { ManageRecords } from "@/components/gw/voters/ManageRecords";
 import { MapPanel } from "@/components/gw/voters/MapPanel";
@@ -28,6 +29,7 @@ import { PeopleView } from "@/components/gw/voters/PeopleView";
 import { Sheet } from "@/components/gw/voters/Sheet";
 import { VotersCanvas, type WardsGeo } from "@/components/gw/voters/VotersCanvas";
 import { useAccess } from "@/hooks/useAccess";
+import { useOnline } from "@/hooks/useOnline";
 import { wardKey } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
 import { figuresFor, shadeLegend, shadeOf } from "@/lib/atlas-view";
@@ -142,6 +144,7 @@ function Voters() {
   const fetchConfig = useServerFn(getMapConfig);
   const fetchDoors = useServerFn(getAreaDoors);
   const tab = search.tab === "people" && !isAgent ? "people" : "map";
+  const online = useOnline();
   const { data } = useQuery({ queryKey: ["voters"], queryFn: () => fetchVoters() });
   // The People list isn't on an agent's screen, so it isn't fetched for them.
   const { data: people } = useQuery({
@@ -187,7 +190,8 @@ function Voters() {
   const setArea = (a: Area) => go({ area: areaParam(a), house: undefined, person: undefined });
   const home: Home = mapArea ? { name: mapArea.name, top: mapArea.top } : NO_MAP;
 
-  if (!data || (!config && !configFailed)) {
+  // With no signal and no saved map settings, the page goes on without the map.
+  if (!data || (!config && !configFailed && online)) {
     return (
       <section className="view active" aria-label="Voters">
         <div className="vh">
@@ -288,15 +292,19 @@ function Voters() {
           </button>
         </div>
         <div className="vt-panel fx2">
-          <PeopleView
-            rows={rows}
-            record={record}
-            loading={!people}
-            search={search}
-            onSearch={go}
-            placeName={title}
-            segments={people?.segments ?? []}
-          />
+          {!people && !online ? (
+            <p className="f-note">The People tab needs signal.</p>
+          ) : (
+            <PeopleView
+              rows={rows}
+              record={record}
+              loading={!people}
+              search={search}
+              onSearch={go}
+              placeName={title}
+              segments={people?.segments ?? []}
+            />
+          )}
         </div>
       </section>
     );
@@ -330,8 +338,10 @@ function Voters() {
     <section className="view active" aria-label="Voters">
       {modals}
       <div className="vscreen">
+        {/* The screen covers the shell's bar, so it carries its own. */}
+        <OfflineBar />
         {bar}
-        {mapArea ? (
+        {mapArea && online ? (
           <MapScreen
             mapArea={mapArea}
             maptilerKey={config?.maptilerKey ?? null}
@@ -353,11 +363,13 @@ function Voters() {
           <div className="vbody">
             <div className="vmap vmap--none">
               <p className="vmap-loading meta">
-                {configFailed
-                  ? "Could not load the map's settings. Try reloading."
-                  : isAgent
-                    ? "No map for this campaign yet: its area's houses aren't loaded."
-                    : "No map for this campaign yet: its area's houses aren't loaded. The People tab works as before."}
+                {!online
+                  ? "The map needs signal."
+                  : configFailed
+                    ? "Could not load the map's settings. Try reloading."
+                    : isAgent
+                      ? "No map for this campaign yet: its area's houses aren't loaded."
+                      : "No map for this campaign yet: its area's houses aren't loaded. The People tab works as before."}
               </p>
             </div>
             <Sheet label="This area">{panel}</Sheet>

@@ -359,12 +359,17 @@ export function FieldApp({
             </button>
           </div>
 
-          {isError && (
+          {isError && online && (
             <p className="f-note">
               Could not load the walk list. New people can still be signed up.
             </p>
           )}
           {!list && isFetching && <p className="f-note">Loading {ward?.name ?? "the ward"}…</p>}
+          {!list && !online && (
+            <p className="f-note">
+              The list needs signal. You can still add someone you meet at the door.
+            </p>
+          )}
           {list && (
             <p className="f-note">
               {street

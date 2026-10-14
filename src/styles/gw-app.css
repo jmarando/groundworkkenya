@@ -397,3 +397,23 @@ a.sb-item {
 .mobile-menu-install:hover {
   background: var(--gw-sidebar-accent);
 }
+
+/* No signal: the bar across the top of signed-in pages, empty (so hidden) with signal.
+   Voters' full-screen map covers the shell's bar, so it carries its own, as a strip. */
+.offline-bar {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid hsl(38 92% 56% / 0.55);
+  border-radius: 10px;
+  background: hsl(38 92% 56% / 0.14);
+  font-size: 13px;
+}
+.offline-bar:empty,
+.wrap:has(.vscreen) > .offline-bar {
+  display: none;
+}
+.vscreen > .offline-bar {
+  margin: 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+}

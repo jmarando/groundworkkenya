@@ -1,11 +1,17 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import { ConsoleShell } from "@/components/gw/ConsoleShell";
 import { GwMark } from "@/components/gw/GwMark";
+import { NeedsSignal } from "@/components/gw/offline/NeedsSignal";
 import { useAccess } from "@/hooks/useAccess";
+import { useOfflineData } from "@/hooks/useOfflineData";
+import { useOnline } from "@/hooks/useOnline";
 import { useSignOut } from "@/hooks/useSignOut";
 import { canOpen, homeFor } from "@/lib/access";
+import { gateState, needsSignal } from "@/lib/offline/screens";
+import { entryUser, phoneUser } from "@/lib/offline/session";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -77,9 +83,13 @@ function Waiting() {
 function Authenticated() {
   const { loading, failed, recheck, checking, isPendingApproval, wrongCampaign, access } =
     useAccess();
+  const { ready } = useOfflineData();
+  const online = useOnline();
+  const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const gate = gateState({ ready, loading, failed, hasAccess: Boolean(access), online });
 
-  if (loading) {
+  if (gate === "checking") {
     return (
       <Gate>
         <span className="eyebrow">Checking your access…</span>
@@ -87,7 +97,17 @@ function Authenticated() {
     );
   }
 
-  if (failed) {
+  if (gate === "first-visit") {
+    return (
+      <Gate>
+        <span className="eyebrow">Groundwork</span>
+        <h1>You're offline.</h1>
+        <p>Open Groundwork once with signal to use it offline.</p>
+      </Gate>
+    );
+  }
+
+  if (gate === "failed") {
     return (
       <Gate>
         <span className="eyebrow">Groundwork</span>
@@ -110,12 +130,22 @@ function Authenticated() {
   if (isPendingApproval || wrongCampaign) return <Waiting />;
 
   const role = access?.role ?? null;
+  // Whether any query whose key starts with `key` has data: what an offline page needs saved.
+  const hasData = (key: string) =>
+    queryClient
+      .getQueryCache()
+      .findAll({ queryKey: [key] })
+      .some((q) => q.state.data !== undefined);
   return (
     <ConsoleShell>
       {pathname === "/home" && homeFor(role) !== "/home" ? (
         <Navigate to={homeFor(role)} replace />
       ) : canOpen(role, pathname) ? (
-        <Outlet />
+        !online && needsSignal(pathname, hasData) ? (
+          <NeedsSignal />
+        ) : (
+          <Outlet />
+        )
       ) : (
         <section className="view active" aria-label="Not available">
           <div className="card">
@@ -133,10 +163,11 @@ function Authenticated() {
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
+  // With no signal, or a connection too weak to answer in time, the sign-in kept on the phone.
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    const user = await entryUser(() => supabase.auth.getUser(), phoneUser, navigator.onLine);
+    if (!user) throw redirect({ to: "/auth" });
+    return { user };
   },
   component: Authenticated,
 });
