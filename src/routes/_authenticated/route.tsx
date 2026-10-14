@@ -1,10 +1,10 @@
-import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { ConsoleShell } from "@/components/gw/ConsoleShell";
 import { GwMark } from "@/components/gw/GwMark";
 import { useAccess } from "@/hooks/useAccess";
+import { useSignOut } from "@/hooks/useSignOut";
 import { canOpen, homeFor } from "@/lib/access";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,16 +26,8 @@ function Gate({ children }: { children: ReactNode }) {
  * of an empty console that looks broken.
  */
 function Waiting() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { recheck, checking, campaign, wrongCampaign } = useAccess();
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
+  const signOut = useSignOut();
 
   return (
     <Gate>

@@ -1,13 +1,12 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 
 import { GwMark } from "./GwMark";
 import { InstallApp } from "./offline/InstallApp";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
+import { useSignOut } from "@/hooks/useSignOut";
 import { CampaignSwitcher } from "./CampaignSwitcher";
 import { canOpen } from "@/lib/access";
 
@@ -64,7 +63,6 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
 ];
 
 export function ConsoleShell({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const { isPrincipal, isAdmin, isSuper, campaign, access } = useAccess();
@@ -79,7 +77,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
   const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
     (g) => g.items.length > 0,
   );
-  const queryClient = useQueryClient();
+  const signOut = useSignOut();
 
   useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => {
@@ -90,13 +88,6 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
-
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
 
   return (
     <div className="app">

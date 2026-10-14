@@ -12,6 +12,7 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { OfflineDataProvider } from "@/components/gw/offline/OfflineData";
 import { manifestHref } from "@/lib/offline/app";
 
 function NotFoundComponent() {
@@ -130,8 +131,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <OfflineDataProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </OfflineDataProvider>
     </QueryClientProvider>
   );
 }
