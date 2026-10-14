@@ -5,6 +5,7 @@
 
 import { readFileSync } from "node:fs";
 
+import { toCentres } from "@/lib/centres";
 import { inBox, ringCentre, wardShapes } from "@/lib/geo";
 import { mapAreaFor } from "@/lib/map-areas";
 import {
@@ -19,7 +20,7 @@ import {
   searchHits,
   type SearchHit,
 } from "@/lib/voters-map";
-import { nextSearch } from "@/lib/voters-view";
+import { nextSearch, type VotersSearch } from "@/lib/voters-view";
 
 let pass = 0;
 let fail = 0;
@@ -395,6 +396,164 @@ eq(
     "a place outside every ward keeps the area",
     go({ kind: "place", label: "Thika", sub: "", center: [37.0693, -1.0388] })[0],
     { area: "w:kawangware" },
+  );
+}
+
+// Polling centres: the hint, the camera, search, and what choosing a centre does.
+{
+  const KILE_CENTRE: [number, number] = [36.7836, -1.2841];
+  const kileleshwa = { level: "ward" as const, slug: "kileleshwa" };
+  eq(
+    "a centre: its place, close enough to see its neighbours, not yet street level",
+    cameraFor({ area: kileleshwa, centre: KILE_CENTRE }, WARDS, SHAPES, AREA),
+    { kind: "point", center: KILE_CENTRE, zoom: 15.5 },
+  );
+  {
+    const both = cameraFor(
+      { area: kileleshwa, house: HOUSE, centre: KILE_CENTRE },
+      WARDS,
+      SHAPES,
+      AREA,
+    );
+    eq("a house outranks a centre", both.kind === "point" ? both.zoom : both, 18);
+  }
+  eq(
+    "a centre outside the map area is no centre: the same target as without one",
+    cameraFor({ area: kileleshwa, centre: [0, 0] }, WARDS, SHAPES, AREA),
+    cameraFor({ area: kileleshwa }, WARDS, SHAPES, AREA),
+  );
+}
+eq(
+  "with centres in the ward, its hint says to click one; nowhere else changes",
+  [
+    hintFor("ward", "county", true),
+    hintFor("ward", "county", false),
+    hintFor("street", "county", true),
+    hintFor("constituency", "county", true),
+    hintFor("area", "county", true),
+  ],
+  [
+    "Click a centre to open it",
+    "Zoom in, or click, to see the houses",
+    "Click a house to open it",
+    "Click a ward to drop in",
+    "Click a ward to drop in, or a constituency's name",
+  ],
+);
+
+{
+  const WARDS_ID = WARDS.map((w) => ({ ...w, id: `id-${w.slug}` }));
+  const centreRow = (code: string, name: string, ward: string, extra = {}) => ({
+    id: `c-${code}`,
+    code,
+    name,
+    iebc_code: null,
+    ward_id: `id-${ward}`,
+    registered_voters: 7889,
+    streams: 12,
+    lat: null,
+    lng: null,
+    placed_by: null,
+    ...extra,
+  });
+  const CENTRES = toCentres(
+    [
+      // The lowest code only contains "kileleshwa"; the next starts with it.
+      centreRow("PS-0001", "ST MARYS KILELESHWA", "kileleshwa"),
+      centreRow("PS-0002", "KILELESHWA PRIMARY SCHOOL", "kileleshwa", {
+        lat: -1.2841,
+        lng: 36.7836,
+        placed_by: "osm",
+      }),
+      centreRow("PS-0003", "KAWANGWARE PRIMARY SCHOOL", "kawangware", {
+        lat: -1.2857,
+        lng: 36.7473,
+        placed_by: "osm-close",
+      }),
+    ],
+    new Map(),
+  );
+  const centreHits = (q: string, max?: number) =>
+    searchHits(q, WARDS_ID, PEOPLE, "county", CENTRES, max).filter((h) => h.kind === "centre");
+
+  eq(
+    "a centre by its name",
+    centreHits("kawangware pri").map((h) => h.label),
+    ["KAWANGWARE PRIMARY SCHOOL"],
+  );
+  eq(
+    "or by its code",
+    centreHits("ps-0003").map((h) => h.label),
+    ["KAWANGWARE PRIMARY SCHOOL"],
+  );
+  eq(
+    "a name that starts with what was typed comes before one that only has it",
+    centreHits("kileleshwa").map((h) => h.label),
+    ["KILELESHWA PRIMARY SCHOOL", "ST MARYS KILELESHWA"],
+  );
+  eq("no more than max of them", centreHits("school", 1).length, 1);
+  eq(
+    "a hit says its ward and voters, and when the centre isn't on the map yet",
+    centreHits("kileleshwa").map((h) => h.sub),
+    ["Kileleshwa ward · 7,889 voters", "Kileleshwa ward · 7,889 voters · not on the map yet"],
+  );
+  eq(
+    "one voter is not 'voters'",
+    searchHits(
+      "lone",
+      WARDS_ID,
+      PEOPLE,
+      "county",
+      toCentres(
+        [centreRow("PS-0009", "LONE SCHOOL", "kileleshwa", { registered_voters: 1 })],
+        new Map(),
+      ),
+    ).map((h) => h.sub),
+    ["Kileleshwa ward · 1 voter · not on the map yet"],
+  );
+  eq("a hit carries what choosing it needs", centreHits("ps-0003")[0], {
+    kind: "centre",
+    code: "PS-0003",
+    label: "KAWANGWARE PRIMARY SCHOOL",
+    sub: "Kawangware ward · 7,889 voters",
+    wardSlug: "kawangware",
+    at: [36.7473, -1.2857],
+  });
+  eq(
+    "search with no centres to offer finds none, as before",
+    searchHits("kileleshwa", WARDS_ID, PEOPLE, "county").some((h) => h.kind === "centre"),
+    false,
+  );
+
+  // Choosing one, from a house open in Kawangware.
+  const FROM = { area: "w:kawangware", house: "6GCRPQM6+X95Q" };
+  const choose = (from: VotersSearch, hit: SearchHit) => {
+    const { changes, camera } = searchGo(hit, SHAPES);
+    return [nextSearch(from, changes), camera];
+  };
+  eq(
+    "a centre with a position: its ward, the centre open, the house closed, the camera on it",
+    choose(FROM, centreHits("ps-0002")[0]!),
+    [
+      { area: "w:kileleshwa", centre: "PS-0002" },
+      { kind: "point", center: [36.7836, -1.2841], zoom: 15.5 },
+    ],
+  );
+  eq(
+    "a centre with none: its ward and the centre, and no camera of its own",
+    choose(FROM, centreHits("ps-0001")[0]!),
+    [{ area: "w:kileleshwa", centre: "PS-0001" }, null],
+  );
+  const OPEN = { area: "w:kilimani", centre: "PS-0002" };
+  eq(
+    "choosing a ward, a constituency, a person's house or a place closes the centre",
+    [
+      { kind: "ward" as const, slug: "kileleshwa", label: "", sub: "" },
+      { kind: "constituency" as const, name: "Dagoretti North", label: "", sub: "" },
+      { kind: "person" as const, id: "p1", label: "", sub: "", house: HOUSE, wardSlug: null },
+      { kind: "place" as const, label: "", sub: "", center: [36.787, -1.2921] as [number, number] },
+    ].map((hit) => "centre" in (choose(OPEN, hit)[0] as object)),
+    [false, false, false, false],
   );
 }
 

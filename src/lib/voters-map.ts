@@ -3,6 +3,7 @@
 // map, as AGENTS.md asks), the constituency names drawn at the top level, and
 // search. Pure, so the map component only draws.
 
+import type { Centre } from "@/lib/centres";
 import {
   distanceM,
   inBox,
@@ -28,6 +29,8 @@ export const MAX_ZOOM = 20;
 export const HOUSE_ZOOM_OPEN = 18;
 /** A place from the search opens at street level, with the houses around it. */
 export const PLACE_ZOOM = 16.5;
+/** A polling centre opens close enough to see its area and the centres around it. */
+export const CENTRE_ZOOM = 15.5;
 
 /** The level a zoom shows. A constituency's map (Mathira) starts at the constituency. */
 export function levelFor(zoom: number, top: Top): Level {
@@ -77,11 +80,12 @@ const union = (boxes: Box[]): Box | null =>
     : null;
 
 /**
- * Where the camera goes: a house in the map area, a ward, a constituency, else the whole
- * map area. A house outside the map area (a plus code typed into the address) is no house.
+ * Where the camera goes: a house in the map area, else a polling centre in it, a ward, a
+ * constituency, else the whole map area. A house outside the map area (a plus code typed into
+ * the address) is no house, and a centre outside it is no centre.
  */
 export function cameraFor(
-  at: { area: Area; house?: string | null },
+  at: { area: Area; house?: string | null; centre?: LngLat | null },
   wards: WardRef[],
   shapes: WardShape[],
   mapArea: { bounds: [number, number, number, number]; top: Top },
@@ -91,6 +95,8 @@ export function cameraFor(
   const found = at.house ? plusCodeCentre(at.house) : null;
   const centre = found && inBox(found, bounds) ? found : null;
   if (centre) return { kind: "point", center: centre, zoom: HOUSE_ZOOM_OPEN };
+  if (at.centre && inBox(at.centre, bounds))
+    return { kind: "point", center: at.centre, zoom: CENTRE_ZOOM };
   const { area } = at;
   if (area.level === "ward") {
     const box = shapes.find((s) => s.slug === area.slug)?.box;
@@ -109,10 +115,14 @@ export function cameraFor(
   };
 }
 
-/** What a click does at the level on show, said on the map. */
-export function hintFor(level: Level, top: Top): string {
+/**
+ * What a click does at the level on show, said on the map. `centres` is whether the ward on
+ * show has polling centres on the map, which a click opens.
+ */
+export function hintFor(level: Level, top: Top, centres = false): string {
   if (level === "street") return "Click a house to open it";
-  if (level === "ward") return "Zoom in, or click, to see the houses";
+  if (level === "ward")
+    return centres ? "Click a centre to open it" : "Zoom in, or click, to see the houses";
   if (level === "constituency" || top === "constituency") return "Click a ward to drop in";
   return "Click a ward to drop in, or a constituency's name";
 }
@@ -173,9 +183,19 @@ export type SearchHit =
       house: string | null;
       wardSlug: string | null;
     }
-  | { kind: "place"; label: string; sub: string; center: LngLat };
+  | { kind: "place"; label: string; sub: string; center: LngLat }
+  | {
+      kind: "centre";
+      code: string;
+      label: string;
+      sub: string;
+      wardSlug: string | null;
+      /** Null for a centre with no position yet. */
+      at: LngLat | null;
+    };
 
-type SearchWard = { slug: string; name: string; constituency: string };
+/** A ward in a search: `id` is what a polling centre names its ward by. */
+type SearchWard = { id?: string; slug: string; name: string; constituency: string };
 type SearchPerson = {
   id: string;
   name: string;
@@ -193,16 +213,19 @@ const fold = (s: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
+const nf = new Intl.NumberFormat("en-KE");
+
 /**
- * Wards and constituencies by name, and people by name, or by their number
- * when four or more digits are typed after its 0 or 254. Names match without
- * capitals or accents. At most `max` of each kind.
+ * Wards and constituencies by name, polling centres by name or code (those that start with
+ * what was typed first), and people by name, or by their number when four or more digits are
+ * typed after its 0 or 254. Names match without capitals or accents. At most `max` of each kind.
  */
 export function searchHits(
   q: string,
   wards: SearchWard[],
   people: SearchPerson[],
   top: Top,
+  centres: Centre[] = [],
   max = 5,
 ): SearchHit[] {
   const needle = fold(q);
@@ -232,6 +255,30 @@ export function searchHits(
         .map((n) => ({ kind: "constituency" as const, name: n, label: n, sub: "Constituency" })),
     );
   }
+  const wardById = new Map(wards.flatMap((w) => (w.id ? [[w.id, w] as const] : [])));
+  const matches = (c: Centre) => [fold(c.name), fold(c.code)].filter((t) => t.includes(needle));
+  const starts = (c: Centre) => matches(c).some((t) => t.startsWith(needle));
+  const named = centres.filter((c) => matches(c).length > 0);
+  out.push(
+    ...[...named.filter(starts), ...named.filter((c) => !starts(c))].slice(0, max).map((c) => {
+      const ward = c.wardId ? wardById.get(c.wardId) : undefined;
+      const sub = [
+        ward ? `${ward.name} ward` : null,
+        `${nf.format(c.voters)} ${c.voters === 1 ? "voter" : "voters"}`,
+        c.placed ? null : "not on the map yet",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return {
+        kind: "centre" as const,
+        code: c.code,
+        label: c.name,
+        sub,
+        wardSlug: ward?.slug ?? null,
+        at: c.placed?.at ?? null,
+      };
+    }),
+  );
   const slugOf = new Map(wards.map((w) => [w.name, w.slug]));
   out.push(
     ...people
@@ -256,26 +303,46 @@ export function searchHits(
 /**
  * What choosing a search hit does: a ward or constituency becomes the area on
  * show; a person with a house opens it, in the ward it stands in; a person
- * without one opens their record on the People tab; a place opens the ward
- * there, with the camera on the place (outside every ward, the area stays).
+ * without one opens their record on the People tab; a polling centre opens its
+ * ward and its card, with the camera on it when it has a position; a place opens
+ * the ward there, with the camera on the place (outside every ward, the area
+ * stays). One card is open at a time: a house closes a centre and a centre a house.
  */
 export function searchGo(
   hit: SearchHit,
   shapes: WardShape[],
 ): { changes: SearchChanges; camera: CameraTarget | null } {
   if (hit.kind === "ward")
-    return { changes: { area: `w:${hit.slug}`, house: undefined }, camera: null };
+    return {
+      changes: { area: `w:${hit.slug}`, house: undefined, centre: undefined },
+      camera: null,
+    };
   if (hit.kind === "constituency")
-    return { changes: { area: `c:${hit.name}`, house: undefined }, camera: null };
+    return {
+      changes: { area: `c:${hit.name}`, house: undefined, centre: undefined },
+      camera: null,
+    };
   if (hit.kind === "person") {
     if (!hit.house) return { changes: { tab: "people", person: hit.id }, camera: null };
     const at = plusCodeCentre(hit.house);
     const slug = (at ? wardAt(at, shapes)?.slug : undefined) ?? hit.wardSlug;
-    return { changes: { ...(slug ? { area: `w:${slug}` } : {}), house: hit.house }, camera: null };
+    return {
+      changes: { ...(slug ? { area: `w:${slug}` } : {}), house: hit.house, centre: undefined },
+      camera: null,
+    };
   }
+  if (hit.kind === "centre")
+    return {
+      changes: {
+        ...(hit.wardSlug ? { area: `w:${hit.wardSlug}` } : {}),
+        centre: hit.code,
+        house: undefined,
+      },
+      camera: hit.at ? { kind: "point", center: hit.at, zoom: CENTRE_ZOOM } : null,
+    };
   const ward = wardAt(hit.center, shapes);
   return {
-    changes: { ...(ward ? { area: `w:${ward.slug}` } : {}), house: undefined },
+    changes: { ...(ward ? { area: `w:${ward.slug}` } : {}), house: undefined, centre: undefined },
     camera: { kind: "point", center: hit.center, zoom: PLACE_ZOOM },
   };
 }

@@ -20,6 +20,8 @@ export type VotersSearch = {
   tab?: "people";
   /** The house whose card is open, by its plus code. */
   house?: string;
+  /** The polling centre whose card is open, by its short code (PS-0042). */
+  centre?: string;
   /** What the map is coloured by; doors when not set. */
   colour?: Colour;
   /** The base map; satellite when not set. */
@@ -32,6 +34,9 @@ export type VotersSearch = {
   person?: string;
   manage?: true;
 };
+
+/** A polling centre's short code: PS-0042, or SAMPLE-0001 for a sample the team kept. */
+const CENTRE_CODE = /^[A-Z0-9][A-Z0-9-]{1,19}$/;
 
 const COLOURS: Colour[] = ["doors", "support", "vote"];
 const BASES: Basemap[] = ["satellite", "streets"];
@@ -51,6 +56,8 @@ export function validateVotersSearch(raw: Record<string, unknown>): VotersSearch
   if (raw["tab"] === "people" || raw["view"] === "people") out.tab = "people";
   const house = typeof raw["house"] === "string" ? raw["house"].trim().toUpperCase() : "";
   if (PLUS_CODE.test(house)) out.house = house;
+  const centre = typeof raw["centre"] === "string" ? raw["centre"].trim().toUpperCase() : "";
+  if (CENTRE_CODE.test(centre)) out.centre = centre;
   const colour = pick(raw["colour"], COLOURS);
   if (colour) out.colour = colour;
   const base = pick(raw["base"], BASES);
@@ -302,12 +309,12 @@ export const share = (x: number): string =>
   x > 0 && x < 0.005 ? "under 1%" : `${Math.round(x * 100)}%`;
 
 /**
- * How a change moves the page: a new area, tab or house is a step Back can
- * undo, and a new area or tab goes back to the top, where its title is.
+ * How a change moves the page: a new area, tab, house or centre is a step Back
+ * can undo, and a new area or tab goes back to the top, where its title is.
  */
 export function stepFor(changes: SearchChanges): { replace: boolean; resetScroll: boolean } {
   const top = "area" in changes || "tab" in changes;
-  return { replace: !(top || "house" in changes), resetScroll: top };
+  return { replace: !(top || "house" in changes || "centre" in changes), resetScroll: top };
 }
 
 /** The page to show: a list that got shorter brings a page past its end back to its last page. */

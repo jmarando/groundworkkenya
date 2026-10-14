@@ -353,5 +353,37 @@ eq(
   [true, false, false],
 );
 
+// The polling centre open on the map: by its short code, so a link or a reload opens it.
+eq(
+  "a centre in the address, by its code in capitals",
+  validateVotersSearch({ centre: "ps-0042" }).centre,
+  "PS-0042",
+);
+eq(
+  "a centre that isn't a code is dropped, so the map opens the area instead",
+  [
+    validateVotersSearch({ centre: "PS 0042" }),
+    validateVotersSearch({ centre: "x" }),
+    validateVotersSearch({ centre: "PS-0042;drop" }),
+    validateVotersSearch({ centre: 42 }),
+  ],
+  [{}, {}, {}, {}],
+);
+eq(
+  "a link opens a centre in the area it names",
+  nextSearch({ area: "w:kileleshwa" }, { centre: "PS-0042" }),
+  { area: "w:kileleshwa", centre: "PS-0042" },
+);
+eq(
+  "closing it takes it out of the address",
+  nextSearch({ area: "w:kileleshwa", centre: "PS-0042" }, { centre: undefined }),
+  { area: "w:kileleshwa" },
+);
+eq(
+  "opening a centre is a step Back undoes, and doesn't go back to the top",
+  stepFor({ centre: "PS-0042" }),
+  { replace: false, resetScroll: false },
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
