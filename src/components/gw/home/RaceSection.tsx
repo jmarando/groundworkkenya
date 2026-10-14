@@ -1,4 +1,4 @@
-import { LastResultCard, MovesCard } from "@/components/gw/home/AtlasCards";
+import { LastResultCard } from "@/components/gw/home/AtlasCards";
 import { RaceReal } from "@/components/gw/home/RaceReal";
 import { SectionHead } from "@/components/gw/home/SectionHead";
 import { TopOfMindCard } from "@/components/gw/home/TopOfMind";
@@ -68,7 +68,6 @@ export function RaceSection({
             )}
           </section>
           <TopOfMindCard mind={mind} />
-          <MovesCard />
           <LastResultCard />
         </>
       )}

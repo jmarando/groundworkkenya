@@ -100,7 +100,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
       <div className="g5 fx2">
         <Link
           to="/voters"
-          search={{ view: "people", support: "strong" }}
+          search={{ tab: "people", support: "strong" }}
           className="card kpi kpi-link"
         >
           <span className="kpi-lbl">Consented supporters</span>
@@ -119,7 +119,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
           </div>
         </Link>
 
-        <Link to="/voters" search={{ view: "wards" }} className="card kpi kpi-link">
+        <Link to="/voters" search={{}} className="card kpi kpi-link">
           <span className="kpi-lbl">Wards on track</span>
           <span className="kpi-val stat">
             {data.wardsOnTrack}
@@ -178,11 +178,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
 
         <Link
           to="/voters"
-          search={
-            data.biggestGap
-              ? { area: `c:${data.biggestGap.constituency}`, view: "wards" }
-              : { view: "wards" }
-          }
+          search={data.biggestGap ? { area: `c:${data.biggestGap.constituency}` } : {}}
           className="card kpi kpi-link"
         >
           <span className="kpi-lbl">Biggest gap</span>
@@ -285,7 +281,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
             </div>
           </div>
           <div className="quick fx4">
-            <Link to="/voters" search={{ view: "people" }} className="qcard">
+            <Link to="/voters" search={{ tab: "people" }} className="qcard">
               <span className="qcard-k">CRM</span>
               <span className="qcard-t">Work the list</span>
               <span className="qcard-s">Search, filter and open any record.</span>

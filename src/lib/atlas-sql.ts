@@ -30,7 +30,34 @@ function upsert(table: string, cols: string[], rows: Cell[][], key: string[]): s
 
 const depth = (key: string) => (key === "kenya" ? 0 : key.split("/").length);
 
-export function atlasSql(f: AtlasFiles): string {
+/**
+ * The atlas's files as a migration. "figures" (the default) writes everything
+ * but the measured indicators, as the first counties' migration has it;
+ * "indicators" writes only the indicators and the sources they cite, for a
+ * migration of their own after schema 24.
+ */
+export function atlasSql(f: AtlasFiles, part: "figures" | "indicators" = "figures"): string {
+  if (part === "indicators") {
+    const cited = new Set(f.indicators.map((r) => r.source));
+    return [
+      upsert(
+        "atlas_sources",
+        ["id", "title", "publisher", "url", "note"],
+        f.sources
+          .filter((s) => cited.has(s.id))
+          .map((s) => [s.id, s.title, s.publisher, s.url, s.note]),
+        ["id"],
+      ),
+      upsert(
+        "atlas_indicators",
+        ["area_key", "indicator", "year", "value", "source_id"],
+        f.indicators.map((r) => [r.area, r.indicator, r.year, r.value, r.source]),
+        ["area_key", "indicator", "year"],
+      ),
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
   const areas = [...f.areas].sort(
     (a, b) => depth(a.key) - depth(b.key) || a.key.localeCompare(b.key),
   );

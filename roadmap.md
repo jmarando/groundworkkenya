@@ -54,6 +54,7 @@ Scope agreed: full app with real backend, brand kept but tidied, no live channel
 - [ ] Custom domain groundwork.ke: ownership verified 25 Sep, all DNS records OK — user to complete setup in Project Settings → Domains (Check status), then SSL provisions; add www.groundwork.ke as a separate domain (A record already pointing to 185.158.133.1)
 
 ## Current
+- [x] Review and correct the entire public homepage layout across screen sizes
 - [x] Repair daily briefing status, catch-up and provider-pause visibility; verify today's outcome
 - [x] Add campaign-scoped news and diary archive
 - [x] Add clearly proposed Sakaja planning items for 12–18 October

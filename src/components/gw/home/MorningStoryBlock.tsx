@@ -7,6 +7,7 @@ export function MorningStoryBlock({
   time,
   canEdit,
   onEdit,
+  separateDetails = false,
 }: {
   view: StoryView | null;
   /** Home's data is still on its way: say so, not that there is no news. */
@@ -15,6 +16,7 @@ export function MorningStoryBlock({
   time: string;
   canEdit: boolean;
   onEdit: () => void;
+  separateDetails?: boolean;
 }) {
   if (!view) {
     return (
@@ -50,6 +52,22 @@ export function MorningStoryBlock({
             {st.headline}
           </h2>
           <p className="mb-story-sum">{st.summary}</p>
+          {!separateDetails && <MorningStoryDetails view={view} />}
+        </>
+      ) : (
+        <><h2 id="mb-story-h" className="mb-story-h">{st.from ? "This morning’s top stories" : "This morning’s check"}</h2>
+        {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}</>
+      )}
+    </article>
+  );
+}
+
+/** Supporting analysis can span the space below the story and today's plan. */
+export function MorningStoryDetails({ view }: { view: StoryView | null }) {
+  if (!view || view.story.kind !== "written") return null;
+  const st = view.story;
+  return (
+    <div className="mb-story-details">
           {st.why ? <p className="mb-story-sum">{st.why}</p> : null}
           {st.figures.length ? (
             <dl className="mb-figs">
@@ -90,12 +108,7 @@ export function MorningStoryBlock({
               ))}
             </p>
           ) : null}
-        </>
-      ) : (
-        <><h2 id="mb-story-h" className="mb-story-h">{st.from ? "This morning’s top stories" : "This morning’s check"}</h2>
-        {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}</>
-      )}
-    </article>
+    </div>
   );
 }
 

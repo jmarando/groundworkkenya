@@ -3,15 +3,23 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { DiaryWeek } from "@/components/gw/diary/DiaryWeek";
+import { PlaceFindings } from "@/components/gw/findings/SoWhat";
 import { useAccess } from "@/hooks/useAccess";
 import { addDays, dayName } from "@/lib/diary";
 import { getDiaryWeek } from "@/lib/diary.functions";
 
 export const Route = createFileRoute("/_authenticated/diary")({
-  // ?week=2026-10-05: the week that holds that day; none: this week.
-  validateSearch: (search: Record<string, unknown>): { week?: string } => {
+  // ?week=2026-10-05: the week that holds that day; none: this week. ?add=<ward id>: a
+  // finding's "Plan a visit", which opens today's form with that ward chosen.
+  validateSearch: (search: Record<string, unknown>): { week?: string; add?: string } => {
     const w = typeof search["week"] === "string" ? search["week"] : "";
-    return /^\d{4}-\d{2}-\d{2}$/.test(w) ? { week: w } : {};
+    const a = typeof search["add"] === "string" ? search["add"] : "";
+    return {
+      ...(/^\d{4}-\d{2}-\d{2}$/.test(w) ? { week: w } : {}),
+      ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a)
+        ? { add: a }
+        : {}),
+    };
   },
   component: DiaryPage,
   head: () => ({
@@ -35,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/diary")({
 });
 
 function DiaryPage() {
-  const { week } = Route.useSearch();
+  const { week, add } = Route.useSearch();
   const { campaign, isPrincipal } = useAccess();
   const fetchWeek = useServerFn(getDiaryWeek);
   const { data, isError } = useQuery({
@@ -58,7 +66,13 @@ function DiaryPage() {
           </div>
           {first ? (
             <nav className="diary-nav" aria-label="Weeks">
-              <Link to="/archive" search={{ month: first.slice(0, 7) }} className="btn btn--ghost btn--sm">Archive</Link>
+              <Link
+                to="/archive"
+                search={{ month: first.slice(0, 7) }}
+                className="btn btn--ghost btn--sm"
+              >
+                Archive
+              </Link>
               <Link
                 to="/diary"
                 search={{ week: addDays(first, -7) }}
@@ -80,7 +94,15 @@ function DiaryPage() {
           ) : null}
         </div>
         {data ? (
-          <DiaryWeek week={data} canEdit={isPrincipal} />
+          <>
+            <PlaceFindings
+              place={null}
+              decisions={["time"]}
+              max={3}
+              title="Where the candidate's time goes"
+            />
+            <DiaryWeek week={data} canEdit={isPrincipal} addWard={add} />
+          </>
         ) : (
           <p className="meta">{isError ? "Could not read the diary." : "Reading the diary…"}</p>
         )}

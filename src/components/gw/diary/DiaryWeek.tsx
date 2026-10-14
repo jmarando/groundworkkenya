@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useAccess } from "@/hooks/useAccess";
+import { useFindings } from "@/hooks/useFindings";
 import { briefLine, wardKey } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
 
 import {
+  addDays,
   cleanEntry,
   dayName,
   DIARY_KINDS,
@@ -26,6 +28,7 @@ function useRefresh() {
   return async () => {
     await queryClient.invalidateQueries({ queryKey: ["diary"] });
     await queryClient.invalidateQueries({ queryKey: ["home"] });
+    await queryClient.invalidateQueries({ queryKey: ["findings"] });
   };
 }
 
@@ -51,20 +54,53 @@ function useBriefs(week: Week): Record<string, string> {
   }, [atlas, week, campaign?.level]);
 }
 
+/** Each stop in the next seven days with a ward: that ward's first two message or field findings. */
+function useStopFindings(week: Week): Record<string, string[]> {
+  const { data } = useFindings();
+  return useMemo(() => {
+    if (!data) return {};
+    const last = addDays(week.today, 6);
+    const out: Record<string, string[]> = {};
+    for (const e of week.entries) {
+      const key = e.wardId ? data.wardKeys[e.wardId] : undefined;
+      if (!key || e.day < week.today || e.day > last) continue;
+      const lines = data.findings
+        .filter((f) => f.place === key && (f.decision === "message" || f.decision === "field"))
+        .slice(0, 2)
+        .map((f) => f.line);
+      if (lines.length) out[e.id] = lines;
+    }
+    return out;
+  }, [data, week]);
+}
+
 /** A week of the diary, Monday to Sunday, each day with its entries by time. */
-export function DiaryWeek({ week, canEdit }: { week: Week; canEdit: boolean }) {
+export function DiaryWeek({
+  week,
+  canEdit,
+  addWard,
+}: {
+  week: Week;
+  canEdit: boolean;
+  /** From a finding's "Plan a visit": today's form opens with this ward chosen. */
+  addWard?: string | undefined;
+}) {
   const briefs = useBriefs(week);
+  const finds = useStopFindings(week);
   return (
     <div className="diary-days">
       {week.days.map((day) => (
         <DiaryDay
-          key={day}
+          // A new "Plan a visit" opens today's form afresh, even with the diary already open.
+          key={day === week.today && addWard ? `${day}:${addWard}` : day}
           day={day}
           isToday={day === week.today}
           entries={week.entries.filter((e) => e.day === day)}
           wards={week.wards}
           briefs={briefs}
+          finds={finds}
           canEdit={canEdit}
+          startWard={canEdit && day === week.today ? addWard : undefined}
         />
       ))}
     </div>
@@ -77,7 +113,9 @@ function DiaryDay({
   entries,
   wards,
   briefs,
+  finds,
   canEdit,
+  startWard,
 }: {
   day: string;
   isToday: boolean;
@@ -85,9 +123,12 @@ function DiaryDay({
   wards: Ward[];
   /** A line from the last election, by entry id, for stops in a ward. */
   briefs: Record<string, string>;
+  /** The stop's ward's findings, by entry id, for stops in the next seven days. */
+  finds: Record<string, string[]>;
   canEdit: boolean;
+  startWard?: string | undefined;
 }) {
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(Boolean(startWard));
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <section
@@ -128,6 +169,11 @@ function DiaryDay({
                       {briefs[e.id]}
                     </p>
                   ) : null}
+                  {finds[e.id]?.map((line) => (
+                    <p key={line} className="diary-find">
+                      {line}
+                    </p>
+                  ))}
                   {e.note ? <p className="mb-time-why">{e.note}</p> : null}
                   {canEdit ? (
                     <div className="diary-actions">
@@ -150,7 +196,13 @@ function DiaryDay({
         <p className="meta">Nothing planned.</p>
       ) : null}
       {adding ? (
-        <EntryForm day={day} entry={null} wards={wards} onDone={() => setAdding(false)} />
+        <EntryForm
+          day={day}
+          entry={null}
+          wards={wards}
+          startWard={startWard}
+          onDone={() => setAdding(false)}
+        />
       ) : null}
     </section>
   );
@@ -185,17 +237,19 @@ function EntryForm({
   day,
   entry,
   wards,
+  startWard,
   onDone,
 }: {
   day: string;
   entry: DiaryEntry | null;
   wards: Ward[];
+  startWard?: string | undefined;
   onDone: () => void;
 }) {
   const [startsAt, setStartsAt] = useState(entry?.startsAt ?? "");
   const [title, setTitle] = useState(entry?.title ?? "");
   const [kind, setKind] = useState<string>(entry?.kind ?? "visit");
-  const [wardId, setWardId] = useState(entry?.wardId ?? "");
+  const [wardId, setWardId] = useState(entry?.wardId ?? startWard ?? "");
   const [note, setNote] = useState(entry?.note ?? "");
   const save = useServerFn(saveDiaryEntry);
   const refresh = useRefresh();

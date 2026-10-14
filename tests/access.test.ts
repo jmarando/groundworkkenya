@@ -42,5 +42,16 @@ eq(
   [true, true, false],
 );
 
+eq(
+  "the team opens Strategy; agents and people waiting don't",
+  [
+    canOpen("organiser", "/strategy"),
+    canOpen("candidate", "/strategy"),
+    canOpen("agent", "/strategy"),
+    canOpen("pending", "/strategy"),
+  ],
+  [true, true, false, false],
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

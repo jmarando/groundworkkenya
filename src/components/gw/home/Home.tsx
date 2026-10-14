@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CampaignSection } from "@/components/gw/home/CampaignSection";
+import { FindingsBlock } from "@/components/gw/home/FindingsBlock";
 import { HomeHeader } from "@/components/gw/home/HomeHeader";
 import { AddPoll, EditRivals, useRemovePoll } from "@/components/gw/home/RaceEditor";
 import { RaceSection } from "@/components/gw/home/RaceSection";
@@ -70,9 +71,11 @@ export function Home({
         time={now}
         plan={plan}
         watch={watchList(d.diary, today)}
+        upcoming={d.diary.filter((entry) => entry.day > today && entry.kind !== "watch")}
         canEdit={canEdit}
         onEditStory={() => setEditing("story")}
       />
+      <FindingsBlock today={items.map((t) => t.title)} />
       {editing === "story" && <StoryEditor view={d.story} onClose={() => setEditing(null)} />}
       <RaceSection
         mode={modes.race}

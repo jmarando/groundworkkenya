@@ -167,18 +167,39 @@ export type TodoInput = {
 /** Shares are floats: a gap of exactly 3 or 10 points must not tip over a line by rounding. */
 const EPS = 1e-9;
 
+/** A number a what-to-do reason prints, with what it is: findings carry these as figures. */
+export type ReasonFigure = { label: string; value: number; text: string };
+
 /**
- * What to do here and why; the first rule that matches wins. The rules follow
- * who is ahead, not the share alone: behind within 10 points is Persuade, behind
- * by more is Cut the gap, ahead by more than 10 (short of Hold) is Lean ours.
+ * What to do here and why, with every number the reason prints; the first rule
+ * that matches wins. The rules follow who is ahead, not the share alone: behind
+ * within 10 points is Persuade, behind by more is Cut the gap, ahead by more
+ * than 10 (short of Hold) is Lean ours.
  */
-export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
+export function whatToDoFigures(i: TodoInput): {
+  todo: Todo;
+  reason: string;
+  figures: ReasonFigure[];
+} {
+  const year: ReasonFigure = { label: "Election", value: i.year, text: String(i.year) };
   const share = ourShare(i.count, i.side);
-  if (share === null) return { todo: "no-side", reason: `Set your side in ${i.year} first.` };
+  if (share === null)
+    return { todo: "no-side", reason: `Set your side in ${i.year} first.`, figures: [year] };
   const t = turnout(i.count);
   const m = margin(i.count, i.side) ?? 0;
   const leader = blocShares(i.count).find((b) => b.bloc !== i.side);
   const sw = i.before ? swing(i.count, i.side, i.before.count, i.before.side) : null;
+  const ours: ReasonFigure = { label: "Our share", value: share, text: pct1(share) };
+  const theirs: ReasonFigure = {
+    label: `${leader?.bloc ?? "The leader"}'s share`,
+    value: leader?.share ?? 0,
+    text: pct1(leader?.share ?? 0),
+  };
+  const pts = (label: string, x: number): ReasonFigure => ({
+    label,
+    value: Number(points(x)),
+    text: points(x),
+  });
   if (
     share >= 0.5 - EPS &&
     t !== null &&
@@ -188,28 +209,52 @@ export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
     return {
       todo: "mobilise",
       reason: `We took ${pct1(share)} here in ${i.year}, but turnout was ${pct0(t)}, ${points(i.parentTurnout - t)} points below ${i.parentName ?? "the area around it"}.`,
+      figures: [
+        ours,
+        year,
+        { label: "Turnout", value: t, text: pct0(t) },
+        pts(`Points below ${i.parentName ?? "the area around it"}`, i.parentTurnout - t),
+      ],
     };
   if (share >= 0.6 - EPS)
-    return { todo: "hold", reason: `We took ${pct1(share)} here in ${i.year}.` };
+    return {
+      todo: "hold",
+      reason: `We took ${pct1(share)} here in ${i.year}.`,
+      figures: [ours, year],
+    };
   if (m < -0.1 - EPS)
     return {
       todo: "cut",
       reason: `We trail ${leader?.bloc ?? "the leader"} by ${points(m)} points here in ${i.year}: ${pct1(share)} to ${pct1(leader?.share ?? 0)}.`,
+      figures: [pts("Points behind", m), year, ours, theirs],
     };
   if (Math.abs(m) <= 0.1 + EPS)
     return {
       todo: "persuade",
       reason: `${i.year} was close: ${pct1(share)} to us against ${pct1(leader?.share ?? 0)} for ${leader?.bloc ?? "the rest"}.`,
+      figures: [year, ours, theirs],
     };
   if (sw !== null && i.before && Math.abs(sw) >= 0.1 - EPS)
     return {
       todo: "persuade",
       reason: `Our share moved ${points(sw)} points ${sw > 0 ? "up" : "down"} between ${i.before.year} and ${i.year}.`,
+      figures: [
+        pts("Points moved", sw),
+        { label: "Election before", value: i.before.year, text: String(i.before.year) },
+        year,
+      ],
     };
   return {
     todo: "lean-ours",
     reason: `We took ${pct1(share)} here in ${i.year}, a ${points(m)}-point lead.`,
+    figures: [ours, year, pts("Points ahead", m)],
   };
+}
+
+/** What to do here and why: `whatToDoFigures` without the figures. */
+export function whatToDo(i: TodoInput): { todo: Todo; reason: string } {
+  const { todo, reason } = whatToDoFigures(i);
+  return { todo, reason };
 }
 
 const LEVEL_TOTAL: Record<string, string> = {

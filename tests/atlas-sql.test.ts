@@ -82,5 +82,38 @@ eq(
   2,
 );
 
+const withInd = emptyFiles();
+readTable(
+  "sources",
+  "id,title,publisher,url,note\nob,Open Buildings v3 (test),Google Open Buildings,,\nother,Something else,IEBC,,\n",
+  "sources",
+  withInd,
+);
+readTable(
+  "indicators",
+  "area,indicator,year,value,source\nnairobi/kibra,buildings,2023,1200,ob\nnairobi/kibra,small_building_share,2023,0.412,ob\n",
+  "indicators",
+  withInd,
+);
+const indSql = atlasSql(withInd, "indicators");
+eq(
+  "the indicators migration: the sources they cite, then the indicators, as upserts",
+  [
+    indSql.includes("'ob'"),
+    indSql.includes("'other'"),
+    indSql.indexOf("atlas_sources") < indSql.indexOf("atlas_indicators"),
+    indSql.includes("('nairobi/kibra', 'small_building_share', 2023, 0.412, 'ob')"),
+    indSql.includes(
+      "on conflict (area_key, indicator, year) do update set value = excluded.value, source_id = excluded.source_id;",
+    ),
+  ],
+  [true, false, true, true, true],
+);
+eq(
+  "the figures migration leaves the indicators out",
+  atlasSql(withInd).includes("atlas_indicators"),
+  false,
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

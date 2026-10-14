@@ -155,6 +155,8 @@ const D: AtlasData = {
   homeArea: null,
   sides: { "2022-governor": "Kenya Kwanza", "2017-governor": "Jubilee" },
   notes: {},
+  indicators: [],
+  profiles: {},
 };
 
 eq("an area's count", countAt(D, "2022-governor", "nairobi/a"), {

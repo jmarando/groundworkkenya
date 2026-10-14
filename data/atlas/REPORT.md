@@ -18,6 +18,7 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 
 Registered voters by ward: 2013: 0 of 85 · 2017: 0 of 85 · 2022: 85 of 85.
 Population estimates: 85 of 85 wards.
+Buildings measured: 85 of 85 wards.
 Population estimate below the 2022 register in 29 of 85 wards: Kabiro, Mutu-ini, Ngando, Kayole South, Upper Savannah, Utawala, Dandora Area I, Imara Daima, Kwa Njenga, Pipeline, Eastleigh South, Pumwani, Clay City, Laini Saba, Sarangombe, Mugumo-ini, Nyayo Highrise, South C, Harambee, Maringo/Hamza, Mabatini, Mlango Kubwa, Kahawa, Zimmerman, Nairobi Central, Nairobi South, Ngara, Ziwani/Kariokor, Parklands/Highridge.
 Registers that disagree: Roysambu in 2022, 164,711 in the 2022 president count against 153,772 in the register.
 
@@ -48,6 +49,7 @@ Missing:
 
 Registered voters by ward: 2013: 0 of 6 · 2017: 0 of 6 · 2022: 6 of 6.
 Population estimates: 6 of 6 wards.
+Buildings measured: 6 of 6 wards.
 Population estimate below the 2022 register in 1 of 6 wards: Karatina Town.
 
 Missing:
@@ -86,6 +88,8 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 - `electionskenya-2013-president`: 2013 presidential results by county, electionskenya.org, http://www.electionskenya.org/results/PR/2013/. A third-party election observation site; its 2013 national totals match IEBC's declaration. County rows list only the four leading candidates and no votes cast. Parties and coalitions come from the candidates' widely reported 2013 tickets
 - `electionskenya-2022-candidates`: 2022 candidates and registered voters by constituency, electionskenya.org, http://www.electionskenya.org/constituency/274/. Constituency pages of a third-party site carrying IEBC's 2022 candidate list (official names and parties) and register; names are given here as other names then surname. Its county pages give the 2022 governor candidates; both lists are what the provisional results were checked against for completeness.
 - `electionskenya-2022-register`: Registered voters per county assembly ward, 2022, electionskenya.org, http://www.electionskenya.org/county/047/. Ward pages of a third-party site carrying IEBC's 2022 register. Nairobi's wards add up to 2,415,310 against IEBC's declared 2,416,551. Mugumo-ini is spelt Mugumu-ini there.
+- `geoboundaries-ken-adm3`: geoBoundaries Kenya ADM3 (wards), geoBoundaries, https://www.geoboundaries.org/. Ward boundaries (Omare & Omare 2020, CC BY 4.0), simplified to about 3 m for the ward maps; areas are measured from them.
+- `google-open-buildings-v3`: Open Buildings v3: building footprints, Google Open Buildings, https://sites.research.google/gr/open-buildings/. Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map's house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more.
 - `iebc-2022-form-34c`: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022, IEBC, https://www.iebc.or.ke/uploads/resources/QLTlLJx0Vr.pdf. County and national totals as printed. Votes cast is valid plus rejected. The national valid total (14,213,137) is 110 more than the four candidates' votes added up (14,213,027), as printed.
 - `kna-2022-nyeri-mps`: Political newcomers dominate Nyeri MP seats, Kenya News Agency, https://www.kenyanews.go.ke/political-newcomers-dominate-nyeri-mp-seats/1000/. The government news agency's report of five of Nyeri's six MP races, the leading candidates as printed. Its '58,534 votes cast' in Mukurweini is that constituency's register, so it isn't entered as votes cast; Othaya's '44,676 votes' is entered as votes cast.
 - `provisional-2017-governor-nairobi`: 2017 Governor result, Nairobi City County, Provisional results. Public provisional figures for the county, eight candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.

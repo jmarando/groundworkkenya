@@ -6,6 +6,8 @@
 //   npx tsx --tsconfig tsconfig.json tests/houses.test.ts
 
 import {
+  BAND_COLOUR,
+  blockNote,
   doorsFirst,
   doorTotals,
   houseColour,
@@ -22,7 +24,6 @@ import {
 } from "@/lib/houses";
 import { readAreaDoors, readHouse, readWardHouses, type Client } from "@/lib/houses.functions";
 import { readMapArea } from "@/lib/map.functions";
-import { BAND_COLOUR } from "@/lib/wardmap";
 
 import { fakeSupabase } from "./fake-supabase";
 
@@ -178,6 +179,16 @@ eq("door totals; an agent in two wards counts once", doorTotals(WARDS, HOUSES, D
   doorsWeek: 15,
   agentsToday: 2,
 });
+eq(
+  "the house card's note for an outline big enough to be several homes",
+  [blockNote(199), blockNote(200), blockNote(1250), blockNote(null)],
+  [
+    null,
+    "This outline covers 200 m², often several homes: log each household as its own visit.",
+    "This outline covers 1,250 m², often several homes: log each household as its own visit.",
+    null,
+  ],
+);
 
 eq(
   "bad rows are left out",

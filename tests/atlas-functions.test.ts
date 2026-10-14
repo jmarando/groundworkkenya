@@ -6,9 +6,11 @@
 import {
   ATLAS_DENIED,
   loadAtlas,
+  PROFILE_DENIED,
   removeNote,
   writeHome,
   writeNote,
+  writeProfile,
   writeSide,
 } from "@/lib/atlas.functions";
 
@@ -85,6 +87,10 @@ const SEED = {
   atlas_settings: [],
   atlas_sides: [],
   area_notes: [],
+  atlas_indicators: [
+    { area_key: "nairobi", indicator: "buildings", year: 2023, value: 1000, source_id: "star" },
+  ],
+  area_profiles: [],
 };
 const as = (role: string) => fakeSupabase(structuredClone(SEED), { my_campaign_role: () => role });
 
@@ -138,6 +144,93 @@ await refuses(
   () => writeHome(as("agent") as never, "nairobi"),
   ATLAS_DENIED,
 );
+
+eq(
+  "the indicators and profiles, read into the screen's shape",
+  [d.indicators, d.profiles],
+  [[{ area: "nairobi", indicator: "buildings", year: 2023, value: 1000, source: "star" }], {}],
+);
+const org = as("organiser");
+const profile = {
+  area: "nairobi",
+  settlement: "mixed" as const,
+  communities: "Long-settled families.",
+  languages: ["sw" as const],
+  institutions: null,
+  issues: null,
+};
+await writeProfile(org as never, profile);
+await writeProfile(org as never, { ...profile, issues: "Water." });
+const withProfile = await loadAtlas(org as never);
+eq(
+  "an organiser's profile, replaced not doubled",
+  [
+    withProfile.profiles["nairobi"]?.settlement,
+    withProfile.profiles["nairobi"]?.issues,
+    org.tables["area_profiles"]?.length,
+  ],
+  ["mixed", "Water.", 1],
+);
+await refuses(
+  "a field agent can't write a profile",
+  () => writeProfile(as("agent") as never, profile),
+  PROFILE_DENIED,
+);
+const named = fakeSupabase(
+  {
+    ...structuredClone(SEED),
+    area_profiles: [
+      {
+        area_key: "nairobi",
+        settlement: "informal",
+        communities: null,
+        languages: [],
+        institutions: null,
+        issues: null,
+        updated_at: "2026-10-10T08:00:00Z",
+        updated_by: "u-1",
+      },
+    ],
+    profiles: [{ user_id: "u-1", full_name: "Achieng Otieno" }],
+  },
+  { my_campaign_role: () => "manager" },
+);
+eq(
+  "a profile says who last saved it",
+  (await loadAtlas(named as never)).profiles["nairobi"]?.updatedBy,
+  "Achieng Otieno",
+);
+
+{
+  // Before Lovable applies the update, its two tables don't exist: the atlas still loads.
+  const base = fakeSupabase(structuredClone(SEED), { my_campaign_role: () => "manager" });
+  const missing = new Set(["atlas_indicators", "area_profiles"]);
+  const before = {
+    ...base,
+    from: (table: string) =>
+      missing.has(table)
+        ? {
+            select: () =>
+              Promise.resolve({
+                data: null,
+                error: { code: "42P01", message: `relation "public.${table}" does not exist` },
+              }),
+          }
+        : base.from(table),
+  };
+  let early: unknown;
+  try {
+    const a = await loadAtlas(before as never);
+    early = [a.areas.length > 0, a.indicators, a.profiles];
+  } catch (e) {
+    early = `threw: ${(e as Error).message}`;
+  }
+  eq(
+    "before the update reaches the database, the atlas loads without profiles or indicators",
+    early,
+    [true, [], {}],
+  );
+}
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

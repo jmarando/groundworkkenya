@@ -2,7 +2,10 @@ import { AreaMap } from "@/components/gw/elections/AreaMap";
 import { AreaNumbers } from "@/components/gw/elections/AreaNumbers";
 import { NoteBox } from "@/components/gw/elections/NoteBox";
 import { PeopleCard } from "@/components/gw/elections/PeopleCard";
+import { PlaceCard } from "@/components/gw/elections/PlaceCard";
 import { ResultList } from "@/components/gw/elections/ResultList";
+import { indicatorText, measuredAt } from "@/lib/area-indicators";
+import { settlementName } from "@/lib/area-profile";
 import { RACES, type Race } from "@/lib/atlas";
 import {
   RACE_NAMES,
@@ -24,6 +27,7 @@ export function ConstituencyView({
   race,
   year,
   canEdit,
+  canEditProfile,
   onArea,
   onSetup,
 }: {
@@ -32,6 +36,7 @@ export function ConstituencyView({
   race: Race;
   year: number;
   canEdit: boolean;
+  canEditProfile: boolean;
   onArea: (key: string) => void;
   onSetup: () => void;
 }) {
@@ -67,6 +72,8 @@ export function ConstituencyView({
         </section>
         <div className="el-side">
           <PeopleCard f={f} />
+          {/* A fresh card for each place, so one place's draft profile never lands on another. */}
+          <PlaceCard key={area.key} d={d} area={area} canEdit={canEditProfile} />
           {area.parent ? (
             <section className="card">
               <AreaMap
@@ -102,34 +109,55 @@ export function ConstituencyView({
                 <th style={{ textAlign: "right" }}>Adults (estimate)</th>
                 <th style={{ textAlign: "right" }}>Aged 18–34</th>
                 <th style={{ textAlign: "right" }}>Not registered (estimate)</th>
+                <th style={{ textAlign: "right" }}>Buildings per km²</th>
+                <th style={{ textAlign: "right" }}>Median building</th>
+                <th>Settlement</th>
                 <th>Note</th>
               </tr>
             </thead>
             <tbody>
-              {wards.map((w) => (
-                <tr key={w.key}>
-                  <td>
-                    <button type="button" className="vt-link" onClick={() => onArea(w.key)}>
-                      {w.name}
-                    </button>
-                  </td>
-                  <td className="num">{w.registered === null ? "—" : votes(w.registered)}</td>
-                  <td className="num">{w.population ? votes(w.population.adults) : "—"}</td>
-                  <td className="num">
-                    {w.population && w.population.adults
-                      ? whole(w.population.youngAdults / w.population.adults)
-                      : "—"}
-                  </td>
-                  <td className="num">
-                    {w.notRegistered
-                      ? votes(w.notRegistered.adults)
-                      : w.estimateBelowRegister
-                        ? "below the register"
+              {wards.map((w) => {
+                const wm = measuredAt(d, w.key);
+                const ws = d.profiles[w.key]?.settlement;
+                return (
+                  <tr key={w.key}>
+                    <td>
+                      <button type="button" className="vt-link" onClick={() => onArea(w.key)}>
+                        {w.name}
+                      </button>
+                    </td>
+                    <td className="num">{w.registered === null ? "—" : votes(w.registered)}</td>
+                    <td className="num">{w.population ? votes(w.population.adults) : "—"}</td>
+                    <td className="num">
+                      {w.population && w.population.adults
+                        ? whole(w.population.youngAdults / w.population.adults)
                         : "—"}
-                  </td>
-                  <td className="meta">{d.notes[w.key] ? "yes" : ""}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="num">
+                      {w.notRegistered
+                        ? votes(w.notRegistered.adults)
+                        : w.estimateBelowRegister
+                          ? "below the register"
+                          : "—"}
+                    </td>
+                    <td className="num">
+                      {wm.buildings_per_km2
+                        ? indicatorText("buildings_per_km2", wm.buildings_per_km2.value).replace(
+                            " per km²",
+                            "",
+                          )
+                        : "—"}
+                    </td>
+                    <td className="num">
+                      {wm.median_building_m2
+                        ? indicatorText("median_building_m2", wm.median_building_m2.value)
+                        : "—"}
+                    </td>
+                    <td>{ws ? settlementName(ws) : "—"}</td>
+                    <td className="meta">{d.notes[w.key] ? "yes" : ""}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

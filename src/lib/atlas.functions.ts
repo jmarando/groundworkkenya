@@ -1,11 +1,20 @@
 // The election atlas read as the signed-in person: every team reads the public
-// figures, and its home area, sides and notes come from its own campaign only.
-// And the candidate's or manager's changes to those three, checked here first
-// and again by the database.
+// figures, and its home area, sides, notes and profiles of places come from its
+// own campaign only. The candidate's or manager's changes (and, for profiles, an
+// organiser's) are checked here first and again by the database.
 
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  PROFILE_EDITORS,
+  cleanProfile,
+  type AreaProfile,
+  type Language,
+  type ProfileInput,
+  type Settlement,
+} from "@/lib/area-profile";
+import type { IndicatorId } from "@/lib/atlas-files";
 import type { AtlasData, Level } from "@/lib/atlas-view";
 import { cleanHome, cleanNote, cleanSide } from "@/lib/elections-view";
 
@@ -28,6 +37,15 @@ export async function loadAtlas(sb: Client): Promise<AtlasData> {
     if (error) throw new Error("Could not read the election atlas.");
     return data ?? [];
   };
+  // The profiles' update: until Lovable applies its migration these tables
+  // don't exist, and the atlas loads without them rather than not at all.
+  const readSoft = async <T>(table: string, cols: string): Promise<T[]> => {
+    const { data, error } = (await sb.from(table).select(cols)) as {
+      data: T[] | null;
+      error: unknown;
+    };
+    return error ? [] : (data ?? []);
+  };
   const [
     areas,
     candidates,
@@ -39,6 +57,8 @@ export async function loadAtlas(sb: Client): Promise<AtlasData> {
     settings,
     sides,
     notes,
+    indicators,
+    profiles,
   ] = await Promise.all([
     read<{ key: string; level: string; name: string; parent: string | null }>(
       "atlas_areas",
@@ -90,7 +110,38 @@ export async function loadAtlas(sb: Client): Promise<AtlasData> {
       "area_notes",
       "area_key, body, updated_at",
     ),
+    readSoft<{
+      area_key: string;
+      indicator: string;
+      year: number;
+      value: number | string;
+      source_id: string;
+    }>("atlas_indicators", "area_key, indicator, year, value, source_id"),
+    readSoft<{
+      area_key: string;
+      settlement: string | null;
+      communities: string | null;
+      languages: string[] | null;
+      institutions: string | null;
+      issues: string | null;
+      updated_at: string;
+      updated_by: string | null;
+    }>(
+      "area_profiles",
+      "area_key, settlement, communities, languages, institutions, issues, updated_at, updated_by",
+    ),
   ]);
+  const editors = [
+    ...new Set(profiles.map((p) => p.updated_by).filter((id): id is string => Boolean(id))),
+  ];
+  const names = new Map<string, string>();
+  if (editors.length) {
+    const { data: people } = (await sb
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", editors)) as { data: { user_id: string; full_name: string | null }[] | null };
+    for (const p of people ?? []) if (p.full_name) names.set(p.user_id, p.full_name);
+  }
   return {
     areas: areas.map((a) => ({
       key: a.key,
@@ -136,10 +187,32 @@ export async function loadAtlas(sb: Client): Promise<AtlasData> {
       source: p.source_id,
     })),
     sources,
+    indicators: indicators.map((r) => ({
+      area: r.area_key,
+      indicator: r.indicator as IndicatorId,
+      year: r.year,
+      value: Number(r.value),
+      source: r.source_id,
+    })),
     homeArea: settings[0]?.home_area ?? null,
     sides: Object.fromEntries(sides.map((s) => [s.election_id, s.bloc])),
     notes: Object.fromEntries(
       notes.map((n) => [n.area_key, { body: n.body, updatedAt: n.updated_at }]),
+    ),
+    profiles: Object.fromEntries(
+      profiles.map((p): [string, AreaProfile] => [
+        p.area_key,
+        {
+          area: p.area_key,
+          settlement: p.settlement as Settlement | null,
+          communities: p.communities,
+          languages: (p.languages ?? []) as Language[],
+          institutions: p.institutions,
+          issues: p.issues,
+          updatedAt: p.updated_at,
+          updatedBy: p.updated_by ? (names.get(p.updated_by) ?? null) : null,
+        },
+      ]),
     ),
   };
 }
@@ -191,6 +264,43 @@ export async function removeNote(sb: Client, area: string): Promise<void> {
   await mustBeStaff(sb);
   await done(sb.from("area_notes").delete().eq("area_key", area));
 }
+
+export const PROFILE_DENIED =
+  "Only the candidate, campaign manager or an organiser can change this.";
+
+function profileError(e: { code?: string; message?: string }): string {
+  if (e.code === "42501" || e.message?.includes("row-level security")) return PROFILE_DENIED;
+  if (e.code === "23503") return "That place isn't in the atlas.";
+  if (e.code === "23514") return "The database refused that: keep each box within its limit.";
+  return "Could not save that. Try again.";
+}
+
+/** A place's profile, replaced whole: checked here for the role, and again by the database. */
+export async function writeProfile(sb: Client, p: ProfileInput): Promise<void> {
+  const { data } = (await sb.rpc("my_campaign_role")) as { data: unknown };
+  if (!(PROFILE_EDITORS as readonly string[]).includes(String(data)))
+    throw new Error(PROFILE_DENIED);
+  const { error } = (await sb.from("area_profiles").upsert(
+    {
+      area_key: p.area,
+      settlement: p.settlement,
+      communities: p.communities,
+      languages: p.languages,
+      institutions: p.institutions,
+      issues: p.issues,
+    },
+    { onConflict: "campaign_id,area_key" },
+  )) as { error: { code?: string; message?: string } | null };
+  if (error) throw new Error(profileError(error));
+}
+
+export const saveProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: Record<string, unknown>) => cleanProfile(input))
+  .handler(async ({ data, context }) => {
+    await writeProfile(context.supabase as never, data);
+    return { ok: true };
+  });
 
 export const getAtlas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

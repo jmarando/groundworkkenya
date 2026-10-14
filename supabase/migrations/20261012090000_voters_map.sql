@@ -79,8 +79,6 @@ create table public.house_visits (
 );
 create index house_visits_ward_idx on public.house_visits (campaign_id, ward_id, visited_at desc);
 create index house_visits_pc_idx on public.house_visits (campaign_id, pc, visited_at desc);
--- person_id is on delete set null: without this, each person deleted scans every visit.
-create index house_visits_person_idx on public.house_visits (person_id);
 create trigger stamp_campaign before insert on public.house_visits
   for each row execute function public.stamp_campaign('people', 'person_id', 'wards', 'ward_id');
 
@@ -92,11 +90,10 @@ create policy "own campaign only" on public.house_visits as restrictive for all 
   using (campaign_id = public.my_campaign()) with check (campaign_id = public.my_campaign());
 -- The office reads every door; an agent the doors they knocked (part 3 adds
 -- the houses on their walk lists).
--- Sub-selects, so Postgres evaluates the calls once per query, not once per row: every door is a row.
 create policy "read by the office" on public.house_visits for select to authenticated
-  using ((select public.my_campaign_role()) in ('super', 'candidate', 'manager', 'organiser'));
+  using (public.my_campaign_role() in ('super', 'candidate', 'manager', 'organiser'));
 create policy "agents read their own" on public.house_visits for select to authenticated
-  using (actor = (select auth.uid()));
+  using (actor = auth.uid());
 create policy "team records their visits" on public.house_visits for insert to authenticated
   with check (public.is_team_member(auth.uid()) and actor = auth.uid());
 
@@ -296,14 +293,8 @@ $$;
 revoke all on function public.record_door(uuid, uuid, jsonb, text, integer, text, jsonb, text, timestamptz, jsonb) from public, anon;
 grant execute on function public.record_door(uuid, uuid, jsonb, text, integer, text, jsonb, text, timestamptz, jsonb) to authenticated;
 
--- 4. Doors per ward and per house, for the map's colours. In the last 30 days a
--- house takes its outcome (and its ward) from its latest visit and its score
--- from its latest visit that has one, so a later door where no one answered
--- keeps the score the house gave. house_doors() counts these per ward, with the
--- visits of the last seven days; it skips visits with no ward, so it returns
--- one row per ward. Ties between visits at the same moment go to the one
--- created last, then to the higher id. Both run as the caller, so an agent
--- counts their own.
+-- 4. Doors per ward, from each house's latest visit in 30 days, and the visits
+-- of the last seven days. Runs as the caller, so an agent counts their own.
 create or replace function public.house_doors()
 returns table (
   ward_id      uuid,
@@ -318,30 +309,18 @@ stable
 security invoker
 set search_path = public
 as $$
-  with recent as (
-    select v.pc, v.ward_id, v.outcome, v.support, v.visited_at, v.created_at, v.id
+  with latest as (
+    select distinct on (v.pc) v.pc, v.ward_id, v.outcome, v.support
       from public.house_visits v
      where v.visited_at > now() - interval '30 days'
-       and v.ward_id is not null
-  ),
-  latest as (
-    select distinct on (r.pc) r.pc, r.ward_id, r.outcome
-      from recent r
-     order by r.pc, r.visited_at desc, r.created_at desc, r.id desc
-  ),
-  scored as (
-    select distinct on (r.pc) r.pc, r.support
-      from recent r
-     where r.support is not null
-     order by r.pc, r.visited_at desc, r.created_at desc, r.id desc
+     order by v.pc, v.visited_at desc
   ),
   per_ward as (
     select l.ward_id,
            count(*)::integer as knocked,
-           (count(*) filter (where s.support is not null))::integer as rated,
-           (count(*) filter (where s.support >= 4))::integer as supporters
+           (count(*) filter (where l.outcome = 'spoke' and l.support is not null))::integer as rated,
+           (count(*) filter (where l.outcome = 'spoke' and l.support >= 4))::integer as supporters
       from latest l
-      left join scored s on s.pc = l.pc
      group by l.ward_id
   ),
   week as (
@@ -353,7 +332,6 @@ as $$
            ), '{}') as agents_today
       from public.house_visits v
      where v.visited_at > now() - interval '7 days'
-       and v.ward_id is not null
      group by v.ward_id
   )
   select coalesce(p.ward_id, w.ward_id),
@@ -363,9 +341,8 @@ as $$
     full join week w on w.ward_id = p.ward_id
 $$;
 
--- Each house in a ward with a visit in 30 days, ordered by plus code so a long
--- list pages: the outcome and time of its latest visit, and the score of its
--- latest visit that has one (null when none). Ties as in house_doors().
+-- Each house in a ward with a visit in 30 days: its latest, ordered by plus
+-- code so a long list pages.
 create or replace function public.ward_houses(_ward_id uuid)
 returns table (pc text, visited_at timestamptz, outcome text, support smallint)
 language sql
@@ -373,27 +350,11 @@ stable
 security invoker
 set search_path = public
 as $$
-  with recent as (
-    select v.pc, v.visited_at, v.outcome, v.support, v.created_at, v.id
-      from public.house_visits v
-     where v.ward_id = _ward_id
-       and v.visited_at > now() - interval '30 days'
-  ),
-  latest as (
-    select distinct on (r.pc) r.pc, r.visited_at, r.outcome
-      from recent r
-     order by r.pc, r.visited_at desc, r.created_at desc, r.id desc
-  ),
-  scored as (
-    select distinct on (r.pc) r.pc, r.support
-      from recent r
-     where r.support is not null
-     order by r.pc, r.visited_at desc, r.created_at desc, r.id desc
-  )
-  select l.pc, l.visited_at, l.outcome, s.support
-    from latest l
-    left join scored s on s.pc = l.pc
-   order by l.pc
+  select distinct on (v.pc) v.pc, v.visited_at, v.outcome, v.support
+    from public.house_visits v
+   where v.ward_id = _ward_id
+     and v.visited_at > now() - interval '30 days'
+   order by v.pc, v.visited_at desc
 $$;
 
 revoke all on function public.house_doors() from public, anon;

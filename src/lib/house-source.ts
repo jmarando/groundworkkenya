@@ -4,8 +4,9 @@
 // forgotten, so the next read tries again.
 
 import type { Building } from "@/lib/geo";
-import { decodeTile, HOUSE_ZOOM } from "@/lib/house-tiles";
+import { decodeTile, HOUSE_ZOOM, toTileSpace } from "@/lib/house-tiles";
 import type { MapArea } from "@/lib/map-areas";
+import { plusCodeCentre } from "@/lib/pluscode";
 import { gunzip, openArchive, type Archive } from "@/lib/pmtiles";
 
 type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
@@ -48,4 +49,18 @@ export async function housesInTile(
   const archive = await houseArchive(area.houses, fetcher);
   const bytes = await archive.getTile(HOUSE_ZOOM, x, y);
   return bytes ? decodeTile(x, y, bytes) : [];
+}
+
+/** The house a plus code names, from the tile its centre is in; null when the file has none there. */
+export async function houseAt(
+  area: MapArea,
+  pc: string,
+  fetcher: Fetch = fetch,
+): Promise<Building | null> {
+  const code = pc.trim().toUpperCase();
+  const centre = plusCodeCentre(code);
+  if (!centre) return null;
+  const [x, y] = toTileSpace(centre);
+  const houses = await housesInTile(area, Math.floor(x), Math.floor(y), fetcher);
+  return houses.find((h) => h.id === code) ?? null;
 }

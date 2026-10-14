@@ -32,6 +32,7 @@ export function SetupPanel({
         : toSide({ data: { election: job.election, bloc: job.bloc } }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["atlas"] });
+      await qc.invalidateQueries({ queryKey: ["findings"] });
       toast.success("Saved.");
     },
     onError: (e: Error) => toast.error(e.message),

@@ -2,6 +2,8 @@
 // one election, its figures in a race and year, the ranking of its parts, its
 // results tables, the blocs to pick a side from, and the map's colours. Pure.
 
+import type { AreaProfile } from "@/lib/area-profile";
+import type { IndicatorId } from "@/lib/atlas-files";
 import {
   figureTag,
   margin,
@@ -12,12 +14,13 @@ import {
   turnout,
   validVotes,
   votesWithinReach,
-  whatToDo,
+  whatToDoFigures,
   TODO_NAMES,
   YEARS,
   type AreaCount,
   type Race,
   type Reach,
+  type ReasonFigure,
   type Todo,
 } from "@/lib/atlas";
 
@@ -58,6 +61,13 @@ export type AtlasSource = {
   note: string | null;
 };
 export type AtlasNote = { body: string; updatedAt: string };
+export type AtlasIndicator = {
+  area: string;
+  indicator: IndicatorId;
+  year: number;
+  value: number;
+  source: string;
+};
 export type AtlasData = {
   areas: AtlasArea[];
   candidates: AtlasCandidate[];
@@ -66,10 +76,13 @@ export type AtlasData = {
   register: AtlasRegister[];
   population: AtlasPopulation[];
   sources: AtlasSource[];
+  indicators: AtlasIndicator[];
   /** The campaign's own: its home area, its side in each election, its notes by area. */
   homeArea: string | null;
   sides: Record<string, string>;
   notes: Record<string, AtlasNote>;
+  /** The campaign's own profiles of places, by area key; empty for a field agent. */
+  profiles: Record<string, AreaProfile>;
 };
 
 export const electionOf = (race: Race, year: number) => `${year}-${race}`;
@@ -141,7 +154,7 @@ export type AreaFigures = {
   yearBefore: number | null;
   /** Our side at `yearBefore`; swing needs it. */
   sideBefore: string | null;
-  todo: { todo: Todo; reason: string } | null;
+  todo: { todo: Todo; reason: string; figures: ReasonFigure[] } | null;
   reach: Reach | null;
   /** The latest register: 2022's, else the election's own. */
   registered: number | null;
@@ -171,7 +184,7 @@ function previousYear(d: AtlasData, race: Race, year: number, key: string): numb
  * part has one, from the same year and source. A sum with a part missing stays
  * missing. WorldPop's figures are sums of grid squares, so adding wards is exact.
  */
-function populationOf(
+export function populationOf(
   d: AtlasData,
   key: string,
 ): { estimate: AtlasPopulation; parts: number | null } | null {
@@ -247,7 +260,7 @@ export function figuresFor(d: AtlasData, key: string, race: Race, year: number):
     sideBefore: before?.side ?? null,
     todo:
       count && counted
-        ? whatToDo({
+        ? whatToDoFigures({
             year,
             count,
             side,

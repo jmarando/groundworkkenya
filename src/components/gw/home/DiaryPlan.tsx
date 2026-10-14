@@ -6,6 +6,7 @@ import { dayName, KIND_NAMES, timeName, type DiaryEntry } from "@/lib/diary";
 export function DiaryPlan({
   plan,
   watch,
+  upcoming = [],
   loading,
   canEdit,
 }: {
@@ -13,6 +14,7 @@ export function DiaryPlan({
   /** Home's data is still on its way. */
   loading: boolean;
   watch: DiaryEntry[];
+  upcoming?: DiaryEntry[];
   canEdit: boolean;
 }) {
   return (
@@ -48,6 +50,23 @@ export function DiaryPlan({
           </p>
         )}
       </section>
+      {upcoming.length > 0 && (
+        <section className="mb-upcoming" aria-labelledby="mb-upcoming-h">
+          <h2 id="mb-upcoming-h">Coming up</h2>
+          <ol className="mb-time">
+            {[...upcoming].sort((a, b) => a.day.localeCompare(b.day) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")).map((entry) => (
+              <li key={entry.id}>
+                <div className="mb-upcoming-date"><span>{dayName(entry.day)}</span><span className="mb-time-at">{timeName(entry)}</span></div>
+                <div className="min-w-0">
+                  <p className="mb-time-place">{entry.title}</p>
+                  <p className="mb-kind">{KIND_NAMES[entry.kind]}{entry.wardName ? ` · ${entry.wardName}` : ""}</p>
+                  {entry.note && <p className="mb-time-why">{entry.note}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
       {watch.length ? (
         <section className="card mb-watch" aria-labelledby="mb-watch-h">
           <div className="card-head">

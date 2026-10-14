@@ -1543,8 +1543,19 @@ figure { margin: 0; }
 .mb-three .btn--primary { background:var(--gw-accent); color:#fff; }
 .mb-three .btn--primary:hover { background:var(--gw-accent-deep); }
 
-.mb-grid { display:grid; grid-template-columns:minmax(0, 1fr) 340px; gap:22px; align-items:start; }
-.mb-side { display:flex; flex-direction:column; gap:14px; }
+.mb-grid { display:grid; grid-template-columns:minmax(0, 1fr) 380px; gap:28px; align-items:stretch; }
+.mb-side { display:flex; flex-direction:column; gap:24px; padding:24px; border:1px solid var(--border); border-radius:8px; background:var(--card); }
+.mb-side .mb-diary,.mb-side .mb-watch { background:transparent; border:0; box-shadow:none; padding:0; }
+.mb-side .card-head { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:start; }
+.mb-side .mb-time li { grid-template-columns:68px minmax(0,1fr); padding:18px 0; gap:14px; }
+.mb-side .mb-time-place { font-size:15px; line-height:1.5; }
+.mb-side .mb-time-why { font-size:14px; line-height:1.6; margin-top:8px; }
+.mb-side .mb-kind { display:block; margin:6px 0 0; font-size:12px; }
+.mb-upcoming { border-top:1px solid var(--border); padding-top:20px; }
+.mb-upcoming h2 { font-size:17px; font-weight:600; margin-bottom:18px; }
+.mb-upcoming-date { display:flex; flex-direction:column; gap:8px; font-size:12px; font-weight:600; color:var(--primary); }
+.morning-wide-details { margin-top:18px; }
+.morning-wide-details .mb-story-sum { max-width:none; }
 .mb-two { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:18px; align-items:start; }
 .mb-story { padding:4px 2px 0; }
 .mb-story-kicker { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:var(--muted-foreground); }
@@ -2065,6 +2076,78 @@ figure { margin: 0; }
   .vt-actions { justify-content:flex-start; }
 }
 
+/* Voters: the map owns the screen below the app's header, with the crumbs and tabs above
+   it and the panel beside it (a sheet on phones); the People tab is a page. */
+.vscreen { position:fixed; inset:0 0 0 256px; z-index:20; display:flex; flex-direction:column; background:var(--gw-paper); }
+.vbar { display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; }
+.vscreen .vbar { padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card); }
+.vbar-place { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; min-width:0; }
+.vbar h1 { font-size:22px; font-weight:600; line-height:1.2; }
+.vbar .spacer { flex:1; }
+.vbody { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) clamp(340px, 30vw, 440px); }
+.vbody .vmap { height:100%; border:0; border-radius:0; }
+.vmap--none { background:var(--muted); }
+.vmap--none .vmap-loading { color:var(--muted-foreground); padding:24px; text-align:center; }
+.vpanel { min-height:0; overflow-y:auto; overscroll-behavior:contain; border-left:1px solid var(--border); padding:16px 18px 28px; display:flex; flex-direction:column; gap:18px; }
+/* A scrolling column: its parts keep their height (the ladder clips, so it would otherwise shrink to nothing). */
+.vpanel > * { flex-shrink:0; }
+.vpanel h2 { font-size:15px; font-weight:600; }
+.vpanel .card-head { margin-bottom:6px; }
+.vpanel .ladder { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.vpanel .ladder > * { border-top:1px solid var(--border); }
+.vpanel .ladder > :nth-child(odd) { border-left:0; }
+.vpanel .ladder > :nth-child(-n+2) { border-top:0; }
+.vpanel .ladder > :last-child:nth-child(odd) { grid-column:1 / -1; }
+.vnext { display:flex; flex-direction:column; gap:8px; }
+.vnext-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--card); }
+.vnext-what { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.vnext-what .meta { font-size:12px; }
+.vnext-row .btn { flex:none; white-space:nowrap; }
+.vtag { align-self:flex-start; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:600; padding:2px 7px; border-radius:999px; background:hsl(15 77% 52% / .12); color:hsl(15 70% 38%); }
+/* The switches, the hint and the legend sit at the top, clear of the credits along the bottom. */
+.vbody .vtop { flex-direction:column; align-items:flex-start; }
+.vtop-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; pointer-events:none; }
+.vtop-row > * { pointer-events:auto; }
+.vtop .vhint { position:static; transform:none; white-space:normal; }
+.vtop .vleg { position:static; max-width:100%; }
+.vt-actions--page { display:flex; justify-content:flex-start; gap:8px; margin-top:14px; }
+/* The search box in the bar: wards, constituencies, people and places, grouped. */
+.vsearch { position:relative; z-index:5; flex:1 1 160px; max-width:340px; }
+.vsearch input { width:100%; min-height:36px; padding:0 12px; border:1px solid var(--border); border-radius:10px; background:var(--card); font:inherit; font-size:13px; color:inherit; }
+.vsearch-list { position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:min(420px, 60vh); overflow-y:auto; margin:0; padding:6px; list-style:none; background:var(--card); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-card); }
+.vsearch-group { padding:8px 8px 4px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted-foreground); }
+.vsearch-opt { display:flex; flex-direction:column; gap:1px; padding:7px 8px; border-radius:8px; cursor:pointer; font-size:13px; }
+.vsearch-opt[aria-selected="true"] { background:var(--muted); }
+.vsearch-opt small { font-size:11.5px; color:var(--muted-foreground); }
+.vsearch-none { font-size:12.5px; color:var(--muted-foreground); padding:10px 12px; }
+/* A house's card at the top of the panel. */
+.vhouse { display:flex; flex-direction:column; gap:8px; padding:14px 16px; border:1px solid var(--border); border-radius:14px; background:var(--card); }
+.vhouse .card-head { margin-bottom:0; }
+.vhouse h2.mono { font-size:16px; margin-top:4px; }
+.vhouse h3 { margin-top:6px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; font-weight:600; color:var(--muted-foreground); }
+.vhouse .f-rows { margin-top:0; }
+.vhouse-note { margin:0; padding:8px 10px; border-radius:8px; font-size:12.5px; background:hsl(40 92% 52% / .14); color:hsl(32 70% 26%); }
+.vvisits { list-style:none; margin:0; padding:0; }
+.vvisits li { display:grid; grid-template-columns:52px minmax(0, 1fr); gap:2px 10px; padding:8px 0; border-top:1px solid var(--border); font-size:12.5px; }
+.vvisits li:first-child { border-top:0; }
+.vvisits small { grid-column:2; font-size:11.5px; color:var(--muted-foreground); }
+@media (max-width:1100px) {
+  .vscreen { inset:64px 0 0 0; }
+  .vbody { grid-template-columns:1fr; grid-template-rows:minmax(0, 1fr); position:relative; }
+  .vpanel { border-left:0; }
+  /* The map's controls and credits stay above the sheet (--vsheet: the room it takes). */
+  .vbody .vmap .vzoom { top:calc((100% - var(--vsheet, 0px)) / 2); }
+  .vbody .maplibregl-ctrl-bottom-right { bottom:var(--vsheet, 0px); }
+  .vbody .vlogo { bottom:calc(var(--vsheet, 0px) + 12px); }
+}
+/* The panel as a sheet over the bottom of the map, below 1,100 px: a handle to drag or press. */
+.vsheet { position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; flex-direction:column; background:var(--gw-paper); border-top:1px solid var(--border); border-radius:16px 16px 0 0; box-shadow:0 -8px 24px hsl(158 15% 8% / .14); transition:height .22s ease-out; }
+.vsheet.is-drag { transition:none; }
+.vsheet-handle { flex:none; display:flex; align-items:center; justify-content:center; width:100%; height:28px; cursor:grab; touch-action:none; }
+.vsheet-handle span { width:44px; height:5px; border-radius:999px; background:hsl(150 6% 70%); }
+.vsheet .vpanel { flex:1; padding-top:4px; }
+@media (prefers-reduced-motion: reduce) { .vsheet { transition:none; } }
+
 /* Elections: the switches, what to do, the results, the map, notes, and the printed brief */
 .el-switches { display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 16px; }
 .el-actions { flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
@@ -2131,3 +2214,36 @@ figure { margin: 0; }
 .search-peaks ul { list-style:none; padding:0; margin:3px 0 0; display:grid; gap:2px; font-size:12.5px; }
 .search-peaks a { color:var(--foreground); text-decoration:underline; text-underline-offset:2px; }
 .search-peak-src, .search-peak-none { color:var(--muted-foreground); font-size:12.5px; }
+
+/* Elections: About this place, and the team's profile of it */
+.place-vs { display:block; font-weight:400; font-size:11.5px; color:var(--muted-foreground); text-align:right; }
+.place-profile { margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.place-profile h3 { font-size:13px; margin:0 0 8px; }
+.place-dl { display:grid; grid-template-columns:minmax(0, 11rem) minmax(0, 1fr); gap:6px 12px; margin:0 0 8px; font-size:13px; }
+.place-dl dt { color:var(--muted-foreground); }
+.place-dl dd { margin:0; white-space:pre-wrap; }
+.place-edit { display:flex; flex-direction:column; gap:10px; }
+.place-box { display:flex; flex-direction:column; gap:4px; font-size:12.5px; }
+.place-box textarea, .place-box select { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:inherit; }
+.place-langs { border:0; padding:0; margin:0; display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12.5px; }
+.place-langs legend { font-size:12.5px; margin-bottom:4px; }
+.place-count { font-size:11px; color:var(--muted-foreground); text-align:right; }
+.place-error { color:var(--destructive); font-size:12.5px; margin:0; }
+@media (max-width:600px) { .place-dl { grid-template-columns:1fr; } }
+
+/* Findings: Strategy, Home, Elections, Voters and the Diary */
+.fd-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:14px; }
+.fd-item { display:flex; gap:10px; align-items:flex-start; }
+.fd-n { flex:none; min-width:1.6rem; height:1.6rem; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; background:var(--muted); color:var(--foreground); }
+.fd-body { min-width:0; flex:1; }
+.fd-line { margin:0 0 6px; font-size:14px; line-height:1.45; }
+.fd-actions { display:flex; flex-wrap:wrap; gap:6px; }
+.fd-figs { display:grid; grid-template-columns:minmax(0, 15rem) minmax(0, 1fr); gap:4px 12px; margin:8px 0 0; font-size:12.5px; }
+.fd-figs dt { color:var(--muted-foreground); }
+.fd-figs dd { margin:0; }
+.fd-group + .fd-group { margin-top:16px; }
+.fd-place { display:flex; flex-direction:column; gap:4px; font-size:12.5px; }
+.fd-place select { font:inherit; padding:6px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:inherit; max-width:100%; }
+.fd-waiting { margin:0 0 12px; }
+.diary-find { margin:2px 0 0; font-size:12px; color:var(--muted-foreground); }
+@media (max-width:600px) { .fd-figs { grid-template-columns:1fr; } }

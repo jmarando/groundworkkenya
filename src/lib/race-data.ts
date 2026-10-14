@@ -426,10 +426,65 @@ export function realVerdict(rivals: RaceRival[], polls: RacePoll[]): string {
 
 export type RivalMove = { title: string; detail: string };
 
+/** One candidate's change between one pollster's last two polls. */
+export type PollMove = {
+  rival: RaceRival;
+  from: number;
+  to: number;
+  /** The change in points, rounded to one decimal. */
+  points: number;
+  older: RacePoll;
+  newer: RacePoll;
+};
+
 /**
- * The biggest change for a rival between one pollster's last two polls, when
- * the newer one came out in the last `withinDays` and moved at least `minPoints`.
+ * The biggest change for any candidate, our own included, between one
+ * pollster's last two polls, when the newer one came out in the last
+ * `withinDays` and moved at least `minPoints`.
  */
+export function biggestPollMove(
+  rivals: RaceRival[],
+  polls: RacePoll[],
+  todayIso: string,
+  minPoints = 2,
+  withinDays = 30,
+): PollMove | null {
+  const today = Date.parse(`${todayIso}T00:00:00Z`);
+  const byPollster = new Map<string, RacePoll[]>();
+  for (const p of polls) {
+    const k = p.pollster.trim().toLowerCase();
+    byPollster.set(k, [...(byPollster.get(k) ?? []), p]);
+  }
+  let best: PollMove | null = null;
+  for (const mine of byPollster.values()) {
+    const [newer, older] = [...mine].sort(byRecency);
+    if (!newer || !older) continue;
+    if ((today - Date.parse(`${newer.publishedOn}T00:00:00Z`)) / 864e5 > withinDays) continue;
+    for (const r of rivals) {
+      const to = shareOf(newer, r);
+      const from = shareOf(older, r);
+      if (to === null || from === null) continue;
+      const d = Math.round(Math.abs(to - from) * 10) / 10;
+      if (d < minPoints) continue;
+      if (!best || d > best.points || (d === best.points && r.name < best.rival.name))
+        best = { rival: r, from, to, points: d, older, newer };
+    }
+  }
+  return best;
+}
+
+/** "Babu Owino up 3.8 points in Mizani Africa's latest poll"; ours reads "We're down 2.9 points …". */
+export function moveTitle(m: PollMove): string {
+  const way = m.to > m.from ? "up" : "down";
+  const who = m.rival.isUs ? "We're" : m.rival.name;
+  return `${who} ${way} ${m.points.toFixed(1)} points in ${m.newer.pollster}'s latest poll`;
+}
+
+/** The move is no bigger than the newer poll's stated margin of error. */
+export const withinMargin = (m: PollMove): boolean =>
+  m.newer.margin !== null && m.points <= m.newer.margin;
+
+/** The biggest recent poll move, as Home's Today list words it. */
 export function rivalMove(
   rivals: RaceRival[],
   polls: RacePoll[],
@@ -437,39 +492,14 @@ export function rivalMove(
   minPoints = 2,
   withinDays = 30,
 ): RivalMove | null {
-  const today = Date.parse(`${todayIso}T00:00:00Z`);
-  const byPollster = new Map<string, RacePoll[]>();
-  for (const p of polls) {
-    const k = p.pollster.trim().toLowerCase();
-    byPollster.set(k, [...(byPollster.get(k) ?? []), p]);
-  }
-  let best: {
-    r: RaceRival;
-    from: number;
-    to: number;
-    older: RacePoll;
-    newer: RacePoll;
-    d: number;
-  } | null = null;
-  for (const mine of byPollster.values()) {
-    const [newer, older] = [...mine].sort(byRecency);
-    if (!newer || !older) continue;
-    if ((today - Date.parse(`${newer.publishedOn}T00:00:00Z`)) / 864e5 > withinDays) continue;
-    for (const r of rivals) {
-      if (r.isUs) continue;
-      const to = shareOf(newer, r);
-      const from = shareOf(older, r);
-      if (to === null || from === null) continue;
-      const d = Math.round(Math.abs(to - from) * 10) / 10;
-      if (d < minPoints) continue;
-      if (!best || d > best.d || (d === best.d && r.name < best.r.name))
-        best = { r, from, to, older, newer, d };
-    }
-  }
-  if (!best) return null;
+  const m = biggestPollMove(rivals, polls, todayIso, minPoints, withinDays);
+  if (!m) return null;
+  const margin = withinMargin(m)
+    ? ` That's within the poll's margin of error (±${m.newer.margin}).`
+    : "";
   return {
-    title: `${best.r.name} ${best.to > best.from ? "up" : "down"} ${best.d.toFixed(1)} points in ${best.newer.pollster}'s latest poll`,
-    detail: `From ${best.from}% in ${monthLabel(pollDate(best.older))} to ${best.to}% in ${monthLabel(pollDate(best.newer))}.`,
+    title: moveTitle(m),
+    detail: `From ${m.from}% in ${monthLabel(pollDate(m.older))} to ${m.to}% in ${monthLabel(pollDate(m.newer))}.${margin}`,
   };
 }
 

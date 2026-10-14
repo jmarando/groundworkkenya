@@ -32,6 +32,7 @@ import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
+import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated/voters'
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
@@ -171,6 +172,11 @@ const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
   id: '/social',
   path: '/social',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStrategyRoute = AuthenticatedStrategyRouteImport.update({
+  id: '/strategy',
+  path: '/strategy',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/people': typeof AuthenticatedPeopleRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
+  '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
   '/voters': typeof AuthenticatedVotersRoute
   '/warroom': typeof AuthenticatedWarroomRoute
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
+  '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/voters': typeof AuthenticatedVotersRoute
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
@@ -476,6 +485,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/polling'
     | '/social'
+    | '/strategy'
     | '/team'
     | '/voters'
     | '/warroom'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/polling'
     | '/social'
+    | '/strategy'
     | '/team'
     | '/voters'
     | '/warroom'
@@ -575,6 +586,7 @@ export interface FileRouteTypes {
     | '/_authenticated/people'
     | '/_authenticated/polling'
     | '/_authenticated/social'
+    | '/_authenticated/strategy'
     | '/_authenticated/team'
     | '/_authenticated/voters'
     | '/_authenticated/warroom'
@@ -794,6 +806,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSocialRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/strategy': {
+      id: '/_authenticated/strategy'
+      path: '/strategy'
+      fullPath: '/strategy'
+      preLoaderRoute: typeof AuthenticatedStrategyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/team': {
       id: '/_authenticated/team'
       path: '/team'
@@ -991,6 +1010,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
+  AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedVotersRoute: typeof AuthenticatedVotersRoute
   AuthenticatedWarroomRoute: typeof AuthenticatedWarroomRoute
@@ -1016,6 +1036,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
+  AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedVotersRoute: AuthenticatedVotersRoute,
   AuthenticatedWarroomRoute: AuthenticatedWarroomRoute,

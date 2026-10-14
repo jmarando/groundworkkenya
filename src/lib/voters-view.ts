@@ -1,18 +1,29 @@
-// The Voters screen's rules: the area, view and filters the address holds, an
-// area's numbers, who in it matches the filters, the views a role sees, and
-// the links in and out. Pure.
+// The Voters screen's rules: the area, tab, house and filters the address
+// holds, an area's numbers, who in it matches the filters, and the links in
+// and out. Pure.
+
+import type { Colour } from "@/lib/houses";
+import type { Top } from "@/lib/map-areas";
+import { PLUS_CODE } from "@/lib/pluscode";
+import type { Basemap } from "@/lib/voters-map";
 
 export type Area =
   { level: "county" } | { level: "constituency"; name: string } | { level: "ward"; slug: string };
 
-export type VotersView = "people" | "doors" | "wards";
 export type SupportFilter = "strong" | "persuadable" | "against" | "unscored";
 export type ConsentFilter = "sms" | "whatsapp" | "call" | "none";
 export type ContactFilter = "week" | "month" | "never";
 
 export type VotersSearch = {
   area?: string;
-  view?: VotersView;
+  /** The People tab; the map when not set. */
+  tab?: "people";
+  /** The house whose card is open, by its plus code. */
+  house?: string;
+  /** What the map is coloured by; doors when not set. */
+  colour?: Colour;
+  /** The base map; satellite when not set. */
+  base?: Basemap;
   support?: SupportFilter;
   consent?: ConsentFilter;
   contact?: ContactFilter;
@@ -22,7 +33,8 @@ export type VotersSearch = {
   manage?: true;
 };
 
-const VIEWS: VotersView[] = ["people", "doors", "wards"];
+const COLOURS: Colour[] = ["doors", "support", "vote"];
+const BASES: Basemap[] = ["satellite", "streets"];
 const SUPPORT: SupportFilter[] = ["strong", "persuadable", "against", "unscored"];
 const CONSENT: ConsentFilter[] = ["sms", "whatsapp", "call", "none"];
 const CONTACT: ContactFilter[] = ["week", "month", "never"];
@@ -35,8 +47,14 @@ export function validateVotersSearch(raw: Record<string, unknown>): VotersSearch
   const out: VotersSearch = {};
   const area = raw["area"];
   if (typeof area === "string" && /^(c:.{2,60}|w:[a-z0-9-]{2,60})$/.test(area)) out.area = area;
-  const view = pick(raw["view"], VIEWS);
-  if (view) out.view = view;
+  // Before the map, view=people was the People list; view=doors and view=wards now open the map.
+  if (raw["tab"] === "people" || raw["view"] === "people") out.tab = "people";
+  const house = typeof raw["house"] === "string" ? raw["house"].trim().toUpperCase() : "";
+  if (PLUS_CODE.test(house)) out.house = house;
+  const colour = pick(raw["colour"], COLOURS);
+  if (colour) out.colour = colour;
+  const base = pick(raw["base"], BASES);
+  if (base) out.base = base;
   const support = pick(raw["support"], SUPPORT);
   if (support) out.support = support;
   const consent = pick(raw["consent"], CONSENT);
@@ -91,20 +109,27 @@ export const wardsIn = (a: Area, wards: WardInfo[]): WardInfo[] =>
 const wardOf = (a: Area, wards: WardInfo[]) =>
   a.level === "ward" ? wards.find((w) => w.slug === a.slug) : undefined;
 
-export function areaTitle(a: Area, wards: WardInfo[]): string {
+/** The top of the campaign's map: its name, and whether it is a county or one constituency. */
+export type Home = { name: string; top: Top };
+const NAIROBI: Home = { name: "Nairobi County", top: "county" };
+
+export function areaTitle(a: Area, wards: WardInfo[], home: Home = NAIROBI): string {
   if (a.level === "constituency") return a.name;
   const w = wardOf(a, wards);
-  return w ? `${w.name} ward` : "Nairobi County";
+  return w ? `${w.name} ward` : home.name;
 }
 
 /** Nairobi County › constituency › ward, each step an area to go back to. */
-export function crumbsOf(a: Area, wards: WardInfo[]): { label: string; area: Area }[] {
-  const out: { label: string; area: Area }[] = [
-    { label: "Nairobi County", area: { level: "county" } },
-  ];
+export function crumbsOf(
+  a: Area,
+  wards: WardInfo[],
+  home: Home = NAIROBI,
+): { label: string; area: Area }[] {
+  const out: { label: string; area: Area }[] = [{ label: home.name, area: { level: "county" } }];
   const w = wardOf(a, wards);
   const constituency = a.level === "constituency" ? a.name : w?.constituency;
-  if (constituency)
+  // A constituency's map (Mathira) is its own top: no second crumb for it.
+  if (constituency && home.top === "county")
     out.push({ label: constituency, area: { level: "constituency", name: constituency } });
   if (w) out.push({ label: `${w.name} ward`, area: { level: "ward", slug: w.slug } });
   return out;
@@ -145,17 +170,6 @@ export function areaNumbers(
         ? 0
         : null,
   };
-}
-
-/** Agents get the doors; above a ward everyone else also gets every ward by the numbers. */
-export const viewsFor = (isAgent: boolean, a: Area): VotersView[] =>
-  isAgent ? ["doors"] : a.level === "ward" ? ["people", "doors"] : ["people", "doors", "wards"];
-
-export function viewOf(search: VotersSearch, isAgent: boolean, a: Area): VotersView {
-  const views = viewsFor(isAgent, a);
-  if (search.view && views.includes(search.view)) return search.view;
-  if (isAgent) return "doors";
-  return a.level === "ward" ? "people" : "wards";
 }
 
 export type PersonLike = {
@@ -248,14 +262,16 @@ export function parseBroadcastSearch(raw: Record<string, unknown>): {
 /** Where an old People link lands on Voters. */
 export const peopleForward = (raw: Record<string, unknown>): VotersSearch => {
   const person = validateVotersSearch({ person: raw["person"] }).person;
-  return person ? { view: "people", person } : { view: "people" };
+  return person ? { tab: "people", person } : { tab: "people" };
 };
 
 export type SearchChanges = { [K in keyof VotersSearch]?: VotersSearch[K] | undefined };
 
 /** The address with `changes` applied; an undefined change removes its key. */
 export function nextSearch(prev: VotersSearch, changes: SearchChanges): VotersSearch {
-  const out: Record<string, unknown> = { ...prev };
+  // The router hands back keys the address had but the screen doesn't keep (an
+  // old view=people would reopen the People tab): clean them out first.
+  const out: Record<string, unknown> = { ...validateVotersSearch(prev) };
   for (const [k, v] of Object.entries(changes)) {
     if (v === undefined) delete out[k];
     else out[k] = v;
@@ -286,20 +302,14 @@ export const share = (x: number): string =>
   x > 0 && x < 0.005 ? "under 1%" : `${Math.round(x * 100)}%`;
 
 /**
- * How a change moves the page: a new area or view is a step Back can undo,
- * and only a new area goes back to the top, where its title and numbers are.
+ * How a change moves the page: a new area, tab or house is a step Back can
+ * undo, and a new area or tab goes back to the top, where its title is.
  */
 export function stepFor(changes: SearchChanges): { replace: boolean; resetScroll: boolean } {
-  const area = "area" in changes;
-  return { replace: !(area || "view" in changes), resetScroll: area };
+  const top = "area" in changes || "tab" in changes;
+  return { replace: !(top || "house" in changes), resetScroll: top };
 }
 
 /** The page to show: a list that got shorter brings a page past its end back to its last page. */
 export const pageWithin = (page: number, count: number, size: number): number =>
   Math.min(page, Math.max(Math.ceil(count / size), 1) - 1);
-
-/** The note under a walk list cut to its first `shown`; none when nothing was cut. */
-export const walkNote = (total: number, shown = 60): string | null =>
-  total > shown
-    ? `Showing the first ${shown} of ${new Intl.NumberFormat("en-KE").format(total)}. "Walk list · CSV" above hands the whole list to a canvasser.`
-    : null;
