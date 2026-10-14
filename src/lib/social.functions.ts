@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { firstName, fillTemplate, validateWaTemplate, type WaTemplateInput } from "@/lib/wa-templates";
 
 export const PLATFORMS = [
   { key: "facebook", label: "Facebook Page", code: "FB" },
@@ -456,21 +457,22 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
  */
 export const startConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp" | "email"; body: string; subject?: string }) => {
+  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp" | "email"; body: string; subject?: string; whatsapp?: WaTemplateInput }) => {
     const body = (input.body ?? "").trim();
     if (!input.personId) throw new Error("Pick a person first.");
     if (!["sms", "whatsapp", "email"].includes(input.channel))
       throw new Error("Pick SMS, WhatsApp or email.");
-    if (!body) throw new Error("Write something before sending.");
+    const whatsapp = input.channel === "whatsapp" && input.whatsapp ? validateWaTemplate(input.whatsapp) : null;
+    if (!body && !whatsapp) throw new Error("Write something before sending.");
     if (body.length > 2000) throw new Error("That message is too long.");
     const subject = (input.subject ?? "").trim().slice(0, 150) || null;
-    return { personId: input.personId, channel: input.channel, body, subject };
+    return { personId: input.personId, channel: input.channel, body, subject, whatsapp };
   })
   .handler(async ({ data, context }): Promise<{ conversationId: string; note: string }> => {
     const sb = context.supabase;
     const { data: person, error: pError } = await sb
       .from("people")
-      .select("id, phone, email")
+      .select("id, phone, email, full_name, campaign_id, opted_out")
       .eq("id", data.personId)
       .maybeSingle();
     if (pError || !person) throw new Error("That person is no longer available.");
@@ -478,6 +480,15 @@ export const startConversation = createServerFn({ method: "POST" })
       throw new Error("There is no email address on this person.");
     if (data.channel !== "email" && !person.phone)
       throw new Error("There is no phone number on this person.");
+    let body = data.body;
+    let params: string[] = [];
+    if (data.whatsapp) {
+      if (person.opted_out) throw new Error("They replied STOP. Nothing was sent.");
+      const { data: campaign, error } = await sb.from("campaigns").select("name, candidate, owns_channels").eq("id", person.campaign_id).single();
+      if (error || !campaign?.owns_channels) throw new Error("This campaign does not yet have its own WhatsApp sending connection.");
+      params = [firstName(person.full_name), campaign.candidate || campaign.name, ...data.whatsapp.fields];
+      body = fillTemplate(data.whatsapp.t.text, params);
+    }
 
     let conversationId: string;
     const { data: existing } = await sb
@@ -502,12 +513,12 @@ export const startConversation = createServerFn({ method: "POST" })
           channel: data.channel,
           external_thread_id:
             data.channel === "email"
-              ? `email:${person.email!.toLowerCase()}`
+              ? `email:${person.email?.toLowerCase()}`
               : `${data.channel}:${phoneKey(person.phone)}`,
           subject: data.channel === "email" ? data.subject : null,
           status: "open",
           unread: false,
-          snippet: data.body,
+          snippet: body,
           last_message_at: new Date().toISOString(),
         })
         .select("id")
@@ -525,7 +536,7 @@ export const startConversation = createServerFn({ method: "POST" })
       r =
         data.channel === "sms"
           ? await replyBySms(sb, convo, data.body)
-          : await replyByWhatsApp(sb, convo, data.body);
+          : await replyByWhatsApp(sb, convo, body, data.whatsapp ? { name: data.whatsapp.t.name, language: data.whatsapp.t.language, params, imageUrl: data.whatsapp.imageUrl } : undefined);
     }
     return { conversationId, note: r.note };
   });
@@ -639,6 +650,7 @@ async function replyByWhatsApp(
   sb: SupabaseClient<Database>,
   convo: { id: string; person_id: string | null },
   body: string,
+  template?: { name: string; language: string; params: string[]; imageUrl?: string | undefined },
 ): Promise<{ status: string; note: string }> {
   if (!convo.person_id) throw new Error("This conversation has no person attached.");
   const { data: person } = await sb
@@ -667,23 +679,31 @@ async function replyByWhatsApp(
     .single();
   if (error || !inserted) throw new Error("The reply could not be saved.");
 
-  const { sendWhatsAppText } = await import("@/lib/whatsapp.server");
-  const r = await sendWhatsAppText(person.phone, body);
-  await sb
+  const { sendWhatsAppText, sendWhatsAppTemplate, recoverPending } = await import("@/lib/whatsapp.server");
+  const r = template
+    ? await sendWhatsAppTemplate(person.phone, template.name, template.language, template.params, template.imageUrl)
+    : await sendWhatsAppText(person.phone, body);
+  const { error: saveError } = await sb
     .from("messages")
     .update(
       r.ok
         ? { status: "accepted", external_id: r.id, sent_at: new Date().toISOString() }
-        : { status: "failed", error: r.error },
+        : { status: r.error.includes("Outcome unknown") ? "sending" : "failed", error: r.error },
     )
     .eq("id", inserted.id);
-  await sb
+  if (saveError) throw new Error("Message outcome could not be saved. Check Inbox before trying again.");
+  const { error: threadError } = await sb
     .from("conversations")
     .update({ unread: false, last_message_at: new Date().toISOString(), snippet: body })
     .eq("id", convo.id);
 
+  if (threadError) throw new Error("Message processed but the Inbox summary could not be updated.");
+  // Reconcile callbacks that arrived before the sender stored the provider id.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await recoverPending(supabaseAdmin);
+
   if (!r.ok) throw new Error(r.error);
-  return { status: "accepted", note: "Sent on WhatsApp." };
+  return { status: "accepted", note: "Accepted by WhatsApp; delivery is not yet confirmed." };
 }
 
 async function senderName(sb: SupabaseClient<Database>, userId: string): Promise<string | null> {

@@ -6,6 +6,9 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BarChart3, MessageCircle, Phone, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAccess } from "@/hooks/useAccess";
+import { WhatsAppTemplateFields } from "@/components/gw/WhatsAppTemplateFields";
+import { firstName, validateWaTemplate, WA_TEMPLATES_ALL, type WaTemplateInput } from "@/lib/wa-templates";
 
 import { getInbox } from "@/lib/console.functions";
 import {
@@ -77,6 +80,7 @@ const CONNECTIONS = [
 const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
 
 function Inbox() {
+  const { campaign } = useAccess();
   const navigate = useNavigate();
   const fetchInbox = useServerFn(getInbox);
   const sendReply = useServerFn(replyToConversation);
@@ -116,6 +120,9 @@ function Inbox() {
   const [channel, setChannel] = useState<"sms" | "whatsapp" | "email">("sms");
   const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
+  const [wa, setWa] = useState<WaTemplateInput>({ template: "rally_invitation_v2", fields: [] });
+  let waReady = false;
+  try { validateWaTemplate(wa); waReady = true; } catch { /* incomplete fields */ }
   const [newNote, setNewNote] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<string>("all");
@@ -180,12 +187,12 @@ function Inbox() {
   }
 
   async function sendNew() {
-    if (!picked || !newBody.trim() || sending) return;
+    if (!picked || (channel === "whatsapp" ? !waReady : !newBody.trim()) || sending) return;
     setSending(true);
     setNewNote(null);
     try {
       const r = await startConvo({
-        data: { personId: picked.id, channel, body: newBody.trim(), subject: newSubject.trim() },
+        data: { personId: picked.id, channel, body: newBody.trim(), subject: newSubject.trim(), ...(channel === "whatsapp" ? { whatsapp: wa } : {}) },
       });
       setNewNote(r.note);
       setNewBody("");
@@ -267,7 +274,7 @@ function Inbox() {
 
       {composing && (
         <div className="pb-scrim" role="dialog" aria-modal="true" aria-labelledby="nm-title">
-          <div className="pb">
+          <div className="pb outreach-sheet">
             <div className="pb-head">
               <div>
                 <span className="eyebrow">Inbox · outbound</span>
@@ -329,7 +336,7 @@ function Inbox() {
                       Change
                     </button>
                   </p>
-                  <div className="bc-actions">
+                  <div className="bc-actions outreach-channels">
                     <button
                       type="button"
                       className={`btn btn--sm ${channel === "sms" ? "btn--primary" : "btn--ghost"}`}
@@ -361,12 +368,9 @@ function Inbox() {
                     </label>
                   )}
                   {channel === "whatsapp" && (
-                    <p className="f-note">
-                      WhatsApp only allows a first message as an approved template. If they have not
-                      messaged the campaign in the last 24 hours, Meta will refuse this send.
-                    </p>
+                    <WhatsAppTemplateFields templates={WA_TEMPLATES_ALL} value={wa} onChange={setWa} name={firstName(picked.name)} campaign={campaign?.candidate ?? campaign?.name} disabled={sending} />
                   )}
-                  <label className="pb-field">
+                  {channel !== "whatsapp" && <label className="pb-field">
                     <span>Message</span>
                     <textarea
                       rows={4}
@@ -374,7 +378,7 @@ function Inbox() {
                       maxLength={2000}
                       onChange={(e) => setNewBody(e.target.value)}
                     />
-                  </label>
+                  </label>}
                 </>
               )}
             </div>
@@ -384,7 +388,7 @@ function Inbox() {
                 <button
                   type="button"
                   className="btn btn--primary"
-                  disabled={sending || !newBody.trim()}
+                  disabled={sending || (channel === "whatsapp" ? !waReady : !newBody.trim())}
                   onClick={() => void sendNew()}
                 >
                   {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : channel === "email" ? "email" : "WhatsApp"}`}

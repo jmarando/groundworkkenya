@@ -7,22 +7,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { invitePollIndividuals } from "@/lib/poll-invitations.functions";
+import { WhatsAppTemplateFields } from "@/components/gw/WhatsAppTemplateFields";
+import { useAccess } from "@/hooks/useAccess";
+import { WA_POLL_TEMPLATES, validateWaTemplate, type WaTemplateInput } from "@/lib/wa-templates";
 
 export function PollRecipients({ poll, onClose }: { poll: { id: string; code: string; question: string; status: string }; onClose: () => void }) {
   const [channel, setChannel] = useState<"whatsapp" | "email">("whatsapp");
   const [recipients, setRecipients] = useState("");
   const [permission, setPermission] = useState(false);
+  const { campaign } = useAccess();
+  const [wa, setWa] = useState<WaTemplateInput>({ template: "poll_invitation_v2", fields: [] });
+  const pollLink = `https://groundwork.ke/p/${encodeURIComponent(poll.code)}`;
+  let waReady = false;
+  try { validateWaTemplate({ ...wa, fields: [pollLink] }, true); waReady = true; } catch { /* missing image */ }
   const send = useServerFn(invitePollIndividuals);
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: () => send({ data: { pollId: poll.id, channel, recipients, permission } }),
+    mutationFn: () => send({ data: { pollId: poll.id, channel, recipients, permission, template: wa.template, imageUrl: wa.imageUrl } }),
     onSuccess: async () => {
       await Promise.all(["polling", "inbox", "poll-detail"].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
     },
   });
   return (
     <Dialog open onOpenChange={(open) => { if (!open && !mutation.isPending) onClose(); }}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="poll-recipient-sheet max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Send poll to individuals</DialogTitle>
           <DialogDescription>{poll.code} · {poll.question}</DialogDescription>
@@ -34,6 +42,7 @@ export function PollRecipients({ poll, onClose }: { poll: { id: string; code: st
         <label htmlFor="poll-recipients" className="text-sm font-medium">{channel === "email" ? "Email addresses" : "Phone numbers"}</label>
         <Textarea id="poll-recipients" rows={5} value={recipients} onChange={(e) => setRecipients(e.target.value)} disabled={mutation.isPending || !!mutation.data} placeholder={channel === "email" ? "name@example.com\nother@example.com" : "0712 345 678\n+254 722 123 456"} />
         <p className="text-sm text-muted-foreground">Up to 20 recipients, separated by lines or commas. Contacts must already be in this campaign’s People list.</p>
+        {channel === "whatsapp" && <WhatsAppTemplateFields templates={WA_POLL_TEMPLATES} value={wa} onChange={setWa} campaign={campaign?.name} name="[First name]" pollLink={pollLink} disabled={mutation.isPending || !!mutation.data} />}
         <label className="flex items-start gap-3 text-sm">
           <Checkbox checked={permission} onCheckedChange={(value) => setPermission(value === true)} disabled={mutation.isPending || !!mutation.data} aria-label="Recipients agreed to this invitation" />
           <span>These recipients agreed to receive this poll invitation.</span>
@@ -45,7 +54,7 @@ export function PollRecipients({ poll, onClose }: { poll: { id: string; code: st
         </div>}
         <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={mutation.isPending} onClick={onClose}>{mutation.data ? "Done" : "Cancel"}</Button>
-          {!mutation.data && <Button disabled={!permission || !recipients.trim() || mutation.isPending} onClick={() => mutation.mutate()}><Send />{mutation.isPending ? "Sending…" : "Send invitations"}</Button>}
+          {!mutation.data && <Button disabled={!permission || !recipients.trim() || mutation.isPending || (channel === "whatsapp" && !waReady)} onClick={() => mutation.mutate()}><Send />{mutation.isPending ? "Sending…" : "Send invitations"}</Button>}
         </div>
       </DialogContent>
     </Dialog>

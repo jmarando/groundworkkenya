@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parsePollRecipients } from "@/lib/poll-recipients";
-import { firstName, fillTemplate, WA_TEMPLATES_ALL } from "@/lib/wa-templates";
+import { firstName, fillTemplate, validateWaTemplate } from "@/lib/wa-templates";
 
 export const invitePollIndividuals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { pollId: string; channel: "whatsapp" | "email"; recipients: string; permission: boolean }) => {
+  .inputValidator((input: { pollId: string; channel: "whatsapp" | "email"; recipients: string; permission: boolean; template?: string; imageUrl?: string | undefined }) => {
     if (!input?.pollId || !["whatsapp", "email"].includes(input.channel)) throw new Error("Choose a poll and channel.");
     if (!input.permission) throw new Error("Confirm that these recipients agreed to receive this invitation.");
     return { ...input, addresses: parsePollRecipients(input.recipients, input.channel) };
@@ -31,9 +31,8 @@ export const invitePollIndividuals = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
     const { replyAddress } = await import("@/lib/email.server");
-    const template = WA_TEMPLATES_ALL.find((t) => t.name === "poll_invitation_v2");
-    if (!template) throw new Error("The poll invitation template is unavailable.");
     const link = `https://groundwork.ke/p/${encodeURIComponent(poll.code)}`;
+    const wa = data.channel === "whatsapp" ? validateWaTemplate({ template: data.template ?? "poll_invitation_v2", fields: [link], imageUrl: data.imageUrl }, true) : null;
     const results: { recipient: string; status: string; note: string }[] = [];
     let opened = false;
     for (const address of data.addresses) {
@@ -70,7 +69,7 @@ export const invitePollIndividuals = createServerFn({ method: "POST" })
       }
       if (inviteError || !invite) throw new Error("Could not reserve this invitation; nothing further was sent.");
       const params = [firstName(person.full_name), campaign.name, link];
-      const body = data.channel === "whatsapp" ? fillTemplate(template.text, params)
+      const body = wa ? fillTemplate(wa.t.text, params)
         : `Hello ${firstName(person.full_name)},\n\n${campaign.name} would value your views.\n\n${poll.question}\n\nTake part: ${link}\n\nReply to this email if you no longer want invitations.`;
       let { data: conversation, error: convoError } = await sb.from("conversations").select("id")
         .eq("campaign_id", campaignId).eq("person_id", person.id).eq("platform", data.channel)
@@ -95,8 +94,8 @@ export const invitePollIndividuals = createServerFn({ method: "POST" })
       let note = "Accepted for sending; delivery is not yet confirmed.";
       let externalId: string | null = null;
       try {
-        if (data.channel === "whatsapp") {
-          const result = await sendWhatsAppTemplate(person.phone, template.name, template.language, params);
+        if (wa) {
+          const result = await sendWhatsAppTemplate(person.phone, wa.t.name, wa.t.language, params, wa.imageUrl);
           if (!result.ok) throw new Error(result.error);
           externalId = result.id;
         } else {

@@ -2,7 +2,7 @@ import { fillTemplate, type WaTemplate, type WaTemplateInput } from "@/lib/wa-te
 
 export function WhatsAppTemplateFields({ templates, value, onChange, name = "friend", campaign = "[Campaign]", pollLink, disabled = false }: {
   templates: WaTemplate[]; value: WaTemplateInput; onChange: (value: WaTemplateInput) => void;
-  name?: string; campaign?: string; pollLink?: string; disabled?: boolean;
+  name?: string | undefined; campaign?: string | undefined; pollLink?: string; disabled?: boolean;
 }) {
   const t = templates.find((t) => t.name === value.template);
   if (!t) return null;

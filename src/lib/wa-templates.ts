@@ -70,7 +70,7 @@ export const WA_TEMPLATES_IMG: WaTemplate[] = [
 export const WA_TEMPLATES_ALL: WaTemplate[] = [...WA_TEMPLATES, ...WA_TEMPLATES_IMG];
 
 export const WA_POLL_TEMPLATES = WA_TEMPLATES_ALL.filter((t) => t.name.startsWith("poll_invitation_"));
-export type WaTemplateInput = { template: string; fields: string[]; imageUrl?: string };
+export type WaTemplateInput = { template: string; fields: string[]; imageUrl?: string | undefined };
 
 export function validateWaTemplate(input: WaTemplateInput, pollOnly = false) {
   const t = (pollOnly ? WA_POLL_TEMPLATES : WA_TEMPLATES_ALL).find((t) => t.name === input.template);

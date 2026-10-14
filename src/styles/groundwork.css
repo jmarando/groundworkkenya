@@ -1263,6 +1263,17 @@ figure { margin: 0; }
   border-radius: 16px 16px 16px 4px;
 }
 .bc-phone p { margin: 0; }
+.outreach-sheet { height: auto; }
+.outreach-sheet .pb-body { flex: 0 1 auto; align-items: stretch; min-height: 0; }
+.outreach-sheet .pb-head { align-items: flex-start; }
+.outreach-sheet .pb-head h2 { letter-spacing: 0; }
+.outreach-channels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wa-template-fields { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.wa-template-preview { padding: 14px 16px; background: var(--gw-paper-2); color: var(--gw-ink); border-radius: 8px; overflow-wrap: anywhere; }
+.wa-template-preview > p { margin: 8px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+.poll-recipient-sheet { z-index: 60; display: flex; flex-direction: column; width: calc(100% - 32px); border-radius: 8px; }
+.poll-recipient-sheet > * { flex-shrink: 0; }
+.poll-recipient-sheet > :first-child { padding-right: 24px; }
 .bc-count { margin: -6px 0 0; font-variant-numeric: tabular-nums; }
 .bc-warn {
   display: flex;
