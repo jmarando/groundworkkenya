@@ -54,20 +54,35 @@ export const WA_TEMPLATES_IMG: WaTemplate[] = [
     label: "Rally / community meeting · with picture",
     language: "en",
     image: true,
-    text: WA_TEMPLATES[0]!.text,
-    fields: WA_TEMPLATES[0]!.fields,
+    text: WA_TEMPLATES[0]?.text.replace(/\.$/, "") ?? "",
+    fields: WA_TEMPLATES[0]?.fields ?? [],
   },
   {
     name: "poll_invitation_img",
     label: "Poll invitation · with picture",
     language: "en",
     image: true,
-    text: WA_TEMPLATES[1]!.text,
-    fields: WA_TEMPLATES[1]!.fields,
+    text: WA_TEMPLATES[1]?.text ?? "",
+    fields: WA_TEMPLATES[1]?.fields ?? [],
   },
 ];
 
 export const WA_TEMPLATES_ALL: WaTemplate[] = [...WA_TEMPLATES, ...WA_TEMPLATES_IMG];
+
+export const WA_POLL_TEMPLATES = WA_TEMPLATES_ALL.filter((t) => t.name.startsWith("poll_invitation_"));
+export type WaTemplateInput = { template: string; fields: string[]; imageUrl?: string };
+
+export function validateWaTemplate(input: WaTemplateInput, pollOnly = false) {
+  const t = (pollOnly ? WA_POLL_TEMPLATES : WA_TEMPLATES_ALL).find((t) => t.name === input.template);
+  if (!t) throw new Error("Pick an approved WhatsApp template.");
+  const fields = (input.fields ?? []).map((f) => String(f ?? "").trim());
+  if (fields.length !== t.fields.length || fields.some((f) => !f || f.length > 200))
+    throw new Error("Fill in every template field (up to 200 characters each).");
+  const imageUrl = t.image ? String(input.imageUrl ?? "").trim() : undefined;
+  if (t.image && (!imageUrl || !/^https:\/\/\S{1,480}$/.test(imageUrl)))
+    throw new Error("Add a public picture link starting with https://");
+  return { t, fields, imageUrl };
+}
 
 export function fillTemplate(text: string, params: string[]): string {
   return text.replace(/\{\{(\d+)\}\}/g, (m, n) => params[Number(n) - 1] || m);
