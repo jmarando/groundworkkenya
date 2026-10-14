@@ -249,7 +249,12 @@ function addOverlays(map: MlMap, basemap: Basemap, mapArea: MapArea): void {
   // The polling centres. The area nearest each sits under the houses, which stay readable at
   // street level; its dot, the ring round the open centre and its name go on top.
   map.addSource("gw-centre-areas", { type: "geojson", data: EMPTY, promoteId: "code" });
-  map.addSource("gw-centres", { type: "geojson", data: EMPTY, promoteId: "code" });
+  map.addSource("gw-centres", {
+    type: "geojson",
+    data: EMPTY,
+    promoteId: "code",
+    attribution: "Polling centres: IEBC, positions © OpenStreetMap contributors (ODbL)",
+  });
   const size: ExpressionSpecification = ["get", "size"];
   const dot = (scale: number, extra = 0): ExpressionSpecification => [
     "+",
