@@ -24,6 +24,7 @@ import {
   HOUSE_ZOOM,
   mergeHouses,
   tilesAround,
+  tilesCovering,
   tilesOf,
   toTileHouse,
   toTileSpace,
@@ -227,6 +228,32 @@ eq(
   "around a corner, the four tiles there",
   tilesAround(fromTileSpace([x + 1, y + 1]), 120).length,
   4,
+);
+
+// The tiles that cover a box, with numbers worked out by hand: a tile is 360/65,536 degrees of
+// longitude wide at zoom 16, and x counts east from the date line, y south from the top.
+eq(
+  "a small box inside one tile is that tile",
+  tilesCovering({ west: 36.7999, south: -1.2801, east: 36.8001, north: -1.2799 }),
+  [{ x: 39467, y: 33001 }],
+);
+eq(
+  "a box across a tile corner is the four tiles there",
+  tilesCovering({ west: 36.752, south: -1.266, east: 36.756, north: -1.263 }),
+  [
+    { x: 39458, y: 32997 },
+    { x: 39458, y: 32998 },
+    { x: 39459, y: 32997 },
+    { x: 39459, y: 32998 },
+  ],
+);
+eq(
+  "a box across one tile's edge is two",
+  tilesCovering({ west: 36.808, south: -1.277, east: 36.812, north: -1.275 }),
+  [
+    { x: 39468, y: 33000 },
+    { x: 39469, y: 33000 },
+  ],
 );
 
 {

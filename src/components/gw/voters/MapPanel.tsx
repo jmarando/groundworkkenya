@@ -38,6 +38,7 @@ export function MapPanel({
   onArea,
   onSearch,
   card,
+  centres,
 }: {
   area: Area;
   wards: WardInfo[];
@@ -52,8 +53,10 @@ export function MapPanel({
   onArea: (a: Area) => void;
   /** Opens the People tab with its filters; agents don't get it. */
   onSearch: (changes: SearchChanges) => void;
-  /** The open house's card. */
+  /** The open house's, or centre's, card. */
   card?: ReactNode;
+  /** The ward's polling centres. */
+  centres?: ReactNode;
 }) {
   const inside = wardsIn(area, wards);
   const n = areaNumbers(area, wards, canvass?.wards ?? [], canvass?.unplaced);
@@ -173,6 +176,8 @@ export function MapPanel({
           <p className="f-note">Zoom in to street level to see each house.</p>
         ) : null}
       </section>
+
+      {centres}
 
       {area.level !== "ward" && t ? (
         <section className="vnext" aria-label="Do this next">

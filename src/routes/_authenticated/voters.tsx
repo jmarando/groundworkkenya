@@ -22,21 +22,26 @@ import {
 import { AddPerson } from "@/components/gw/AddPerson";
 import { OfflineBar } from "@/components/gw/offline/OfflineBar";
 import { CentreCard } from "@/components/gw/voters/CentreCard";
+import { CentresList } from "@/components/gw/voters/CentresList";
 import { HouseCard } from "@/components/gw/voters/HouseCard";
 import { ManageRecords } from "@/components/gw/voters/ManageRecords";
 import { MapPanel } from "@/components/gw/voters/MapPanel";
 import { MapSearch } from "@/components/gw/voters/MapSearch";
 import { PeopleView } from "@/components/gw/voters/PeopleView";
+import { PlaceIt } from "@/components/gw/voters/PlaceIt";
 import { Sheet } from "@/components/gw/voters/Sheet";
 import { VotersCanvas, type WardsGeo } from "@/components/gw/voters/VotersCanvas";
 import { useAccess } from "@/hooks/useAccess";
+import { useAreaHouses } from "@/hooks/useAreaHouses";
 import { useOnline } from "@/hooks/useOnline";
+import { useWardCentres } from "@/hooks/useWardCentres";
 import { wardKey } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
 import { figuresFor, shadeLegend, shadeOf } from "@/lib/atlas-view";
 import {
+  canPlaceCentres,
   CENTRE_SWATCH,
-  centreAreaShapes,
+  centreDoors,
   centreDots,
   type Centre,
   type CentreAreaShapes,
@@ -45,7 +50,7 @@ import { getCentres } from "@/lib/centres.functions";
 import { getCanvassing, getPeople, getVoters, type CanvassData } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { defaultRace } from "@/lib/elections-view";
-import { wardAt, wardShapes } from "@/lib/geo";
+import { ringCentre, wardAt, wardShapes, type LngLat, type WardShape } from "@/lib/geo";
 import { getJson } from "@/lib/geo-files";
 import {
   houseColour,
@@ -61,9 +66,9 @@ import { getAreaDoors, getWardHouses } from "@/lib/houses.functions";
 import { getMapConfig } from "@/lib/map.functions";
 import { mapAreaFor, type HouseCounts, type MapArea } from "@/lib/map-areas";
 import { plusCodeCentre } from "@/lib/pluscode";
-import { centreAreas } from "@/lib/stations/areas";
 import {
   cameraFor,
+  CENTRE_ZOOM,
   centreStays,
   hintFor,
   searchGo,
@@ -155,6 +160,7 @@ function Voters() {
   const fetchConfig = useServerFn(getMapConfig);
   const fetchDoors = useServerFn(getAreaDoors);
   const fetchCentres = useServerFn(getCentres);
+  const fetchHouses = useServerFn(getWardHouses);
   const tab = search.tab === "people" && !isAgent ? "people" : "map";
   const online = useOnline();
   const { data } = useQuery({ queryKey: ["voters"], queryFn: () => fetchVoters() });
@@ -192,13 +198,54 @@ function Voters() {
     enabled: tab === "map" && Boolean(mapArea),
     staleTime: 60_000,
   });
+  const { data: geo, isError: geoFailed } = useQuery({
+    queryKey: ["geo", mapArea?.id, "wards"],
+    queryFn: () => getJson<WardsGeo>(mapArea!.wards),
+    enabled: tab === "map" && Boolean(mapArea),
+    staleTime: Infinity,
+  });
   const [adding, setAdding] = useState(false);
   const [level, setLevel] = useState<Level>("area");
+  // Putting a centre on the map: which one, and where the pin is now.
+  const [placing, setPlacing] = useState<{ code: string; at: LngLat } | null>(null);
   // The search box sits in the bar; the map, which owns the camera, takes what it picks.
   const pick = useRef<(hit: SearchHit) => void>(() => undefined);
 
   const wards = useMemo(() => data?.wards ?? [], [data]);
   const centreList = useMemo(() => centres ?? [], [centres]);
+  const shapes = useMemo(() => (geo ? wardShapes(geo) : []), [geo]);
+  const area = parseArea(search.area, wards);
+  // The ward on show and its polling centres: the two lists, and the area nearest each placed one.
+  const wardOn = area.level === "ward" ? (wards.find((w) => w.slug === area.slug) ?? null) : null;
+  const here = useWardCentres(
+    wardOn?.id ?? null,
+    wardOn ? shapes.find((s) => s.slug === wardOn.slug) : undefined,
+    centreList,
+  );
+  const { data: houseStates } = useQuery({
+    queryKey: ["ward-houses", wardOn?.id],
+    queryFn: () => fetchHouses({ data: { wardId: wardOn!.id } }),
+    enabled: tab === "map" && Boolean(wardOn),
+  });
+  const doorsByCentre = useMemo(
+    () => (houseStates ? centreDoors(houseStates, here.areas) : undefined),
+    [houseStates, here.areas],
+  );
+  const openCentre = search.centre
+    ? (centreList.find((c) => c.code === search.centre) ?? null)
+    : null;
+  const openArea = openCentre ? here.areas.find((a) => a.id === openCentre.id) : undefined;
+  const areaHouses = useAreaHouses(mapArea, openArea);
+  const canPlace = canPlaceCentres(access?.role ?? null);
+  // A centre being placed is given up when another centre, or none, is opened.
+  const lastCentre = useRef(search.centre);
+  useEffect(() => {
+    if (placing && lastCentre.current !== search.centre && search.centre !== placing.code)
+      setPlacing(null);
+    lastCentre.current = search.centre;
+    // Only a change of the open centre matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.centre]);
   const rows = useMemo(() => {
     const a = parseArea(search.area, wards);
     const now = Date.now();
@@ -226,7 +273,6 @@ function Voters() {
     );
   }
 
-  const area = parseArea(search.area, wards);
   const title = areaTitle(area, wards, home);
   const crumbs = crumbsOf(area, wards, home);
   const record = search.person ? (people?.rows.find((r) => r.id === search.person) ?? null) : null;
@@ -332,11 +378,30 @@ function Voters() {
     );
   }
 
-  const openCentre = search.centre
-    ? (centreList.find((c) => c.code === search.centre) ?? null)
-    : null;
+  // Putting a centre on the map starts from where it is, or an agent's suggestion, or else the
+  // middle of its ward; the pin is dragged from there.
+  const startPlacing = (c: Centre) => {
+    const ward = wards.find((w) => w.id === c.wardId);
+    const outline = ward ? shapes.find((s) => s.slug === ward.slug)?.polygons[0]?.[0] : undefined;
+    const at = c.placed?.at ?? c.suggestion?.at ?? (outline ? ringCentre(outline) : null);
+    if (!at) return;
+    const inThisWard = ward && area.level === "ward" && area.slug === ward.slug;
+    go({
+      centre: c.code,
+      house: undefined,
+      ...(ward && !inThisWard ? { area: `w:${ward.slug}` } : {}),
+    });
+    setPlacing({ code: c.code, at });
+  };
   const card =
-    search.house && mapArea ? (
+    placing && openCentre?.code === placing.code ? (
+      <PlaceIt
+        centre={openCentre}
+        at={placing.at}
+        onDone={() => setPlacing(null)}
+        onCancel={() => setPlacing(null)}
+      />
+    ) : search.house && mapArea ? (
       <HouseCard
         pc={search.house}
         mapArea={mapArea}
@@ -348,7 +413,32 @@ function Voters() {
       <CentreCard
         centre={openCentre}
         wardName={wards.find((w) => w.id === openCentre.wardId)?.name ?? null}
+        placedInWard={here.placed.length}
+        waitingInWard={here.waiting.length}
+        numbers={
+          openArea
+            ? {
+                doors: doorsByCentre ? (doorsByCentre.get(openCentre.id) ?? null) : undefined,
+                houses: areaHouses,
+              }
+            : null
+        }
+        canPlace={canPlace}
+        onPlace={() => startPlacing(openCentre)}
         onClose={() => go({ centre: undefined })}
+      />
+    ) : null;
+  const centresList =
+    area.level === "ward" && mapArea ? (
+      <CentresList
+        placed={here.placed}
+        waiting={here.waiting}
+        doors={doorsByCentre}
+        open={search.centre ?? null}
+        canPlace={canPlace}
+        state={centres === undefined ? "reading" : centres === null ? "missing" : "ready"}
+        onOpen={(code) => go({ centre: code, house: undefined })}
+        onPlace={startPlacing}
       />
     ) : null;
   const panel = (
@@ -363,6 +453,7 @@ function Voters() {
       onArea={setArea}
       onSearch={go}
       card={card}
+      centres={centresList}
     />
   );
   return (
@@ -381,7 +472,15 @@ function Voters() {
             search={search}
             doors={doors}
             counts={counts ?? null}
+            geo={geo}
+            geoFailed={geoFailed}
+            shapes={shapes}
             centres={centreList}
+            areaShapes={here.areaShapes}
+            hasCentres={here.placed.length > 0}
+            openCentre={openCentre}
+            placing={placing}
+            onPin={(at) => setPlacing((p) => (p ? { ...p, at } : p))}
             level={level}
             onLevel={setLevel}
             onGo={go}
@@ -465,8 +564,6 @@ function Bar({
 const addressKey = (s: { area?: string; house?: string; centre?: string }) =>
   `${s.area ?? ""}|${s.house ?? ""}|${s.centre ?? ""}`;
 
-const NO_AREAS: CentreAreaShapes = { type: "FeatureCollection", features: [] };
-
 /** The map and its controls beside the panel. */
 function MapScreen({
   mapArea,
@@ -476,7 +573,15 @@ function MapScreen({
   search,
   doors,
   counts,
+  geo,
+  geoFailed,
+  shapes,
   centres,
+  areaShapes,
+  hasCentres,
+  openCentre,
+  placing,
+  onPin,
   level,
   onLevel,
   onGo,
@@ -491,8 +596,21 @@ function MapScreen({
   search: VotersSearch;
   doors: WardDoors[] | null | undefined;
   counts: HouseCounts | null;
+  /** The ward outlines, once read, and whether they couldn't be. */
+  geo: WardsGeo | undefined;
+  geoFailed: boolean;
+  shapes: WardShape[];
   /** The campaign's polling centres, placed or not; none while they are read or can't be. */
   centres: Centre[];
+  /** The part of the ward on show nearest each of its centres on the map. */
+  areaShapes: CentreAreaShapes;
+  /** Whether the ward on show has centres on the map. */
+  hasCentres: boolean;
+  /** The centre whose card is open. */
+  openCentre: Centre | null;
+  /** The centre being placed, and where its pin is. */
+  placing: { code: string; at: LngLat } | null;
+  onPin: (at: LngLat) => void;
   level: Level;
   onLevel: (level: Level) => void;
   /** A change to the address, a step or not as stepFor says; a new area is flown to. */
@@ -513,12 +631,6 @@ function MapScreen({
   const keyOk = Boolean(maptilerKey) && !tilesRefused;
   const base: Basemap = keyOk ? (search.base ?? "satellite") : "streets";
 
-  const { data: geo, isError: geoFailed } = useQuery({
-    queryKey: ["geo", mapArea.id, "wards"],
-    queryFn: () => getJson<WardsGeo>(mapArea.wards),
-    staleTime: Infinity,
-  });
-  const shapes = useMemo(() => (geo ? wardShapes(geo) : []), [geo]);
   const ward = area.level === "ward" ? (wards.find((w) => w.slug === area.slug) ?? null) : null;
   const { data: houses } = useQuery({
     queryKey: ["ward-houses", ward?.id],
@@ -560,22 +672,8 @@ function MapScreen({
     return out;
   }, [houses, colour]);
 
-  // The polling centres: a dot for each with a position, and in the ward on show the part
-  // nearest each, worked out here from the ward's outline.
-  const wardShape = ward ? shapes.find((s) => s.slug === ward.slug) : undefined;
+  // The polling centres: a dot for each with a position (the areas come from the panel's ward).
   const dots = useMemo(() => centreDots(centres), [centres]);
-  const inWard = useMemo(
-    () => (ward ? centres.filter((c) => c.wardId === ward.id) : []),
-    // The ward's id is what its centres are named by.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [centres, ward?.id],
-  );
-  const areaShapes = useMemo(() => {
-    if (!wardShape) return NO_AREAS;
-    const here = inWard.flatMap((c) => (c.placed ? [{ id: c.id, at: c.placed.at }] : []));
-    return centreAreaShapes(centreAreas(here, wardShape), inWard);
-  }, [wardShape, inWard]);
-  const openCentre = search.centre ? (centres.find((c) => c.code === search.centre) ?? null) : null;
   const legend: LegendItem[] = [
     ...(level === "street"
       ? houseLegend(colour)
@@ -629,6 +727,16 @@ function MapScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, geo]);
 
+  // Starting to place a centre flies to its pin, which may be nowhere the address knows of.
+  const placingCode = placing?.code ?? null;
+  useEffect(() => {
+    if (!placing) return;
+    const target: CameraTarget = { kind: "point", center: placing.at, zoom: CENTRE_ZOOM };
+    setCamera((c) => ({ seq: (c?.seq ?? 0) + 1, target }));
+    // Only starting to place a centre sends the camera, not each move of the pin.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placingCode]);
+
   // A search hit: its address, and for a place its own camera, flown even when the area stays.
   useEffect(() => {
     pick.current = (hit) => {
@@ -669,6 +777,8 @@ function MapScreen({
           centres={dots}
           centreAreas={areaShapes}
           centre={search.centre ?? null}
+          pin={placing?.at ?? null}
+          onPin={onPin}
           camera={camera}
           padding={{ bottom: room }}
           onMoved={(a, at) =>
@@ -677,7 +787,7 @@ function MapScreen({
                 ...(a ? { area: areaParam(a) } : {}),
                 ...(at === "street" ? {} : { house: undefined }),
                 // An open centre closes when the map leaves its ward, or zooms out past the centres.
-                ...(centreStays(openCentre, a, at, wards) ? {} : { centre: undefined }),
+                ...(placing || centreStays(openCentre, a, at, wards) ? {} : { centre: undefined }),
               },
               false,
             )
@@ -741,11 +851,9 @@ function MapScreen({
                 ))}
               </div>
               <div className="vglass vhint" role="status">
-                {hintFor(
-                  level,
-                  mapArea.top,
-                  inWard.some((c) => c.placed),
-                )}
+                {placing
+                  ? "Drag the pin, or tap the map, to where the centre is"
+                  : hintFor(level, mapArea.top, hasCentres)}
               </div>
             </div>
             <div className="vglass vleg">

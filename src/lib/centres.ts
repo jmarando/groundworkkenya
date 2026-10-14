@@ -1,8 +1,12 @@
 // The polling centres the Voters map draws: the database's rows read into centres, which have a
 // position, and the dots and shaded areas handed to the map. Pure, so the map only draws.
 
-import type { LngLat, Ring } from "@/lib/geo";
-import type { CentreArea } from "@/lib/stations/areas";
+import type { MyRole } from "@/lib/access";
+import { boundsOf, distanceM, type Building, type LngLat, type Ring } from "@/lib/geo";
+import { tilesCovering } from "@/lib/house-tiles";
+import type { HouseState } from "@/lib/houses";
+import { plusCodeCentre } from "@/lib/pluscode";
+import { centreAt, type CentreArea } from "@/lib/stations/areas";
 
 /**
  * Where a centre's position came from: the OpenStreetMap school of that name, a close name
@@ -183,4 +187,98 @@ export function centreAreaShapes(areas: CentreArea[], centres: Centre[]): Centre
         : [];
     }),
   };
+}
+
+/** What came of the doors knocked in 30 days, in one centre's area. */
+export type CentreDoors = { knocked: number; rated: number; supporters: number };
+
+/**
+ * The doors knocked in 30 days, counted in the area each house stands in (a house's plus code
+ * says where it is, so no house file is read): houses knocked, those with a score, and those
+ * that score 4 or 5. Every area has an entry; a house outside every area is left out.
+ */
+export function centreDoors(houses: HouseState[], areas: CentreArea[]): Map<string, CentreDoors> {
+  const out = new Map(areas.map((a) => [a.id, { knocked: 0, rated: 0, supporters: 0 }]));
+  for (const h of houses) {
+    const at = plusCodeCentre(h.pc);
+    const doors = out.get((at && centreAt(at, areas)) || "");
+    if (!doors) continue;
+    doors.knocked += 1;
+    if (h.support !== null) {
+      doors.rated += 1;
+      if (h.support >= 4) doors.supporters += 1;
+    }
+  }
+  return out;
+}
+
+/** How many of these houses stand in the area, by where each house's centre is. */
+export function housesIn(buildings: Building[], area: CentreArea): number {
+  return buildings.filter((b) => centreAt(b.centre, [area]) !== null).length;
+}
+
+/**
+ * A ward's centres in the two lists the panel shows: those on the map and those not yet, each
+ * with the biggest register first and ties by name.
+ */
+export function wardCentres(
+  centres: Centre[],
+  wardId: string,
+): { placed: Centre[]; waiting: Centre[] } {
+  const bySize = (a: Centre, b: Centre) => b.voters - a.voters || a.name.localeCompare(b.name);
+  const here = centres.filter((c) => c.wardId === wardId).sort(bySize);
+  return { placed: here.filter((c) => c.placed), waiting: here.filter((c) => !c.placed) };
+}
+
+/** The candidate, managers and organisers put centres on the map: what the database allows. */
+export function canPlaceCentres(role: MyRole): boolean {
+  return role === "super" || role === "candidate" || role === "manager" || role === "organiser";
+}
+
+/** " on 12 Oct" for a time, in Nairobi; nothing for none. */
+function on(iso: string | null): string {
+  if (!iso || Number.isNaN(Date.parse(iso))) return "";
+  const day = new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Nairobi",
+  });
+  return ` on ${day}`;
+}
+
+const goodTo = (m: number | null) =>
+  m === null ? "" : ` (the phone said it was good to ${Math.round(m)} m)`;
+
+/** Where a centre's position came from, in words, for its card. */
+export function placementNote(p: Placement): string {
+  if (p.by === "osm") return "From OpenStreetMap, where a school has this name.";
+  if (p.by === "osm-close")
+    return "From OpenStreetMap, but a school with a close name rather than this one's: not confirmed yet.";
+  if (p.by === "organiser") return `Placed by ${p.who ?? "an organiser"}${on(p.when)}.`;
+  return `Confirmed at the centre by ${p.who ?? "an agent"}${on(p.when)}${goodTo(p.accuracyM)}.`;
+}
+
+/** A distance for people: to the nearest 10 m under a kilometre, else in kilometres. */
+function far(m: number): string {
+  if (m < 10) return "under 10 m";
+  return m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(1)} km`;
+}
+
+/** An agent's suggestion, for the organiser deciding on it; `pin` is where the centre is now. */
+export function suggestionNote(s: Suggestion, pin: LngLat | null): string {
+  const away = pin ? `, about ${far(distanceM(pin, s.at))} from the pin` : "";
+  return `${s.who ?? "An agent"} suggested this position${on(s.when)}${goodTo(s.accuracyM)}${away}.`;
+}
+
+/** The most house tiles read to count one area's houses; a bigger area isn't counted. */
+const MAX_COUNT_TILES = 100;
+
+/**
+ * The zoom-16 tiles to read to count the houses in an area; null when it has no outline or
+ * would take more than 100 tiles (a rural ward in one piece).
+ */
+export function tilesToCount(area: CentreArea): { x: number; y: number }[] | null {
+  if (!area.polygons.length) return null;
+  const tiles = tilesCovering(boundsOf({ type: "MultiPolygon", coordinates: area.polygons }));
+  return tiles.length <= MAX_COUNT_TILES ? tiles : null;
 }

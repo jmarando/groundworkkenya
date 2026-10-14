@@ -3,7 +3,19 @@
 // Pure. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/centres.test.ts
 
-import { centreAreaShapes, centreDots, dotSize, toCentres } from "@/lib/centres";
+import {
+  canPlaceCentres,
+  centreAreaShapes,
+  centreDoors,
+  centreDots,
+  dotSize,
+  housesIn,
+  placementNote,
+  suggestionNote,
+  tilesToCount,
+  toCentres,
+  wardCentres,
+} from "@/lib/centres";
 import type { Ring } from "@/lib/geo";
 
 let pass = 0;
@@ -238,6 +250,176 @@ eq(
   "an area for a centre we don't know is left out",
   centreAreaShapes([{ id: "ghost", polygons: [[square]] }], centres).features,
   [],
+);
+
+// Doors by area. Real Kileleshwa houses (their plus codes say where they are): three near
+// 36.754, -1.2644; three near 36.8097, -1.2761; and one between, at 36.7813, -1.2836.
+const rect = (west: number, south: number, east: number, north: number): Ring => [
+  [west, south],
+  [east, south],
+  [east, north],
+  [west, north],
+  [west, south],
+];
+const areas = [
+  { id: "w", polygons: [[rect(36.752, -1.266, 36.756, -1.263)]] },
+  { id: "e", polygons: [[rect(36.808, -1.277, 36.812, -1.275)]] },
+  { id: "z", polygons: [[rect(36.9, -1.4, 36.91, -1.39)]] },
+];
+const visit = (pc: string, outcome: "spoke" | "not_home" | "refused", support: number | null) => ({
+  pc,
+  at: "2026-10-10T08:00:00Z",
+  outcome,
+  support,
+});
+const doors = centreDoors(
+  [
+    visit("6GCRPQP3+5JC5", "spoke", 5),
+    visit("6GCRPQP3+7H3V", "spoke", 2),
+    visit("6GCRPQP3+6JH2", "not_home", null),
+    visit("6GCRPRF5+HVCP", "spoke", 4),
+    visit("6GCRPQ8J+HG7M", "spoke", 5),
+    visit("hello", "spoke", 5),
+  ],
+  areas,
+);
+eq(
+  "each house knocked counts in the area it stands in: knocked, scored, and supporters (4 or 5)",
+  [...doors.entries()],
+  [
+    ["w", { knocked: 3, rated: 2, supporters: 1 }],
+    ["e", { knocked: 1, rated: 1, supporters: 1 }],
+    ["z", { knocked: 0, rated: 0, supporters: 0 }],
+  ],
+);
+
+const building = (id: string, centre: [number, number]) => ({ id, area: 60, centre, rings: [] });
+eq(
+  "houses in an area, by where each house's centre is",
+  housesIn(
+    [
+      building("a", [36.754027, -1.264572]),
+      building("b", [36.753918, -1.264353]),
+      building("c", [36.809645, -1.276057]),
+      building("d", [36.781293, -1.283583]),
+    ],
+    areas[0]!,
+  ),
+  2,
+);
+
+// Counting an area's houses means reading the house tiles it covers: cheap for a city block of
+// cells, not for a rural ward in one piece.
+eq("the tiles to read for an area are those its outline covers", tilesToCount(areas[1]!), [
+  { x: 39468, y: 33000 },
+  { x: 39469, y: 33000 },
+]);
+eq(
+  "an area too big to read is not counted",
+  tilesToCount({ id: "big", polygons: [[rect(36.0, -1.5, 37.0, -1.0)]] }),
+  null,
+);
+eq(
+  "an area with no outline has nothing to count",
+  tilesToCount({ id: "none", polygons: [] }),
+  null,
+);
+
+// A ward's centres, in the two lists the panel shows.
+{
+  const at = { lat: -1.28, lng: 36.8, placed_by: "osm" };
+  const ward = toCentres(
+    [
+      row({ id: "c-1", code: "PS-0001", name: "BETA SCHOOL", registered_voters: 9000, ...at }),
+      row({ id: "c-2", code: "PS-0002", name: "SMALL SCHOOL", registered_voters: 5000, ...at }),
+      row({ id: "c-3", code: "PS-0003", name: "ALPHA SCHOOL", registered_voters: 9000, ...at }),
+      row({ id: "c-4", code: "PS-0004", name: "MID UNPLACED", registered_voters: 3000 }),
+      row({ id: "c-5", code: "PS-0005", name: "TINY UNPLACED", registered_voters: 100 }),
+      row({ id: "c-6", code: "PS-0006", name: "ELSEWHERE", ward_id: "w-other", ...at }),
+    ],
+    new Map(),
+  );
+  const lists = wardCentres(ward, "w-kitisuru");
+  eq(
+    "a ward's centres on the map: the biggest register first, ties by name",
+    lists.placed.map((c) => c.code),
+    ["PS-0003", "PS-0001", "PS-0002"],
+  );
+  eq(
+    "and those not on the map yet, the same way, with no other ward's",
+    lists.waiting.map((c) => c.code),
+    ["PS-0004", "PS-0005"],
+  );
+}
+
+// Where a centre's position came from, in words.
+const placement = (extra: Record<string, unknown>) => ({
+  at: [36.8, -1.28] as [number, number],
+  by: "osm" as const,
+  accuracyM: null,
+  when: null,
+  who: null,
+  ...extra,
+});
+eq(
+  "each source says what it is",
+  [
+    placementNote(placement({ by: "osm" })),
+    placementNote(placement({ by: "osm-close" })),
+    placementNote(
+      placement({ by: "organiser", who: "Njoki Mwangi", when: "2026-10-12T09:00:00Z" }),
+    ),
+    placementNote(placement({ by: "organiser" })),
+    placementNote(
+      placement({
+        by: "agent",
+        who: "Peter Otieno",
+        when: "2026-10-12T09:00:00Z",
+        accuracyM: 12.5,
+      }),
+    ),
+    placementNote(placement({ by: "agent" })),
+  ],
+  [
+    "From OpenStreetMap, where a school has this name.",
+    "From OpenStreetMap, but a school with a close name rather than this one's: not confirmed yet.",
+    "Placed by Njoki Mwangi on 12 Oct.",
+    "Placed by an organiser.",
+    "Confirmed at the centre by Peter Otieno on 12 Oct (the phone said it was good to 13 m).",
+    "Confirmed at the centre by an agent.",
+  ],
+);
+
+// An agent's suggestion waiting for an organiser.
+{
+  const suggestion = (lat: number) => ({
+    at: [36.8, lat] as [number, number],
+    accuracyM: 31,
+    when: "2026-10-13T09:00:00Z",
+    who: "Brian Otieno",
+  });
+  eq(
+    "a suggestion says who, when, how sure the phone was, and how far it is from the pin",
+    [
+      suggestionNote(suggestion(-1.277844), [36.8, -1.28]),
+      suggestionNote(suggestion(-1.2665), [36.8, -1.28]),
+      suggestionNote(suggestion(-1.277844), null),
+    ],
+    [
+      "Brian Otieno suggested this position on 13 Oct (the phone said it was good to 31 m), about 240 m from the pin.",
+      "Brian Otieno suggested this position on 13 Oct (the phone said it was good to 31 m), about 1.5 km from the pin.",
+      "Brian Otieno suggested this position on 13 Oct (the phone said it was good to 31 m).",
+    ],
+  );
+}
+
+// Who may put a centre on the map: what the database's functions allow.
+eq(
+  "the candidate, managers and organisers place centres; agents and people not yet admitted don't",
+  (["super", "candidate", "manager", "organiser", "agent", "pending", null] as const).map(
+    canPlaceCentres,
+  ),
+  [true, true, true, true, false, false, false],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

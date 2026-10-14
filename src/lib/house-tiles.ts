@@ -6,7 +6,7 @@
 // find the house it is at. A house that crosses a tile edge is written whole
 // into each tile it touches, and each tile draws only its own part. Pure.
 
-import { ringAreaM2, ringCentre, type Building, type LngLat, type Ring } from "@/lib/geo";
+import { ringAreaM2, ringCentre, type Box, type Building, type LngLat, type Ring } from "@/lib/geo";
 import { readVarint, writeVarint } from "@/lib/varint";
 
 export const HOUSE_ZOOM = 16;
@@ -330,16 +330,26 @@ export function decodeTile(x: number, y: number, bytes: Uint8Array): Building[] 
   return [];
 }
 
-/** The zoom-16 tiles within radiusM of a point. */
-export function tilesAround(p: LngLat, radiusM: number): { x: number; y: number }[] {
-  const dLat = radiusM / 111_320;
-  const dLng = dLat / Math.max(Math.cos(p[1] * RAD), 0.01);
-  const [x0, y0] = toTileSpace([p[0] - dLng, p[1] + dLat]);
-  const [x1, y1] = toTileSpace([p[0] + dLng, p[1] - dLat]);
+/** The zoom-16 tiles that cover a box, west to east, each from north to south. */
+export function tilesCovering(box: Box): { x: number; y: number }[] {
+  const [x0, y0] = toTileSpace([box.west, box.north]);
+  const [x1, y1] = toTileSpace([box.east, box.south]);
   const out: { x: number; y: number }[] = [];
   for (let x = Math.floor(x0); x <= Math.floor(x1); x++)
     for (let y = Math.floor(y0); y <= Math.floor(y1); y++) out.push({ x, y });
   return out;
+}
+
+/** The zoom-16 tiles within radiusM of a point. */
+export function tilesAround(p: LngLat, radiusM: number): { x: number; y: number }[] {
+  const dLat = radiusM / 111_320;
+  const dLng = dLat / Math.max(Math.cos(p[1] * RAD), 0.01);
+  return tilesCovering({
+    west: p[0] - dLng,
+    south: p[1] - dLat,
+    east: p[0] + dLng,
+    north: p[1] + dLat,
+  });
 }
 
 /** Houses from several tiles, each once: a house on a tile edge is in both. */

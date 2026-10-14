@@ -17,13 +17,14 @@ import type {
   LngLatBoundsLike,
   Map as MlMap,
   MapGeoJSONFeature,
+  Marker,
 } from "maplibre-gl";
 // MapLibre looks for its worker next to its own file, which a bundle doesn't
 // keep. Vite builds the worker as its own asset and this is its URL.
 import maplibreWorker from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
 import { CENTRE_TINT, type CentreAreaShapes, type CentreDots } from "@/lib/centres";
-import { ringAreaM2, type Ring, type WardShape } from "@/lib/geo";
+import { ringAreaM2, type LngLat, type Ring, type WardShape } from "@/lib/geo";
 import { houseArchive } from "@/lib/house-source";
 import { LAYER } from "@/lib/house-tiles";
 import { MAP_AREAS, type MapArea } from "@/lib/map-areas";
@@ -74,6 +75,10 @@ type Props = {
   centreAreas: CentreAreaShapes;
   /** The centre whose card is open, by its code. */
   centre: string | null;
+  /** The pin dragged to place a centre, [longitude, latitude]; none when none is being placed. */
+  pin: LngLat | null;
+  /** The pin was dragged, or the map tapped while placing, to here. */
+  onPin: (at: LngLat) => void;
   /** Where the app sends the camera; a new seq sends it again. */
   camera: { seq: number; target: CameraTarget } | null;
   /** Room the panel takes at the bottom (the sheet on phones), kept out of the map's centre. */
@@ -511,6 +516,11 @@ export function VotersCanvas(props: Props) {
       map.on("click", (e) => {
         if (!map) return;
         const q = latest.current;
+        // While a centre is placed, a tap puts the pin there: nothing else is opened.
+        if (q.pin) {
+          q.onPin([e.lngLat.lng, e.lngLat.lat]);
+          return;
+        }
         const at = levelFor(map.getZoom(), q.mapArea.top);
         if (at === "ward" || at === "street") {
           // A centre's dot, with room for a finger, comes before the houses and the ground.
@@ -642,6 +652,40 @@ export function VotersCanvas(props: Props) {
           { sel: f.properties.code === props.centre },
         );
   }, [styleRev, props.centreAreas, props.centre]);
+
+  // The pin that places a centre: a marker dragged on the map, reported where it is dropped.
+  const pinRef = useRef<Marker | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const at = props.pin;
+    if (!at) {
+      pinRef.current?.remove();
+      pinRef.current = null;
+      return;
+    }
+    if (pinRef.current) {
+      pinRef.current.setLngLat(at);
+      return;
+    }
+    let cancelled = false;
+    void import("maplibre-gl").then((ml) => {
+      if (cancelled || pinRef.current) return;
+      const el = document.createElement("div");
+      el.className = "vpin";
+      el.setAttribute("role", "img");
+      el.setAttribute("aria-label", "Pin: drag it to where the centre is");
+      const marker = new ml.Marker({ element: el, draggable: true }).setLngLat(at).addTo(map);
+      marker.on("dragend", () => {
+        const p = marker.getLngLat();
+        latest.current.onPin([p.lng, p.lat]);
+      });
+      pinRef.current = marker;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, props.pin]);
 
   useEffect(() => {
     const map = mapRef.current;
