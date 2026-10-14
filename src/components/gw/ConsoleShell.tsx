@@ -24,8 +24,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     title: "Operate",
     items: [
       { to: "/home", label: "Home" },
-      { to: "/diary", label: "Diary" },
-      { to: "/archive", label: "News & diary archive" },
+      { to: "/diary", label: "Diary & news" },
       { to: "/voters", label: "Voters", faint: "MAP" },
       { to: "/elections", label: "Elections", faint: "ATLAS" },
       { to: "/strategy", label: "Strategy", faint: "SO WHAT" },
@@ -39,8 +38,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
       { to: "/inbox", label: "Inbox" },
       { to: "/broadcast", label: "Broadcast & ads" },
       { to: "/website", label: "Website", faint: "PUBLIC" },
-      { to: "/social", label: "Social & sentiment", faint: "AI" },
-      { to: "/listening", label: "Listening", faint: "LIVE DATA" },
+      { to: "/listening", label: "Social & listening", faint: "LIVE" },
     ],
   },
   {
@@ -60,7 +58,6 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     items: [
       { to: "/team", label: "Team", faint: "ACCESS", adminOnly: true },
       { to: "/campaigns", label: "Campaigns", faint: "SUPER", superOnly: true },
-      { to: "/foundations", label: "Brand & design" },
     ],
   },
 ];
