@@ -4,10 +4,11 @@
 // the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/stations-data.test.ts
 
+import { distanceOutsideM } from "@/lib/geo";
 import { checkRegistered } from "@/lib/stations/register";
 
 import { areaShapes, atlasRegistered, STATION_AREAS } from "../scripts/stations/areas";
-import { readCentres } from "../scripts/stations/read";
+import { readCentres, readPositions } from "../scripts/stations/read";
 
 let pass = 0;
 let fail = 0;
@@ -64,6 +65,30 @@ for (const area of STATION_AREAS) {
     centres.filter((c) => !/^\d{13}$/.test(c.iebcCode) || !c.iebcCode.startsWith(area.prefix))
       .length,
     0,
+  );
+
+  const byCode = new Map(centres.map((c) => [c.iebcCode, c]));
+  const shapes = new Map(areaShapes(area).map((s) => [s.slug, s.polygons]));
+  const positions = readPositions(area);
+  eq(
+    `${area.id}: every position is a centre's, found once, by name or close name`,
+    positions.filter(
+      (p, i) =>
+        !byCode.has(p.iebcCode) ||
+        positions.findIndex((q) => q.iebcCode === p.iebcCode) !== i ||
+        !["osm", "osm-close"].includes(p.placedBy) ||
+        !/^(node|way|relation)\/\d+$/.test(p.osmId),
+    ).length,
+    0,
+  );
+  eq(
+    `${area.id}: every position is in its centre's ward or within 2 km of it`,
+    positions
+      .filter(
+        (p) => distanceOutsideM([p.lng, p.lat], shapes.get(byCode.get(p.iebcCode)!.ward)!) > 2000,
+      )
+      .map((p) => p.iebcCode),
+    [],
   );
 }
 

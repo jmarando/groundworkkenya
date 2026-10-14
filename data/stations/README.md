@@ -29,3 +29,22 @@ The reader (`src/lib/stations/register.ts`) goes by where each word is on the pa
 long names run into the next column: a stream's code is the 15 digits a word ends with, and its
 count the digits ending the word at the count column. IEBC spells one of our wards differently
 (MUGUMU-INI for Mugumo-ini); `WARD_ALIASES` there maps it.
+
+## Where the centres are
+
+`<area>-positions.csv` holds the centres whose position was found from OpenStreetMap's
+schools, colleges and universities (© OpenStreetMap contributors, published under the Open
+Database License, ODbL): `iebc_code`, `lat`, `lng`, `placed_by` (`osm` for the same name,
+`osm-close` for a name one word off, or the same name in two places more than 500 m apart,
+kept as a hollow pin until someone confirms it), and the school's `osm_id` and `osm_name`.
+These positions are a database derived from OpenStreetMap, and are published under the ODbL
+too. The rules are in `src/lib/stations/match.ts`. On 14 October 2026 they placed 164 of
+Nairobi's 378 centres, with 27 close names, and 8 of Mathira's 109: Mathira's rural schools are
+mostly not on OpenStreetMap. Organisers place the rest on the Voters map ("Place it"), and agents
+confirm them at the centre ("I'm here").
+
+To find them again:
+
+```bash
+npx tsx --tsconfig tsconfig.json scripts/stations/positions.ts
+```

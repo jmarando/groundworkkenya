@@ -121,6 +121,24 @@ export function buildingsNear(
   return near.sort((a, b) => a.distanceM - b.distanceM).slice(0, limit);
 }
 
+/** Metres from a point to the nearest edge of a (Multi)Polygon; 0 when it is inside. */
+export function distanceOutsideM(p: LngLat, polygons: Ring[][]): number {
+  if (polygons.some((rings) => inPolygon(p, rings))) return 0;
+  let best = Infinity;
+  for (const rings of polygons)
+    for (const ring of rings)
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [ax, ay] = toLocalM(ring[i]!, p);
+        const [bx, by] = toLocalM(ring[i + 1]!, p);
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len = dx * dx + dy * dy;
+        const t = len ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
+        best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+      }
+  return best;
+}
+
 export function inBox(p: LngLat, box: Box): boolean {
   return p[0] >= box.west && p[0] <= box.east && p[1] >= box.south && p[1] <= box.north;
 }
