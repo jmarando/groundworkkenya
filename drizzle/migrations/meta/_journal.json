@@ -43,6 +43,13 @@
       "when": 1791890610563,
       "tag": "0005_area_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791943611920,
+      "tag": "0006_findings",
+      "breakpoints": true
     }
   ]
 }
