@@ -3048,6 +3048,15 @@ export type Database = {
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_team_member: { Args: { _user_id: string }; Returns: boolean }
+      issue_weeks: {
+        Args: { _weeks?: number }
+        Returns: {
+          issue: string
+          n: number
+          source: string
+          week: number
+        }[]
+      }
       launch_poll: {
         Args: { _poll_id: string; _sms_body: string }
         Returns: Json
@@ -3134,6 +3143,14 @@ export type Database = {
       remove_member: { Args: { _user_id: string }; Returns: undefined }
       request_campaign_access: { Args: { _slug: string }; Returns: string }
       restore_site_version: { Args: { _version: string }; Returns: number }
+      rival_mention_weeks: {
+        Args: { _weeks?: number }
+        Returns: {
+          n: number
+          rival_id: string
+          week: number
+        }[]
+      }
       save_site_draft: { Args: { _draft: Json; _rev: number }; Returns: number }
       set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
@@ -3185,6 +3202,15 @@ export type Database = {
           visited_at: string
         }[]
       }
+      ward_issues: {
+        Args: { _days?: number }
+        Returns: {
+          issue: string
+          n: number
+          source: string
+          ward_id: string
+        }[]
+      }
       ward_map: {
         Args: { _ward_id: string }
         Returns: {
@@ -3202,6 +3228,20 @@ export type Database = {
           phone_masked: string
           segment: string
           support_score: number
+        }[]
+      }
+      ward_spend: {
+        Args: { _days?: number }
+        Returns: {
+          kes: number
+          ward_id: string
+        }[]
+      }
+      ward_supporters: {
+        Args: never
+        Returns: {
+          supporters: number
+          ward_id: string
         }[]
       }
     }
