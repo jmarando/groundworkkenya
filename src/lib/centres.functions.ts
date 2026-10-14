@@ -7,7 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { toCentres, type Centre } from "@/lib/centres";
+import { toCentres, type Centre, type HereResult } from "@/lib/centres";
 import type { Client } from "@/lib/houses.functions";
 import { pageAll } from "@/lib/page-all";
 
@@ -124,7 +124,7 @@ export async function adoptSuggestion(sb: Client, id: string): Promise<void> {
   if (error) throw refused(error, "Could not use that position.");
 }
 
-export type HereResult = { moved: boolean; why: "accuracy" | "distance" | "no-ward" | null };
+export type { HereResult };
 
 const WHY: NonNullable<HereResult["why"]>[] = ["accuracy", "distance", "no-ward"];
 

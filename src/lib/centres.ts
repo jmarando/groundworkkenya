@@ -282,3 +282,47 @@ export function tilesToCount(area: CentreArea): { x: number; y: number }[] | nul
   const tiles = tilesCovering(boundsOf({ type: "MultiPolygon", coordinates: area.polygons }));
   return tiles.length <= MAX_COUNT_TILES ? tiles : null;
 }
+
+/** How far from a phone the field app looks for polling centres. */
+export const NEAR_M = 2000;
+
+/**
+ * The centres near a phone: those on the map within `radiusM`, nearest first with the metres to
+ * each; and the centres of the ward it is in that aren't on the map yet (biggest register
+ * first), which an agent standing at one can place.
+ */
+export function centresNear(
+  centres: Centre[],
+  at: LngLat,
+  wardId: string | null,
+  radiusM = NEAR_M,
+): { near: { centre: Centre; metres: number }[]; waiting: Centre[] } {
+  const near = centres
+    .flatMap((c) => (c.placed ? [{ centre: c, metres: distanceM(at, c.placed.at) }] : []))
+    .filter((n) => n.metres <= radiusM)
+    .sort((a, b) => a.metres - b.metres)
+    .map((n) => ({ centre: n.centre, metres: Math.round(n.metres) }));
+  return { near, waiting: wardId ? wardCentres(centres, wardId).waiting : [] };
+}
+
+/** What the database's station_here asks of a phone: a fix this good, and this near the ward. */
+export const HERE_ACCURACY_M = 50;
+export const HERE_OUTSIDE_M = 300;
+
+/** What station_here answered: the position became the centre's, or was kept, and why. */
+export type HereResult = { moved: boolean; why: "accuracy" | "distance" | "no-ward" | null };
+
+/** What an agent is told after "I'm here". */
+export function hereMessage(r: HereResult, accuracyM: number | null): string {
+  if (r.moved) return "Thank you: the centre is now where you are.";
+  if (r.why === "accuracy") {
+    const sure =
+      accuracyM === null
+        ? "Your phone didn't say how sure it was"
+        : `Your phone is only sure to ${Math.round(accuracyM)} m`;
+    return `${sure}, and a centre needs ${HERE_ACCURACY_M} m or better, so your position is kept for an organiser to check. Try again in the open.`;
+  }
+  if (r.why === "distance")
+    return `You are more than ${HERE_OUTSIDE_M} m outside this centre's ward, so your position is kept for an organiser to check.`;
+  return "Your position is kept for an organiser to check.";
+}

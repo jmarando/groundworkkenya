@@ -17,7 +17,7 @@ export type Fix = { lng: number; lat: number; accuracy: number | null; at: numbe
 export type Geo = { status: "locating" | "ok" | "off" | "none"; fix: Fix | null; slow: boolean };
 
 /** Watch the phone's position while mounted, keeping the sharpest recent fix. */
-function useFix(): Geo {
+export function useFix(): Geo {
   const [geo, setGeo] = useState<Geo>({ status: "locating", fix: null, slow: false });
 
   useEffect(() => {

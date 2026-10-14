@@ -8,7 +8,9 @@ import {
   centreAreaShapes,
   centreDoors,
   centreDots,
+  centresNear,
   dotSize,
+  hereMessage,
   housesIn,
   placementNote,
   suggestionNote,
@@ -351,6 +353,81 @@ eq(
     ["PS-0004", "PS-0005"],
   );
 }
+
+// The field app's "Polling centres near me": with the phone at 36.8, -1.28, the centres on the
+// map within 2 km, nearest first (a degree of latitude is 111,195 m), and the ward's centres
+// that aren't on the map yet, which an agent standing at one can place.
+{
+  const at = (lat: number) => ({ lat, lng: 36.8, placed_by: "osm" });
+  const here = toCentres(
+    [
+      row({ id: "far", code: "PS-0001", name: "FAR", ...at(-1.2575) }),
+      row({ id: "mid", code: "PS-0002", name: "MID", ...at(-1.2665) }),
+      row({ id: "near", code: "PS-0003", name: "NEAR", ...at(-1.2785) }),
+      row({
+        id: "w1-b",
+        code: "PS-0004",
+        name: "B UNPLACED",
+        ward_id: "w-1",
+        registered_voters: 10,
+      }),
+      row({
+        id: "w1-a",
+        code: "PS-0005",
+        name: "A UNPLACED",
+        ward_id: "w-1",
+        registered_voters: 900,
+      }),
+      row({ id: "w2", code: "PS-0006", name: "OTHER WARD", ward_id: "w-2", registered_voters: 50 }),
+    ],
+    new Map(),
+  );
+  const found = centresNear(here, [36.8, -1.28], "w-1");
+  eq(
+    "within 2 km, nearest first, with the metres to each",
+    found.near.map((n) => [n.centre.code, n.metres]),
+    [
+      ["PS-0003", 167],
+      ["PS-0002", 1501],
+    ],
+  );
+  eq(
+    "the ward's centres not on the map, the biggest register first, and no other ward's",
+    found.waiting.map((c) => c.code),
+    ["PS-0005", "PS-0004"],
+  );
+  eq(
+    "with no ward known, none are offered to place",
+    centresNear(here, [36.8, -1.28], null).waiting,
+    [],
+  );
+  eq(
+    "a wider reach finds the far one too",
+    centresNear(here, [36.8, -1.28], null, 3000).near.map((n) => n.centre.code),
+    ["PS-0003", "PS-0002", "PS-0001"],
+  );
+}
+
+// What an agent is told after "I'm here": the database decided, and why.
+eq(
+  "each answer, in words",
+  [
+    hereMessage({ moved: true, why: null }, 12),
+    hereMessage({ moved: false, why: "accuracy" }, 80),
+    hereMessage({ moved: false, why: "accuracy" }, null),
+    hereMessage({ moved: false, why: "distance" }, 12),
+    hereMessage({ moved: false, why: "no-ward" }, 12),
+    hereMessage({ moved: false, why: null }, 12),
+  ],
+  [
+    "Thank you: the centre is now where you are.",
+    "Your phone is only sure to 80 m, and a centre needs 50 m or better, so your position is kept for an organiser to check. Try again in the open.",
+    "Your phone didn't say how sure it was, and a centre needs 50 m or better, so your position is kept for an organiser to check. Try again in the open.",
+    "You are more than 300 m outside this centre's ward, so your position is kept for an organiser to check.",
+    "Your position is kept for an organiser to check.",
+    "Your position is kept for an organiser to check.",
+  ],
+);
 
 // Where a centre's position came from, in words.
 const placement = (extra: Record<string, unknown>) => ({

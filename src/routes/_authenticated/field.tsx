@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
+import { CentresNearMe } from "@/components/gw/CentresNearMe";
 import { FieldApp } from "@/components/gw/FieldApp";
 import { InstallApp } from "@/components/gw/offline/InstallApp";
 import { StreetPlan } from "@/components/gw/StreetPlan";
@@ -70,6 +71,14 @@ function Field() {
             <span className="mono">works without signal</span>
           </div>
           {data ? <FieldApp wards={allWards} /> : <p className="f-note">Loading wards…</p>}
+        </div>
+
+        <div className="card" style={{ minWidth: 0 }}>
+          <div className="card-head">
+            <h2>Polling centres near me</h2>
+            <span className="mono">needs signal</span>
+          </div>
+          {data ? <CentresNearMe wards={allWards} /> : <p className="f-note">Loading wards…</p>}
         </div>
 
         <div className="card" style={{ minWidth: 0 }}>
