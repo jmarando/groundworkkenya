@@ -93,9 +93,12 @@ declare
 begin
   foreach t in array array['people', 'messages', 'conversations', 'polling_stations', 'polls',
                            'broadcasts', 'contributions', 'listening_mentions', 'person_events'] loop
-    execute format('select count(*) from public.%I', t) into n;
+    execute format('select count(*) from public.%I where campaign_id <> %L', t,
+                   'ca000000-0000-4000-8000-000000000003') into n;
     assert n = 0, format('Mathira sees Sakaja''s %s', t);
   end loop;
+  select count(*) into n from public.polling_stations;
+  assert n = 109, 'Mathira sees its own 109 polling centres: ' || n;
   select count(*) into n from public.wards;
   assert n = 6, 'Mathira sees its own six wards and nobody else''s: ' || n;
   assert (select count(*) from public.campaigns) = 1, 'Mathira sees one campaign, its own';

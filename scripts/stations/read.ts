@@ -2,9 +2,12 @@
 import { existsSync, readFileSync } from "node:fs";
 
 import { parseCSV } from "@/lib/csv";
+import type { CentrePosition } from "@/lib/stations/match";
 import type { RegisterCentre } from "@/lib/stations/register";
 
-import type { StationArea } from "./areas";
+import type { StationsArea } from "@/lib/stations/sql";
+
+import { areaShapes, STATION_AREAS, type StationArea } from "./areas";
 
 /** The area's centres from data/stations/<id>.csv. */
 export function readCentres(area: StationArea): RegisterCentre[] {
@@ -23,16 +26,6 @@ export function readCentres(area: StationArea): RegisterCentre[] {
 export const hasCentres = (area: StationArea): boolean =>
   existsSync(`data/stations/${area.id}.csv`);
 
-/** A centre's position found from OpenStreetMap's schools (data/stations/<id>-positions.csv). */
-export type CentrePosition = {
-  iebcCode: string;
-  lat: number;
-  lng: number;
-  placedBy: "osm" | "osm-close";
-  osmId: string;
-  osmName: string;
-};
-
 /** The area's positions; none before scripts/stations/positions.ts has run. */
 export function readPositions(area: StationArea): CentrePosition[] {
   const path = `data/stations/${area.id}-positions.csv`;
@@ -48,3 +41,12 @@ export function readPositions(area: StationArea): CentrePosition[] {
     osmName: r[at("osm_name")]!,
   }));
 }
+
+/** Every area's centres, positions and ward boxes, as the migration is written from them. */
+export const stationAreasData = (): StationsArea[] =>
+  STATION_AREAS.map((a) => ({
+    mapArea: a.mapArea,
+    centres: readCentres(a),
+    positions: readPositions(a),
+    boxes: areaShapes(a).map((s) => ({ slug: s.slug, box: s.box })),
+  }));

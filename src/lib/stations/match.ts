@@ -17,6 +17,16 @@ export type School = { id: string; name: string; at: LngLat; area: boolean };
 
 export type Placed = { at: LngLat; placedBy: "osm" | "osm-close"; osmId: string; osmName: string };
 
+/** A centre's position found from the schools, as data/stations/<area>-positions.csv keeps it. */
+export type CentrePosition = {
+  iebcCode: string;
+  lat: number;
+  lng: number;
+  placedBy: Placed["placedBy"];
+  osmId: string;
+  osmName: string;
+};
+
 /** How far outside the centre's ward a school can be. */
 const NEAR_WARD_M = 2000;
 /** The same name further apart than this isn't one school drawn twice. */

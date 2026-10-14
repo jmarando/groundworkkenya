@@ -5,10 +5,13 @@
 //   npx tsx --tsconfig tsconfig.json tests/stations-data.test.ts
 
 import { distanceOutsideM } from "@/lib/geo";
+import { readFileSync } from "node:fs";
+
 import { checkRegistered } from "@/lib/stations/register";
+import { stationsMigration } from "@/lib/stations/sql";
 
 import { areaShapes, atlasRegistered, STATION_AREAS } from "../scripts/stations/areas";
-import { readCentres, readPositions } from "../scripts/stations/read";
+import { readCentres, readPositions, stationAreasData } from "../scripts/stations/read";
 
 let pass = 0;
 let fail = 0;
@@ -91,6 +94,13 @@ for (const area of STATION_AREAS) {
     [],
   );
 }
+
+eq(
+  "the migration is the one data/stations writes (run scripts/stations/build-sql.ts after a change)",
+  readFileSync("supabase/migrations/20261015090100_polling_centres_data.sql", "utf8") ===
+    stationsMigration(stationAreasData()),
+  true,
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
