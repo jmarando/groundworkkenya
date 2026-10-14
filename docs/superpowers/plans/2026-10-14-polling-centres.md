@@ -381,7 +381,7 @@ What they pin, with real Kileleshwa house codes: each knocked house counts in th
 
 ```bash
 npx prettier --check src/components/gw/voters/*.tsx src/hooks/useWardCentres.ts src/hooks/useAreaHouses.ts src/lib/centres.ts src/lib/house-tiles.ts src/routes/_authenticated/voters.tsx tests/centres.test.ts tests/house-tiles.test.ts
-npx eslint src/components/gw/voters src/hooks src/lib/centres.ts src/lib/house-tiles.ts src/routes/_authenticated/voters.tsx tests/centres.test.ts tests/house-tiles.test.ts
+npx eslint src/components/gw/voters src/hooks/useWardCentres.ts src/hooks/useAreaHouses.ts src/lib/centres.ts src/lib/house-tiles.ts src/routes/_authenticated/voters.tsx tests/centres.test.ts tests/house-tiles.test.ts
 npx tsc --noEmit -p tsconfig.json
 ```
 

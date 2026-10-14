@@ -2,7 +2,9 @@
 
 Status: designed with the user and approved on 14 October 2026, section by section. This is
 parts 2 and 3 of `2026-10-12-voters-map-design.md`, with the details settled; where the two
-differ, this one holds. Decisions:
+differ, this one holds. Part 1, the centres, was built on 14 October 2026 (its plan is
+`docs/superpowers/plans/2026-10-14-polling-centres.md`), and where the build differs from what
+was approved, the text below now says what was built. Decisions:
 
 - **Centres from IEBC's public data:** the 2022 register for the list, OpenStreetMap school
   names for positions, organisers' pins and agents' "I'm here" for the rest.
@@ -31,7 +33,7 @@ code and name, the 15-digit stream code (county 3, constituency 3, ward 4, centr
 
 Checked on 14 October 2026:
 
-- Nairobi (county 047): 376 centres, 3,636 streams, 85 wards. 30 rows wrap onto a second
+- Nairobi (county 047): 378 centres, 3,643 streams, 85 wards. 30 rows wrap onto a second
   line, so the reader finds rows by their 15-digit codes and takes the count from the next
   line when it isn't on the code's. With those rows, the total is the atlas's 2,415,310.
 - Mathira (county 019, constituency 096): 109 centres, 201 streams, 6 wards, 104,492
@@ -54,7 +56,7 @@ The PDF isn't committed; the script reads it from a path it's given.
   off) is kept as a hollow pin until someone confirms it. Positions are written beside the
   centres in `data/stations/`, whose README credits OpenStreetMap (ODbL) and IEBC.
 - **Stored per campaign** in `polling_stations`:
-  - Sakaja and Kalonzo get Nairobi's 376 centres, Mathira its 109.
+  - Sakaja and Kalonzo get Nairobi's 378 centres, Mathira its 109.
   - `code` stays the short code agents key on USSD and write on a form's photo: PS-0001
     upwards in IEBC's order. A new `iebc_code` holds the 13 digits.
   - Sakaja's 85 sample rows go, except a row with a filed result, a form photo or an agent
@@ -78,9 +80,14 @@ The PDF isn't committed; the script reads it from a path it's given.
   agent's suggestion waiting, and **Plan a walk list here**. 2022 results come with part 4.
 - **The address** gains the chosen centre, so a link or a reload opens it.
 - **Place it:** an organiser drops a pin at the middle of the ward and drags it where the
-  centre is; saving records the organiser and the time.
+  centre is; saving records the organiser and the time. A tap on the map moves the pin too.
+  The pin starts at an agent's suggestion if there is one. **Move it** does the same for a
+  centre already on the map, which corrects a wrong OpenStreetMap match.
 - **I'm here,** in the field app under **Polling centres near me** (the centres within 2 km,
-  nearest first; it needs signal): the phone's position becomes the centre's when it is
+  nearest first, and the centres of the ward the phone is in that are not on the map yet,
+  since a centre with no position can't be within 2 km of anything and nearly half have
+  none; it needs signal, and watches the phone's position only once asked): the phone's
+  position becomes the centre's when it is
   no more than 300 m outside the box around the centre's ward, and accurate to 50 m.
   Otherwise it is kept as a suggestion, and an organiser can use it from the centre's
   card. It also confirms a close-name position.
@@ -193,7 +200,7 @@ As the repository does it: `tests/*.test.ts` scripts with `eq()`, run by `npm te
 the SQL tests (`tests/sql/run.sh`).
 
 - **The register reader:** rows found by their 15 digits, wrapped rows included; Nairobi
-  376 centres and 3,636 streams adding up to 2,415,310; Mathira 109, 201 and 104,492; an
+  378 centres and 3,643 streams adding up to 2,415,310; Mathira 109, 201 and 104,492; an
   unknown ward name stops it.
 - **Name matching:** "primary school"-style words ignored; inside the ward or within 2 km;
   never a primary with a secondary; a close name marked hollow.
