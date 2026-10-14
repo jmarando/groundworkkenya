@@ -57,9 +57,9 @@ Plain JavaScript, served at `/sw.js`. One function decides what each request is:
   kept copy; a page with no copy gets `/offline.html`.
 - **An app file** (same-origin `/assets/…`): from the phone first, since a released file's
   name never changes; fetched and kept when missing. At most 300 are kept, oldest dropped.
-- **Kept and refreshed in the background:** same-origin `/brand/…`, `/geo/…`,
-  `/favicon.ico` and the two manifests, and Google Fonts (`fonts.googleapis.com`,
-  `fonts.gstatic.com`).
+- **Kept and refreshed in the background:** same-origin `/brand/…`, `/geo/…`, the house
+  files' counts (`/tiles/….json`, never the `.pmtiles` house files), `/favicon.ico` and the
+  two manifests, and Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`).
 - **Never kept:** everything else, straight to the network: every server function
   (`/_serverFn/…`), `/api/…`, Supabase, house tiles (`/tiles/…`), MapTiler, anything not a
   GET, and range requests.
@@ -101,16 +101,17 @@ the browser refuses storage, nothing is saved and the app works online as today.
 
 **What is saved, by React Query key:**
 
-| Key                         | Saved                                                                    |
-| --------------------------- | ------------------------------------------------------------------------ |
-| `["my-access"]`             | as loaded: the person's own role and campaign                            |
-| `["home", campaign]`        | as loaded                                                                |
-| `["diary", campaign, week]` | as loaded, each week opened                                              |
-| `["voters"]`                | `wards` and `totals` only; `people` and `feed` emptied                   |
-| `["canvassing"]`            | `totals`, `wards`, `issues`, `unplaced`; `walkList` and `recent` emptied |
-| `["area-doors"]`            | as loaded (counts per ward)                                              |
-| `["atlas"]`                 | as loaded                                                                |
-| `["findings", campaign]`    | as loaded                                                                |
+| Key                         | Saved                                                                                              |
+| --------------------------- | -------------------------------------------------------------------------------------------------- |
+| `["my-access"]`             | as loaded: the person's own role and campaign                                                      |
+| `["home", campaign]`        | as loaded                                                                                          |
+| `["diary", campaign, week]` | as loaded, each week opened                                                                        |
+| `["voters"]`                | `wards` and `totals` only; `people` and `feed` emptied                                             |
+| `["canvassing"]`            | `totals`, `wards`, `issues`, `unplaced`; `walkList` and `recent` emptied                           |
+| `["area-doors"]`            | as loaded (counts per ward)                                                                        |
+| `["atlas"]`                 | as loaded                                                                                          |
+| `["findings", campaign]`    | as loaded                                                                                          |
+| `["map-config"]`            | as loaded: the campaign's map area and the map's settings, which Voters and the field app wait for |
 
 - Each successful load of a listed query is saved, at most once a second per key, with the
   time it loaded.
@@ -129,8 +130,10 @@ the browser refuses storage, nothing is saved and the app works online as today.
 - **The bar** sits at the top of every signed-in page while offline; its time is the last
   successful load of a saved query.
 - **Pages off the list** show "This page needs signal" while offline.
-- **The sign-in check:** with saved access, the gate lets the person in when the check
-  can't reach the server; without it: "Open Groundwork once with signal to use it offline."
+- **The sign-in check:** when Supabase can't be reached, the signed-in area's entry check
+  takes the session already on the phone instead of sending the person to sign in, and with
+  saved access the gate lets them in; without saved access: "Open Groundwork once with
+  signal to use it offline."
 - **Voters:** the map's place shows "The map needs signal"; the panel shows the saved
   numbers. The People tab needs signal.
 - **The field app:** the ward list comes from the saved Voters copy; the street's list shows
