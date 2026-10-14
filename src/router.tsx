@@ -1,8 +1,12 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { startInstallable } from "@/lib/offline/app";
 
 export const getRouter = () => {
+  if (typeof window !== "undefined") {
+    startInstallable();
+  }
   const queryClient = new QueryClient();
 
   const router = createRouter({

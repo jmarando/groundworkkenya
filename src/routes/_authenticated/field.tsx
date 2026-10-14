@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { FieldApp } from "@/components/gw/FieldApp";
+import { InstallApp } from "@/components/gw/offline/InstallApp";
 import { StreetPlan } from "@/components/gw/StreetPlan";
 import { getVoters } from "@/lib/console.functions";
 
@@ -49,8 +50,8 @@ function Field() {
             Built for the door, <span className="serif">not the desk.</span>
           </h1>
           <p className="meta">
-            Pick a ward and your street, walk door by door, tap what happened. Visits save on the phone when there is no signal
-            and sync when it comes back.
+            Pick a ward and your street, walk door by door, tap what happened. Visits save on the
+            phone when there is no signal and sync when it comes back.
           </p>
         </div>
         <div className="vh-side">
@@ -58,6 +59,7 @@ function Field() {
             <span className="dot-live" aria-hidden="true" />{" "}
             {nf.format(data?.totals.contactedWeek ?? 0)} doors logged this week
           </span>
+          <InstallApp className="btn btn--ghost btn--sm" />
         </div>
       </div>
 

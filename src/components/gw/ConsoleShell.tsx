@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Menu, X } from "lucide-react";
 
 import { GwMark } from "./GwMark";
+import { InstallApp } from "./offline/InstallApp";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccess } from "@/hooks/useAccess";
@@ -153,6 +154,9 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
               Sign out
             </button>
           </div>
+          <div className="sb-foot-line">
+            <InstallApp className="sb-signout" />
+          </div>
         </div>
       </aside>
 
@@ -215,6 +219,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                 >
                   Sign out
                 </Button>
+                <InstallApp className="mobile-menu-install" />
               </div>
             </nav>
           </div>

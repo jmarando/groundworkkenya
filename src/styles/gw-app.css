@@ -372,3 +372,28 @@ a.sb-item {
   .ibx .th-body { max-height: 420px; }
   .ibx .msg { max-width: 92%; }
 }
+
+/* Installing: the iPhone's install note, and the phone menu's install button, under Sign
+   out and in line with it. */
+.install-note {
+  font-size: 11.5px;
+  opacity: 0.75;
+}
+.mobile-menu-install {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--gw-sidebar-fg);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.mobile-menu-install:hover {
+  background: var(--gw-sidebar-accent);
+}

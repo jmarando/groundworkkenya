@@ -12,6 +12,7 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { manifestHref } from "@/lib/offline/app";
 
 function NotFoundComponent() {
   return (
@@ -74,7 +75,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  head: ({ matches }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -100,7 +101,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/brand/favicon-16.png?v=3", type: "image/png", sizes: "16x16" },
       { rel: "shortcut icon", href: "/favicon.ico?v=3", type: "image/x-icon" },
       { rel: "apple-touch-icon", href: "/brand/apple-touch-icon.png?v=3", sizes: "180x180" },
-      { rel: "manifest", href: "/site.webmanifest?v=3" },
+      // The field app's pages name its own manifest, so installing from them installs it.
+      { rel: "manifest", href: manifestHref(matches.at(-1)?.pathname ?? "/") },
     ],
   }),
   shellComponent: RootShell,
