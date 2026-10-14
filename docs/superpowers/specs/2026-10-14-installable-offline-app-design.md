@@ -1,6 +1,7 @@
 # The installable offline app
 
-Status: designed with the user on 14 October 2026; this spec awaits their review.
+Status: designed with the user and approved on 14 October 2026; a few details were settled
+while planning (a weak signal, the sign-in kept on the phone, signing out with no signal).
 
 ## Why
 
@@ -54,7 +55,9 @@ Plain JavaScript, served at `/sw.js`. One function decides what each request is:
 - **A page** (a same-origin navigation): from the network first, so a new release shows at
   once. A copy is kept of the offline pages (`/home`, `/field`, `/diary`, `/voters`,
   `/elections`, `/strategy`), whatever their search part (`?area=…`). With no signal, the
-  kept copy; a page with no copy gets `/offline.html`.
+  kept copy; a page with no copy gets `/offline.html`. A page with a kept copy waits at most
+  4 seconds for the network: a weak signal gets the kept copy, and the fresh page is still
+  kept for next time.
 - **An app file** (same-origin `/assets/…`): from the phone first, since a released file's
   name never changes; fetched and kept when missing. At most 300 are kept, oldest dropped.
 - **Kept and refreshed in the background:** same-origin `/brand/…`, `/geo/…`, the house
@@ -65,7 +68,9 @@ Plain JavaScript, served at `/sw.js`. One function decides what each request is:
   GET, and range requests.
 
 On install it keeps `/offline.html`, `/home` and `/field`, and the app files those two pages
-name, so the first offline open works after a single visit with signal. On activate it
+name, so the first offline open works after a single visit with signal. It keeps plain
+copies: a host may answer `/offline.html` by way of a redirect (Cloudflare's default sends
+it to `/offline`), and a redirected copy can't answer a page request. On activate it
 deletes older versions' stores and takes charge of open pages at once, so the files they
 load next are kept too. Store names carry a version (`gw-pages-v1`, `gw-files-v1`,
 `gw-refresh-v1`); a release can ship a `sw.js` that clears its stores and removes itself.
@@ -117,10 +122,16 @@ the browser refuses storage, nothing is saved and the app works online as today.
   time it loaded.
 - A record of whose data it is (user, campaign) and a format version sits beside it.
 - **On start**, in the browser: when the person and campaign and version match, every saved
-  entry goes back into the query cache with its load time, so it counts as old and
-  refreshes as soon as there is signal; entries older than 14 days are deleted instead.
-  When anything doesn't match, everything saved is deleted.
-- **On sign-out**, everything saved is deleted.
+  entry goes back into the query cache with its load time, marked old whatever a page's own
+  `staleTime`, so it refreshes as soon as there is signal (the map settings, which pages
+  otherwise keep for good, included); entries older than 14 days are deleted instead.
+  When anything doesn't match, everything saved is deleted. The person is read from the
+  sign-in stored on the phone, without the network.
+- Saving runs only where the background file runs (the live site, or localhost with
+  `?sw=1`): elsewhere the app can't open with no signal, so there's nothing to save for.
+- **On sign-out**, everything saved is deleted. Supabase's sign-out needs signal; with none,
+  the sign-out deletes the session stored on the phone too, so the phone is signed out
+  either way.
 - Mutations stop waiting for the network (React Query's `networkMode: "always"`), so a save
   offline fails at once.
 
@@ -129,13 +140,21 @@ the browser refuses storage, nothing is saved and the app works online as today.
 - `useOnline()` follows the browser's online and offline events.
 - **The bar** sits at the top of every signed-in page while offline; its time is the last
   successful load of a saved query.
-- **Pages off the list** show "This page needs signal" while offline.
+- React Query is told at start whether there's signal (it otherwise only hears the
+  browser's online and offline events), so an app opened offline waits instead of failing
+  its loads.
+- **Pages off the list**, and listed pages with nothing saved, show "This page needs signal"
+  while offline.
 - **The sign-in check:** when Supabase can't be reached, the signed-in area's entry check
   takes the session already on the phone instead of sending the person to sign in, and with
   saved access the gate lets them in; without saved access: "Open Groundwork once with
-  signal to use it offline."
+  signal to use it offline." The session is read from the phone's storage directly: with no
+  signal, Supabase's own calls report no session once the hour-long access token has run
+  out, though the session is still stored and refreshes when signal returns. A check that
+  hasn't answered in 5 seconds counts as no signal.
 - **Voters:** the map's place shows "The map needs signal"; the panel shows the saved
-  numbers. The People tab needs signal.
+  numbers. The People tab needs signal. Voters' full-screen map covers the shell's bar, so
+  it carries its own.
 - **The field app:** the ward list comes from the saved Voters copy; the street's list shows
   the note above.
 
@@ -166,9 +185,14 @@ the browser refuses storage, nothing is saved and the app works online as today.
   and clients. Which kind each request is (every rule above); what install keeps (the
   offline page, `/home`, `/field` and their app files); a kept page served offline, search
   part or not; `/offline.html` for a page never kept; network-only requests never stored;
-  the 300-file limit; older stores deleted on activate.
+  the 300-file limit; older stores deleted on activate; a weak signal's 4-second wait; plain
+  copies of redirected pages.
 - **Saved data:** what each key keeps and strips; the 14-day expiry; deletion on sign-out
-  and on another person or campaign or format; entries restored with their load time.
+  and on another person or campaign or format; entries restored with their load time and
+  marked old; stopping waits for a save under way.
+- **The sign-in kept on the phone:** a stored session whose access has run out still counts;
+  a refusal sends the person to sign in; no signal, a failed fetch or no answer in 5 seconds
+  uses the phone's sign-in; a sign-out that can't reach Supabase deletes the phone's copy.
 - **The manifests:** valid, with their ids and start pages.
 - **The sign-in check:** with saved access and no signal, the person gets in; without, the
   note.
