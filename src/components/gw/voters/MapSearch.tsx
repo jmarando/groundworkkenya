@@ -1,17 +1,19 @@
 // The one search box above the Voters map: wards and constituencies by name,
-// people on file by name or number, and places and streets from MapTiler when
-// the key is set. A combobox: the arrow keys move through the results, Enter
-// picks one, Escape closes them.
+// polling centres by name or code, people on file by name or number, and places
+// and streets from MapTiler when the key is set. A combobox: the arrow keys move
+// through the results, Enter picks one, Escape closes them.
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
+import type { Centre } from "@/lib/centres";
 import type { MapArea } from "@/lib/map-areas";
 import { geocodeUrl, placeHits, searchHits, type SearchHit } from "@/lib/voters-map";
 
 const GROUPS: { kind: SearchHit["kind"]; label: string }[] = [
   { kind: "ward", label: "Wards" },
   { kind: "constituency", label: "Constituencies" },
+  { kind: "centre", label: "Polling centres" },
   { kind: "person", label: "People" },
   { kind: "place", label: "Places" },
 ];
@@ -20,13 +22,16 @@ export function MapSearch({
   mapArea,
   maptilerKey,
   wards,
+  centres,
   people,
   onPick,
 }: {
   mapArea: MapArea;
   /** Places and streets come from MapTiler's search with the map's key; none without it. */
   maptilerKey: string | null;
-  wards: { slug: string; name: string; constituency: string }[];
+  wards: { id: string; slug: string; name: string; constituency: string }[];
+  /** The campaign's polling centres, placed or not; none while they are read. */
+  centres: Centre[];
   /** People on file; none for agents, who don't search the records. */
   people: { id: string; name: string; phone: string; ward: string | null; house: string | null }[];
   onPick: (hit: SearchHit) => void;
@@ -55,9 +60,9 @@ export function MapSearch({
   const hits = useMemo(
     () =>
       q.trim()
-        ? [...searchHits(q, wards, people, mapArea.top), ...(settled === q ? places : [])]
+        ? [...searchHits(q, wards, people, mapArea.top, centres), ...(settled === q ? places : [])]
         : [],
-    [q, settled, wards, people, mapArea.top, places],
+    [q, settled, wards, people, centres, mapArea.top, places],
   );
   const shown = open && hits.length > 0;
   const nothing = open && q.trim().length >= 2 && !hits.length && settled === q && !isFetching;
@@ -92,12 +97,14 @@ export function MapSearch({
         ref={input}
         type="search"
         role="combobox"
-        aria-label="Search wards, people and places"
+        aria-label="Search wards, polling centres, people and places"
         aria-autocomplete="list"
         aria-expanded={shown}
         aria-controls={`${id}-list`}
         {...(shown && hits[active] ? { "aria-activedescendant": `${id}-${active}` } : {})}
-        placeholder={maptilerKey ? "Search wards, people, places" : "Search wards and people"}
+        placeholder={
+          maptilerKey ? "Search wards, centres, people, places" : "Search wards, centres, people"
+        }
         value={q}
         onChange={(e) => {
           setQ(e.target.value);

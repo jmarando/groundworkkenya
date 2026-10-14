@@ -4,17 +4,25 @@
 // time, through the "houses" protocol) and coloured by its latest visit. The
 // level follows the zoom. When the person moves the map, the area on show
 // follows its centre; when the app moves it (a link, a search, the fit
-// button), it flies there and says nothing back. Draws only: the rules are in
-// src/lib/voters-map.ts.
+// button), it flies there and says nothing back. From zoom 13 the polling centres
+// with a position are drawn as dots sized by their register, with the part of the
+// ward on show nearest each shaded. Draws only: the rules are in src/lib/voters-map.ts.
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { GeoJSONSource, LngLatBoundsLike, Map as MlMap, MapGeoJSONFeature } from "maplibre-gl";
+import type {
+  ExpressionSpecification,
+  GeoJSONSource,
+  LngLatBoundsLike,
+  Map as MlMap,
+  MapGeoJSONFeature,
+} from "maplibre-gl";
 // MapLibre looks for its worker next to its own file, which a bundle doesn't
 // keep. Vite builds the worker as its own asset and this is its URL.
 import maplibreWorker from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
+import { CENTRE_TINT, type CentreAreaShapes, type CentreDots } from "@/lib/centres";
 import { ringAreaM2, type Ring, type WardShape } from "@/lib/geo";
 import { houseArchive } from "@/lib/house-source";
 import { LAYER } from "@/lib/house-tiles";
@@ -28,6 +36,7 @@ import {
   MAX_ZOOM,
   MIN_ZOOM,
   STREET_ZOOM,
+  WARD_ZOOM,
   type Basemap,
   type CameraTarget,
   type LabelPoints,
@@ -59,6 +68,12 @@ type Props = {
   houseColours: Map<string, string>;
   /** The house whose card is open. */
   house: string | null;
+  /** A dot for each polling centre with a position, from zoom 13. */
+  centres: CentreDots;
+  /** The part of the ward on show nearest each of its centres, from zoom 13. */
+  centreAreas: CentreAreaShapes;
+  /** The centre whose card is open, by its code. */
+  centre: string | null;
   /** Where the app sends the camera; a new seq sends it again. */
   camera: { seq: number; target: CameraTarget } | null;
   /** Room the panel takes at the bottom (the sheet on phones), kept out of the map's centre. */
@@ -69,6 +84,8 @@ type Props = {
   onPick: (area: Area) => void;
   /** A click at street level: a house and its footprint in m², or null for none. */
   onHouse: (pc: string | null, footprintM2: number | null) => void;
+  /** A click on a polling centre's dot, by its code. */
+  onCentre: (code: string) => void;
   onLevel: (level: Level) => void;
   /** The basemap provider refused us (a bad or restricted key). */
   onTilesRefused: () => void;
@@ -79,6 +96,9 @@ type Props = {
 const EMPTY = { type: "FeatureCollection" as const, features: [] };
 const OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
 const NO_WARD = "__none__";
+const NO_CENTRE = "__none__";
+/** A dot's touch target reaches this far past its edge: a finger is wider than a 10 px dot. */
+const DOT_REACH = 8;
 
 function styleUrl(basemap: Basemap, key: string | null): string {
   if (!key) return OPENFREEMAP;
@@ -225,6 +245,108 @@ function addOverlays(map: MlMap, basemap: Basemap, mapArea: MapArea): void {
       },
       paint: { "text-color": text, "text-halo-color": halo, "text-halo-width": 1.6 },
     });
+
+  // The polling centres. The area nearest each sits under the houses, which stay readable at
+  // street level; its dot, the ring round the open centre and its name go on top.
+  map.addSource("gw-centre-areas", { type: "geojson", data: EMPTY, promoteId: "code" });
+  map.addSource("gw-centres", { type: "geojson", data: EMPTY, promoteId: "code" });
+  const size: ExpressionSpecification = ["get", "size"];
+  const dot = (scale: number, extra = 0): ExpressionSpecification => [
+    "+",
+    ["*", scale, size],
+    extra,
+  ];
+  map.addLayer(
+    {
+      id: "gw-centre-areas-fill",
+      type: "fill",
+      source: "gw-centre-areas",
+      minzoom: WARD_ZOOM,
+      maxzoom: STREET_ZOOM,
+      paint: {
+        "fill-color": CENTRE_TINT,
+        "fill-opacity": ["case", ["boolean", ["feature-state", "sel"], false], 0.4, 0.22],
+      },
+    },
+    "gw-houses-fill",
+  );
+  map.addLayer(
+    {
+      id: "gw-centre-areas-line",
+      type: "line",
+      source: "gw-centre-areas",
+      minzoom: WARD_ZOOM,
+      paint: {
+        "line-color": [
+          "case",
+          ["boolean", ["feature-state", "sel"], false],
+          accent,
+          light ? "hsla(158, 15%, 10%, 0.6)" : "hsla(0, 0%, 100%, 0.8)",
+        ],
+        "line-width": ["case", ["boolean", ["feature-state", "sel"], false], 2.5, 1.2],
+        "line-dasharray": [3, 2],
+      },
+    },
+    "gw-wards-label",
+  );
+  map.addLayer({
+    id: "gw-centres-circle",
+    type: "circle",
+    source: "gw-centres",
+    minzoom: WARD_ZOOM,
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        WARD_ZOOM,
+        dot(0.7),
+        STREET_ZOOM + 1,
+        dot(1.2),
+      ],
+      // A close name nobody has confirmed is drawn hollow.
+      "circle-color": ["case", ["get", "close"], "hsla(0, 0%, 100%, 0.12)", "hsl(0, 0%, 100%)"],
+      "circle-stroke-color": ink,
+      "circle-stroke-width": 2,
+    },
+  });
+  map.addLayer({
+    id: "gw-centres-sel",
+    type: "circle",
+    source: "gw-centres",
+    minzoom: WARD_ZOOM,
+    filter: ["==", ["get", "code"], NO_CENTRE],
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        WARD_ZOOM,
+        dot(0.7, 6),
+        STREET_ZOOM + 1,
+        dot(1.2, 6),
+      ],
+      "circle-color": "hsla(0, 0%, 0%, 0)",
+      "circle-stroke-color": accent,
+      "circle-stroke-width": 3,
+    },
+  });
+  map.addLayer({
+    id: "gw-centres-label",
+    type: "symbol",
+    source: "gw-centres",
+    minzoom: WARD_ZOOM + 1.5,
+    layout: {
+      "text-field": ["get", "name"],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": 11,
+      "text-max-width": 9,
+      // Just under the dot, whatever its size.
+      "text-variable-anchor": ["top"],
+      "text-radial-offset": ["+", 0.4, ["/", ["*", 0.9, size], 11]],
+    },
+    paint: { "text-color": text, "text-halo-color": halo, "text-halo-width": 1.4 },
+  });
 }
 
 function hasLayer(map: MlMap, id: string): boolean {
@@ -385,6 +507,24 @@ export function VotersCanvas(props: Props) {
         if (!map) return;
         const q = latest.current;
         const at = levelFor(map.getZoom(), q.mapArea.top);
+        if (at === "ward" || at === "street") {
+          // A centre's dot, with room for a finger, comes before the houses and the ground.
+          const { x, y } = e.point;
+          const dot = hasLayer(map, "gw-centres-circle")
+            ? map.queryRenderedFeatures(
+                [
+                  [x - DOT_REACH, y - DOT_REACH],
+                  [x + DOT_REACH, y + DOT_REACH],
+                ],
+                { layers: ["gw-centres-circle"] },
+              )[0]
+            : undefined;
+          const code = dot ? String(dot.properties?.["code"] ?? "") : "";
+          if (code) {
+            q.onCentre(code);
+            return;
+          }
+        }
         if (at === "street") {
           const hit = hasLayer(map, "gw-houses-fill")
             ? map.queryRenderedFeatures(e.point, { layers: ["gw-houses-fill"] })[0]
@@ -413,7 +553,12 @@ export function VotersCanvas(props: Props) {
         const slug = w ? String(w.properties?.["slug"] ?? "") : "";
         if (slug) q.onPick({ level: "ward", slug });
       });
-      for (const layer of ["gw-houses-fill", "gw-wards-fill", "gw-constituency-label"]) {
+      for (const layer of [
+        "gw-houses-fill",
+        "gw-wards-fill",
+        "gw-constituency-label",
+        "gw-centres-circle",
+      ]) {
         map.on("mouseenter", layer, () => {
           if (map) map.getCanvas().style.cursor = "pointer";
         });
@@ -472,6 +617,29 @@ export function VotersCanvas(props: Props) {
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !styleRev) return;
+    (map.getSource("gw-centres") as GeoJSONSource | undefined)?.setData(props.centres as never);
+    (map.getSource("gw-centre-areas") as GeoJSONSource | undefined)?.setData(
+      props.centreAreas as never,
+    );
+  }, [styleRev, props.centres, props.centreAreas]);
+
+  // The open centre: a ring round its dot, and its area drawn stronger.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleRev) return;
+    if (hasLayer(map, "gw-centres-sel"))
+      map.setFilter("gw-centres-sel", ["==", ["get", "code"], props.centre ?? NO_CENTRE]);
+    if (map.getSource("gw-centre-areas"))
+      for (const f of props.centreAreas.features)
+        map.setFeatureState(
+          { source: "gw-centre-areas", id: f.properties.code },
+          { sel: f.properties.code === props.centre },
+        );
+  }, [styleRev, props.centreAreas, props.centre]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !loaded || !props.camera) return;
     fly(map, props.camera.target, props.padding.bottom);
     // Only a new seq sends the camera again.
@@ -505,7 +673,7 @@ export function VotersCanvas(props: Props) {
       <div
         ref={host}
         className="vmap-canvas"
-        aria-label={`Map of ${props.mapArea.name}: its wards, and every house from zoom 16`}
+        aria-label={`Map of ${props.mapArea.name}: its wards, its polling centres from zoom 13, and every house from zoom 16`}
       />
       {!loaded && <div className="vmap-loading meta">Loading the map…</div>}
       {props.children}

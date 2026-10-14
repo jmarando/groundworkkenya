@@ -106,6 +106,10 @@ export function toCentres(rows: unknown, names: Map<string, string>): Centre[] {
   return out;
 }
 
+/** The tint of the area nearest each centre, and the legend's swatch for it at its drawn strength. */
+export const CENTRE_TINT = "hsl(200, 80%, 55%)";
+export const CENTRE_SWATCH = "hsla(200, 80%, 55%, 0.35)";
+
 const MIN_DOT = 4;
 const MAX_DOT = 24;
 

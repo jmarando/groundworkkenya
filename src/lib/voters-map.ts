@@ -116,6 +116,23 @@ export function cameraFor(
 }
 
 /**
+ * Whether the open polling centre stays open when the person moves the map: only while centres
+ * are drawn (ward and street level) and the ward under the middle of the map is the centre's,
+ * or none is. `open` is null with no centre open.
+ */
+export function centreStays(
+  open: { wardId: string | null } | null,
+  area: Area | null,
+  level: Level,
+  wards: { id: string; slug: string }[],
+): boolean {
+  if (!open) return true;
+  if (level !== "ward" && level !== "street") return false;
+  if (!open.wardId || area?.level !== "ward") return true;
+  return wards.find((w) => w.slug === area.slug)?.id === open.wardId;
+}
+
+/**
  * What a click does at the level on show, said on the map. `centres` is whether the ward on
  * show has polling centres on the map, which a click opens.
  */

@@ -11,6 +11,7 @@ import { mapAreaFor } from "@/lib/map-areas";
 import {
   areaAt,
   cameraFor,
+  centreStays,
   constituencyLabels,
   geocodeUrl,
   hintFor,
@@ -440,6 +441,38 @@ eq(
     "Click a ward to drop in, or a constituency's name",
   ],
 );
+
+{
+  // Panning the map with a centre's card open.
+  const ids = [
+    { id: "id-kileleshwa", slug: "kileleshwa" },
+    { id: "id-kilimani", slug: "kilimani" },
+  ];
+  const open = { wardId: "id-kileleshwa" };
+  const kileleshwa = { level: "ward" as const, slug: "kileleshwa" };
+  const kilimani = { level: "ward" as const, slug: "kilimani" };
+  eq(
+    "the open centre stays while its ward is under the middle of the map, or none is",
+    [
+      centreStays(open, kileleshwa, "ward", ids),
+      centreStays(open, null, "ward", ids),
+      centreStays(open, kileleshwa, "street", ids),
+    ],
+    [true, true, true],
+  );
+  eq("moving into another ward closes it", centreStays(open, kilimani, "ward", ids), false);
+  eq(
+    "so does zooming out to where centres aren't drawn",
+    [centreStays(open, kileleshwa, "constituency", ids), centreStays(open, null, "area", ids)],
+    [false, false],
+  );
+  eq("with none open there is nothing to close", centreStays(null, kilimani, "area", ids), true);
+  eq(
+    "a centre with no ward isn't closed by moving between wards",
+    centreStays({ wardId: null }, kilimani, "ward", ids),
+    true,
+  );
+}
 
 {
   const WARDS_ID = WARDS.map((w) => ({ ...w, id: `id-${w.slug}` }));
