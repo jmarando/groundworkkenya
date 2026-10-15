@@ -57,6 +57,13 @@
       "when": 1792062571209,
       "tag": "0007_polling_centres",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792063296603,
+      "tag": "0008_polling_centres_version",
+      "breakpoints": true
     }
   ]
 }
