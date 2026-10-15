@@ -2270,12 +2270,24 @@ export type Database = {
           code: string
           created_at: string
           id: string
+          iebc_code: string | null
+          lat: number | null
+          lng: number | null
           name: string
+          placed_accuracy_m: number | null
+          placed_actor: string | null
+          placed_at: string | null
+          placed_by: string | null
           registered_voters: number
           reported_at: string | null
           results: Json | null
           status: string
           streams: number
+          suggested_accuracy_m: number | null
+          suggested_at: string | null
+          suggested_by: string | null
+          suggested_lat: number | null
+          suggested_lng: number | null
           turnout_reported: number | null
           ward_id: string | null
         }
@@ -2286,12 +2298,24 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          iebc_code?: string | null
+          lat?: number | null
+          lng?: number | null
           name: string
+          placed_accuracy_m?: number | null
+          placed_actor?: string | null
+          placed_at?: string | null
+          placed_by?: string | null
           registered_voters?: number
           reported_at?: string | null
           results?: Json | null
           status?: string
           streams?: number
+          suggested_accuracy_m?: number | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          suggested_lat?: number | null
+          suggested_lng?: number | null
           turnout_reported?: number | null
           ward_id?: string | null
         }
@@ -2302,12 +2326,24 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          iebc_code?: string | null
+          lat?: number | null
+          lng?: number | null
           name?: string
+          placed_accuracy_m?: number | null
+          placed_actor?: string | null
+          placed_at?: string | null
+          placed_by?: string | null
           registered_voters?: number
           reported_at?: string | null
           results?: Json | null
           status?: string
           streams?: number
+          suggested_accuracy_m?: number | null
+          suggested_at?: string | null
+          suggested_by?: string | null
+          suggested_lat?: number | null
+          suggested_lng?: number | null
           turnout_reported?: number | null
           ward_id?: string | null
         }
@@ -2851,40 +2887,52 @@ export type Database = {
           campaign_id: string
           constituency: string
           created_at: string
+          east: number | null
           id: string
           map_x: number | null
           map_y: number | null
           name: string
+          north: number | null
           registered_voters: number
           slug: string
+          south: number | null
           supporters: number
           target_votes: number
+          west: number | null
         }
         Insert: {
           campaign_id?: string
           constituency: string
           created_at?: string
+          east?: number | null
           id?: string
           map_x?: number | null
           map_y?: number | null
           name: string
+          north?: number | null
           registered_voters?: number
           slug: string
+          south?: number | null
           supporters?: number
           target_votes?: number
+          west?: number | null
         }
         Update: {
           campaign_id?: string
           constituency?: string
           created_at?: string
+          east?: number | null
           id?: string
           map_x?: number | null
           map_y?: number | null
           name?: string
+          north?: number | null
           registered_voters?: number
           slug?: string
+          south?: number | null
           supporters?: number
           target_votes?: number
+          west?: number | null
         }
         Relationships: [
           {
@@ -3098,6 +3146,10 @@ export type Database = {
           ward_id: string
         }[]
       }
+      place_station: {
+        Args: { _lat: number; _lng: number; _station_id: string }
+        Returns: undefined
+      }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
       process_outbox: {
         Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
@@ -3143,6 +3195,7 @@ export type Database = {
       remove_member: { Args: { _user_id: string }; Returns: undefined }
       request_campaign_access: { Args: { _slug: string }; Returns: string }
       restore_site_version: { Args: { _version: string }; Returns: number }
+      retire_sample_stations: { Args: never; Returns: Json }
       rival_mention_weeks: {
         Args: { _weeks?: number }
         Returns: {
@@ -3161,6 +3214,15 @@ export type Database = {
         Returns: undefined
       }
       site_editor: { Args: never; Returns: string }
+      station_here: {
+        Args: {
+          _accuracy: number
+          _lat: number
+          _lng: number
+          _station_id: string
+        }
+        Returns: Json
+      }
       street_walk: {
         Args: { _street_id: string }
         Returns: {
@@ -3180,6 +3242,10 @@ export type Database = {
         Returns: boolean
       }
       unpublish_site: { Args: never; Returns: undefined }
+      use_station_suggestion: {
+        Args: { _station_id: string }
+        Returns: undefined
+      }
       walk_list: {
         Args: { _limit?: number; _ward_id: string }
         Returns: {
