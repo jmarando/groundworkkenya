@@ -14,11 +14,15 @@ import {
   nextDoor,
   NOT_HOME_DAYS,
   PATCH_SIZE,
+  holderText,
   progressText,
   queuedDoors,
+  recentKind,
   skipReason,
+  skipText,
   SPOKE_REFUSED_DAYS,
   suggestPatch,
+  teamOptionText,
   walkingOrder,
   type HouseHistory,
   type PlanHouse,
@@ -420,6 +424,63 @@ eq(
     canPlanWalkLists,
   ),
   [false, true, true, true, true, false, false],
+);
+
+// Which visit keeps a house waiting, and the sentences the planner and the cards say.
+const seen = (extra: Partial<HouseHistory>): HouseHistory => ({
+  pc: "A",
+  spokeOrRefusedAt: null,
+  notHomeAt: null,
+  onList: null,
+  ...extra,
+});
+eq(
+  "which visit keeps a house waiting",
+  [
+    recentKind(seen({ spokeOrRefusedAt: iso(29) }), NOW),
+    recentKind(seen({ notHomeAt: iso(2) }), NOW),
+    recentKind(seen({ spokeOrRefusedAt: iso(31), notHomeAt: iso(4) }), NOW),
+    recentKind(seen({ spokeOrRefusedAt: iso(1), notHomeAt: iso(1) }), NOW),
+    recentKind(undefined, NOW),
+  ],
+  ["spoke", "not-home", null, "spoke", null],
+);
+eq(
+  "who has a list",
+  [
+    holderText("Njoki Mwangi", "2026-10-20T08:30:00Z"),
+    holderText(null, null),
+    holderText("Njoki Mwangi", null),
+  ],
+  ["With Njoki Mwangi since 20 Oct", "Not given to anyone yet", "With Njoki Mwangi"],
+);
+eq(
+  "a team member in the picker",
+  [
+    teamOptionText({ name: "Njoki Mwangi", role: "agent", doorsOpen: 12 }),
+    teamOptionText({ name: "Wanjiru Kamau", role: "manager", doorsOpen: 1 }),
+    teamOptionText({ name: "Otieno", role: "agent", doorsOpen: 0 }),
+  ],
+  [
+    "Njoki Mwangi · agent · 12 doors open",
+    "Wanjiru Kamau · manager · 1 door open",
+    "Otieno · agent · no doors open",
+  ],
+);
+eq(
+  "what a patch left out, in words",
+  [
+    skipText({ spoke: 4, notHome: 2, otherList: 1 }),
+    skipText({ spoke: 0, notHome: 0, otherList: 3 }),
+    skipText({ spoke: 1, notHome: 0, otherList: 0 }),
+    skipText({ spoke: 0, notHome: 0, otherList: 0 }),
+  ],
+  [
+    "Left out: 4 spoken to or refused in 30 days, 2 not home in the last 3 days and 1 on another list",
+    "Left out: 3 on other lists",
+    "Left out: 1 spoken to or refused in 30 days",
+    "",
+  ],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

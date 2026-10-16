@@ -29,6 +29,14 @@ export type HouseHistory = {
   onList: string | null;
 };
 
+/** Which kind of visit keeps a house waiting: a conversation or a refusal, or nobody home. */
+export function recentKind(h: HouseHistory | undefined, now: number): "spoke" | "not-home" | null {
+  if (!h) return null;
+  if (within(h.spokeOrRefusedAt, SPOKE_REFUSED_DAYS, now)) return "spoke";
+  if (within(h.notHomeAt, NOT_HOME_DAYS, now)) return "not-home";
+  return null;
+}
+
 /** Why a house is not suggested: it is on another open list, or was visited lately. */
 export function skipReason(
   h: HouseHistory | undefined,
@@ -36,9 +44,7 @@ export function skipReason(
 ): "other-list" | "recent" | null {
   if (!h) return null;
   if (h.onList) return "other-list";
-  if (within(h.spokeOrRefusedAt, SPOKE_REFUSED_DAYS, now)) return "recent";
-  if (within(h.notHomeAt, NOT_HOME_DAYS, now)) return "recent";
-  return null;
+  return recentKind(h, now) ? "recent" : null;
 }
 
 /** True when the time is less than this many days before now. */
@@ -191,6 +197,42 @@ export function defaultName(
       : words.join(" ");
   const number = ` ${madeFromCentre + 1}`;
   return `${base.slice(0, NAME_MAX - number.length).trimEnd()}${number}`;
+}
+
+/** Who has a list, and since when ("With Njoki Mwangi since 20 Oct"). */
+export function holderText(name: string | null, since: string | null): string {
+  if (!name) return "Not given to anyone yet";
+  const t = since ? Date.parse(since) : NaN;
+  if (Number.isNaN(t)) return `With ${name}`;
+  const day = new Date(t).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Nairobi",
+  });
+  return `With ${name} since ${day}`;
+}
+
+/** A team member in the picker: who, as what, and the doors still open on their lists. */
+export function teamOptionText(m: { name: string; role: string; doorsOpen: number }): string {
+  const open =
+    m.doorsOpen === 0
+      ? "no doors open"
+      : m.doorsOpen === 1
+        ? "1 door open"
+        : `${m.doorsOpen} doors open`;
+  return `${m.name} · ${m.role} · ${open}`;
+}
+
+/** What a suggested patch left out, and why; nothing when it left nothing out. */
+export function skipText(s: { spoke: number; notHome: number; otherList: number }): string {
+  const parts: string[] = [];
+  if (s.spoke > 0) parts.push(`${s.spoke} spoken to or refused in ${SPOKE_REFUSED_DAYS} days`);
+  if (s.notHome > 0) parts.push(`${s.notHome} not home in the last ${NOT_HOME_DAYS} days`);
+  if (s.otherList > 0)
+    parts.push(`${s.otherList} on ${s.otherList === 1 ? "another list" : "other lists"}`);
+  const last = parts.pop();
+  if (last === undefined) return "";
+  return `Left out: ${parts.length ? `${parts.join(", ")} and ` : ""}${last}`;
 }
 
 /** "15 of 44 done". */

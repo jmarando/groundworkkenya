@@ -22,6 +22,8 @@ export type VotersSearch = {
   house?: string;
   /** The polling centre whose card is open, by its short code (PS-0042). */
   centre?: string;
+  /** The walk list whose card is open, by its id. */
+  list?: string;
   /** What the map is coloured by; doors when not set. */
   colour?: Colour;
   /** The base map; satellite when not set. */
@@ -34,6 +36,8 @@ export type VotersSearch = {
   person?: string;
   manage?: true;
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A polling centre's short code: PS-0042, or SAMPLE-0001 for a sample the team kept. */
 const CENTRE_CODE = /^[A-Z0-9][A-Z0-9-]{1,19}$/;
@@ -58,6 +62,8 @@ export function validateVotersSearch(raw: Record<string, unknown>): VotersSearch
   if (PLUS_CODE.test(house)) out.house = house;
   const centre = typeof raw["centre"] === "string" ? raw["centre"].trim().toUpperCase() : "";
   if (CENTRE_CODE.test(centre)) out.centre = centre;
+  const list = raw["list"];
+  if (typeof list === "string" && UUID.test(list)) out.list = list.toLowerCase();
   const colour = pick(raw["colour"], COLOURS);
   if (colour) out.colour = colour;
   const base = pick(raw["base"], BASES);
@@ -309,12 +315,15 @@ export const share = (x: number): string =>
   x > 0 && x < 0.005 ? "under 1%" : `${Math.round(x * 100)}%`;
 
 /**
- * How a change moves the page: a new area, tab, house or centre is a step Back
+ * How a change moves the page: a new area, tab, house, centre or walk list is a step Back
  * can undo, and a new area or tab goes back to the top, where its title is.
  */
 export function stepFor(changes: SearchChanges): { replace: boolean; resetScroll: boolean } {
   const top = "area" in changes || "tab" in changes;
-  return { replace: !(top || "house" in changes || "centre" in changes), resetScroll: top };
+  return {
+    replace: !(top || "house" in changes || "centre" in changes || "list" in changes),
+    resetScroll: top,
+  };
 }
 
 /** The page to show: a list that got shorter brings a page past its end back to its last page. */

@@ -385,5 +385,34 @@ eq(
   { replace: false, resetScroll: false },
 );
 
+// A walk list open on the map: by its id, so a link or a reload opens it.
+const LIST = "0b9a3f56-4a53-4f86-bb64-1f0a6a7d2a11";
+eq("a list in the address", validateVotersSearch({ list: LIST }).list, LIST);
+eq(
+  "an id in capitals is kept as small letters",
+  validateVotersSearch({ list: LIST.toUpperCase() }).list,
+  LIST,
+);
+eq(
+  "a list that isn't an id is dropped",
+  [validateVotersSearch({ list: "../etc" }).list, validateVotersSearch({ list: 42 }).list],
+  [undefined, undefined],
+);
+eq(
+  "a link opens a list in the area it names",
+  nextSearch({ area: "w:kileleshwa" }, { list: LIST }),
+  { area: "w:kileleshwa", list: LIST },
+);
+eq(
+  "closing it takes it out of the address",
+  nextSearch({ area: "w:kileleshwa", list: LIST }, { list: undefined }),
+  { area: "w:kileleshwa" },
+);
+eq(
+  "opening a list is a step Back undoes, and doesn't go back to the top",
+  stepFor({ list: LIST }),
+  { replace: false, resetScroll: false },
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

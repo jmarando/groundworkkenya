@@ -16,6 +16,7 @@ import {
   geocodeUrl,
   hintFor,
   levelFor,
+  listStays,
   placeHits,
   searchGo,
   searchHits,
@@ -472,6 +473,38 @@ eq(
     centreStays({ wardId: null }, kilimani, "ward", ids),
     true,
   );
+}
+
+{
+  // Panning the map with a walk list open: the same rule as a centre's, by the list's ward.
+  const ids = [
+    { id: "id-kileleshwa", slug: "kileleshwa" },
+    { id: "id-kilimani", slug: "kilimani" },
+  ];
+  const open = { wardId: "id-kileleshwa" };
+  const kileleshwa = { level: "ward" as const, slug: "kileleshwa" };
+  const kilimani = { level: "ward" as const, slug: "kilimani" };
+  eq(
+    "an open list stays while the map is in its ward, at ward and street level",
+    [listStays(open, kileleshwa, "ward", ids), listStays(open, kileleshwa, "street", ids)],
+    [true, true],
+  );
+  eq(
+    "moving into another ward, or out to the county, closes it",
+    [listStays(open, kilimani, "ward", ids), listStays(open, kileleshwa, "area", ids)],
+    [false, false],
+  );
+  eq(
+    "or out to the constituency, where no list is drawn",
+    listStays(open, kileleshwa, "constituency", ids),
+    false,
+  );
+  eq(
+    "between wards the map hasn't a ward under it: it stays",
+    listStays(open, null, "ward", ids),
+    true,
+  );
+  eq("with none open there is nothing to close", listStays(null, kilimani, "area", ids), true);
 }
 
 {
