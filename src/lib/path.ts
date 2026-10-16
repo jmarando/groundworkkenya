@@ -90,6 +90,10 @@ const NONE: Move = { share: 0, turnout: 0 };
 const sum = <T>(xs: T[], f: (x: T) => number) => xs.reduce((t, x) => t + f(x), 0);
 const ratio = (a: number, b: number) => (b > 0 ? a / b : 0);
 
+/** Whether a county is at the line: 25% or more of its valid votes (and somebody voted). */
+export const atLine = (c: Pick<CountyNow, "valid" | "yours">): boolean =>
+  c.valid > 0 && c.yours * 4 >= c.valid;
+
 type Worked = CountyNow & { cast: number; registered: number; county: County };
 
 /** One county with a region's move applied. A move of zero returns the declared numbers exactly. */
@@ -133,7 +137,7 @@ export function runPath(k: Kenya, side: Side, sc: Scenario = {}): Path {
   const valid = sum(w, (c) => c.valid) + k.outside.valid;
   const cast = sum(w, (c) => c.cast) + k.outside.valid + k.outside.rejected;
   const registered = sum(w, (c) => c.registered) + k.outside.registered;
-  const atQuarter = w.filter((c) => c.valid > 0 && c.yours * 4 >= c.valid).length;
+  const atQuarter = w.filter(atLine).length;
   const toHalf = Math.max(0, Math.floor(valid / 2 - yours) + 1);
   const clearsCounties = atQuarter >= RULE.countiesNeeded;
   const base = k.counties;

@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 
 import { parseKenya, type County, type Kenya, type Outside } from "@/lib/kenya";
 import {
+  atLine,
   isBaseline,
   nearLine,
   RULE,
@@ -397,6 +398,17 @@ for (const side of SIDE_LIST) {
 }
 
 // ------------------------------------------------------------- the bars are exact
+
+eq(
+  "atLine: 25.0% is at the line, 24.9% is not, and a county nobody voted in is not",
+  [
+    atLine({ valid: 1000, yours: 250 }),
+    atLine({ valid: 1000, yours: 249.9 }),
+    atLine({ valid: 1000, yours: 600 }),
+    atLine({ valid: 0, yours: 0 }),
+  ],
+  [true, false, true, false],
+);
 
 {
   // Exactly 25% counts; 249 of 1,000 does not.

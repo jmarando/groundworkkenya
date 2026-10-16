@@ -2306,3 +2306,55 @@ figure { margin: 0; }
 .fd-waiting { margin:0 0 12px; }
 .diary-find { margin:2px 0 0; font-size:12px; color:var(--muted-foreground); }
 @media (max-width:600px) { .fd-figs { grid-template-columns:1fr; } }
+
+/* Path to State House: the Strategy page's national arithmetic */
+.pth { margin-top:16px; }
+.pth > summary { display:flex; align-items:baseline; justify-content:space-between; gap:6px 12px; flex-wrap:wrap; cursor:pointer; list-style:none; }
+.pth > summary::-webkit-details-marker { display:none; }
+.pth > summary h2 { margin:0; }
+.pth > summary::after { content:"Open"; font-size:12px; color:var(--muted-foreground); margin-left:auto; }
+.pth[open] > summary::after { content:"Close"; }
+.pth > summary:focus-visible, .pth-fine summary:focus-visible, .pth-counties summary:focus-visible { outline:2px solid var(--ring); outline-offset:2px; border-radius:6px; }
+.pth-body { margin-top:14px; display:flex; flex-direction:column; gap:16px; }
+.pth-intro { margin:0; max-width:62ch; }
+.pth-side { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.pth-side .seg { flex-wrap:wrap; }
+.pth-score { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
+.pth-tile { display:flex; flex-direction:column; gap:6px; padding:14px 16px; border-left:3px solid var(--border); }
+.pth-tile[data-ok="true"] { border-left-color:var(--gw-success); }
+.pth-tile[data-ok="false"] { border-left-color:var(--gw-destructive); }
+.pth-lbl { font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted-foreground); font-weight:500; }
+.pth-val { font-size:28px; line-height:1.1; }
+.pth-sub { font-size:12px; color:var(--muted-foreground); }
+.pth-lines { margin:0; }
+.pth-rows { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.pth-row { display:grid; grid-template-columns:minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1.7fr) minmax(0, .8fr); gap:6px 18px; align-items:start; padding:14px 0 14px 10px; border-top:1px solid var(--border); }
+.pth-row[data-moved="true"] { box-shadow:inset 3px 0 0 var(--gw-accent); }
+.pth-head h3 { font-size:14px; margin:0 0 2px; }
+.pth-head p, .pth-shares, .pth-votes { margin:0; }
+.pth-shares { display:flex; flex-direction:column; gap:2px; font-size:13px; }
+.pth-sliders { display:flex; flex-direction:column; gap:4px; }
+.pth-slider { display:grid; grid-template-columns:4.2rem minmax(0, 1fr) 4.4rem; align-items:center; gap:8px; font-size:12.5px; }
+.pth-slider input[type="range"] { width:100%; min-height:28px; accent-color:var(--gw-accent); }
+.pth-slider output { text-align:right; font-family:var(--font-mono); font-size:12px; font-variant-numeric:tabular-nums; }
+.pth-votes { display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:13px; overflow-wrap:anywhere; }
+.pth-counties { grid-column:1 / -1; }
+.pth-counties summary { cursor:pointer; font-size:12.5px; color:var(--muted-foreground); }
+.pth-counties ul { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(16rem, 1fr)); gap:6px 18px; }
+.pth-counties li { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; gap:8px; align-items:center; font-size:12.5px; }
+.pth-foot { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.pth-fine { font-size:12.5px; color:var(--muted-foreground); }
+.pth-fine summary { cursor:pointer; }
+.pth-fine ul { margin:8px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:6px; max-width:70ch; }
+@media (max-width:900px) {
+  .pth-row { grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); }
+  .pth-sliders { grid-column:1 / -1; }
+  .pth-votes { align-items:flex-start; }
+}
+@media (max-width:600px) {
+  .pth-side .seg { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); width:100%; }
+  .pth-side .seg button { white-space:normal; line-height:1.25; padding:6px 8px; }
+  .pth-score { grid-template-columns:1fr; }
+  .pth-row { grid-template-columns:minmax(0, 1fr); }
+  .pth-slider { grid-template-columns:3.6rem minmax(0, 1fr) 3.9rem; }
+}

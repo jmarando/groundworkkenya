@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 
 import { FindingItem } from "@/components/gw/findings/FindingItem";
+import { PathToStateHouse } from "@/components/gw/strategy/PathToStateHouse";
 import { useAccess } from "@/hooks/useAccess";
 import { useFindings } from "@/hooks/useFindings";
 import { getAtlas } from "@/lib/atlas.functions";
@@ -18,6 +19,7 @@ import {
   RULES,
   within,
 } from "@/lib/findings/core";
+import { sideFromBloc } from "@/lib/path-view";
 
 const ABOUT =
   "What the figures say about where to spend time, what to say where, where to put field work and money, and how to answer rivals and polls.";
@@ -152,6 +154,10 @@ function Strategy() {
             );
           })
         : null}
+      <PathToStateHouse
+        president={campaign?.level === "president"}
+        startSide={sideFromBloc(atlas?.sides["2022-president"])}
+      />
     </section>
   );
 }
