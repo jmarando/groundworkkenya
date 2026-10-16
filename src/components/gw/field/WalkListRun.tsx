@@ -79,6 +79,11 @@ export function WalkListRun({
   );
   const visited = useMemo(() => new Set(outcomes.keys()), [outcomes]);
   const shapes = useMemo(() => outcomeShapes(doors, outcomes), [doors, outcomes]);
+  // Not rebuilt when only the phone's position moves, which is every few seconds.
+  const mapDoors = useMemo(
+    () => doors.map((d) => ({ pc: d.pc, n: d.n, at: d.at, done: visited.has(d.pc) })),
+    [doors, visited],
+  );
 
   const back = (
     <button type="button" className="btn btn--ghost btn--sm" onClick={onBack}>
@@ -100,7 +105,7 @@ export function WalkListRun({
       <div className="wl-run">
         {back}
         <p className="f-note">
-          This list isn't with you any more: it may be done, or have been given to someone else.
+          This list isn't with you any more: it is done, or it was given to someone else.
         </p>
       </div>
     );
@@ -178,7 +183,7 @@ export function WalkListRun({
         <Suspense fallback={<div className="wl-map wl-map--loading">Loading the map…</div>}>
           <WalkListMap
             shapes={shapes}
-            doors={doors.map((d) => ({ pc: d.pc, n: d.n, at: d.at, done: visited.has(d.pc) }))}
+            doors={mapDoors}
             current={door?.pc ?? null}
             fix={geo.fix}
             online={online}

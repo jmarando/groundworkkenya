@@ -72,7 +72,11 @@ export function cleanVisit(input: Visit) {
   return base;
 }
 
-/** record_door's arguments for a clean visit: their names are the contract with the database. */
+/**
+ * record_door's arguments for a clean visit: their names are the contract with the database. The
+ * list and door are sent only for a visit at a list's door, so an app that is published before
+ * its database is updated still records every other visit.
+ */
 export function visitArgs(data: ReturnType<typeof cleanVisit>) {
   return {
     _client_id: data.clientId,
@@ -85,8 +89,9 @@ export function visitArgs(data: ReturnType<typeof cleanVisit>) {
     _consent_source: data.consentSource,
     _visited_at: data.visitedAt,
     _place: data.place,
-    _walk_list_id: data.walkListId,
-    _door_pc: data.doorPc,
+    ...(data.walkListId && data.doorPc
+      ? { _walk_list_id: data.walkListId, _door_pc: data.doorPc }
+      : {}),
   };
 }
 

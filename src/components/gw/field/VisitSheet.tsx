@@ -160,9 +160,12 @@ function SpokeFields({ s, consent }: { s: Spoke; consent: boolean }) {
 function Outcomes({
   outcome,
   onChange,
+  spoke = "Spoke to them",
 }: {
   outcome: Outcome | null;
   onChange: (o: Outcome) => void;
+  /** What the first button says: at a walk list's door it is just "Spoke". */
+  spoke?: string;
 }) {
   return (
     <div className="fa-outcomes" role="group" aria-label="What happened">
@@ -174,7 +177,7 @@ function Outcomes({
           aria-pressed={outcome === o}
           onClick={() => onChange(o)}
         >
-          {o === "spoke" ? "Spoke to them" : OUTCOME_LABEL[o]}
+          {o === "spoke" ? spoke : OUTCOME_LABEL[o]}
         </button>
       ))}
     </div>
@@ -441,7 +444,7 @@ export function DoorVisit({
         <p className="meta">No one is on file at this house yet.</p>
       )}
 
-      <Outcomes outcome={outcome} onChange={setOutcome} />
+      <Outcomes outcome={outcome} onChange={setOutcome} spoke="Spoke" />
 
       {spoke && (
         <>

@@ -9,7 +9,7 @@ import { useAccess } from "@/hooks/useAccess";
 import { useOfflineData } from "@/hooks/useOfflineData";
 import { useOnline } from "@/hooks/useOnline";
 import { useSignOut } from "@/hooks/useSignOut";
-import { canOpen, homeFor } from "@/lib/access";
+import { homeFor, pageVerdict } from "@/lib/access";
 import { gateState, needsSignal } from "@/lib/offline/screens";
 import { entryUser, phoneUser } from "@/lib/offline/session";
 import { Link, Navigate, useRouterState } from "@tanstack/react-router";
@@ -136,11 +136,12 @@ function Authenticated() {
       .getQueryCache()
       .findAll({ queryKey: [key] })
       .some((q) => q.state.data !== undefined);
+  const verdict = pageVerdict(role, pathname);
   return (
     <ConsoleShell>
-      {pathname === "/home" && homeFor(role) !== "/home" ? (
+      {verdict === "send-home" ? (
         <Navigate to={homeFor(role)} replace />
-      ) : canOpen(role, pathname) ? (
+      ) : verdict === "open" ? (
         !online && needsSignal(pathname, hasData) ? (
           <NeedsSignal />
         ) : (

@@ -190,12 +190,17 @@ eq(
   },
 );
 eq(
-  "and with none: the list and door are null, an issue left out is empty text",
+  "and with none the two aren't sent at all, so an app ahead of its database still records plain visits",
   (() => {
     const a = visitArgs(cleanVisit(visit({ personId: "p1" }))) as Record<string, unknown>;
-    return [a["_walk_list_id"], a["_door_pc"], a["_issue"], a["_person_id"]];
+    return [
+      Object.keys(a).includes("_walk_list_id"),
+      Object.keys(a).includes("_door_pc"),
+      a["_issue"],
+      a["_person_id"],
+    ];
   })(),
-  [null, null, "", "p1"],
+  [false, false, "", "p1"],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

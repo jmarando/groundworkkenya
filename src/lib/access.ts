@@ -54,6 +54,18 @@ export function canOpen(role: MyRole, path: string): boolean {
   return TEAM_ROLES.includes(role);
 }
 
+/**
+ * What the signed-in area does with a page: open it, send the person to their start page, or say
+ * the page isn't theirs. An agent who lands on a page that isn't theirs (an old link or bookmark,
+ * Voters before walk lists moved to the field app) is sent to the field app; anyone else is told.
+ */
+export function pageVerdict(role: MyRole, path: string): "open" | "send-home" | "denied" {
+  const page = "/" + (path.split("/")[1] ?? "");
+  if (page === "/home" && homeFor(role) !== "/home") return "send-home";
+  if (canOpen(role, path)) return "open";
+  return role === "agent" ? "send-home" : "denied";
+}
+
 /** The first page a role lands on after signing in. */
 export function homeFor(role: MyRole): string {
   return role === "agent" ? "/field" : "/home";

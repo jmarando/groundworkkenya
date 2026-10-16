@@ -2,7 +2,7 @@
 // works from the Field app (their walk lists are there). Pure. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/access.test.ts
 
-import { canOpen, homeFor } from "@/lib/access";
+import { canOpen, homeFor, pageVerdict } from "@/lib/access";
 
 let pass = 0;
 let fail = 0;
@@ -54,6 +54,42 @@ eq(
     canOpen("pending", "/strategy"),
   ],
   [true, true, false, false],
+);
+
+// What the signed-in area does with a page: open it, send the person to their own start page, or say it isn't theirs.
+eq(
+  "an agent who follows an old link to Voters, Home or any page that isn't theirs is sent to the field app",
+  [
+    pageVerdict("agent", "/voters"),
+    pageVerdict("agent", "/voters/anything"),
+    pageVerdict("agent", "/home"),
+    pageVerdict("agent", "/elections"),
+  ],
+  ["send-home", "send-home", "send-home", "send-home"],
+);
+eq(
+  "an agent's own pages open",
+  [pageVerdict("agent", "/field"), pageVerdict("agent", "/foundations")],
+  ["open", "open"],
+);
+eq(
+  "the team's pages open for the team",
+  [
+    pageVerdict("manager", "/home"),
+    pageVerdict("organiser", "/voters"),
+    pageVerdict("super", "/campaigns"),
+  ],
+  ["open", "open", "open"],
+);
+eq(
+  "a page that isn't theirs is said so, not hidden by a redirect, for everyone but agents",
+  [
+    pageVerdict("organiser", "/finance"),
+    pageVerdict("manager", "/campaigns"),
+    pageVerdict("pending", "/voters"),
+    pageVerdict(null, "/home"),
+  ],
+  ["denied", "denied", "denied", "denied"],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

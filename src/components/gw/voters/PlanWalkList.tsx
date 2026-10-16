@@ -117,7 +117,7 @@ export function PlanWalkList({
           aria-pressed={patch}
           onClick={() => dispatch({ type: "mode", mode: "patch" })}
         >
-          Suggested patch
+          Use the suggested patch
         </button>
         <button
           type="button"
