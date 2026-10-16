@@ -443,6 +443,8 @@ begin
   assert (select count(*) from public.walk_list_planning(kile) where pc = 'TEST0000+12') = 0, 'only a visit 40 days ago';
   assert (select count(*) from public.walk_list_planning(kile) where pc = 'TEST0000+13' and spoke_or_refused_at is not null) = 1, 'refused counts with spoke';
   assert (select on_list from public.walk_list_planning(kile) where pc = 'TEST0000+01') = (select id from public.walk_lists where name = 'A');
+  assert (select array_agg(pc) from public.walk_list_planning(kile)) = (select array_agg(pc order by pc) from public.walk_list_planning(kile)),
+    'in plus code order, so a long history pages without gaps';
   assert (select count(*) from public.walk_list_planning(kile) where pc in ('TEST0000+20', 'TEST0000+21')) = 0, 'a done list holds nothing';
   assert (select count(*) from public.walk_list_planning(kile) where pc like 'TEST0000+%') = 7,
     'four doors on the open list and three recent visits';

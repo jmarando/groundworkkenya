@@ -261,7 +261,8 @@ $$;
 
 -- What planning in a ward needs to know of its houses: the latest spoke or refused and the
 -- latest not home in the last 30 days, and the open list a house is on. The screen applies
--- the 30 and 3 day rules.
+-- the 30 and 3 day rules. In plus code order, because a busy ward's history is more than
+-- the thousand rows a response may hold and is read a page at a time.
 create or replace function public.walk_list_planning(_ward_id uuid)
 returns table (pc text, spoke_or_refused_at timestamptz, not_home_at timestamptz, on_list uuid)
 language plpgsql
@@ -292,7 +293,8 @@ begin
   )
   select coalesce(s.pc, h.pc), s.spoke_or_refused_at, s.not_home_at, h.on_list
     from seen s
-    full join held h on h.pc = s.pc;
+    full join held h on h.pc = s.pc
+   order by 1;
 end;
 $$;
 
