@@ -11,6 +11,7 @@ import {
   idOf,
   isSaved,
   keptForm,
+  listsToForget,
   restorable,
   SAVED_VERSION,
   type SavedEntry,
@@ -60,10 +61,30 @@ export async function startSaving(
   };
   const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
+  // The lists out with this person loaded: the copy of a list that has ended, or was given to
+  // someone else, goes from the phone's storage and the cache, and any save of it still waiting.
+  const forgetEnded = (lists: unknown) => {
+    const active = (Array.isArray(lists) ? lists : []).flatMap((l: { id?: unknown }) =>
+      typeof l?.id === "string" ? [l.id] : [],
+    );
+    for (const q of queryClient.getQueryCache().findAll({ queryKey: ["walk-list-doors"] })) {
+      if (active.includes(String(q.queryKey[1]))) continue;
+      const doorsId = idOf(q.queryKey);
+      clearTimeout(timers.get(doorsId));
+      timers.delete(doorsId);
+      queryClient.removeQueries({ queryKey: q.queryKey, exact: true });
+    }
+    run(async () => {
+      const gone = listsToForget(await store.all(), active);
+      if (gone.length) await store.remove(gone);
+    });
+  };
+
   const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
     if (event.type !== "updated" || event.action.type !== "success") return;
     const { queryKey, state } = event.query;
     if (!isSaved(queryKey)) return;
+    if (queryKey[0] === "my-walk-lists") forgetEnded(state.data);
     const id = idOf(queryKey);
     clearTimeout(timers.get(id));
     timers.set(

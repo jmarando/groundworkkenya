@@ -286,11 +286,12 @@ function Voters() {
       ? undefined
       : (wardLists?.find((l) => l.id === search.list) ?? null)
     : null;
-  // The doors of the open lists, only for their outlines and the open list's colours: no people.
+  // The doors of the open lists, only for their outlines and the open list's colours: no people,
+  // and not the phone's saved copy of a list (its key is walk-list-doors).
   const outlineLists = useMemo(() => (wardLists ?? []).slice(0, MAX_OUTLINES), [wardLists]);
   const outlineDoors = useQueries({
     queries: outlineLists.map((l) => ({
-      queryKey: ["walk-list-doors", l.id],
+      queryKey: ["walk-list-map-doors", l.id],
       queryFn: () => fetchListDoors({ data: { id: l.id, people: false } }),
       enabled: tab === "map" && level === "street",
       staleTime: 60_000,
@@ -299,7 +300,7 @@ function Voters() {
   });
   // The open list's doors are read again every 30 seconds, for the colours as visits come in.
   const { data: openDoors } = useQuery({
-    queryKey: ["walk-list-doors", search.list],
+    queryKey: ["walk-list-map-doors", search.list],
     queryFn: () => fetchListDoors({ data: { id: search.list!, people: false } }),
     enabled: tab === "map" && Boolean(search.list) && canPlan,
     refetchInterval: 30_000,

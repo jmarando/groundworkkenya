@@ -1,6 +1,6 @@
 // Checks for the page data kept for no signal: what each saved query keeps
-// (never the voter file, the contacts feed, walk lists or recent visits), the
-// 14-day limit, putting data back as old, saving as queries load, and clearing
+// (never the voter file, the contacts feed, today's ward list or recent visits; the walk lists
+// out with the person, with the names and numbers at their doors), the 14-day limit, putting data back as old, saving as queries load, and clearing
 // for another person, campaign or format. Runs against a real query cache and a
 // stand-in for the phone's storage. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/offline-saved.test.ts
@@ -12,6 +12,7 @@ import {
   idOf,
   isSaved,
   keptForm,
+  listsToForget,
   MAX_AGE_MS,
   restorable,
   SAVED_VERSION,
@@ -136,6 +137,77 @@ eq(
   );
 }
 
+// ---------------------------------------------------------------- walk lists
+
+const withPeople = {
+  doors: [
+    {
+      n: 1,
+      pc: "6GCRQ2XQ+22",
+      at: [36.78, -1.28],
+      rings: [[[36.78, -1.28]]],
+      wardId: "w1",
+      outcome: null,
+      visitedAt: null,
+    },
+  ],
+  people: [{ pc: "6GCRQ2XQ+22", id: "p1", name: "Mercy", phone: "+254712345678", support: 4 }],
+};
+const doorsEntry = (list: string, age = DAY) => entry(["walk-list-doors", list], withPeople, age);
+
+eq(
+  "walk lists are saved",
+  [isSaved(["my-walk-lists"]), isSaved(["walk-list-doors", "L1"])],
+  [true, true],
+);
+eq(
+  "a list's doors are kept whole, names and numbers included",
+  keptForm(["walk-list-doors", "L1"], withPeople),
+  withPeople,
+);
+eq(
+  "the lists out are kept as loaded",
+  keptForm(["my-walk-lists"], [{ id: "L1", name: "Kileleshwa Primary 1" }]),
+  [{ id: "L1", name: "Kileleshwa Primary 1" }],
+);
+eq(
+  "a finished list's copy is forgotten, a live one's kept",
+  listsToForget([doorsEntry("L1"), doorsEntry("L2")], ["L2"]),
+  [idOf(["walk-list-doors", "L1"])],
+);
+eq("no list out forgets every copy", listsToForget([doorsEntry("L1"), doorsEntry("L2")], []), [
+  idOf(["walk-list-doors", "L1"]),
+  idOf(["walk-list-doors", "L2"]),
+]);
+eq(
+  "other saved queries are never forgotten by this",
+  listsToForget(
+    [
+      { id: "x", key: ["home"], data: 1, updatedAt: 0 },
+      { id: "y", key: ["my-walk-lists"], data: [], updatedAt: 0 },
+    ],
+    [],
+  ),
+  [],
+);
+eq(
+  "a copy older than 14 days is dropped",
+  restorable([doorsEntry("L1", 15 * DAY)], NOW).drop.length,
+  1,
+);
+eq(
+  "today's ward walk list is still never saved",
+  keptForm(["canvassing"], {
+    totals: {},
+    wards: [],
+    issues: [],
+    walkList: [{ id: "p1" }],
+    recent: [{ id: "e1" }],
+  }),
+  { totals: {}, wards: [], issues: [], unplaced: undefined, walkList: [], recent: [] },
+);
+eq("nor the ward's list by its own key", isSaved(["walk-list", "w1", null]), false);
+
 // ---------------------------------------------------------------- putting back
 
 {
@@ -216,6 +288,73 @@ eq(
   await new Promise((r) => setTimeout(r, 5)); // the save is under way
   await stop();
   eq("stopping waits for a save under way, so a clear after it is final", m.saved.size, 1);
+}
+
+// ---------------------------------------------------------------- a list that has ended
+
+{
+  const qc = new QueryClient();
+  const { m, store } = memory(ME, [doorsEntry("L1"), doorsEntry("L2")]);
+  const stop = await startSaving(qc, store, "u1", { now: () => NOW, wait: 0 });
+  eq(
+    "both lists' doors are put back at the start",
+    [
+      qc.getQueryData(["walk-list-doors", "L1"]) !== undefined,
+      qc.getQueryData(["walk-list-doors", "L2"]) !== undefined,
+    ],
+    [true, true],
+  );
+  await qc.fetchQuery({
+    queryKey: ["my-walk-lists"],
+    queryFn: async () => [{ id: "L2", name: "Kileleshwa Primary 2" }],
+  });
+  await settle();
+  eq(
+    "the lists out loading forgets the copy of a list that is no longer out, and its cache entry",
+    [
+      [...m.saved.keys()].sort(),
+      qc.getQueryData(["walk-list-doors", "L1"]),
+      qc.getQueryData(["walk-list-doors", "L2"]) !== undefined,
+    ],
+    [[idOf(["my-walk-lists"]), idOf(["walk-list-doors", "L2"])].sort(), undefined, true],
+  );
+  stop();
+}
+{
+  const qc = new QueryClient();
+  const { m, store } = memory(ME, [doorsEntry("L1")]);
+  const stop = await startSaving(qc, store, "u1", { now: () => NOW, wait: 0 });
+  await qc
+    .fetchQuery({
+      queryKey: ["my-walk-lists"],
+      queryFn: async () => {
+        throw new TypeError("Failed to fetch");
+      },
+      retry: false,
+    })
+    .catch(() => undefined);
+  await settle();
+  eq(
+    "a failed load, as with no signal, forgets nothing",
+    [[...m.saved.keys()], qc.getQueryData(["walk-list-doors", "L1"]) !== undefined],
+    [[idOf(["walk-list-doors", "L1"])], true],
+  );
+  stop();
+}
+{
+  const qc = new QueryClient();
+  const { m, store } = memory(ME);
+  m.slow = true;
+  const stop = await startSaving(qc, store, "u1", { now: () => NOW, wait: 5 });
+  await qc.fetchQuery({ queryKey: ["walk-list-doors", "L1"], queryFn: async () => withPeople });
+  await qc.fetchQuery({ queryKey: ["my-walk-lists"], queryFn: async () => [] });
+  await new Promise((r) => setTimeout(r, 60)); // the waits are over and the slow saves done
+  await stop();
+  eq(
+    "a copy about to be saved when its list ends is not saved after all",
+    [...m.saved.keys()],
+    [idOf(["my-walk-lists"])],
+  );
 }
 
 // ---------------------------------------------------------------- whose data

@@ -3,8 +3,8 @@
 //
 // A visit is recorded on the phone first. If the phone is online it goes
 // straight up; if not, it waits here and syncs when signal returns. Only the
-// visits themselves are stored — never the walk list — so a lost phone
-// carries as little of the voter file as possible.
+// visits themselves are stored here, never the walk list: the lists the person is
+// carrying are kept apart (src/lib/offline/saved.ts), for the lists out with them only.
 
 export const ISSUES = [
   "Water",
@@ -41,7 +41,36 @@ export type Visit = {
   label: string;
   /** Where the door was. Missing on visits queued before phones sent it. */
   place?: Place | null;
+  /**
+   * The walk list this door is on, and the door's plus code: a visit at a list's door is recorded
+   * at that house and with that list, with no person needed. Missing on visits that aren't at one.
+   */
+  walkListId?: string | null;
+  doorPc?: string | null;
 };
+
+const LIST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DOOR_PC = /^[0-9A-Z+]{4,24}$/;
+
+/**
+ * The list and door a visit names: null when it names neither. One without the other, or either
+ * malformed, is refused: a visit is never half at a list's door.
+ */
+export function cleanListRef(input: {
+  walkListId?: unknown;
+  doorPc?: unknown;
+}): { walkListId: string; doorPc: string } | null {
+  const { walkListId, doorPc } = input;
+  if ((walkListId ?? null) === null && (doorPc ?? null) === null) return null;
+  if (
+    typeof walkListId !== "string" ||
+    !LIST_ID.test(walkListId) ||
+    typeof doorPc !== "string" ||
+    !DOOR_PC.test(doorPc)
+  )
+    throw new Error("That door isn't on a list.");
+  return { walkListId, doorPc };
+}
 
 /** The phone's GPS fix at the door and the building the agent was at. */
 export type Place = {

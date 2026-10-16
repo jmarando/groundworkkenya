@@ -1,6 +1,9 @@
 // The page data kept on the phone for no signal: which queries, what of each
-// is kept (never the voter file, the contacts feed, walk lists or recent
-// visits), how long, and for whom. Pure.
+// is kept (never the voter file, the contacts feed, today's ward list or recent visits),
+// how long, and for whom. Pure. The one exception is the walk lists out with the person: a list
+// opened once with signal is kept whole, names and full numbers at its doors included, because
+// an agent at a door with no signal needs them (agreed 14 October 2026). It is forgotten when
+// the list ends (listsToForget), after 14 days, and at sign-out.
 
 import type { CanvassData, VotersData } from "@/lib/console.functions";
 
@@ -24,6 +27,8 @@ const KEEP: Record<string, (data: unknown) => unknown> = {
   findings: same,
   "area-doors": same,
   "map-config": same,
+  "my-walk-lists": same,
+  "walk-list-doors": same,
   voters: (data) => {
     const v = data as Partial<VotersData>;
     return { wards: v.wards ?? [], totals: v.totals, feed: [], people: [] };
@@ -50,6 +55,16 @@ export const idOf = (key: readonly unknown[]): string => JSON.stringify(key);
 export function keptForm(key: readonly unknown[], data: unknown): unknown {
   const keep = typeof key[0] === "string" && Object.hasOwn(KEEP, key[0]) ? KEEP[key[0]] : undefined;
   return keep && data !== undefined ? keep(data) : undefined;
+}
+
+/**
+ * The saved copies of walk lists that are no longer out with the person: the ids of the saved
+ * `walk-list-doors` entries whose list (the second part of the key) isn't among `active`.
+ */
+export function listsToForget(entries: SavedEntry[], active: string[]): string[] {
+  return entries
+    .filter((e) => e.key[0] === "walk-list-doors" && !active.includes(String(e.key[1])))
+    .map((e) => e.id);
 }
 
 /** The saved entries still young enough, and the ids of the rest. */
