@@ -49,7 +49,9 @@ export function PlanWalkList({
   const [name, setName] = useState(() => defaultName(centre?.name ?? null, wardName, made));
   const [giveTo, setGiveTo] = useState("");
   const { state, draft, status, dispatch } = plan;
-  const count = draft.doors.length;
+  // A draft only counts once the houses and what is known of them are read: before schema 28
+  // there is no history to leave houses out by, so nothing is offered to send.
+  const count = status === "ready" ? draft.doors.length : 0;
 
   const send = useMutation({
     mutationFn: () =>
