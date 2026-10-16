@@ -32,6 +32,7 @@ import { ringAreaM2, type LngLat, type Ring, type WardShape } from "@/lib/geo";
 import { houseArchive } from "@/lib/house-source";
 import { LAYER } from "@/lib/house-tiles";
 import { MAP_AREAS, type MapArea } from "@/lib/map-areas";
+import { styleUrl } from "@/lib/map-style";
 import type { Shapes } from "@/lib/walk-list-map";
 import {
   areaAt,
@@ -113,19 +114,10 @@ type Props = {
 };
 
 const EMPTY = { type: "FeatureCollection" as const, features: [] };
-const OPENFREEMAP = "https://tiles.openfreemap.org/styles/liberty";
 const NO_WARD = "__none__";
 const NO_CENTRE = "__none__";
 /** A dot's touch target reaches this far past its edge: a finger is wider than a 10 px dot. */
 const DOT_REACH = 8;
-
-function styleUrl(basemap: Basemap, key: string | null): string {
-  if (!key) return OPENFREEMAP;
-  const k = encodeURIComponent(key);
-  return basemap === "satellite"
-    ? `https://api.maptiler.com/maps/hybrid/style.json?key=${k}`
-    : `https://api.maptiler.com/maps/streets-v2/style.json?key=${k}`;
-}
 
 let housesProtocol = false;
 

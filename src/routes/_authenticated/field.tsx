@@ -1,15 +1,25 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { CentresNearMe } from "@/components/gw/CentresNearMe";
 import { FieldApp } from "@/components/gw/FieldApp";
+import { WalkListRun } from "@/components/gw/field/WalkListRun";
+import { WalkLists } from "@/components/gw/field/WalkLists";
 import { InstallApp } from "@/components/gw/offline/InstallApp";
 import { StreetPlan } from "@/components/gw/StreetPlan";
+import { useFieldQueue } from "@/hooks/useFieldQueue";
 import { getVoters } from "@/lib/console.functions";
+
+const LIST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/_authenticated/field")({
   component: Field,
+  // ?list=<id> opens one of the person's walk lists, so a link or a reload opens the same list.
+  validateSearch: (raw: Record<string, unknown>): { list?: string } =>
+    typeof raw["list"] === "string" && LIST_ID.test(raw["list"])
+      ? { list: raw["list"].toLowerCase() }
+      : {},
   head: () => ({
     meta: [
       { title: "Field app · Groundwork" },
@@ -35,6 +45,10 @@ const nf = new Intl.NumberFormat("en-KE");
 function Field() {
   const fetchVoters = useServerFn(getVoters);
   const { data } = useQuery({ queryKey: ["voters"], queryFn: () => fetchVoters() });
+  const { list } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  // One queue of visits for the page: the walk lists and the ward's list save into the same one.
+  const queue = useFieldQueue();
 
   const allWards = (data?.wards ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
   const busiest = (data?.wards ?? [])
@@ -67,10 +81,35 @@ function Field() {
       <div className="pgrid fx2">
         <div className="card" style={{ minWidth: 0 }}>
           <div className="card-head">
+            <h2>Your walk lists</h2>
+            <span className="mono">kept on the phone once opened</span>
+          </div>
+          {list ? (
+            <WalkListRun
+              key={list}
+              listId={list}
+              queue={queue}
+              onBack={() => void navigate({ search: {} })}
+            />
+          ) : (
+            <WalkLists
+              online={queue.online}
+              queue={queue.queue}
+              onOpen={(id) => void navigate({ search: { list: id } })}
+            />
+          )}
+        </div>
+
+        <div className="card" style={{ minWidth: 0 }}>
+          <div className="card-head">
             <h2>At the door</h2>
             <span className="mono">works without signal</span>
           </div>
-          {data ? <FieldApp wards={allWards} /> : <p className="f-note">Loading wards…</p>}
+          {data ? (
+            <FieldApp wards={allWards} queue={queue} />
+          ) : (
+            <p className="f-note">Loading wards…</p>
+          )}
         </div>
 
         <div className="card" style={{ minWidth: 0 }}>

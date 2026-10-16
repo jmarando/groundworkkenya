@@ -12,6 +12,7 @@ import {
   listDoorShapes,
   listHull,
   openListOutlines,
+  outcomeShapes,
 } from "@/lib/walk-list-map";
 import type { ListDoor } from "@/lib/walk-lists.functions";
 
@@ -194,6 +195,28 @@ eq(
   { west: 36.775, south: -1.3, east: 36.79, north: -1.28 },
 );
 eq("no doors, no box", boxOfDoors([]), null);
+
+// The phone's list: each door coloured by what the phone knows of it, a door with none plain.
+eq(
+  "the phone's doors are coloured by their state, plain when none",
+  outcomeShapes(
+    doors,
+    new Map([
+      ["D1", "refused" as const],
+      ["D3", "not_home" as const],
+    ]),
+  ).features.map((f) => [f.properties!["pc"], f.properties!["colour"]]),
+  [
+    ["D1", OUTCOME_COLOUR.refused],
+    ["D2", PLAIN],
+    ["D3", OUTCOME_COLOUR.not_home],
+  ],
+);
+eq(
+  "and keep their number",
+  outcomeShapes(doors, new Map()).features.map((f) => f.properties!["n"]),
+  [1, 2, 3],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

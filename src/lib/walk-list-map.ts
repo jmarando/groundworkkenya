@@ -3,7 +3,7 @@
 // list. Shapes for the map's GeoJSON sources; pure, so the map only draws.
 
 import type { Box, LngLat, Ring } from "@/lib/geo";
-import { OUTCOME_COLOUR, PLAIN } from "@/lib/houses";
+import { OUTCOME_COLOUR, PLAIN, type Outcome } from "@/lib/houses";
 import type { ListDoor } from "@/lib/walk-lists.functions";
 
 type Geometry =
@@ -55,6 +55,21 @@ export function drawnShape(points: LngLat[]): Shapes {
   return { type: "FeatureCollection", features };
 }
 
+/** A door's rings, or a small square round its place when it has no outline of its own. */
+function doorRings(d: ListDoor): Ring[] {
+  if (d.rings.length) return d.rings;
+  const [lng, lat] = d.at;
+  return [
+    [
+      [lng - SQUARE, lat + SQUARE],
+      [lng + SQUARE, lat + SQUARE],
+      [lng + SQUARE, lat - SQUARE],
+      [lng - SQUARE, lat - SQUARE],
+      [lng - SQUARE, lat + SQUARE],
+    ],
+  ];
+}
+
 /**
  * A list's doors, each coloured by the latest visit at its house; a visit from before `since`
  * (when the list first went out) is not this list's, and the door stays plain.
@@ -67,21 +82,26 @@ export function listDoorShapes(doors: ListDoor[], since: string | null = null): 
       const visited = d.visitedAt ? Date.parse(d.visitedAt) : NaN;
       const fresh =
         d.outcome !== null && !Number.isNaN(visited) && (Number.isNaN(from) || visited >= from);
-      const [lng, lat] = d.at;
-      const rings = d.rings.length
-        ? d.rings
-        : [
-            [
-              [lng - SQUARE, lat + SQUARE],
-              [lng + SQUARE, lat + SQUARE],
-              [lng + SQUARE, lat - SQUARE],
-              [lng - SQUARE, lat - SQUARE],
-              [lng - SQUARE, lat + SQUARE],
-            ] as Ring,
-          ];
       return polygon(
         { pc: d.pc, n: d.n, colour: fresh && d.outcome ? OUTCOME_COLOUR[d.outcome] : PLAIN },
-        rings,
+        doorRings(d),
+      );
+    }),
+  };
+}
+
+/**
+ * A list's doors on the phone, each coloured by what the phone knows of it (the server's visits
+ * since the list went out, and those waiting to send); a door with none stays plain.
+ */
+export function outcomeShapes(doors: ListDoor[], outcomes: ReadonlyMap<string, Outcome>): Shapes {
+  return {
+    type: "FeatureCollection",
+    features: doors.map((d) => {
+      const outcome = outcomes.get(d.pc);
+      return polygon(
+        { pc: d.pc, n: d.n, colour: outcome ? OUTCOME_COLOUR[outcome] : PLAIN },
+        doorRings(d),
       );
     }),
   };
