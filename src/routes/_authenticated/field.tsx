@@ -7,7 +7,6 @@ import { FieldApp } from "@/components/gw/FieldApp";
 import { WalkListRun } from "@/components/gw/field/WalkListRun";
 import { WalkLists } from "@/components/gw/field/WalkLists";
 import { InstallApp } from "@/components/gw/offline/InstallApp";
-import { StreetPlan } from "@/components/gw/StreetPlan";
 import { useFieldQueue } from "@/hooks/useFieldQueue";
 import { getVoters } from "@/lib/console.functions";
 
@@ -65,8 +64,9 @@ function Field() {
             Built for the door, <span className="serif">not the desk.</span>
           </h1>
           <p className="meta">
-            Pick a ward and your street, walk door by door, tap what happened. Visits save on the
-            phone when there is no signal and sync when it comes back.
+            Open a walk list and go door by door, tap what happened. Or pick a ward and visit who is
+            on its list. Visits save on the phone when there is no signal and sync when it comes
+            back.
           </p>
         </div>
         <div className="vh-side">
@@ -118,14 +118,6 @@ function Field() {
             <span className="mono">needs signal</span>
           </div>
           {data ? <CentresNearMe wards={allWards} /> : <p className="f-note">Loading wards…</p>}
-        </div>
-
-        <div className="card" style={{ minWidth: 0 }}>
-          <div className="card-head">
-            <h2>Street plan</h2>
-            <span className="mono">organisers assign streets</span>
-          </div>
-          {data ? <StreetPlan wards={allWards} /> : <p className="f-note">Loading wards…</p>}
         </div>
 
         <div className="card" style={{ minWidth: 0 }}>

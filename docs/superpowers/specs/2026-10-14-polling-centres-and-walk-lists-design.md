@@ -4,7 +4,10 @@ Status: designed with the user and approved on 14 October 2026, section by secti
 parts 2 and 3 of `2026-10-12-voters-map-design.md`, with the details settled; where the two
 differ, this one holds. Part 1, the centres, was built on 14 October 2026 (its plan is
 `docs/superpowers/plans/2026-10-14-polling-centres.md`), and where the build differs from what
-was approved, the text below now says what was built. Decisions:
+was approved, the text below now says what was built. Part 2, the walk lists, was built on 16
+and 17 October 2026 (its plan is `docs/superpowers/plans/2026-10-16-walk-lists.md`; schema 28);
+what it did beyond or differently from the text below is under "What part 2 did differently".
+Decisions:
 
 - **Centres from IEBC's public data:** the 2022 register for the list, OpenStreetMap school
   names for positions, organisers' pins and agents' "I'm here" for the rest.
@@ -231,11 +234,47 @@ Two parts, each with its own plan and release.
    doors on the phone, keeping a list for no signal, street plans retired, agents out of
    `/voters`.
 
+## What part 2 did differently
+
+Choices the plan made where this text was silent or said otherwise, as built:
+
+- **A list can be saved as a draft.** The planner's "Give it to" picker starts at "No one yet:
+  keep it as a draft", so a list with no one to give it to exists on the screen too. A draft
+  holds its houses against other lists until it is given to someone or closed.
+- **A knock is never refused because the list moved on.** A visit made offline at a door of a
+  list since closed or given to someone else is still recorded (at the house, with the list)
+  and changes nothing about the list. A visit at a door that isn't on that list is refused,
+  with a reason, and waits in the phone's queue as a problem to retry or discard.
+- **A patch is read from the open centre's area, else the ward's**, up to 100 house tiles;
+  a bigger area says so and asks for a centre. A drawn shape keeps houses spoken to lately:
+  only houses on another open list are left out of it.
+- **Door numbers on the phone are HTML markers**, and with no signal (or when the street map
+  doesn't arrive in 6 seconds) the map is a plain background drawn from the list's own
+  outlines; with signal it sits on the street style, not satellite.
+- **The people picker** lists agents first, each with the doors still open on their lists,
+  then everyone else on the team, from a database function so organisers, who can't open Team,
+  can use it.
+- **The phone's copy** of a list holds the full numbers of the people at its doors (agreed 14
+  October 2026). It is deleted at the next load of the person's lists after the list is done,
+  closed or given to someone else, at sign-out, and after 14 days.
+- **Visits waiting to send count toward a list's progress on the phone**; "done" only becomes
+  true on the server once they arrive. A skipped door is remembered while the list is open,
+  not across a reload.
+- **Street level means zoom 16 or more**: "Plan a walk list" appears in the panel there,
+  besides the centre card's button. A default name is the centre's name tidied ("Kileleshwa
+  Primary") and the number of lists already made from it plus one.
+- **Street plans are retired** as the spec says (`canvass_streets`, `people.street_id`,
+  `door_no` and `street_walk` stay in the database untouched); agents' pages are the Field
+  app and Foundations.
+
+## What is next
+
+- **Notifications**, starting with "You've been given a walk list".
+
 ## Not in this design
 
 - 2022 results by polling station (part 4: reading IEBC's Forms 34B).
 - Routes along roads.
 - Street maps with no signal: only a list's own houses are kept.
-- Notifications (the next piece, starting with "You've been given a walk list").
 - Houses outside a campaign's map area.
 - Agents' write access to people records, which is still open and worth its own fix.

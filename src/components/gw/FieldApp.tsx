@@ -7,7 +7,6 @@ import { VisitSheet } from "@/components/gw/field/VisitSheet";
 import { storage, type FieldQueue } from "@/hooks/useFieldQueue";
 import type { Visit } from "@/lib/field";
 import { getWalkList, type WalkEntry } from "@/lib/field.functions";
-import { getStreetWalk, listStreets } from "@/lib/streets.functions";
 import { OUTCOME_LABEL } from "@/lib/houses";
 import { mapAreaFor } from "@/lib/map-areas";
 import { getMapConfig } from "@/lib/map.functions";
@@ -32,11 +31,7 @@ export function FieldApp({
   queue: FieldQueue;
 }) {
   const fetchWalk = useServerFn(getWalkList);
-
-  const fetchStreets = useServerFn(listStreets);
-  const fetchStreet = useServerFn(getStreetWalk);
   const [wardId, setWardId] = useState("");
-  const [streetId, setStreetId] = useState("");
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState<{ person: WalkEntry | null } | null>(null);
   const { online, waiting, problems, syncing, sync, discard, retry } = queue;
@@ -51,7 +46,6 @@ export function FieldApp({
 
   const chooseWard = (id: string) => {
     setWardId(id);
-    setStreetId("");
     setSearch("");
     try {
       storage()?.setItem(WARD_KEY, id);
@@ -60,22 +54,13 @@ export function FieldApp({
     }
   };
 
-  const { data: streets } = useQuery({
-    queryKey: ["walk-list", "streets", wardId],
-    queryFn: () => fetchStreets({ data: { wardId } }),
-    enabled: Boolean(wardId),
-    staleTime: 60_000,
-  });
-  const street = streets?.find((s) => s.id === streetId);
-
   const {
     data: list,
     isFetching,
     isError,
-  } = useQuery<(WalkEntry & { doorNo?: number | null })[]>({
-    queryKey: ["walk-list", wardId, streetId],
-    queryFn: () =>
-      streetId ? fetchStreet({ data: { streetId } }) : fetchWalk({ data: { wardId } }),
+  } = useQuery<WalkEntry[]>({
+    queryKey: ["walk-list", wardId],
+    queryFn: () => fetchWalk({ data: { wardId } }),
     enabled: Boolean(wardId),
     staleTime: 60_000,
   });
@@ -139,40 +124,6 @@ export function FieldApp({
 
       {wardId ? (
         <>
-          {streets && streets.length > 0 && (
-            <div className="fa-streets" role="group" aria-label="Street">
-              <span className="eyebrow">Street</span>
-              <div className="fa-street-chips">
-                <button
-                  type="button"
-                  className={`fa-street${streetId ? "" : " is-on"}`}
-                  aria-pressed={!streetId}
-                  onClick={() => setStreetId("")}
-                >
-                  <b>Whole ward</b>
-                  <small>priority list</small>
-                </button>
-                {streets.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`fa-street${streetId === s.id ? " is-on" : ""}`}
-                    aria-pressed={streetId === s.id}
-                    onClick={() => {
-                      setStreetId(s.id);
-                      setSearch("");
-                    }}
-                  >
-                    <b>{s.name}</b>
-                    <small>
-                      {s.done}/{s.doors} doors · {s.agentName ?? "unassigned"}
-                    </small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="fa-tools">
             <input
               type="search"
@@ -203,9 +154,8 @@ export function FieldApp({
           )}
           {list && (
             <p className="f-note">
-              {street
-                ? `${street.name} · ${list.length} doors in walking order${street.agentName ? ` · ${street.agentName}` : ""}`
-                : `${list.length} on the list · not reached yet first · anyone who refused in the last 30 days is left off`}
+              {list.length} on the list · not reached yet first · anyone who refused in the last 30
+              days is left off
             </p>
           )}
 
@@ -213,10 +163,7 @@ export function FieldApp({
             {shown.map((p) => (
               <li key={p.id}>
                 <button type="button" className="fa-person" onClick={() => setOpen({ person: p })}>
-                  <b>
-                    {p.doorNo != null && <span className="fa-door-no">No. {p.doorNo}</span>}
-                    {p.name}
-                  </b>
+                  <b>{p.name}</b>
                   <span className="mono">{p.phoneMasked}</span>
                   <small>
                     {p.lastOutcome

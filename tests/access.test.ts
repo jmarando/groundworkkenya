@@ -1,8 +1,8 @@
-// Checks for which pages each role opens, now that Voters holds People and
-// Canvassing. Pure. Run from the repository root:
+// Checks for which pages each role opens: Voters holds People and Canvassing, and a field agent
+// works from the Field app (their walk lists are there). Pure. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/access.test.ts
 
-import { canOpen } from "@/lib/access";
+import { canOpen, homeFor } from "@/lib/access";
 
 let pass = 0;
 let fail = 0;
@@ -18,10 +18,13 @@ function eq(name: string, got: unknown, want: unknown) {
 }
 
 eq(
-  "an agent opens Voters and the Field app",
+  "an agent opens the Field app, not Voters",
   [canOpen("agent", "/voters"), canOpen("agent", "/field")],
-  [true, true],
+  [false, true],
 );
+eq("an agent still opens Foundations", canOpen("agent", "/foundations"), true);
+eq("an agent's home is the field app", homeFor("agent"), "/field");
+eq("everyone else's home is Home", [homeFor("manager"), homeFor("organiser")], ["/home", "/home"]);
 eq("an agent's pages no longer name Canvassing", canOpen("agent", "/canvassing"), false);
 eq("an agent doesn't open Broadcast", canOpen("agent", "/broadcast"), false);
 eq("an organiser opens Voters", canOpen("organiser", "/voters"), true);

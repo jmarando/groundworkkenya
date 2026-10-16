@@ -17,9 +17,7 @@ export const TEAM_ROLES: MyRole[] = ["super", "candidate", "manager", "organiser
  * candidate and super admin read as "admin", so finance and admin checks
  * written as `admin || manager` keep meaning "candidate or campaign manager".
  */
-export async function myRoles(
-  sb: SupabaseClient<Database>,
-): Promise<{ data: { role: string }[] }> {
+export async function myRoles(sb: SupabaseClient<Database>): Promise<{ data: { role: string }[] }> {
   const { data } = await sb.rpc("my_campaign_role");
   const role = (data as MyRole) ?? null;
   const legacy =
@@ -45,8 +43,8 @@ const PAGE_ROLES: Record<string, MyRole[]> = {
   "/team": ["super", "candidate", "manager"],
   "/campaigns": ["super"],
 };
-/** Field agents get field work only. */
-const AGENT_PAGES = ["/field", "/voters", "/foundations"];
+/** Field agents get field work only: the field app, where their walk lists are, and Foundations. */
+const AGENT_PAGES = ["/field", "/foundations"];
 
 export function canOpen(role: MyRole, path: string): boolean {
   const page = "/" + (path.split("/")[1] ?? "");
