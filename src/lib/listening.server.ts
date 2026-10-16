@@ -240,7 +240,7 @@ export async function runListeningScan(
     credits?: Pick<AnyClient, "rpc"> | null;
   } = {},
 ): Promise<ScanResult> {
-  const topicLimit = Math.min(Math.max(opts.topicLimit ?? 4, 1), 8);
+  let topicLimit = Math.min(Math.max(opts.topicLimit ?? 4, 1), 8);
   const classifyLimit = Math.min(Math.max(opts.classifyLimit ?? 40, 1), 60);
   const notes: string[] = [];
   // Every campaign's team can read the job row, so what it says names no keyword:
@@ -255,7 +255,19 @@ export async function runListeningScan(
 
   const { data: job } = await sb.from("listening_jobs").select("*").eq("key", JOB_KEY).maybeSingle();
 
-  if (job?.status === "paused" && !opts.force) {
+  // Paused because the search service refused work (402/403/429): try one
+  // keyword six hours later. If it is still refused the pause stands, so no
+  // paid work is repeated; if credits are back, collection carries on by
+  // itself instead of waiting for someone to notice the mornings are empty.
+  const pausedOnCredits = /\((402|403|429)\)/.test(String(job?.paused_reason ?? ""));
+  const pausedSince = job?.last_run_at ? Date.parse(job.last_run_at) : 0;
+  const probe =
+    job?.status === "paused" &&
+    pausedOnCredits &&
+    pausedSince > 0 &&
+    now.getTime() - pausedSince > 6 * 3600_000;
+
+  if (job?.status === "paused" && !opts.force && !probe) {
     return {
       ran: false,
       topics: 0,
@@ -267,6 +279,11 @@ export async function runListeningScan(
       notes: ["Sweeping is paused until someone clears it."],
     };
   }
+  if (probe) {
+    topicLimit = 1;
+    say("Collection was paused, so one keyword was tried to see if it works again.");
+  }
+
   if (job?.locked_until && new Date(job.locked_until) > now && !opts.force) {
     return {
       ran: false,
