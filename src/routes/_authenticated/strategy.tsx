@@ -51,7 +51,7 @@ function Strategy() {
   const { campaign } = useAccess();
   const { data, isError, refetch } = useFindings();
   const fetchAtlas = useServerFn(getAtlas);
-  const { data: atlas } = useQuery({
+  const { data: atlas, isPending: atlasPending } = useQuery({
     queryKey: ["atlas"],
     queryFn: () => fetchAtlas(),
     staleTime: 5 * 60_000,
@@ -154,10 +154,15 @@ function Strategy() {
             );
           })
         : null}
-      <PathToStateHouse
-        president={campaign?.level === "president"}
-        startSide={sideFromBloc(atlas?.sides["2022-president"])}
-      />
+      {
+        // Once the atlas has answered, so the side it names is there from the first sight of the section.
+        atlasPending ? null : (
+          <PathToStateHouse
+            president={campaign?.level === "president"}
+            startSide={sideFromBloc(atlas?.sides["2022-president"])}
+          />
+        )
+      }
     </section>
   );
 }

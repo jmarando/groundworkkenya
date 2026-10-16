@@ -275,7 +275,7 @@ export function PathToStateHouse({
               move={moves[g.id] ?? NO_MOVE}
               counties={now.counties.filter((c) => c.region === g.id)}
               was={was}
-              onMove={(patch) => setMoves(setMove(moves, g.id, patch))}
+              onMove={(patch) => setMoves((m) => setMove(m, g.id, patch))}
             />
           ))}
         </ul>

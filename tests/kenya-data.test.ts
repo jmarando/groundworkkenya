@@ -293,6 +293,44 @@ eq(
     "",
   );
   eq(
+    "a county listed twice is named",
+    refusal(
+      lines
+        .map((l) => (l.includes(",Lamu,") ? lines.find((x) => x.includes(",Mombasa,")) : l))
+        .join("\n"),
+    ).includes("Mombasa is listed twice"),
+    true,
+  );
+  eq(
+    "a code used twice is named, since the screen finds counties by code",
+    refusal(countiesCsv.replace("005,Lamu,", "001,Lamu,")).includes("code 001 is used twice"),
+    true,
+  );
+  eq(
+    "a county where nobody is registered or voted is refused, not divided by",
+    [
+      refusal(countiesCsv.replace(",642362,277301,3812,", ",0,0,0,")),
+      refusal(countiesCsv.replace(",642362,277301,3812,", ",642362,0,0,")),
+    ].map((m) => [
+      m.includes("Mombasa: nobody is registered"),
+      m.includes("Mombasa: no votes were cast"),
+    ]),
+    [
+      [true, true],
+      [false, true],
+    ],
+  );
+  eq(
+    "a county with no rejected votes is as good as any",
+    refusal(countiesCsv.replace(",642362,277301,3812,", ",642362,277301,0,")),
+    "",
+  );
+  eq(
+    "a county with only rejected votes has cast votes to divide by",
+    refusal(countiesCsv.replace(",642362,277301,3812,161015,113700,", ",642362,0,5,0,0,")),
+    "",
+  );
+  eq(
     "48 counties is refused",
     refusal(`${countiesCsv.trimEnd()}\n048,Extra,coast,1,1,0,0,0,0,0,1\n`).includes(
       "47 counties, found 48",

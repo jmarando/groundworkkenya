@@ -61,6 +61,8 @@ export function parseKenya(regionsCsv: string, countiesCsv: string): Kenya {
 
   const counties: County[] = [];
   const outside: Outside[] = [];
+  const names = new Set<string>();
+  const codes = new Set<string>();
   for (const r of rowsOf("counties.csv", countiesCsv, COUNTY_COLUMNS, problems)) {
     const who = r["county"] ?? "";
     let ok = true;
@@ -85,7 +87,14 @@ export function parseKenya(regionsCsv: string, countiesCsv: string): Kenya {
     >;
     if (!regions.some((x) => x.id === r["region"]))
       problems.push(`${who}: region "${r["region"]}" is not in regions.csv`);
+    if (names.has(who)) problems.push(`${who} is listed twice`);
+    if (codes.has(r["code"] ?? "")) problems.push(`code ${r["code"]} is used twice`);
+    names.add(who);
+    codes.add(r["code"] ?? "");
     if (ok) {
+      // Turnout is worked out as cast over registered: neither may be nothing.
+      if (n.registered === 0) problems.push(`${who}: nobody is registered`);
+      if (n.valid + n.rejected === 0) problems.push(`${who}: no votes were cast`);
       if (n.raila + n.ruto > n.valid)
         problems.push(`${who}: Raila and Ruto have more votes than were valid`);
       if (n.valid + n.rejected > n.registered)
