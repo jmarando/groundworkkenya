@@ -1,7 +1,7 @@
 // A polling centre on the Voters map: its register, where its position came from, an agent's
 // suggestion waiting for an organiser, and the houses in the area nearest it: how many, how
 // many were knocked in 30 days, and the supporters among those scored. Organisers and managers
-// can place it, or move it.
+// can place it, or move it, and plan a walk list from it.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,6 +21,7 @@ export function CentreCard({
   numbers,
   canPlace,
   onPlace,
+  onPlan,
   onClose,
 }: {
   centre: Centre;
@@ -36,6 +37,8 @@ export function CentreCard({
   numbers: { doors: CentreDoors | null | undefined; houses: number | null | undefined } | null;
   canPlace: boolean;
   onPlace: () => void;
+  /** Starts a walk list from this centre; left out when the person can't plan one or it has no area. */
+  onPlan?: () => void;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -145,11 +148,22 @@ export function CentreCard({
         </>
       ) : null}
 
-      {canPlace ? (
+      {canPlace || onPlan ? (
         <div className="vhouse-actions">
-          <button type="button" className="btn btn--primary btn--sm" onClick={onPlace}>
-            {placed ? "Move it" : "Place it"}
-          </button>
+          {onPlan ? (
+            <button type="button" className="btn btn--primary btn--sm" onClick={onPlan}>
+              Plan a walk list here
+            </button>
+          ) : null}
+          {canPlace ? (
+            <button
+              type="button"
+              className={onPlan ? "btn btn--ghost btn--sm" : "btn btn--primary btn--sm"}
+              onClick={onPlace}
+            >
+              {placed ? "Move it" : "Place it"}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </section>

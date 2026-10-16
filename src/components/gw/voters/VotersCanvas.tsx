@@ -6,7 +6,10 @@
 // follows its centre; when the app moves it (a link, a search, the fit
 // button), it flies there and says nothing back. From zoom 13 the polling centres
 // with a position are drawn as dots sized by their register, with the part of the
-// ward on show nearest each shaded. Draws only: the rules are in src/lib/voters-map.ts.
+// ward on show nearest each shaded. At street level it also draws the walk lists: the open
+// lists outlined, the open list's doors numbered and coloured by their latest visit, and, while
+// one is planned, its draft and the shape being drawn; a tap is then the planner's. Draws only:
+// the rules are in src/lib/voters-map.ts.
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -14,6 +17,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type {
   ExpressionSpecification,
   GeoJSONSource,
+  LayerSpecification,
   LngLatBoundsLike,
   Map as MlMap,
   MapGeoJSONFeature,
@@ -28,6 +32,7 @@ import { ringAreaM2, type LngLat, type Ring, type WardShape } from "@/lib/geo";
 import { houseArchive } from "@/lib/house-source";
 import { LAYER } from "@/lib/house-tiles";
 import { MAP_AREAS, type MapArea } from "@/lib/map-areas";
+import type { Shapes } from "@/lib/walk-list-map";
 import {
   areaAt,
   cameraFor,
@@ -79,6 +84,15 @@ type Props = {
   pin: LngLat | null;
   /** The pin was dragged, or the map tapped while placing, to here. */
   onPin: (at: LngLat) => void;
+  /** The open walk lists' outlines, from street level. */
+  listOutlines: Shapes;
+  /** The open walk list's doors, numbered and coloured by their latest visit. */
+  listDoors: Shapes;
+  /** The walk list being planned: its draft houses, numbered, and the shape being drawn. */
+  planDraft: Shapes;
+  planDrawn: Shapes;
+  /** While a walk list is planned a tap is the planner's: the point, and the house under it. */
+  onPlanTap: ((at: LngLat, pc: string | null) => void) | null;
   /** Where the app sends the camera; a new seq sends it again. */
   camera: { seq: number; target: CameraTarget } | null;
   /** Room the panel takes at the bottom (the sheet on phones), kept out of the map's centre. */
@@ -357,6 +371,90 @@ function addOverlays(map: MlMap, basemap: Basemap, mapArea: MapArea): void {
     },
     paint: { "text-color": text, "text-halo-color": halo, "text-halo-width": 1.4 },
   });
+
+  // Walk lists, over the houses, all in violet: open lists are outlined, the open list's doors
+  // are filled by their latest visit, and the planner's draft is filled and numbered in the
+  // order to walk in. The shape being drawn is the accent colour, like the pin.
+  const violet = "hsl(262, 70%, 60%)";
+  const white = "hsl(0, 0%, 100%)";
+  const number = (id: string, source: string): LayerSpecification => ({
+    id,
+    type: "symbol",
+    source,
+    minzoom: STREET_ZOOM + 0.5,
+    layout: {
+      "text-field": ["to-string", ["get", "n"]],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": 12,
+      "text-allow-overlap": true,
+    },
+    paint: { "text-color": ink, "text-halo-color": white, "text-halo-width": 1.8 },
+  });
+  for (const source of ["gw-list-outlines", "gw-list-doors", "gw-draft", "gw-draw"])
+    map.addSource(source, { type: "geojson", data: EMPTY });
+  map.addLayer({
+    id: "gw-list-outlines-line",
+    type: "line",
+    source: "gw-list-outlines",
+    minzoom: STREET_ZOOM,
+    paint: { "line-color": violet, "line-width": 2.5, "line-dasharray": [2, 1.5] },
+  });
+  map.addLayer({
+    id: "gw-list-doors-fill",
+    type: "fill",
+    source: "gw-list-doors",
+    minzoom: STREET_ZOOM,
+    paint: { "fill-color": ["to-color", ["get", "colour"]], "fill-opacity": 0.85 },
+  });
+  map.addLayer({
+    id: "gw-list-doors-line",
+    type: "line",
+    source: "gw-list-doors",
+    minzoom: STREET_ZOOM,
+    paint: { "line-color": violet, "line-width": 1.5 },
+  });
+  map.addLayer(number("gw-list-doors-num", "gw-list-doors"));
+  map.addLayer({
+    id: "gw-draft-fill",
+    type: "fill",
+    source: "gw-draft",
+    minzoom: STREET_ZOOM,
+    paint: { "fill-color": violet, "fill-opacity": 0.8 },
+  });
+  map.addLayer({
+    id: "gw-draft-line",
+    type: "line",
+    source: "gw-draft",
+    minzoom: STREET_ZOOM,
+    paint: { "line-color": white, "line-width": 1.2 },
+  });
+  map.addLayer(number("gw-draft-num", "gw-draft"));
+  map.addLayer({
+    id: "gw-draw-fill",
+    type: "fill",
+    source: "gw-draw",
+    filter: ["==", ["geometry-type"], "Polygon"],
+    paint: { "fill-color": accent, "fill-opacity": 0.14 },
+  });
+  map.addLayer({
+    id: "gw-draw-line",
+    type: "line",
+    source: "gw-draw",
+    filter: ["!=", ["geometry-type"], "Point"],
+    paint: { "line-color": accent, "line-width": 2.5, "line-dasharray": [2, 1.5] },
+  });
+  map.addLayer({
+    id: "gw-draw-points",
+    type: "circle",
+    source: "gw-draw",
+    filter: ["==", ["geometry-type"], "Point"],
+    paint: {
+      "circle-radius": 5,
+      "circle-color": white,
+      "circle-stroke-color": accent,
+      "circle-stroke-width": 2.5,
+    },
+  });
 }
 
 function hasLayer(map: MlMap, id: string): boolean {
@@ -521,6 +619,15 @@ export function VotersCanvas(props: Props) {
           q.onPin([e.lngLat.lng, e.lngLat.lat]);
           return;
         }
+        // While a walk list is planned, a tap is the planner's: a start point, a corner, or a house.
+        if (q.onPlanTap) {
+          const house = hasLayer(map, "gw-houses-fill")
+            ? map.queryRenderedFeatures(e.point, { layers: ["gw-houses-fill"] })[0]
+            : undefined;
+          const pc = house ? String(house.properties?.["pc"] ?? "") : "";
+          q.onPlanTap([e.lngLat.lng, e.lngLat.lat], pc || null);
+          return;
+        }
         const at = levelFor(map.getZoom(), q.mapArea.top);
         if (at === "ward" || at === "street") {
           // A centre's dot, with room for a finger, comes before the houses and the ground.
@@ -652,6 +759,23 @@ export function VotersCanvas(props: Props) {
           { sel: f.properties.code === props.centre },
         );
   }, [styleRev, props.centreAreas, props.centre]);
+
+  // The walk lists' shapes, and a cross-hair while a tap is the planner's.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !styleRev) return;
+    const set = (source: string, data: Shapes) =>
+      (map.getSource(source) as GeoJSONSource | undefined)?.setData(data as never);
+    set("gw-list-outlines", props.listOutlines);
+    set("gw-list-doors", props.listDoors);
+    set("gw-draft", props.planDraft);
+    set("gw-draw", props.planDrawn);
+  }, [styleRev, props.listOutlines, props.listDoors, props.planDraft, props.planDrawn]);
+  const planning = props.onPlanTap !== null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map && loaded) map.getCanvas().style.cursor = planning ? "crosshair" : "";
+  }, [loaded, planning]);
 
   // The pin that places a centre: a marker dragged on the map, reported where it is dropped.
   const pinRef = useRef<Marker | null>(null);

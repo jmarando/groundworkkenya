@@ -6,7 +6,7 @@
 // move the person makes on the map writes the address and isn't flown again.
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Fragment,
@@ -29,11 +29,15 @@ import { MapPanel } from "@/components/gw/voters/MapPanel";
 import { MapSearch } from "@/components/gw/voters/MapSearch";
 import { PeopleView } from "@/components/gw/voters/PeopleView";
 import { PlaceIt } from "@/components/gw/voters/PlaceIt";
+import { PlanWalkList } from "@/components/gw/voters/PlanWalkList";
 import { Sheet } from "@/components/gw/voters/Sheet";
 import { VotersCanvas, type WardsGeo } from "@/components/gw/voters/VotersCanvas";
+import { WalkListCard } from "@/components/gw/voters/WalkListCard";
+import { WalkListsList } from "@/components/gw/voters/WalkListsList";
 import { useAccess } from "@/hooks/useAccess";
 import { useAreaHouses } from "@/hooks/useAreaHouses";
 import { useOnline } from "@/hooks/useOnline";
+import { useWalkListPlan, type WalkListPlan } from "@/hooks/useWalkListPlan";
 import { useWardCentres } from "@/hooks/useWardCentres";
 import { wardKey } from "@/lib/atlas-app";
 import { getAtlas } from "@/lib/atlas.functions";
@@ -50,7 +54,7 @@ import { getCentres } from "@/lib/centres.functions";
 import { getCanvassing, getPeople, getVoters, type CanvassData } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { defaultRace } from "@/lib/elections-view";
-import { ringCentre, wardAt, wardShapes, type LngLat, type WardShape } from "@/lib/geo";
+import { ringCentre, wardAt, wardShapes, type Box, type LngLat, type WardShape } from "@/lib/geo";
 import { getJson } from "@/lib/geo-files";
 import {
   houseColour,
@@ -71,7 +75,10 @@ import {
   CENTRE_ZOOM,
   centreStays,
   hintFor,
+  HOUSE_ZOOM_OPEN,
+  listStays,
   searchGo,
+  STREET_ZOOM,
   type Basemap,
   type CameraTarget,
   type Level,
@@ -95,6 +102,24 @@ import {
   type WardInfo,
 } from "@/lib/voters-view";
 
+import {
+  boxOfDoors,
+  draftShapes,
+  drawnShape,
+  listDoorShapes,
+  listHull,
+  openListOutlines,
+  type Shapes,
+} from "@/lib/walk-list-map";
+import { planHint } from "@/lib/walk-list-plan";
+import { canPlanWalkLists } from "@/lib/walk-lists";
+import {
+  getOpenLists,
+  getWalkListDoors,
+  type ListDoor,
+  type ListSummary,
+} from "@/lib/walk-lists.functions";
+
 const ABOUT =
   "Pick an area, from the county down to one house: its people, its doors and its numbers, on one map.";
 
@@ -113,6 +138,15 @@ export const Route = createFileRoute("/_authenticated/voters")({
     ],
   }),
 });
+
+const NO_SHAPES: Shapes = { type: "FeatureCollection", features: [] };
+/** The open walk lists outlined on the map: more than this are left to the panel's list. */
+const MAX_OUTLINES = 25;
+
+/** The doors of each list, in the order asked for; null for one not read yet or that can't be. */
+const combineDoors = (
+  results: UseQueryResult<{ doors: ListDoor[] } | null>[],
+): (ListDoor[] | null)[] => results.map((r) => r.data?.doors ?? null);
 
 /** A campaign with no map area: the People tab's top. */
 const NO_MAP: Home = { name: "Every ward", top: "county" };
@@ -237,6 +271,71 @@ function Voters() {
   const openArea = openCentre ? here.areas.find((a) => a.id === openCentre.id) : undefined;
   const areaHouses = useAreaHouses(mapArea, openArea);
   const canPlace = canPlaceCentres(access?.role ?? null);
+  const canPlan = canPlanWalkLists(access?.role ?? null);
+  // The ward's open walk lists, for the office: null when they can't be read (before schema 28).
+  const fetchOpenLists = useServerFn(getOpenLists);
+  const fetchListDoors = useServerFn(getWalkListDoors);
+  const { data: wardLists } = useQuery({
+    queryKey: ["walk-lists", wardOn?.id],
+    queryFn: () => fetchOpenLists({ data: { wardId: wardOn!.id } }),
+    enabled: tab === "map" && Boolean(mapArea) && Boolean(wardOn) && canPlan,
+    refetchInterval: 30_000,
+  });
+  const openList: ListSummary | null | undefined = search.list
+    ? wardLists === undefined
+      ? undefined
+      : (wardLists?.find((l) => l.id === search.list) ?? null)
+    : null;
+  // The doors of the open lists, only for their outlines and the open list's colours: no people.
+  const outlineLists = useMemo(() => (wardLists ?? []).slice(0, MAX_OUTLINES), [wardLists]);
+  const outlineDoors = useQueries({
+    queries: outlineLists.map((l) => ({
+      queryKey: ["walk-list-doors", l.id],
+      queryFn: () => fetchListDoors({ data: { id: l.id, people: false } }),
+      enabled: tab === "map" && level === "street",
+      staleTime: 60_000,
+    })),
+    combine: combineDoors,
+  });
+  // The open list's doors are read again every 30 seconds, for the colours as visits come in.
+  const { data: openDoors } = useQuery({
+    queryKey: ["walk-list-doors", search.list],
+    queryFn: () => fetchListDoors({ data: { id: search.list!, people: false } }),
+    enabled: tab === "map" && Boolean(search.list) && canPlan,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+  const listOutlines = useMemo(
+    () =>
+      openListOutlines(
+        outlineLists.map((l, i) => ({
+          id: l.id,
+          rings: [listHull((outlineDoors[i] ?? []).map((d) => d.at))].filter((r) => r.length),
+        })),
+      ),
+    [outlineLists, outlineDoors],
+  );
+  const listDoors = useMemo(
+    () =>
+      search.list && openDoors
+        ? listDoorShapes(openDoors.doors, openList?.firstSentAt ?? null)
+        : NO_SHAPES,
+    [search.list, openDoors, openList?.firstSentAt],
+  );
+  const listBox = useMemo(() => (openDoors ? boxOfDoors(openDoors.doors) : null), [openDoors]);
+  // Planning a walk list: from the open centre's area, else the ward's.
+  const wardShape = wardOn ? shapes.find((s) => s.slug === wardOn.slug) : undefined;
+  const plan = useWalkListPlan({
+    mapArea,
+    polygons: openArea?.polygons ?? wardShape?.polygons ?? null,
+    wardId: wardOn?.id ?? null,
+  });
+  // Planning is for one centre or ward: moving to another gives it up.
+  const planScope = `${wardOn?.id ?? ""}|${openCentre?.code ?? ""}`;
+  const stopPlanning = plan.stop;
+  useEffect(() => {
+    stopPlanning();
+  }, [planScope, stopPlanning]);
   // A centre being placed is given up when another centre, or none, is opened.
   const lastCentre = useRef(search.centre);
   useEffect(() => {
@@ -255,7 +354,13 @@ function Voters() {
   const go = (changes: SearchChanges) =>
     void navigate({ search: (prev) => nextSearch(prev, changes), ...stepFor(changes) });
   const setArea = (a: Area) =>
-    go({ area: areaParam(a), house: undefined, centre: undefined, person: undefined });
+    go({
+      area: areaParam(a),
+      house: undefined,
+      centre: undefined,
+      list: undefined,
+      person: undefined,
+    });
   const home: Home = mapArea ? { name: mapArea.name, top: mapArea.top } : NO_MAP;
 
   // With no signal and no saved map settings, the page goes on without the map.
@@ -389,6 +494,7 @@ function Voters() {
     go({
       centre: c.code,
       house: undefined,
+      list: undefined,
       ...(ward && !inThisWard ? { area: `w:${ward.slug}` } : {}),
     });
     setPlacing({ code: c.code, at });
@@ -401,6 +507,26 @@ function Voters() {
         onDone={() => setPlacing(null)}
         onCancel={() => setPlacing(null)}
       />
+    ) : plan.on && wardOn ? (
+      <PlanWalkList
+        key={planScope}
+        plan={plan}
+        centre={openCentre && openArea ? openCentre : null}
+        wardId={wardOn.id}
+        wardName={wardOn.name}
+        made={
+          (wardLists ?? []).filter((l) =>
+            openCentre && openArea ? l.centreId === openCentre.id : l.centreId === null,
+          ).length
+        }
+        onCancel={plan.stop}
+        onSent={(id) => {
+          plan.stop();
+          go({ list: id, house: undefined, centre: undefined });
+        }}
+      />
+    ) : search.list ? (
+      <WalkListCard list={openList} canManage={canPlan} onClose={() => go({ list: undefined })} />
     ) : search.house && mapArea ? (
       <HouseCard
         pc={search.house}
@@ -425,6 +551,9 @@ function Voters() {
         }
         canPlace={canPlace}
         onPlace={() => startPlacing(openCentre)}
+        {...(canPlan && openCentre.placed && openArea
+          ? { onPlan: () => plan.begin(openCentre.placed!.at) }
+          : {})}
         onClose={() => go({ centre: undefined })}
       />
     ) : null;
@@ -437,7 +566,7 @@ function Voters() {
         open={search.centre ?? null}
         canPlace={canPlace}
         state={centres === undefined ? "reading" : centres === null ? "missing" : "ready"}
-        onOpen={(code) => go({ centre: code, house: undefined })}
+        onOpen={(code) => go({ centre: code, house: undefined, list: undefined })}
         onPlace={startPlacing}
       />
     ) : null;
@@ -454,6 +583,22 @@ function Voters() {
       onSearch={go}
       card={card}
       centres={centresList}
+      walkLists={canPlan && area.level === "ward" ? wardLists : undefined}
+      walkListsList={
+        canPlan && area.level === "ward" && mapArea ? (
+          <WalkListsList
+            lists={wardLists}
+            open={search.list ?? null}
+            onOpen={(id) => go({ list: id, house: undefined, centre: undefined })}
+          />
+        ) : null
+      }
+      {...(canPlan && area.level === "ward" && level === "street" && mapArea && !plan.on
+        ? {
+            onPlan: () =>
+              plan.begin(openCentre && openArea ? (openCentre.placed?.at ?? null) : null),
+          }
+        : {})}
     />
   );
   return (
@@ -481,6 +626,11 @@ function Voters() {
             openCentre={openCentre}
             placing={placing}
             onPin={(at) => setPlacing((p) => (p ? { ...p, at } : p))}
+            plan={plan}
+            listOutlines={listOutlines}
+            listDoors={listDoors}
+            listBox={listBox}
+            listWardId={search.list ? (openList?.wardId ?? wardOn?.id ?? null) : null}
             level={level}
             onLevel={setLevel}
             onGo={go}
@@ -582,6 +732,11 @@ function MapScreen({
   openCentre,
   placing,
   onPin,
+  plan,
+  listOutlines,
+  listDoors,
+  listBox,
+  listWardId,
   level,
   onLevel,
   onGo,
@@ -611,6 +766,15 @@ function MapScreen({
   /** The centre being placed, and where its pin is. */
   placing: { code: string; at: LngLat } | null;
   onPin: (at: LngLat) => void;
+  /** The walk list being planned. */
+  plan: WalkListPlan;
+  /** The open walk lists' outlines, and the open list's doors coloured by their latest visit. */
+  listOutlines: Shapes;
+  listDoors: Shapes;
+  /** The box round the open list's doors, to fly to when it opens. */
+  listBox: Box | null;
+  /** The ward the open walk list is in, if one is open. */
+  listWardId: string | null;
   level: Level;
   onLevel: (level: Level) => void;
   /** A change to the address, a step or not as stepFor says; a new area is flown to. */
@@ -737,6 +901,56 @@ function MapScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placingCode]);
 
+  // Planning from a centre flies to it, close enough to see its houses.
+  const planning = plan.on;
+  const planCentre = plan.centre;
+  useEffect(() => {
+    if (!planning || !planCentre) return;
+    const target: CameraTarget = { kind: "point", center: planCentre, zoom: STREET_ZOOM + 1 };
+    setCamera((c) => ({ seq: (c?.seq ?? 0) + 1, target }));
+    // Only starting to plan sends the camera.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planning]);
+
+  // Opening a walk list flies to its doors, once they are read and the map has its wards: the
+  // address's own flight comes first, and this one replaces it.
+  const flownList = useRef<string | null>(null);
+  useEffect(() => {
+    if (!search.list) {
+      flownList.current = null;
+      return;
+    }
+    if (!geo || !listBox || flownList.current === search.list) return;
+    flownList.current = search.list;
+    const target: CameraTarget = {
+      kind: "box",
+      box: listBox,
+      minZoom: STREET_ZOOM,
+      maxZoom: HOUSE_ZOOM_OPEN,
+    };
+    setCamera((c) => ({ seq: (c?.seq ?? 0) + 1, target }));
+  }, [search.list, listBox, geo]);
+
+  // The planner's draft and the shape being drawn, for the map.
+  const planDraft = useMemo(
+    () =>
+      planning
+        ? draftShapes(plan.draft.doors.map((d) => ({ pc: d.pc, rings: d.rings, n: d.n })))
+        : NO_SHAPES,
+    [planning, plan.draft.doors],
+  );
+  const planDrawn = useMemo(
+    () =>
+      !planning
+        ? NO_SHAPES
+        : plan.state.mode === "draw"
+          ? drawnShape(plan.state.drawn)
+          : plan.state.start
+            ? drawnShape([plan.state.start])
+            : NO_SHAPES,
+    [planning, plan.state],
+  );
+
   // A search hit: its address, and for a place its own camera, flown even when the area stays.
   useEffect(() => {
     pick.current = (hit) => {
@@ -779,6 +993,11 @@ function MapScreen({
           centre={search.centre ?? null}
           pin={placing?.at ?? null}
           onPin={onPin}
+          listOutlines={listOutlines}
+          listDoors={listDoors}
+          planDraft={planDraft}
+          planDrawn={planDrawn}
+          onPlanTap={planning ? plan.tap : null}
           camera={camera}
           padding={{ bottom: room }}
           onMoved={(a, at) =>
@@ -788,11 +1007,17 @@ function MapScreen({
                 ...(at === "street" ? {} : { house: undefined }),
                 // An open centre closes when the map leaves its ward, or zooms out past the centres.
                 ...(placing || centreStays(openCentre, a, at, wards) ? {} : { centre: undefined }),
+                // An open walk list closes the same way.
+                ...(listStays(listWardId ? { wardId: listWardId } : null, a, at, wards)
+                  ? {}
+                  : { list: undefined }),
               },
               false,
             )
           }
-          onPick={(a) => onGo({ area: areaParam(a), house: undefined, centre: undefined })}
+          onPick={(a) =>
+            onGo({ area: areaParam(a), house: undefined, centre: undefined, list: undefined })
+          }
           onHouse={(pc) => {
             if (!pc) {
               fromTheMap({ house: undefined }, false);
@@ -802,7 +1027,12 @@ function MapScreen({
             const at = plusCodeCentre(pc);
             const shape = at ? wardAt(at, shapes) : null;
             fromTheMap(
-              { house: pc, centre: undefined, ...(shape ? { area: `w:${shape.slug}` } : {}) },
+              {
+                house: pc,
+                centre: undefined,
+                list: undefined,
+                ...(shape ? { area: `w:${shape.slug}` } : {}),
+              },
               true,
             );
           }}
@@ -811,7 +1041,12 @@ function MapScreen({
             const c = centres.find((x) => x.code === code);
             const slug = c?.wardId ? wards.find((w) => w.id === c.wardId)?.slug : undefined;
             fromTheMap(
-              { centre: code, house: undefined, ...(slug ? { area: `w:${slug}` } : {}) },
+              {
+                centre: code,
+                house: undefined,
+                list: undefined,
+                ...(slug ? { area: `w:${slug}` } : {}),
+              },
               true,
             );
           }}
@@ -853,7 +1088,11 @@ function MapScreen({
               <div className="vglass vhint" role="status">
                 {placing
                   ? "Drag the pin, or tap the map, to where the centre is"
-                  : hintFor(level, mapArea.top, hasCentres)}
+                  : planning
+                    ? level === "street"
+                      ? planHint(plan.state, plan.status, plan.draft.tooMany)
+                      : "Zoom in to street level to plan on the houses"
+                    : hintFor(level, mapArea.top, hasCentres)}
               </div>
             </div>
             <div className="vglass vleg">
@@ -879,7 +1118,7 @@ function MapScreen({
       )}
       <Sheet
         label="This area"
-        raiseOn={search.house ?? search.centre ?? null}
+        raiseOn={search.house ?? search.centre ?? search.list ?? (planning ? "plan" : null)}
         lowerOn={search.area ?? ""}
         onRoom={setRoom}
       >

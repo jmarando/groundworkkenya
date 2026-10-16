@@ -7,6 +7,7 @@ import type { Building, LngLat } from "@/lib/geo";
 import {
   draftDoors,
   emptyPlan,
+  planHint,
   reducePlan,
   skipSplit,
   toDoors,
@@ -79,6 +80,11 @@ eq(
     { type: "start", at: [36.801, -1.28] },
   ),
   { ...emptyPlan(), start: [36.801, -1.28] },
+);
+eq(
+  "the start can be given up, so the next tap chooses another",
+  reducePlan(reducePlan(started(), { type: "off", pc: "H1" }), { type: "start", at: null }),
+  emptyPlan(),
 );
 eq(
   "changing the way to choose keeps the start and drops the rest",
@@ -262,6 +268,33 @@ eq(
   const big = draftDoors(reducePlan(s, { type: "done" }), crowd, new Map(), NOW, null);
   eq("over 150 houses it takes none and says so", [big.doors.length, big.tooMany], [0, true]);
 }
+
+// What the map says while a list is planned.
+eq(
+  "the hint follows the planner",
+  [
+    planHint(emptyPlan(), "reading", false),
+    planHint(emptyPlan(), "too-big", false),
+    planHint(emptyPlan(), "missing", false),
+    planHint(emptyPlan(), "ready", false),
+    planHint(started(), "ready", false),
+    planHint(drawing(1), "ready", false),
+    planHint(drawing(3), "ready", false),
+    planHint(done, "ready", false),
+    planHint(done, "ready", true),
+  ],
+  [
+    "Reading the houses…",
+    "This area is too big to plan from here",
+    "Walk lists aren't in yet",
+    "Tap the map to choose where the list starts",
+    "Tap a house to take it off or put it back",
+    "Tap the map to put down the corners of an area",
+    "Keep tapping round the houses, then press Done",
+    "Tap a house to take it off or put it back",
+    "That's more than 150 houses: draw a smaller area",
+  ],
+);
 
 // What was skipped, by why; and a house on both counts as on another list.
 eq("the skips by why", skipSplit(line, history, NOW), { spoke: 2, notHome: 1, otherList: 1 });

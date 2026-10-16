@@ -339,11 +339,13 @@ function toDoor(r: Row): ListDoor | null {
 /**
  * A list's doors in walking order with the latest visit at each, and the people on file there
  * (the agent's door sheet: names and numbers, kept on the phone for the list's sake); null when
- * the doors can't be read. A refused lookup of the people leaves the doors without them.
+ * the doors can't be read. A refused lookup of the people leaves the doors without them, and
+ * `withPeople` false never asks for them (the outline of a list needs only its doors).
  */
 export async function readListDoors(
   sb: Client,
   id: string,
+  withPeople = true,
 ): Promise<{ doors: ListDoor[]; people: DoorPerson[] } | null> {
   const { data, error } = (await sb.rpc("walk_list_doors", { _list_id: id })) as {
     data: unknown;
@@ -354,7 +356,7 @@ export async function readListDoors(
     return null;
   }
   const doors = compact(rowsOf(data).map(toDoor)).sort((a, b) => a.n - b.n);
-  if (doors.length === 0) return { doors, people: [] };
+  if (doors.length === 0 || !withPeople) return { doors, people: [] };
   const found = (await sb
     .from("people")
     .select("id, full_name, phone, support_score, building_id")
@@ -418,8 +420,13 @@ export const getMyWalkLists = createServerFn({ method: "GET" })
 
 export const getWalkListDoors = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: cleanListId(input) }))
-  .handler(async ({ data, context }) => readListDoors(context.supabase as never, data.id));
+  .inputValidator((input: { id: string; people?: boolean }) => ({
+    id: cleanListId(input),
+    people: input?.people !== false,
+  }))
+  .handler(async ({ data, context }) =>
+    readListDoors(context.supabase as never, data.id, data.people),
+  );
 
 export const makeWalkList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

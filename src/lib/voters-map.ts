@@ -340,7 +340,8 @@ export function searchHits(
  * without one opens their record on the People tab; a polling centre opens its
  * ward and its card, with the camera on it when it has a position; a place opens
  * the ward there, with the camera on the place (outside every ward, the area
- * stays). One card is open at a time: a house closes a centre and a centre a house.
+ * stays). One card is open at a time: a house closes a centre and a centre a house, and either
+ * closes an open walk list.
  */
 export function searchGo(
   hit: SearchHit,
@@ -348,20 +349,26 @@ export function searchGo(
 ): { changes: SearchChanges; camera: CameraTarget | null } {
   if (hit.kind === "ward")
     return {
-      changes: { area: `w:${hit.slug}`, house: undefined, centre: undefined },
+      changes: { area: `w:${hit.slug}`, house: undefined, centre: undefined, list: undefined },
       camera: null,
     };
   if (hit.kind === "constituency")
     return {
-      changes: { area: `c:${hit.name}`, house: undefined, centre: undefined },
+      changes: { area: `c:${hit.name}`, house: undefined, centre: undefined, list: undefined },
       camera: null,
     };
   if (hit.kind === "person") {
-    if (!hit.house) return { changes: { tab: "people", person: hit.id }, camera: null };
+    if (!hit.house)
+      return { changes: { tab: "people", person: hit.id, list: undefined }, camera: null };
     const at = plusCodeCentre(hit.house);
     const slug = (at ? wardAt(at, shapes)?.slug : undefined) ?? hit.wardSlug;
     return {
-      changes: { ...(slug ? { area: `w:${slug}` } : {}), house: hit.house, centre: undefined },
+      changes: {
+        ...(slug ? { area: `w:${slug}` } : {}),
+        house: hit.house,
+        centre: undefined,
+        list: undefined,
+      },
       camera: null,
     };
   }
@@ -371,12 +378,18 @@ export function searchGo(
         ...(hit.wardSlug ? { area: `w:${hit.wardSlug}` } : {}),
         centre: hit.code,
         house: undefined,
+        list: undefined,
       },
       camera: hit.at ? { kind: "point", center: hit.at, zoom: CENTRE_ZOOM } : null,
     };
   const ward = wardAt(hit.center, shapes);
   return {
-    changes: { ...(ward ? { area: `w:${ward.slug}` } : {}), house: undefined, centre: undefined },
+    changes: {
+      ...(ward ? { area: `w:${ward.slug}` } : {}),
+      house: undefined,
+      centre: undefined,
+      list: undefined,
+    },
     camera: { kind: "point", center: hit.center, zoom: PLACE_ZOOM },
   };
 }

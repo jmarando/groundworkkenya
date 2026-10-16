@@ -659,6 +659,24 @@ eq(
     "Could not read the people at a walk list's doors: permission denied for table people",
   ]);
 }
+{
+  // The outlines of the open lists need only the doors: nobody's name or number is read for them.
+  let asked = 0;
+  const watching: Client = {
+    from: (table) => {
+      asked++;
+      return withDoors.from(table);
+    },
+    rpc: withDoors.rpc,
+  };
+  const bare = await readListDoors(watching, "L1", false);
+  eq(
+    "doors without their people when only the doors are wanted",
+    [bare?.doors.length, bare?.people],
+    [2, []],
+  );
+  eq("and the people table is not touched", asked, 0);
+}
 eq(
   "a list with no doors has no people to look up",
   await readListDoors(fakeSupabase({}, { walk_list_doors: () => [] }), "L1"),

@@ -621,6 +621,19 @@ eq(
     ].map((hit) => "centre" in (choose(OPEN, hit)[0] as object)),
     [false, false, false, false],
   );
+  const WITH_LIST = { area: "w:kilimani", list: "0b9a3f56-4a53-4f86-bb64-1f0a6a7d2a11" };
+  eq(
+    "choosing any hit closes an open walk list, as it does a house or a centre",
+    [
+      { kind: "ward" as const, slug: "kileleshwa", label: "", sub: "" },
+      { kind: "constituency" as const, name: "Dagoretti North", label: "", sub: "" },
+      { kind: "person" as const, id: "p1", label: "", sub: "", house: HOUSE, wardSlug: null },
+      { kind: "person" as const, id: "p2", label: "", sub: "", house: null, wardSlug: null },
+      { kind: "place" as const, label: "", sub: "", center: [36.787, -1.2921] as [number, number] },
+      centreHits("ps-0002")[0]!,
+    ].map((hit) => "list" in (choose(WITH_LIST, hit)[0] as object)),
+    [false, false, false, false, false, false],
+  );
 }
 
 console.log(`${pass} passed, ${fail} failed`);

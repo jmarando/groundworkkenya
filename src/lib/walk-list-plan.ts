@@ -3,6 +3,7 @@
 
 import type { Building, LngLat } from "@/lib/geo";
 import {
+  DRAW_CAP,
   housesWithin,
   inWalkingOrder,
   recentKind,
@@ -29,7 +30,7 @@ export type PlanState = {
 
 export type PlanAction =
   | { type: "mode"; mode: PlanMode }
-  | { type: "start"; at: LngLat }
+  | { type: "start"; at: LngLat | null }
   | { type: "point"; at: LngLat }
   | { type: "done" }
   | { type: "again" }
@@ -162,6 +163,34 @@ export function draftDoors(
     leftOff: skipped.otherList,
     tooMany: false,
   };
+}
+
+/** Whether the planner can work: its houses and their history are read, or why it can't. */
+export type PlanStatus =
+  /** The houses, or what is known of them, are still being read. */
+  | "reading"
+  /** The area has too many house tiles to read here. */
+  | "too-big"
+  /** The planning history can't be read: the database update isn't in. */
+  | "missing"
+  | "ready";
+
+/** What the map says while a list is planned: why it can't yet, else the next thing to tap. */
+export function planHint(s: PlanState, status: PlanStatus, tooMany: boolean): string {
+  if (status === "reading") return "Reading the houses…";
+  if (status === "too-big") return "This area is too big to plan from here";
+  if (status === "missing") return "Walk lists aren't in yet";
+  if (s.mode === "patch")
+    return s.start
+      ? "Tap a house to take it off or put it back"
+      : "Tap the map to choose where the list starts";
+  if (!s.closed)
+    return s.drawn.length >= 3
+      ? "Keep tapping round the houses, then press Done"
+      : "Tap the map to put down the corners of an area";
+  return tooMany
+    ? `That's more than ${DRAW_CAP} houses: draw a smaller area`
+    : "Tap a house to take it off or put it back";
 }
 
 /** The houses read from the map's house file, as houses to plan. */

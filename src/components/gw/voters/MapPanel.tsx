@@ -13,6 +13,7 @@ import type { CanvassData } from "@/lib/console.functions";
 import { votersPlace } from "@/lib/findings/core";
 import { doorsFirst, doorTotals, type WardDoors } from "@/lib/houses";
 import type { Level } from "@/lib/voters-map";
+import type { ListSummary } from "@/lib/walk-lists.functions";
 import {
   areaNumbers,
   doorIssues,
@@ -39,6 +40,9 @@ export function MapPanel({
   onSearch,
   card,
   centres,
+  walkLists,
+  walkListsList,
+  onPlan,
 }: {
   area: Area;
   wards: WardInfo[];
@@ -57,6 +61,12 @@ export function MapPanel({
   card?: ReactNode;
   /** The ward's polling centres. */
   centres?: ReactNode;
+  /** The ward's open walk lists, for the count in Doors: undefined while read, null when they can't be. */
+  walkLists?: ListSummary[] | null | undefined;
+  /** The ward's open walk lists as a section of their own. */
+  walkListsList?: ReactNode;
+  /** Starts a walk list from the ward (street level, staff); left out otherwise. */
+  onPlan?: () => void;
 }) {
   const inside = wardsIn(area, wards);
   const n = areaNumbers(area, wards, canvass?.wards ?? [], canvass?.unplaced);
@@ -170,14 +180,28 @@ export function MapPanel({
               <span>Agents out today</span>
               <b>{nf.format(t.agentsToday)}</b>
             </div>
+            {walkLists ? (
+              <div className="f-row">
+                <span>Walk lists out</span>
+                <b>{nf.format(walkLists.filter((l) => l.status === "out").length)}</b>
+              </div>
+            ) : null}
           </div>
         )}
+        {onPlan ? (
+          <div className="vhouse-actions pw-start">
+            <button type="button" className="btn btn--primary btn--sm" onClick={onPlan}>
+              Plan a walk list
+            </button>
+          </div>
+        ) : null}
         {area.level === "ward" && level !== "street" ? (
           <p className="f-note">Zoom in to street level to see each house.</p>
         ) : null}
       </section>
 
       {centres}
+      {walkListsList}
 
       {area.level !== "ward" && t ? (
         <section className="vnext" aria-label="Do this next">

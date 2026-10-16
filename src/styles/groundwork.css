@@ -2151,6 +2151,15 @@ figure { margin: 0; }
 .vhouse-note .btn { margin-top:6px; }
 .vpin { width:22px; height:22px; border-radius:50%; background:hsl(15 77% 52%); border:3px solid #fff; box-shadow:0 0 0 2px hsl(15 77% 52%), 0 2px 8px rgb(0 0 0 / .45); cursor:grab; touch-action:none; }
 .vpin:active { cursor:grabbing; }
+/* Walk lists: planning one in the panel, its team picker, and an open list's progress bar. */
+.pw .pw-modes { align-self:flex-start; }
+.pw .pw-left { margin-top:0; }
+.pw .pb-field small { font-size:11.5px; color:var(--muted-foreground); }
+.pw-send { display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+.pw-send .pb-field input, .pw-send .pb-field select { min-height:40px; font-size:14px; }
+.pw-bar { height:8px; border-radius:999px; background:var(--limit-track, var(--muted)); overflow:hidden; }
+.pw-bar i { display:block; height:100%; border-radius:999px; background:hsl(142 62% 40%); }
+.pw-start { margin-top:10px; }
 @media (max-width:1100px) {
   .vscreen { inset:64px 0 0 0; }
   .vbody { grid-template-columns:1fr; grid-template-rows:minmax(0, 1fr); position:relative; }
