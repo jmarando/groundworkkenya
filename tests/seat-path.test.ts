@@ -362,6 +362,18 @@ eq(
   ["A", "B", "C"],
 );
 
+// ------------------------------------------------------------- votes past the register
+
+{
+  // Figures that hold more votes than the register (a typo somewhere) must not be rescaled by a move
+  // that is not about turnout, nor by no move at all.
+  const odd = toy([["a", 600, 500, 1000]]);
+  eq("no move: the votes are the votes, whatever the register says", [runSeat(odd).totals.yours, runSeat(odd).totals.rival], [600, 500]);
+  const shifted = runSeat(odd, { a: MOVE(10) }).buckets[0]!;
+  near("a share move keeps the two together as they were", shifted.yours + shifted.rival, 1100, 1e-9);
+  near("and moves the share by ten points", shifted.share - shifted.was.share, 0.1, 1e-12);
+}
+
 // ------------------------------------------------------------- the ends, ties and the lead
 
 {

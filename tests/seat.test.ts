@@ -529,6 +529,55 @@ eq(
   );
 }
 eq(
+  "a register smaller than the votes counted in a constituency is refused",
+  refusal(
+    toyAtlas({
+      ...BASE,
+      register: [
+        ["Alpha", 600, []],
+        ["Beta", null, [300, 500]],
+        ["Gamma", 900, [450, 450]],
+      ],
+    }),
+    "x",
+    "Bloc P",
+  ),
+  "The 2022 register is smaller than the votes counted in Alpha.",
+);
+eq(
+  "a register exactly the votes counted is accepted",
+  refusal(
+    toyAtlas({
+      ...BASE,
+      register: [
+        ["Alpha", 700, []],
+        ["Beta", null, [300, 500]],
+        ["Gamma", 900, [450, 450]],
+      ],
+    }),
+    "x",
+    "Bloc P",
+  ),
+  "",
+);
+eq(
+  "and in the seats shown together",
+  refusal(
+    toyAtlas({
+      ...BASE,
+      cons: [BASE.cons[0]!, BASE.cons[1]!],
+      register: [
+        ["Alpha", 1000, []],
+        ["Beta", null, [300, 500]],
+        ["Gamma", 300, []],
+      ],
+    }),
+    "x",
+    "Bloc P",
+  ),
+  "The 2022 register is smaller than the votes counted in Gamma.",
+);
+eq(
   "no register for a constituency is refused",
   refusal(
     toyAtlas({

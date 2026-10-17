@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { FindingItem } from "@/components/gw/findings/FindingItem";
 import { NoPathToCityHall, PathToCityHall } from "@/components/gw/strategy/PathToCityHall";
@@ -64,7 +64,10 @@ function Strategy() {
   const home = atlas ? homeAreaFor(campaign, atlas.homeArea, atlas.areas) : null;
   const homeName = atlas?.areas.find((a) => a.key === home)?.name ?? "your area";
   // A governor's path by constituency, or why there is none; null for any other race.
-  const seat = atlas && home ? seatForCampaign(campaign, atlas, home) : null;
+  const seat = useMemo(
+    () => (atlas && home ? seatForCampaign(campaign, atlas, home) : null),
+    [campaign, atlas, home],
+  );
   const places =
     atlas && home
       ? atlas.areas

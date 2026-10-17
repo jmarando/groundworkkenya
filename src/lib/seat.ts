@@ -161,6 +161,13 @@ export function seatFromAtlas(
     });
   }
 
+  const over = buckets.find((b) => b.yours + b.rival > b.registered);
+  if (over)
+    return {
+      ok: false,
+      why: `The ${year} register is smaller than the votes counted in ${over.name}.`,
+    };
+
   const ticket = (b: string) => {
     for (const c of d.candidates) {
       if (c.election !== `${year}-president` || c.bloc !== b) continue;

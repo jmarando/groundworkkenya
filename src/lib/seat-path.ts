@@ -68,7 +68,10 @@ export function runSeat(seat: Seat, sc: Scenario = {}): SeatRun {
     const y1 = m.share === 0 ? b.yours : clamp01(share0 + m.share / 100) * two;
     const r1 = two - y1;
     // Then turnout: both counts scale, so the extra voters split like the constituency's own.
-    const f = two > 0 && b.registered > 0 ? clamp01(turnout0 + m.turnout / 100) / turnout0 : 1;
+    const f =
+      m.turnout !== 0 && two > 0 && b.registered > 0
+        ? clamp01(turnout0 + m.turnout / 100) / turnout0
+        : 1;
     const yours = y1 * f;
     const rival = r1 * f;
     return {
