@@ -100,6 +100,8 @@ const refusal = (d: AtlasData, county: string, bloc: string | null = null) => {
   eq("the sources are named as the atlas names them", s.source, {
     constituencies: "The Star: Sakaja declared winner in Nairobi governor race",
     county: "Provisional results: 2022 Governor result, Nairobi City County",
+    president:
+      "IEBC: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022",
   });
 }
 
@@ -138,13 +140,18 @@ const refusal = (d: AtlasData, county: string, bloc: string | null = null) => {
 {
   const s = seatOf(real, "nairobi", "Kenya Kwanza");
   eq("the presidential candidates of the same two blocs, in the county", s.president, {
-    yours: 561775,
-    rival: 767395,
+    yours: { name: "William Ruto", votes: 561775 },
+    rival: { name: "Raila Odinga", votes: 767395 },
   });
   eq("the other side's view", seatOf(real, "nairobi", "Azimio").president, {
-    yours: 767395,
-    rival: 561775,
+    yours: { name: "Raila Odinga", votes: 767395 },
+    rival: { name: "William Ruto", votes: 561775 },
   });
+  eq(
+    "its source is named",
+    s.source.president,
+    "IEBC: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022",
+  );
 }
 
 // ---------------------------------------------------------- flipping
@@ -159,7 +166,10 @@ const refusal = (d: AtlasData, county: string, bloc: string | null = null) => {
       "Polycarp Igathe",
       "Johnson Sakaja",
       { yours: 573516, rival: 699392, valid: 1324409 },
-      { yours: 767395, rival: 561775 },
+      {
+        yours: { name: "Raila Odinga", votes: 767395 },
+        rival: { name: "William Ruto", votes: 561775 },
+      },
       false,
     ],
   );
@@ -212,6 +222,8 @@ type Toy = {
   /** Registers: [constituency name, own row | null, ward numbers]. */
   register: [string, number | null, number[]][];
   presidentBlocs?: [string, string];
+  /** The source ids of the two presidential rows. */
+  presidentSources?: [string, string];
   /** Leave the sources table empty, so a label can only be the id. */
   noSources?: boolean;
 };
@@ -289,8 +301,13 @@ function toyAtlas(t: Toy): AtlasData {
         { candidate: gov("Ann"), area: key(n), votes: a, source: src ?? "press" },
         { candidate: gov("Ben"), area: key(n), votes: b, source: src ?? "press" },
       ]),
-      { candidate: pres("Pat"), area: "x", votes: 5000, source: "iebc" },
-      { candidate: pres("Quin"), area: "x", votes: 7000, source: "iebc" },
+      { candidate: pres("Pat"), area: "x", votes: 5000, source: t.presidentSources?.[0] ?? "iebc" },
+      {
+        candidate: pres("Quin"),
+        area: "x",
+        votes: 7000,
+        source: t.presidentSources?.[1] ?? "iebc",
+      },
     ],
     turnout: [],
     register: t.register.flatMap(([n, own, wards]) => [
@@ -316,6 +333,14 @@ function toyAtlas(t: Toy): AtlasData {
       : [
           { id: "county", title: "County figures", publisher: "Pub1", url: null, note: null },
           { id: "press", title: "Constituency figures", publisher: "Pub2", url: null, note: null },
+          { id: "iebc", title: "Presidential figures", publisher: "Pub3", url: null, note: null },
+          {
+            id: "iebc2",
+            title: "More presidential figures",
+            publisher: "Pub4",
+            url: null,
+            note: null,
+          },
         ],
     indicators: [],
     homeArea: "x",
@@ -362,6 +387,7 @@ const BASE: Toy = {
   eq("a county's source labels are 'publisher: title'", s.source, {
     constituencies: "Pub2: Constituency figures",
     county: "Pub1: County figures",
+    president: "Pub3: Presidential figures",
   });
   eq(
     "with no presidential candidate of the same blocs there is no ticket",
@@ -373,7 +399,33 @@ const BASE: Toy = {
     seatOf(toyAtlas({ ...BASE, presidentBlocs: ["Bloc P", "Bloc Y"] }), "x", "Bloc P").president,
     null,
   );
-  eq("the presidential candidates of the same blocs", s.president, { yours: 5000, rival: 7000 });
+  eq("the presidential candidates of the same blocs", s.president, {
+    yours: { name: "Pat", votes: 5000 },
+    rival: { name: "Quin", votes: 7000 },
+  });
+  eq(
+    "a presidential result with no source in the table is named by its id",
+    seatOf(toyAtlas({ ...BASE, noSources: true }), "x", "Bloc P").source.president,
+    "iebc",
+  );
+  eq(
+    "with no ticket there is no source for it",
+    seatOf(toyAtlas({ ...BASE, presidentBlocs: ["Bloc Z", "Bloc Y"] }), "x", "Bloc P").source
+      .president,
+    null,
+  );
+  eq(
+    "nor with one of the two blocs missing",
+    seatOf(toyAtlas({ ...BASE, presidentBlocs: ["Bloc P", "Bloc Y"] }), "x", "Bloc P").source
+      .president,
+    null,
+  );
+  eq(
+    "two presidential sources are both named, each once",
+    seatOf(toyAtlas({ ...BASE, presidentSources: ["iebc", "iebc2"] }), "x", "Bloc P").source
+      .president,
+    "Pub3: Presidential figures; Pub4: More presidential figures",
+  );
 }
 {
   // One constituency missing: the county's total less the others is the bucket.
@@ -449,6 +501,7 @@ eq(
   eq("a source the atlas doesn't list is named by its id", bare.source, {
     constituencies: "press",
     county: "county",
+    president: "iebc",
   });
   const mixed = seatOf(
     toyAtlas({

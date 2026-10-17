@@ -7,6 +7,8 @@
 import type { AtlasData } from "@/lib/atlas-view";
 
 export type Contender = { name: string; bloc: string };
+/** A presidential candidate's votes in the county. */
+export type Ticket = { name: string; votes: number };
 
 /** A constituency, or the constituencies the figures don't separate. */
 export type SeatBucket = {
@@ -37,9 +39,9 @@ export type Seat = {
   total: { yours: number; rival: number; valid: number };
   buckets: SeatBucket[];
   /** The presidential candidates of the same two blocs, in the county; null when not on file. */
-  president: { yours: number; rival: number } | null;
-  /** Where the figures come from, as "publisher: title". */
-  source: { constituencies: string; county: string };
+  president: { yours: Ticket; rival: Ticket } | null;
+  /** Where the figures come from, as "publisher: title" (the presidential ones null without a ticket). */
+  source: { constituencies: string; county: string; president: string | null };
 };
 
 export type SeatResult = { ok: true; seat: Seat } | { ok: false; why: string };
@@ -160,7 +162,7 @@ export function seatFromAtlas(
     for (const c of d.candidates) {
       if (c.election !== `${year}-president` || c.bloc !== b) continue;
       const r = votesAt(c.id, county);
-      if (r) return r.votes;
+      if (r) return { name: c.name, votes: r.votes, source: r.source };
     }
     return null;
   };
@@ -180,10 +182,14 @@ export function seatFromAtlas(
       topOther: others.length ? Math.max(...others.map((x) => x.votes)) : 0,
       total: { yours: mine.votes, rival: theirs.votes, valid },
       buckets,
-      president: py !== null && pr !== null ? { yours: py, rival: pr } : null,
+      president:
+        py && pr
+          ? { yours: { name: py.name, votes: py.votes }, rival: { name: pr.name, votes: pr.votes } }
+          : null,
       source: {
         constituencies: [...new Set(reported.map((x) => label(x.y.source)))].join("; "),
         county: label(mine.source),
+        president: py && pr ? [...new Set([label(py.source), label(pr.source)])].join("; ") : null,
       },
     },
   };

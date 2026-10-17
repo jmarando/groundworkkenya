@@ -71,7 +71,7 @@ function toy(
     total: { yours: y, rival: v, valid: y + v + others },
     buckets: bs,
     president: null,
-    source: { constituencies: "c", county: "k" },
+    source: { constituencies: "c", county: "k", president: null },
   };
 }
 
