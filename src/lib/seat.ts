@@ -55,6 +55,9 @@ export function togetherName(names: string[]): string {
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
+/** The place a campaign's seat text names: "Governor · Nairobi" is "Nairobi". */
+export const placeOfSeat = (seatText: string): string => (seatText.split("·").pop() ?? "").trim();
+
 /** The seat as the other side sees it: their votes are "yours". */
 export function flipSeat(s: Seat): Seat {
   return {
@@ -193,4 +196,23 @@ export function seatFromAtlas(
       },
     },
   };
+}
+
+/**
+ * The seat a governor campaign plans on, or the sentence for why there is none;
+ * null for any other level. `home` is the campaign's home area key, which is a
+ * county only when the atlas knows the campaign's county.
+ */
+export function seatForCampaign(
+  campaign: { level: string; seat: string } | null,
+  d: AtlasData,
+  home: string,
+): SeatResult | null {
+  if (campaign?.level !== "governor") return null;
+  if (!d.areas.some((a) => a.key === home && a.level === "county"))
+    return {
+      ok: false,
+      why: `The 2022 governor result isn't on file for ${placeOfSeat(campaign.seat) || "this county"}.`,
+    };
+  return seatFromAtlas(d, home, d.sides["2022-governor"] ?? null);
 }

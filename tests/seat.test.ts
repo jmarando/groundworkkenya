@@ -4,7 +4,14 @@
 //   npx tsx --tsconfig tsconfig.json tests/seat.test.ts
 
 import type { AtlasData } from "@/lib/atlas-view";
-import { flipSeat, seatFromAtlas, togetherName, type Seat } from "@/lib/seat";
+import {
+  flipSeat,
+  placeOfSeat,
+  seatForCampaign,
+  seatFromAtlas,
+  togetherName,
+  type Seat,
+} from "@/lib/seat";
 
 import { atlasFromCsv, candidateId } from "./atlas-csv";
 
@@ -579,6 +586,74 @@ eq(
   "Embakasi and Embakasi East",
 );
 eq("none", togetherName([]), "");
+
+// ---------------------------------------------------------- the seat a campaign plans on
+
+{
+  const withSide = (bloc: string) => atlasFromCsv({ sides: { "2022-governor": bloc } });
+  const sakaja = seatForCampaign(
+    { level: "governor", seat: "Governor · Nairobi" },
+    withSide("Kenya Kwanza"),
+    "nairobi",
+  );
+  eq(
+    "a Nairobi governor's seat, from the campaign's side",
+    sakaja?.ok && [sakaja.seat.yours.name, sakaja.seat.defaulted],
+    ["Johnson Sakaja", false],
+  );
+  const igathe = seatForCampaign(
+    { level: "governor", seat: "Governor · Nairobi" },
+    withSide("Azimio"),
+    "nairobi",
+  );
+  eq("the other side", igathe?.ok && igathe.seat.yours.name, "Polycarp Igathe");
+  const none = seatForCampaign({ level: "governor", seat: "Governor · Nairobi" }, real, "nairobi");
+  eq(
+    "no side set: the winner, said to be a default",
+    none?.ok && [none.seat.yours.name, none.seat.defaulted],
+    ["Johnson Sakaja", true],
+  );
+  eq(
+    "an MP, a president or no campaign has no seat to plan",
+    [
+      seatForCampaign({ level: "mp", seat: "MP · Mathira" }, real, "nyeri"),
+      seatForCampaign({ level: "president", seat: "President" }, real, "kenya"),
+      seatForCampaign(null, real, "nairobi"),
+    ],
+    [null, null, null],
+  );
+  eq(
+    "a governor whose county the atlas can't place is told the county",
+    seatForCampaign({ level: "governor", seat: "Governor · Kiambu" }, real, "kenya"),
+    { ok: false, why: "The 2022 governor result isn't on file for Kiambu." },
+  );
+  eq(
+    "and one whose seat names no place",
+    seatForCampaign({ level: "governor", seat: "" }, real, "kenya"),
+    { ok: false, why: "The 2022 governor result isn't on file for this county." },
+  );
+  eq(
+    "a home that is a constituency is no county",
+    seatForCampaign({ level: "governor", seat: "Governor · Nairobi" }, real, "nairobi/kasarani"),
+    { ok: false, why: "The 2022 governor result isn't on file for Nairobi." },
+  );
+  eq(
+    "Nyeri: on file for the county only",
+    seatForCampaign({ level: "governor", seat: "Governor · Nyeri" }, real, "nyeri"),
+    {
+      ok: false,
+      why: "Nyeri's 2022 governor result is on file for the county as a whole, not by constituency.",
+    },
+  );
+}
+
+// ---------------------------------------------------------- the place a campaign's seat names
+
+eq("a seat's place", placeOfSeat("Governor · Nairobi"), "Nairobi");
+eq("with spaces and a longer place", placeOfSeat("  Governor ·  Trans Nzoia "), "Trans Nzoia");
+eq("with no dot, the whole text", placeOfSeat("Nairobi"), "Nairobi");
+eq("with several dots, the last", placeOfSeat("Governor · Kenya · Kiambu"), "Kiambu");
+eq("empty", placeOfSeat(""), "");
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

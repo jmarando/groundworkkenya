@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 
 import { FindingItem } from "@/components/gw/findings/FindingItem";
+import { NoPathToCityHall, PathToCityHall } from "@/components/gw/strategy/PathToCityHall";
 import { PathToStateHouse } from "@/components/gw/strategy/PathToStateHouse";
 import { useAccess } from "@/hooks/useAccess";
 import { useFindings } from "@/hooks/useFindings";
@@ -20,6 +21,7 @@ import {
   within,
 } from "@/lib/findings/core";
 import { sideFromBloc } from "@/lib/path-view";
+import { placeOfSeat, seatForCampaign } from "@/lib/seat";
 
 const ABOUT =
   "What the figures say about where to spend time, what to say where, where to put field work and money, and how to answer rivals and polls.";
@@ -61,6 +63,8 @@ function Strategy() {
 
   const home = atlas ? homeAreaFor(campaign, atlas.homeArea, atlas.areas) : null;
   const homeName = atlas?.areas.find((a) => a.key === home)?.name ?? "your area";
+  // A governor's path by constituency, or why there is none; null for any other race.
+  const seat = atlas && home ? seatForCampaign(campaign, atlas, home) : null;
   const places =
     atlas && home
       ? atlas.areas
@@ -157,10 +161,17 @@ function Strategy() {
       {
         // Once the atlas has answered, so the side it names is there from the first sight of the section.
         atlasPending ? null : (
-          <PathToStateHouse
-            president={campaign?.level === "president"}
-            startSide={sideFromBloc(atlas?.sides["2022-president"])}
-          />
+          <>
+            {seat?.ok ? (
+              <PathToCityHall seat={seat.seat} />
+            ) : seat ? (
+              <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
+            ) : null}
+            <PathToStateHouse
+              president={campaign?.level === "president"}
+              startSide={sideFromBloc(atlas?.sides["2022-president"])}
+            />
+          </>
         )
       }
     </section>
