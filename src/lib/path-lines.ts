@@ -16,8 +16,9 @@ import {
   type Side,
 } from "@/lib/path";
 
+/** One reading: its id (the presidential and the governor's differ), its sentence, and the figure behind each number in it. */
 export type PathLine = {
-  id: "standing" | "biggest" | "turnout" | "counties";
+  id: string;
   line: string;
   figures: Figure[];
 };
@@ -58,7 +59,7 @@ const thousands = (n: number) => count(Math.round(n / 1000) * 1000);
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 /** "A", "A and B", "A, B and C". */
-function list(names: string[]): string {
+export function list(names: string[]): string {
   if (names.length < 2) return names.join("");
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
