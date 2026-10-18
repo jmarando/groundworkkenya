@@ -6,8 +6,9 @@
 // docs/superpowers/plans/2026-10-18-outlook-2027.md.
 //
 // A group is the 2022 voters of one of the two main candidates (`yours`,
-// `rival`) in a place, or the people newly on the register (`new`). A `Take` says
-// how many of a group vote again (`back`, in points of 100) and, of those who
+// `rival`) in a place, the people on the 2022 register who cast no valid vote
+// (`idle`), or the people newly on the register (`new`). A `Take` says how many
+// of a group vote in 2027 (`back`, in points of 100) and, of those who
 // vote, how many vote for each of up to four candidates (`goes`, in points of
 // 100); the rest vote for someone outside the field. The other 2022 candidates'
 // votes, which the atlas holds for the county only, stay with "everyone else".
@@ -18,9 +19,10 @@ import type { Seat } from "@/lib/seat";
 
 /** Candidates in the field, at most. */
 export const SLOTS = 4;
-export type PoolId = "yours" | "rival" | "new";
-export const POOLS: readonly PoolId[] = ["yours", "rival", "new"];
-const NAMES = ["Your candidate", "Main rival", "Second rival", "Third rival"];
+export type PoolId = "yours" | "rival" | "idle" | "new";
+export const POOLS: readonly PoolId[] = ["yours", "rival", "idle", "new"];
+/** What a candidate is called until the team names them. */
+export const DEFAULT_NAMES = ["Your candidate", "Main rival", "Second rival", "Third rival"];
 /** Plans that differ by less than this are the same plan. */
 const EPS = 1e-9;
 
@@ -58,7 +60,11 @@ export type BucketOutcome = {
   registered: number;
   /** New registrations placed here. */
   fresh: number;
+  /** The registered who cast no valid vote in 2022, here. */
+  idle: number;
   votes: number[];
+  /** The slot, other than the first, with the most votes here; the lowest slot on a tie. */
+  rival: number;
   /** The first candidate's votes less the best of the others'. */
   margin: number;
   /** The candidate with more votes than any other, to the whole vote; null when level. */
@@ -102,7 +108,7 @@ const zeros = (n: number) => Array.from({ length: n }, () => 0);
 /** The names of a field of 2 to 4, with a default for any missing. */
 function field(names: string[]): string[] {
   const n = clamp(names.length, 2, SLOTS);
-  return Array.from({ length: n }, (_, i) => names[i] ?? NAMES[i]!);
+  return Array.from({ length: n }, (_, i) => names[i] ?? DEFAULT_NAMES[i]!);
 }
 
 /** The slot with more votes than any other, to the whole vote; null when the top is level. */
@@ -136,16 +142,34 @@ function neutral(seat: Seat): number[] {
 /** 2022's register in the seat. */
 const register = (seat: Seat) => sum(seat.buckets.map((b) => b.registered));
 
+/**
+ * The people on the 2022 register who cast no valid vote, in each place: its
+ * register less the two main candidates' votes and its share of the other
+ * candidates' (the atlas holds those for the county only, so they are scaled by
+ * the two main candidates' votes), never below nothing. Together they are the
+ * register less the valid votes.
+ */
+export function idleOf(seat: Seat): Record<string, number> {
+  const two = sum(seat.buckets.map((b) => b.yours + b.rival));
+  return Object.fromEntries(
+    seat.buckets.map((b) => {
+      const others = two > 0 ? (seat.others * (b.yours + b.rival)) / two : 0;
+      return [b.key, Math.max(0, b.registered - b.yours - b.rival - others)];
+    }),
+  );
+}
+
 // -------------------------------------------------------------------- the plan
 
 /** 2022 again: each group votes again for its own candidate; new registrations do not vote (and, if they did, would split as the county did). */
 export function baselinePlan(seat: Seat, names: string[] = []): Plan {
   const n = clamp(names.length, 2, SLOTS);
   return {
-    names: Array.from({ length: n }, (_, i) => names[i]?.trim() || NAMES[i]!),
+    names: Array.from({ length: n }, (_, i) => names[i]?.trim() || DEFAULT_NAMES[i]!),
     takes: {
       yours: { back: 100, goes: [100, 0, 0, 0] },
       rival: { back: 100, goes: [0, 100, 0, 0] },
+      idle: { back: 0, goes: neutral(seat) },
       new: { back: 0, goes: neutral(seat) },
     },
   };
@@ -251,7 +275,7 @@ export function withBack(plan: Plan, pool: PoolId, value: number): Plan {
 /** A candidate added to the field, up to four; a blank name is the next default. */
 export function addCandidate(plan: Plan, name = ""): Plan {
   if (plan.names.length >= SLOTS) return plan;
-  return { ...plan, names: [...plan.names, name.trim() || NAMES[plan.names.length]!] };
+  return { ...plan, names: [...plan.names, name.trim() || DEFAULT_NAMES[plan.names.length]!] };
 }
 
 /** The third or fourth candidate removed, the later one moving up; the first two cannot go. */
@@ -333,7 +357,13 @@ export function simulate(o: Outlook, plan: Plan): Outcome {
     ReturnType<typeof shape>
   >;
   const votes = zeros(n);
-  const from: Record<PoolId, number[]> = { yours: zeros(n), rival: zeros(n), new: zeros(n) };
+  const from: Record<PoolId, number[]> = {
+    yours: zeros(n),
+    rival: zeros(n),
+    idle: zeros(n),
+    new: zeros(n),
+  };
+  const idle = idleOf(o.seat);
   let everyone = o.seat.others;
   let fresh = 0;
 
@@ -341,7 +371,12 @@ export function simulate(o: Outlook, plan: Plan): Outcome {
     const placed = o.fresh?.[b.key] ?? 0;
     const here = Number.isFinite(placed) ? Math.max(0, placed) : 0;
     fresh += here;
-    const size: Record<PoolId, number> = { yours: b.yours, rival: b.rival, new: here };
+    const size: Record<PoolId, number> = {
+      yours: b.yours,
+      rival: b.rival,
+      idle: idle[b.key] ?? 0,
+      new: here,
+    };
     const bv = zeros(n);
     for (const p of POOLS) {
       const s = shapes[p];
@@ -354,7 +389,9 @@ export function simulate(o: Outlook, plan: Plan): Outcome {
       }
       everyone += voting * s.rest;
     }
-    const best = Math.max(...bv.slice(1));
+    let near = 1;
+    for (let c = 2; c < n; c++) if (bv[c]! > bv[near]!) near = c;
+    const best = bv[near]!;
     return {
       key: b.key,
       name: b.name,
@@ -362,7 +399,9 @@ export function simulate(o: Outlook, plan: Plan): Outcome {
       together: b.together,
       registered: b.registered,
       fresh: here,
+      idle: size.idle,
       votes: bv,
+      rival: near,
       margin: bv[0]! - best,
       leader: unique(bv),
     };

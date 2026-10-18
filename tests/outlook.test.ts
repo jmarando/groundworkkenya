@@ -13,6 +13,7 @@ import {
   baselinePlan,
   dropCandidate,
   fitSplit,
+  idleOf,
   isBaseline,
   likeBefore,
   shiftSplit,
@@ -108,7 +109,7 @@ const run = (plan: Plan, o: Outlook = O) => simulate(o, plan);
 /** `plan` with one pool's take replaced. */
 const takes = (
   plan: Plan,
-  pool: "yours" | "rival" | "new",
+  pool: "yours" | "rival" | "new" | "idle",
   back: number,
   goes: number[],
 ): Plan => ({
@@ -122,6 +123,8 @@ eq("the field", P.names, ["Your candidate", "Main rival"]);
 eq("yours go home", P.takes.yours, { back: 100, goes: [100, 0, 0, 0] });
 eq("the rival's go home", P.takes.rival, { back: 100, goes: [0, 100, 0, 0] });
 eq("new registrations stay home", P.takes.new.back, 0);
+eq("so do the registered who did not vote in 2022", P.takes.idle.back, 0);
+nears("and would split as the county did too", P.takes.idle.goes, [50, 100 * (1000 / 2200), 0, 0]);
 nears("new registrations, if they vote, split as the county did", P.takes.new.goes, [
   50,
   100 * (1000 / 2200),
@@ -152,7 +155,12 @@ eq("never more than four", baselinePlan(small, ["A", "B", "C", "D", "E"]).names.
   eq("votes to turn it", r.toTurn, 51);
   eq("the register", r.registered, 3100);
   near("turnout", r.turnout, 2200 / 3100);
-  eq("where the votes come from", r.from, { yours: [1100, 0], rival: [0, 1000], new: [0, 0] });
+  eq("where the votes come from", r.from, {
+    yours: [1100, 0],
+    rival: [0, 1000],
+    idle: [0, 0],
+    new: [0, 0],
+  });
   eq(
     "the constituencies",
     r.buckets.map((b) => [
@@ -470,6 +478,7 @@ nears("shiftSplit: below nothing", shiftSplit([90, 10, 0, 0], 0, 1, -5), [100, 0
     takes: {
       yours: { back: 100, goes: [10, 20, 30, 40] },
       rival: { back: 100, goes: [40, 30, 20, 10] },
+      idle: { back: 20, goes: [10, 20, 30, 40] },
       new: { back: 50, goes: [25, 25, 25, 25] },
     },
   };
@@ -477,10 +486,11 @@ nears("shiftSplit: below nothing", shiftSplit([90, 10, 0, 0], 0, 1, -5), [100, 0
   eq("dropping moves the later ones up", d.names, ["a", "b", "d"]);
   eq(
     "and their shares",
-    [d.takes.yours.goes, d.takes.rival.goes, d.takes.new.goes],
+    [d.takes.yours.goes, d.takes.rival.goes, d.takes.idle.goes, d.takes.new.goes],
     [
       [10, 20, 40, 0],
       [40, 30, 10, 0],
+      [10, 20, 40, 0],
       [25, 25, 25, 0],
     ],
   );
@@ -587,6 +597,66 @@ eq("a weight that is not a number", allocate(10, { a: Number.NaN, b: 1 }), { a: 
   );
 }
 
+// ------------------------------------------------------------- the registered who did not vote in 2022
+
+{
+  // The register less the valid votes, placed where the register is long and the votes are few.
+  const idle = idleOf(small);
+  nears(
+    "each place's share of them",
+    [idle["a"]!, idle["b"]!, idle["c"]!],
+    [
+      1500 - 1000 - (100 * 1000) / 2100,
+      1200 - 800 - (100 * 800) / 2100,
+      400 - 300 - (100 * 300) / 2100,
+    ],
+  );
+  near(
+    "add up to the register less the valid votes",
+    idle["a"]! + idle["b"]! + idle["c"]!,
+    3100 - 2200,
+  );
+  eq(
+    "they are in the outcome",
+    run(P).buckets.map((b) => Math.round(b.idle)),
+    [452, 362, 86],
+  );
+  eq(
+    "a place whose register is shorter than its votes has none",
+    idleOf(toy([["a", 600, 500, 1000]], { others: 100 }))["a"],
+    0,
+  );
+  eq(
+    "nor one with no votes to scale the others by",
+    idleOf(toy([["a", 0, 0, 50]], { others: 0 }))["a"],
+    50,
+  );
+  const r = run(withBack(P, "idle", 100));
+  nears("all of them vote as the county did", r.votes, [1100 + 450, 1000 + 900 * (1000 / 2200)]);
+  near("everyone else gets the rest", r.everyone, 100 + 900 * (100 / 2200));
+  near("so every registered voter has voted", r.valid, 3100);
+  near("and turnout is whole", r.turnout, 1);
+  nears("they are where the votes come from", r.from.idle, [450, 900 * (1000 / 2200)]);
+  const half = run(withBack(withGoes(P, "idle", 0, 100), "idle", 50));
+  nears("half of them, all for the first", half.votes, [1100 + 450, 1000]);
+  near("everyone else is not moved", half.everyone, 100);
+  eq("they are not the baseline", isBaseline(withBack(P, "idle", 5), small), false);
+  // With new registrations voting too, each group's votes are its own.
+  const both = simulate(outlook(small, fresh), withBack(withBack(P, "idle", 100), "new", 100));
+  nears("from the registered who stayed home", both.from.idle, [450, 900 * (1000 / 2200)]);
+  nears("from the new registrations", both.from.new, [150, 300 * (1000 / 2200)]);
+  nears("they have no home candidate", withGoes(P, "idle", 1, 70).takes.idle.goes, [30, 70, 0, 0]);
+  eq("back past 100 is 100", run(takes(P, "idle", 150, [100, 0, 0, 0])).votes[0], 1100 + 900);
+  eq("a validation problem names them", validatePlan(takes(P, "idle", 101, [100, 0, 0, 0])), [
+    "idle: back is not between 0 and 100",
+  ]);
+  eq(
+    "a plan the sliders made is valid",
+    validatePlan(withGoes(withBack(P, "idle", 40), "idle", 0, 60)),
+    [],
+  );
+}
+
 // ------------------------------------------------------------- the edges the mutation check found
 
 {
@@ -640,6 +710,18 @@ eq("a weight that is not a number", allocate(10, { a: Number.NaN, b: 1 }), { a: 
   // The rival is the strongest of three others, and a bucket's margin is against the strongest there.
   const four = baselinePlan(small, ["A", "B", "C", "D"]);
   eq("the strongest of three", run(takes(four, "rival", 100, [0, 10, 20, 70])).rival, 3);
+  eq(
+    "each place has its own strongest other",
+    run(takes(baselinePlan(small, ["A", "B", "C"]), "rival", 100, [0, 20, 80, 0])).buckets.map(
+      (b) => b.rival,
+    ),
+    [2, 2, 2],
+  );
+  eq(
+    "the first of the equal in a place",
+    run(splitPool(P, "rival")).buckets.map((b) => b.rival),
+    [1, 1, 1],
+  );
   const three = takes(baselinePlan(small, ["A", "B", "C"]), "rival", 100, [0, 20, 80, 0]);
   eq(
     "a bucket's margin is against its strongest",
@@ -800,6 +882,26 @@ const NP = baselinePlan(nairobi);
     1e-4,
   );
   nears("Langata has no new registrations", at("nairobi/langata").votes, [38064, 37336]);
+}
+{
+  // The registered who cast no valid vote in 2022: the register less the valid votes.
+  const idle = idleOf(nairobi);
+  near(
+    "Nairobi: 1,090,901 of them",
+    Object.values(idle).reduce((t, v) => t + v, 0),
+    1090901,
+    1e-6,
+  );
+  near("Dagoretti North", idle["nairobi/dagoretti-north"]!, 75688.4929, 1e-4);
+  near("Starehe", idle["nairobi/starehe"]!, 81523.0081, 1e-4);
+  near("the four Embakasi seats together", idle["nairobi#together"]!, 263107.7939, 1e-4);
+  const r = simulate(N, withBack(NP, "idle", 10));
+  nears("a tenth of them vote as the county did", r.votes, [757000.1431, 620755.8766], 1e-3);
+  near("everyone else", r.everyone, 55743.0802, 1e-3);
+  near("valid", r.valid, 1433499.1, 1e-3);
+  near("the margin", r.margin, 136244.2665, 1e-3);
+  const all = simulate(N, withGoes(withBack(NP, "idle", 25), "idle", 0, 100));
+  nears("a quarter of them, all for the first", all.votes, [972117.25, 573516], 1e-3);
 }
 
 console.log(`${pass} passed, ${fail} failed`);

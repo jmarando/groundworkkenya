@@ -106,7 +106,7 @@ const COMMUNITY =
   eq(
     "the readings, in order",
     l.map((x) => x.id),
-    ["standing", "turn", "closest", "fresh", "ceiling", "ticket", "young"],
+    ["standing", "turn", "closest", "idle", "fresh", "ceiling", "ticket", "young"],
   );
   const t = byId(O, P);
   eq(
@@ -123,6 +123,11 @@ const COMMUNITY =
     "the closest constituencies",
     t["closest"],
     "The closest constituencies: Langata (ahead by 728), Dagoretti North (ahead by 729), Mathare (ahead by 1,334) and Westlands (ahead by 1,389).",
+  );
+  eq(
+    "what the registered who stayed home would have to do",
+    t["idle"],
+    "1,090,901 people on the 2022 register cast no valid vote that year, 45% of it. If a tenth of them voted (109,090 votes), Main rival could not pass Your candidate on them alone; if a quarter did (272,725 votes), Main rival would need about 73% of their votes.",
   );
   eq(
     "what the new registrations would have to do",
@@ -174,7 +179,7 @@ const COMMUNITY =
   eq(
     "the readings that depend on the plan",
     lines(O, p).map((x) => x.id),
-    ["standing", "turn", "united", "closest", "fresh", "ceiling", "ticket", "young"],
+    ["standing", "turn", "united", "closest", "idle", "fresh", "ceiling", "ticket", "young"],
   );
 }
 {
@@ -310,7 +315,7 @@ eq(
   eq("no close constituency, no line", t["closest"], undefined);
   eq("no president on file, no ticket", t["ticket"], undefined);
   eq("no estimates, no young adults", t["young"], undefined);
-  eq("what is left", Object.keys(t), ["standing", "turn", "ceiling"]);
+  eq("what is left", Object.keys(t), ["standing", "turn", "idle", "ceiling"]);
   eq(
     "the vote against the winner exactly the winner's",
     t["ceiling"],
@@ -480,11 +485,11 @@ eq(
   );
   const empty = toy([["a", 0, 0, 100]]);
   eq(
-    "nobody voted in 2022: no share to speak of",
+    "nobody voted in 2022: no share of 2022's votes to speak of, only a register of people who stayed home",
     Object.keys(
       byId(outlookFor(empty, null, { count: 10, period: "p", source: "s" }), baselinePlan(empty)),
     ),
-    ["standing", "turn"],
+    ["standing", "turn", "idle"],
   );
 }
 {
@@ -546,6 +551,136 @@ eq(
   );
 }
 
+{
+  // With more than two candidates, a close constituency says who the first is close to.
+  const three = (seat: Seat, goes: number[]) => {
+    const p = addCandidate(baselinePlan(seat));
+    return { ...p, takes: { ...p.takes, rival: { back: 100, goes } } };
+  };
+  const six = toy(
+    [1, 2, 3, 4, 5, 6].map(
+      (i, k) =>
+        [String.fromCharCode(97 + k), 1000, 1000 - 10 * i, 5000] as [
+          string,
+          number,
+          number,
+          number,
+        ],
+    ),
+  );
+  eq(
+    "a field of three, the second the strongest",
+    byId(outlookFor(six, null, null), addCandidate(baselinePlan(six)))["closest"],
+    "The closest constituencies: A (ahead of Main rival by 10), B (ahead of Main rival by 20), C (ahead of Main rival by 30) and D (ahead of Main rival by 40).",
+  );
+  const ahead = toy([["a", 525, 475, 2000]]);
+  eq(
+    "ahead of the third",
+    byId(outlookFor(ahead, null, null), three(ahead, [0, 0, 100, 0]))["closest"],
+    "The closest constituency: A (ahead of Second rival by 50).",
+  );
+  const level = toy([["a", 500, 500, 2000]]);
+  eq(
+    "level with the third",
+    byId(outlookFor(level, null, null), three(level, [0, 0, 100, 0]))["closest"],
+    "The closest constituency: A (level with Second rival).",
+  );
+  const behind = toy([["a", 475, 525, 2000]]);
+  eq(
+    "behind the third",
+    byId(outlookFor(behind, null, null), three(behind, [0, 0, 100, 0]))["closest"],
+    "The closest constituency: A (behind Second rival by 50).",
+  );
+}
+
+{
+  // The registered who cast no valid vote in 2022, at the edges.
+  const at = (seat: Seat, plan: Plan = baselinePlan(seat)) =>
+    byId(outlookFor(seat, null, null), plan);
+  eq(
+    "too few at a tenth, enough at a quarter",
+    at(small)["idle"],
+    "900 people on the 2022 register cast no valid vote that year, 29% of it. If a tenth of them voted (90 votes), Main rival could not pass Your candidate on them alone; if a quarter did (225 votes), Main rival would need about 72% of their votes.",
+  );
+  const tied = toy(
+    [
+      ["a", 500, 500, 1200],
+      ["b", 500, 500, 1200],
+    ],
+    { others: 0 },
+  );
+  eq(
+    "enough at both",
+    at(tied)["idle"],
+    "400 people on the 2022 register cast no valid vote that year, 17% of it. If a tenth of them voted (40 votes), Your candidate would need about 50% of their votes to pass Main rival; if a quarter did (100 votes), about 50%.",
+  );
+  const lopsided = toy([["a", 900, 100, 3000]]);
+  eq(
+    "not enough even at a quarter",
+    at(lopsided)["idle"],
+    "2,000 people on the 2022 register cast no valid vote that year, 67% of it. Even if a quarter of them voted (500 votes), Main rival could not pass Your candidate on them alone.",
+  );
+  eq("nobody stayed home", at(toy([["a", 500, 500, 1000]]))["idle"], undefined);
+  eq(
+    "a share that rounds up",
+    at(toy([["a", 80, 60, 160]]))["idle"],
+    "20 people on the 2022 register cast no valid vote that year, 13% of it. Even if a quarter of them voted (5 votes), Main rival could not pass Your candidate on them alone.",
+  );
+  const three = addCandidate(baselinePlan(small));
+  const strong = {
+    ...three,
+    takes: {
+      ...three.takes,
+      rival: { back: 100, goes: [0, 20, 80, 0] },
+      idle: { back: 100, goes: [30, 20, 50, 0] },
+    },
+  };
+  eq(
+    "the rival is the strongest of the others",
+    at(small, strong)["idle-plan"],
+    "In your plan 100% of them vote: 900 votes, 270 for Your candidate and 450 for Second rival, which lifts turnout by 29.0 points of the register.",
+  );
+  eq(
+    "the plan's own use of them",
+    at(small, withBack(baselinePlan(small), "idle", 100))["idle-plan"],
+    "In your plan 100% of them vote: 900 votes, 450 for Your candidate and 409 for Main rival, which lifts turnout by 29.0 points of the register.",
+  );
+  eq("not in 2022 again", at(small)["idle-plan"], undefined);
+  const wild = {
+    ...baselinePlan(small),
+    takes: {
+      ...baselinePlan(small).takes,
+      idle: { back: 250, goes: baselinePlan(small).takes.idle.goes },
+    },
+  };
+  eq(
+    "a share past 100 is 100",
+    at(small, wild)["idle-plan"],
+    "In your plan 100% of them vote: 900 votes, 450 for Your candidate and 409 for Main rival, which lifts turnout by 29.0 points of the register.",
+  );
+  // Which group a reading isolates: the other group stays as the plan has it.
+  const both = withBack(withBack(baselinePlan(small), "idle", 100), "new", 100);
+  const o = outlookFor(small, null, { count: 120, period: "p", source: "s" });
+  eq(
+    "the idle reading does not depend on the idle group",
+    byId(o, both)["idle"],
+    byId(o, baselinePlan(small))["idle"],
+  );
+}
+{
+  const o = outlookFor(nairobi, youth, REGISTRATION);
+  eq(
+    "in Nairobi: a tenth of them vote as the county did",
+    byId(o, withBack(P, "idle", 10))["idle-plan"],
+    "In your plan 10% of them vote: 109,090 votes, 57,608 for Your candidate and 47,240 for Main rival, which lifts turnout by 4.5 points of the register.",
+  );
+  eq(
+    "and the standing moves with it",
+    byId(o, withBack(P, "idle", 10))["standing"],
+    "With your plan, Your candidate has 757,000 votes, 52.8% of the valid votes, and is ahead of Main rival by 136,244 votes.",
+  );
+}
+
 // ------------------------------------------------------------- every number is a figure
 
 {
@@ -556,6 +691,9 @@ eq(
     ["like 2022", O, likeBefore(P, nairobi)],
     ["new voters all in", O, withGoes(withBack(P, "new", 100), "new", 0, 100)],
     ["a tenth switch", O, withGoes(P, "yours", 1, 10)],
+    ["idle tenth", O, withBack(P, "idle", 10)],
+    ["idle all for one", O, withGoes(withBack(P, "idle", 100), "idle", 0, 100)],
+    ["small, idle in", smallOutlook(null), withBack(baselinePlan(small), "idle", 100)],
     [
       "three and a half",
       O,

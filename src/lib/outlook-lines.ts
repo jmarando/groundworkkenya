@@ -8,7 +8,15 @@
 // docs/superpowers/plans/2026-10-18-outlook-2027.md.
 
 import { count, percent, type Figure } from "@/lib/findings/core";
-import { isBaseline, simulate, withBack, type Outlook, type Plan } from "@/lib/outlook";
+import {
+  idleOf,
+  isBaseline,
+  simulate,
+  withBack,
+  type Outlook,
+  type Plan,
+  type PoolId,
+} from "@/lib/outlook";
 import { list, sharePercent, type PathLine } from "@/lib/path-lines";
 import { lean, plural, seatLines, short } from "@/lib/seat-lines";
 
@@ -17,6 +25,10 @@ const MINE = { source: "Your plan for 2027", period: "scenario" };
 const CLOSE = 0.05;
 /** Constituencies named in the "closest" reading. */
 const NEAR = 4;
+/** The shares of those who stayed home in 2022 that the "idle" reading tries. */
+const TENTH = 0.1;
+const QUARTER = 0.25;
+const SCENARIO = { source: "Worked out from 2022's figures", period: "scenario" };
 
 const figure = (
   label: string,
@@ -150,7 +162,14 @@ export function outlookLines(o: Outlook, plan: Plan): PathLine[] {
       const parts = near.map(({ b }) => {
         const c = lean(b.margin);
         if (c.n > 0) figures.push(figure(`Margin in ${b.name}`, b.margin, count(c.n), origin));
-        return `${b.name} (${short(c)})`;
+        // With more than two in the field, say who the first is close to.
+        if (names.length < 3) return `${b.name} (${short(c)})`;
+        const who = names[b.rival]!;
+        const how =
+          c.word === "level"
+            ? `level with ${who}`
+            : `${c.word === "ahead" ? "ahead of" : "behind"} ${who} by ${count(c.n)}`;
+        return `${b.name} (${how})`;
       });
       lines.push({
         id: "closest",
@@ -160,22 +179,88 @@ export function outlookLines(o: Outlook, plan: Plan): PathLine[] {
     }
   }
 
+  /** Who would have to pass whom, and by how many votes, with one group of the plan switched off. */
+  const against = (pool: PoolId) => {
+    const off = simulate(o, withBack(plan, pool, 0));
+    const m0 = off.votes[0]! - off.votes[off.rival]!;
+    const leading = Math.round(m0) > 0;
+    return {
+      challenger: leading ? names[off.rival]! : A,
+      defender: leading ? A : names[off.rival]!,
+      gap: Math.abs(m0),
+    };
+  };
+  /** The share of a group's votes the challenger needs to pass when `people` of them vote; null when even all of their votes are too few (equal votes only tie). */
+  const needFrom = (people: number, gap: number) => (people > gap ? (1 + gap / people) / 2 : null);
+  const onRegister = sum(seat.buckets.map((b) => b.registered));
+
+  // The registered who cast no valid vote in 2022: what it would take for them to decide it, and what the plan assumes of them.
+  const stayed = sum(Object.values(idleOf(seat)));
+  if (stayed > 0) {
+    const { challenger, defender, gap } = against("idle");
+    const n = figure("Registered in 2022, no valid vote", stayed, whole(stayed), atlas);
+    const shareValue = stayed / onRegister;
+    const share = figure("Share of the 2022 register", shareValue, percent(shareValue), atlas);
+    const figures: Figure[] = [n, share, year];
+    const start = `${n.text} people on the ${year.text} register cast no valid vote that year, ${share.text} of it.`;
+    const tenth = TENTH * stayed;
+    const quarter = QUARTER * stayed;
+    const p1 = needFrom(tenth, gap);
+    const p2 = needFrom(quarter, gap);
+    const pct = (label: string, x: number) => {
+      const f = figure(label, x, percent(x), SCENARIO);
+      figures.push(f);
+      return f.text;
+    };
+    const votes = (label: string, x: number) => {
+      const f = figure(label, x, whole(x), SCENARIO);
+      figures.push(f);
+      return f.text;
+    };
+    let rest: string;
+    if (p2 === null) {
+      rest = `Even if a quarter of them voted (${votes("Votes if a quarter of them voted", quarter)} votes), ${challenger} could not pass ${defender} on them alone.`;
+    } else if (p1 === null) {
+      rest = `If a tenth of them voted (${votes("Votes if a tenth of them voted", tenth)} votes), ${challenger} could not pass ${defender} on them alone; if a quarter did (${votes("Votes if a quarter of them voted", quarter)} votes), ${challenger} would need about ${pct(`Share of their votes ${challenger} would need if a quarter voted`, p2)} of their votes.`;
+    } else {
+      rest = `If a tenth of them voted (${votes("Votes if a tenth of them voted", tenth)} votes), ${challenger} would need about ${pct(`Share of their votes ${challenger} would need if a tenth voted`, p1)} of their votes to pass ${defender}; if a quarter did (${votes("Votes if a quarter of them voted", quarter)} votes), about ${pct(`Share of their votes ${challenger} would need if a quarter voted`, p2)}.`;
+    }
+    lines.push({ id: "idle", line: `${start} ${rest}`, figures });
+
+    const idleBack = Math.min(100, Math.max(0, plan.takes.idle.back));
+    const voting = (sum(r.buckets.map((b) => b.idle)) * idleBack) / 100;
+    if (voting > 0) {
+      const backF = figure("Share of them who vote", idleBack / 100, percent(idleBack / 100), MINE);
+      const votingF = figure("Votes from them", voting, whole(voting), MINE);
+      const forA = figure(
+        `Votes from them for ${A}`,
+        r.from.idle[0]!,
+        whole(r.from.idle[0]!),
+        MINE,
+      );
+      const forR = figure(
+        `Votes from them for ${R}`,
+        r.from.idle[r.rival]!,
+        whole(r.from.idle[r.rival]!),
+        MINE,
+      );
+      const points = (100 * voting) / onRegister;
+      const pts = figure("Points of the 2022 register", points, points.toFixed(1), MINE);
+      lines.push({
+        id: "idle-plan",
+        line: `In your plan ${backF.text} of them vote: ${votingF.text} votes, ${forA.text} for ${A} and ${forR.text} for ${R}, which lifts turnout by ${pts.text} points of the register.`,
+        figures: [backF, votingF, forA, forR, pts],
+      });
+    }
+  }
+
   // What the new registrations would have to do, and what the plan assumes of them.
   const reg = o.registration;
   if (reg && reg.count > 0 && seat.total.valid > 0) {
-    const off = simulate(o, withBack(plan, "new", 0));
-    const m0 = off.votes[0]! - off.votes[off.rival]!;
-    const leading = Math.round(m0) > 0;
-    const challenger = leading ? names[off.rival]! : A;
-    const defender = leading ? A : names[off.rival]!;
-    const gap = Math.abs(m0);
-    const registered = sum(seat.buckets.map((b) => b.registered));
-    const rate = registered > 0 ? seat.total.valid / registered : null;
-    /** The share of the new voters' votes the challenger needs to pass when `t` of them vote; null when even all of their votes are too few (equal votes only tie). */
-    const need = (t: number) => {
-      const people = t * reg.count;
-      return people > gap ? (1 + gap / people) / 2 : null;
-    };
+    const { challenger, defender, gap } = against("new");
+    const rate = onRegister > 0 ? seat.total.valid / onRegister : null;
+    /** The share of the new voters' votes the challenger needs to pass when `t` of them vote. */
+    const need = (t: number) => needFrom(t * reg.count, gap);
     const here = { source: reg.source, period: reg.period };
     const n = figure("New registrations in the county", reg.count, count(reg.count), here);
     const ratioValue = reg.count / seat.total.valid;
