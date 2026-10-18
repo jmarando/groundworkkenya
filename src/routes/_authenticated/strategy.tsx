@@ -75,6 +75,22 @@ function Strategy() {
           .sort((a, b) => a.key.localeCompare(b.key))
       : [];
 
+  // The paths do not depend on the findings, so they show whether or not those load. They wait
+  // for the atlas, so the side it names is there from the first sight of them.
+  const paths = atlasPending ? null : (
+    <>
+      {seat?.ok ? (
+        <PathToCityHall seat={seat.seat} />
+      ) : seat ? (
+        <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
+      ) : null}
+      <PathToStateHouse
+        president={campaign?.level === "president"}
+        startSide={sideFromBloc(atlas?.sides["2022-president"])}
+      />
+    </>
+  );
+
   if (isError)
     return (
       <section className="view active" aria-label="Strategy">
@@ -84,6 +100,7 @@ function Strategy() {
             Try again
           </button>
         </div>
+        {paths}
       </section>
     );
 
@@ -161,22 +178,7 @@ function Strategy() {
             );
           })
         : null}
-      {
-        // Once the atlas has answered, so the side it names is there from the first sight of the section.
-        atlasPending ? null : (
-          <>
-            {seat?.ok ? (
-              <PathToCityHall seat={seat.seat} />
-            ) : seat ? (
-              <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
-            ) : null}
-            <PathToStateHouse
-              president={campaign?.level === "president"}
-              startSide={sideFromBloc(atlas?.sides["2022-president"])}
-            />
-          </>
-        )
-      }
+      {paths}
     </section>
   );
 }

@@ -2340,8 +2340,11 @@ figure { margin: 0; }
 .pth-votes { display:flex; flex-direction:column; align-items:flex-end; gap:1px; font-size:13px; overflow-wrap:anywhere; }
 .pth-counties { grid-column:1 / -1; }
 .pth-counties summary { cursor:pointer; font-size:12.5px; color:var(--muted-foreground); }
-.pth-counties ul { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(16rem, 1fr)); gap:6px 18px; }
-.pth-counties li { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; gap:8px; align-items:center; font-size:12.5px; }
+.pth-counties ul { list-style:none; margin:8px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(23rem, 1fr)); gap:6px 18px; }
+.pth-counties li { display:grid; grid-template-columns:minmax(0, 1fr) 11.5rem 6.5rem; gap:8px; align-items:center; font-size:12.5px; }
+.pth-counties li > .pill { justify-self:start; }
+.pth-all { background:var(--muted); border-radius:10px; }
+.pth-all .pth-head h3 { font-size:13px; }
 .pth-foot { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
 .pth-fine { font-size:12.5px; color:var(--muted-foreground); }
 .pth-fine summary { cursor:pointer; }

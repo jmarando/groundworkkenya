@@ -27,6 +27,23 @@ export function setMove(sc: Scenario, region: string, patch: Partial<Move>): Sce
   return next.share === 0 && next.turnout === 0 ? rest : { ...rest, [region]: next };
 }
 
+/** `sc` with the same part of every listed region's move set. Never changes `sc`. */
+export function setAll(sc: Scenario, keys: string[], patch: Partial<Move>): Scenario {
+  return keys.reduce((m, k) => setMove(m, k, patch), sc);
+}
+
+/** What every listed region's move has in common; null for a part where they differ. */
+export function commonMove(
+  sc: Scenario,
+  keys: string[],
+): { share: number | null; turnout: number | null } {
+  if (!keys.length) return { share: 0, turnout: 0 };
+  const moves = keys.map((k): Move => sc[k] ?? { share: 0, turnout: 0 });
+  const same = (part: (m: Move) => number) =>
+    moves.every((m) => part(m) === part(moves[0]!)) ? part(moves[0]!) : null;
+  return { share: same((m) => m.share), turnout: same((m) => m.turnout) };
+}
+
 /** "+5", "−3" (a true minus), "0"; a whole number with thousands, then `unit`. */
 export function signed(n: number, unit = ""): string {
   const r = Math.round(n);
