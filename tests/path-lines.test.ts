@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 
 import { unaccounted } from "@/lib/findings/core";
 import { parseKenya, type County, type Kenya } from "@/lib/kenya";
-import { pathLines, sharePercent } from "@/lib/path-lines";
+import { pathLines, sharePercent, thousands } from "@/lib/path-lines";
 import type { Scenario, Side } from "@/lib/path";
 
 let pass = 0;
@@ -126,13 +126,29 @@ eq(
   );
 }
 
+// ------------------------------------------------------------- about, to a sensible round
+
+eq(
+  "about: to the thousand from ten thousand, the hundred from a thousand, the ten below",
+  [
+    thousands(112151),
+    thousands(10400),
+    thousands(8844),
+    thousands(1049),
+    thousands(640),
+    thousands(34),
+    thousands(0.4),
+  ],
+  ["112,000", "10,000", "8,800", "1,000", "640", "30", "0"],
+);
+
 // ------------------------------------------------------------- the biggest region
 
 for (const side of ["ruto", "raila"] as const)
   eq(
     `the biggest region (${side})`,
     line(k, side, {}, "biggest"),
-    "Mt Kenya West is the biggest region, 16% of valid votes. Five points of your side's share there is worth about 112,000 votes, 0.8 points nationally.",
+    "On 2022's map, Mt Kenya West is the biggest region, 16% of valid votes. Five points of your side's share there is worth about 112,000 votes, 0.8 points nationally.",
   );
 eq(
   "it is worked out on 2022's map, whatever has been changed",
@@ -273,8 +289,9 @@ eq(
         (f) => f.text === "2022",
       ),
       pathLines(k, "raila")[2]!.figures.some((f) => f.text === "2022"),
+      pathLines(k, "ruto")[1]!.figures.some((f) => f.text === "2022"),
     ],
-    [true, false, true],
+    [true, false, true, true],
   );
 }
 

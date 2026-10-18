@@ -325,6 +325,35 @@ eq(
   ["Langata", "Dagoretti North"],
 );
 eq(
+  "close means within five points of the votes between the two, by default",
+  closestSeats(nairobi, {}, 20).map((b) => b.name),
+  ["Langata", "Dagoretti North", "Mathare", "Westlands"],
+);
+eq(
+  "a tighter limit keeps fewer: within one point of a tie",
+  closestSeats(nairobi, {}, 4, 0.01).map((b) => b.name),
+  ["Langata", "Dagoretti North"],
+);
+eq("within nothing: none, since no constituency is level", closestSeats(nairobi, {}, 4, 0), []);
+eq(
+  "exactly at the limit counts, one vote past does not",
+  [
+    closestSeats(toy([["a", 525, 475, 4000]])).map((b) => b.key),
+    closestSeats(toy([["a", 526, 474, 4000]])).map((b) => b.key),
+  ],
+  [["a"], []],
+);
+eq(
+  "a constituency with no votes between the two is not close, it is empty",
+  closestSeats(toy([["a", 0, 0, 1000]])).map((b) => b.key),
+  [],
+);
+eq(
+  "the limit is read on the votes as the scenario has them",
+  closestSeats(toy([["a", 600, 400, 4000]]), { a: MOVE(-9) }).map((b) => b.key),
+  ["a"],
+);
+eq(
   "a constituency level on votes is carried by nobody",
   [
     runSeat(
@@ -354,9 +383,9 @@ eq(
   "a tie in the margin goes by name",
   closestSeats(
     toy([
-      ["b", 110, 100, 1000],
-      ["a", 210, 200, 1000],
-      ["c", 100, 150, 1000],
+      ["b", 1100, 1000, 5000],
+      ["a", 2100, 2000, 8000],
+      ["c", 1000, 1100, 5000],
     ]),
   ).map((b) => b.name),
   ["A", "B", "C"],
@@ -368,9 +397,18 @@ eq(
   // Figures that hold more votes than the register (a typo somewhere) must not be rescaled by a move
   // that is not about turnout, nor by no move at all.
   const odd = toy([["a", 600, 500, 1000]]);
-  eq("no move: the votes are the votes, whatever the register says", [runSeat(odd).totals.yours, runSeat(odd).totals.rival], [600, 500]);
+  eq(
+    "no move: the votes are the votes, whatever the register says",
+    [runSeat(odd).totals.yours, runSeat(odd).totals.rival],
+    [600, 500],
+  );
   const shifted = runSeat(odd, { a: MOVE(10) }).buckets[0]!;
-  near("a share move keeps the two together as they were", shifted.yours + shifted.rival, 1100, 1e-9);
+  near(
+    "a share move keeps the two together as they were",
+    shifted.yours + shifted.rival,
+    1100,
+    1e-9,
+  );
   near("and moves the share by ten points", shifted.share - shifted.was.share, 0.1, 1e-12);
 }
 

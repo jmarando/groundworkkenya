@@ -54,8 +54,11 @@ const figure = (
   origin: { source: string; period: string },
 ): Figure => ({ label, value, text, ...origin });
 
-/** About, to the nearest thousand. */
-const thousands = (n: number) => count(Math.round(n / 1000) * 1000);
+/** About: to the ten under a thousand, the hundred under ten thousand, else the thousand. */
+export function thousands(n: number): string {
+  const unit = n < 1000 ? 10 : n < 10000 ? 100 : 1000;
+  return count(Math.round(n / unit) * unit);
+}
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
 /** "A", "A and B", "A, B and C". */
@@ -131,8 +134,8 @@ export function pathLines(k: Kenya, side: Side, sc: Scenario = {}): PathLine[] {
         );
         lines.push({
           id: "biggest",
-          line: `${biggest.name} is the biggest region, ${weight.text} of valid votes. Five points of your side's share there is worth about ${votes.text} votes, ${points.text} points nationally.`,
-          figures: [weight, votes, points],
+          line: `On ${year.text}'s map, ${biggest.name} is the biggest region, ${weight.text} of valid votes. Five points of your side's share there is worth about ${votes.text} votes, ${points.text} points nationally.`,
+          figures: [year, weight, votes, points],
         });
       }
     }
