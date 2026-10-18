@@ -1,6 +1,6 @@
-# Kenya, by county: the 2022 presidential result
+# Kenya, by county: the 2022 presidential result, and what has changed since
 
-What the Strategy page's "Path to State House" starts from. Published election results only: no voter data, nobody's community.
+What the Strategy page's "Path to State House" starts from, and the facts beside its "Outlook 2027". Published election results and published reports only: no voter data, nobody's community.
 
 ## Files
 
@@ -23,3 +23,13 @@ IEBC's rows for Kilifi and West Pokot carry 10 and 100 more valid votes than the
 ## Changing a region
 
 Edit the `region` of a county in `counties.csv` to another `id` from `regions.csv`. Every region must keep at least one county. `npm test` refuses a file with a county in no region, a number that is not whole, or anything other than 47 counties.
+
+## Outlook 2027: what has changed since 2022
+
+- `outlook-notes.csv`: dated, sourced notes shown beside the Outlook on the Strategy page. Columns: `id` (unique), `topic` (`youth`, `register`, `world`, `parties` or `nairobi`), `place` (blank for everywhere, else a county name; the Nairobi notes show only on a Nairobi campaign), `date` (the day the source reports, `YYYY-MM-DD`, or `YYYY-MM` when it gives a month), `title`, `text`, `kind` (`official`, `reported`, `survey` or `statement`), `source` (publication and date), `url` (https, to the page read), `caveat` (what to remember when reading it).
+  - Every figure in a note is one its source prints; where a source reports another body's count (a rights commission, a pollster) the note says whose. Counts that differ between sources are not added or averaged.
+  - A note names places, parties, officials and published bodies. It never names a community or says how one votes: `tests/outlook-notes.test.ts` refuses a note that does.
+  - Statements by politicians are labelled `statement`; polls and studies `survey`, with their size and method where the source gives them.
+- `registered-2026.csv`: new registrations by county in the IEBC's mass registration drive of 30 March to 28 April 2026, for the 17 counties that Capital FM printed on 1 May 2026 (the drive's national total was 2,345,476; the 17 add up to 1,107,452). `code` is IEBC's county code (checked against `counties.csv`). The figures are gross and unaudited, with no age breakdown. They leave out the 267,249 continuous registrations since 29 September 2025, which no source splits by county. Add a county only from a source that prints it.
+
+Both files are read by `src/lib/outlook-notes.ts`, which refuses a bad file and names every problem.

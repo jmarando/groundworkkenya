@@ -35,10 +35,10 @@ const NUMBERS = ["registered", "valid", "rejected", "raila", "ruto"] as const;
 const NUMBERS_2017 = ["uhuru_2017", "raila_2017", "valid_2017"] as const;
 const COUNTY_COLUMNS = ["code", "county", "region", ...NUMBERS, ...NUMBERS_2017];
 
-type Row = Record<string, string>;
+export type Row = Record<string, string>;
 
 /** The rows of a CSV file by column name; a missing column is a problem and no rows. */
-function rowsOf(file: string, text: string, columns: string[], problems: string[]): Row[] {
+export function rowsOf(file: string, text: string, columns: string[], problems: string[]): Row[] {
   const [head = [], ...body] = parseCSV(text).map((r) => r.map((c) => c.trim()));
   const missing = columns.filter((c) => !head.includes(c));
   for (const c of missing) problems.push(`${file} has no column "${c}"`);
