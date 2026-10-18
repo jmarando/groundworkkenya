@@ -32,16 +32,16 @@ export function hundreds(n: number): string {
   const unit = n < 1000 ? 10 : 100;
   return count(Math.round(n / unit) * unit);
 }
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+export const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-type Lean = { word: "ahead" | "behind" | "level"; n: number };
+export type Lean = { word: "ahead" | "behind" | "level"; n: number };
 /** A margin read as a side, to the whole vote: "level" when it rounds to nothing. */
-function lean(margin: number): Lean {
+export function lean(margin: number): Lean {
   const n = Math.round(Math.abs(margin));
   return n === 0 ? { word: "level", n: 0 } : { word: margin > 0 ? "ahead" : "behind", n };
 }
 /** "ahead by 728", "behind by 184", "level". */
-const short = (l: Lean) => (l.word === "level" ? "level" : `${l.word} by ${count(l.n)}`);
+export const short = (l: Lean) => (l.word === "level" ? "level" : `${l.word} by ${count(l.n)}`);
 /** "ahead by 125,876 votes", "behind by 1 vote", "level". */
 const votes = (l: Lean) =>
   l.word === "level" ? "level" : `${short(l)} ${plural(l.n, "vote", "votes")}`;
