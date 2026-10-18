@@ -71,6 +71,15 @@ export function flipSeat(s: Seat): Seat {
   };
 }
 
+/** An area's register in `year`: its own row, else its parts' rows added; null when there is none. */
+export function registerOf(d: AtlasData, area: string, year: number): number | null {
+  const own = d.register.find((r) => r.year === year && r.area === area);
+  if (own) return own.registered;
+  const kids = d.areas.filter((a) => a.parent === area);
+  const rows = kids.flatMap((k) => d.register.filter((r) => r.year === year && r.area === k.key));
+  return rows.length ? rows.reduce((t, r) => t + r.registered, 0) : null;
+}
+
 /**
  * A county's governor race in `year` by constituency, from the atlas. `bloc` is
  * the campaign's side in that race; without one that matches, the county's
@@ -109,13 +118,7 @@ export function seatFromAtlas(
   const valid = field.reduce((t, x) => t + x.votes, 0);
   const others = field.filter((x) => x !== mine && x !== theirs);
 
-  const registered = (area: string): number | null => {
-    const own = d.register.find((r) => r.year === year && r.area === area);
-    if (own) return own.registered;
-    const kids = d.areas.filter((a) => a.parent === area);
-    const rows = kids.flatMap((k) => d.register.filter((r) => r.year === year && r.area === k.key));
-    return rows.length ? rows.reduce((t, r) => t + r.registered, 0) : null;
-  };
+  const registered = (area: string) => registerOf(d, area, year);
 
   const seats = d.areas.filter((a) => a.level === "constituency" && a.parent === county);
   const reported = seats.flatMap((a) => {
