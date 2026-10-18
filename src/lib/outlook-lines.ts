@@ -202,7 +202,7 @@ export function outlookLines(o: Outlook, plan: Plan): PathLine[] {
     const shareValue = stayed / onRegister;
     const share = figure("Share of the 2022 register", shareValue, percent(shareValue), atlas);
     const figures: Figure[] = [n, share, year];
-    const start = `${n.text} people on the ${year.text} register cast no valid vote that year, ${share.text} of it.`;
+    const start = `${n.text} registered voters on the ${year.text} register cast no valid vote that year, ${share.text} of it. The register is still to be cleaned, so the pool that could vote is smaller.`;
     const tenth = TENTH * stayed;
     const quarter = QUARTER * stayed;
     const p1 = needFrom(tenth, gap);

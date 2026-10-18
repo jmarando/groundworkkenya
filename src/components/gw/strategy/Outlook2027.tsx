@@ -157,7 +157,7 @@ function Place({ b, names, youth }: { b: BucketOutcome; names: string[]; youth: 
   const l = leader(b.votes);
   const facts = youth?.buckets[b.key];
   return (
-    <li className="out-place" data-moved={b.fresh > 0 ? "true" : undefined}>
+    <li className="out-place">
       <div className="pth-head">
         <h3>{b.name}</h3>
         <p className="meta">
@@ -171,7 +171,7 @@ function Place({ b, names, youth }: { b: BucketOutcome; names: string[]; youth: 
       </p>
       <p className="meta out-extra">
         {[
-          b.idle >= 0.5 ? `${whole(b.idle)} on the register cast no valid vote in 2022` : "",
+          b.idle >= 0.5 ? `${whole(b.idle)} registered voters cast no valid vote in 2022` : "",
           b.fresh > 0 ? `${count(b.fresh)} new registrations placed here` : "",
           facts && facts.adults > 0
             ? `${percent(facts.young / facts.adults)} of adults are young`
@@ -256,7 +256,7 @@ export function Outlook2027({
     {
       id: "idle",
       name: "On the 2022 register, no valid vote",
-      sub: `${whole(stayed)} in ${seat.countyName}`,
+      sub: `${whole(stayed)} names in ${seat.countyName}, not yet cleaned`,
       label: "Vote",
     },
   ];
@@ -530,9 +530,10 @@ export function Outlook2027({
           <summary>How this works</summary>
           <ul>
             <li>
-              A group is the voters one of the two main candidates had in a place in 2022, or the
-              people newly on the register. Nothing here records, guesses or models any person's or
-              community's vote; the shares you set are the situations you want to try.
+              A group is the voters one of the two main candidates had in a place in 2022, the
+              registered voters who cast no valid vote that year, or the people newly on the
+              register. Nothing here records, guesses or models any person's or community's vote;
+              the shares you set are the situations you want to try.
             </li>
             <li>
               It starts from the 2022 governor result in each constituency as the atlas holds it:{" "}
@@ -549,11 +550,13 @@ export function Outlook2027({
               every constituency, so read the table as a starting point.
             </li>
             <li>
-              People with no valid vote in 2022 are those on the 2022 register who did not cast one:
-              the register less the valid votes, placed in each constituency by its register less
-              its votes (the other candidates' votes are scaled by the two main candidates'). They
-              stay at home unless you move "Vote". Where they are is place context, a guide to where
-              turnout could grow; nothing says who they are or how they would vote.
+              Registered voters with no valid vote in 2022 are those on the 2022 register who did
+              not cast one: the register less the valid votes, placed in each constituency by its
+              register less its votes (the other candidates' votes are scaled by the two main
+              candidates'). The register has not been cleaned, so some of these names will have died
+              or moved and the pool that could vote is smaller. They stay at home unless you move
+              "Vote". Where they are is place context, a guide to where turnout could grow; nothing
+              says who they are or how they would vote.
             </li>
             <li>
               New registrations are the IEBC's figure for the county in its mass drive (

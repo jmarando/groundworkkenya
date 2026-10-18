@@ -127,7 +127,7 @@ const COMMUNITY =
   eq(
     "what the registered who stayed home would have to do",
     t["idle"],
-    "1,090,901 people on the 2022 register cast no valid vote that year, 45% of it. If a tenth of them voted (109,090 votes), Main rival could not pass Your candidate on them alone; if a quarter did (272,725 votes), Main rival would need about 73% of their votes.",
+    "1,090,901 registered voters on the 2022 register cast no valid vote that year, 45% of it. The register is still to be cleaned, so the pool that could vote is smaller. If a tenth of them voted (109,090 votes), Main rival could not pass Your candidate on them alone; if a quarter did (272,725 votes), Main rival would need about 73% of their votes.",
   );
   eq(
     "what the new registrations would have to do",
@@ -600,7 +600,7 @@ eq(
   eq(
     "too few at a tenth, enough at a quarter",
     at(small)["idle"],
-    "900 people on the 2022 register cast no valid vote that year, 29% of it. If a tenth of them voted (90 votes), Main rival could not pass Your candidate on them alone; if a quarter did (225 votes), Main rival would need about 72% of their votes.",
+    "900 registered voters on the 2022 register cast no valid vote that year, 29% of it. The register is still to be cleaned, so the pool that could vote is smaller. If a tenth of them voted (90 votes), Main rival could not pass Your candidate on them alone; if a quarter did (225 votes), Main rival would need about 72% of their votes.",
   );
   const tied = toy(
     [
@@ -612,19 +612,19 @@ eq(
   eq(
     "enough at both",
     at(tied)["idle"],
-    "400 people on the 2022 register cast no valid vote that year, 17% of it. If a tenth of them voted (40 votes), Your candidate would need about 50% of their votes to pass Main rival; if a quarter did (100 votes), about 50%.",
+    "400 registered voters on the 2022 register cast no valid vote that year, 17% of it. The register is still to be cleaned, so the pool that could vote is smaller. If a tenth of them voted (40 votes), Your candidate would need about 50% of their votes to pass Main rival; if a quarter did (100 votes), about 50%.",
   );
   const lopsided = toy([["a", 900, 100, 3000]]);
   eq(
     "not enough even at a quarter",
     at(lopsided)["idle"],
-    "2,000 people on the 2022 register cast no valid vote that year, 67% of it. Even if a quarter of them voted (500 votes), Main rival could not pass Your candidate on them alone.",
+    "2,000 registered voters on the 2022 register cast no valid vote that year, 67% of it. The register is still to be cleaned, so the pool that could vote is smaller. Even if a quarter of them voted (500 votes), Main rival could not pass Your candidate on them alone.",
   );
   eq("nobody stayed home", at(toy([["a", 500, 500, 1000]]))["idle"], undefined);
   eq(
     "a share that rounds up",
     at(toy([["a", 80, 60, 160]]))["idle"],
-    "20 people on the 2022 register cast no valid vote that year, 13% of it. Even if a quarter of them voted (5 votes), Main rival could not pass Your candidate on them alone.",
+    "20 registered voters on the 2022 register cast no valid vote that year, 13% of it. The register is still to be cleaned, so the pool that could vote is smaller. Even if a quarter of them voted (5 votes), Main rival could not pass Your candidate on them alone.",
   );
   const three = addCandidate(baselinePlan(small));
   const strong = {

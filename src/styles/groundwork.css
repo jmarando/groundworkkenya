@@ -2406,7 +2406,6 @@ figure { margin: 0; }
 .out-points { margin:0; padding-left:18px; display:flex; flex-direction:column; gap:6px; max-width:70ch; font-size:13px; }
 .out-places { display:flex; flex-direction:column; }
 .out-place { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.6fr); gap:4px 18px; align-items:start; padding:12px 0 12px 10px; border-top:1px solid var(--border); }
-.out-place[data-moved="true"] { box-shadow:inset 3px 0 0 var(--gw-accent); }
 .out-place p { margin:0; }
 .out-lead { display:flex; flex-direction:column; gap:1px; }
 .out-extra { overflow-wrap:anywhere; }
