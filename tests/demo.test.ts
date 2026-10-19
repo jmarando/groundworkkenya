@@ -126,7 +126,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false, false, false, false],
+  [true, true, false, true, true, true],
 );
 
 // ---- insights

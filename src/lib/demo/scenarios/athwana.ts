@@ -275,19 +275,20 @@ export const athwana: Scenario = {
     },
   },
   lastTime: {
-    title: "2022 MCA election, Athwana ward (illustrative)",
-    official: false,
-    source: "Illustrative figures for the demo",
+    title: "2017 MCA election, Athwana ward",
+    official: true,
+    source: "IEBC declared results, via BallotWinners (6,177 valid votes)",
     results: [
-      { name: "Winner, 2022", votes: 3_900, share: 52.3 },
-      { name: "Runner-up", votes: 2_700, share: 36.2 },
-      { name: "Others", votes: 860, share: 11.5 },
+      { name: "Victor Karithi Mutumah (Jubilee)", votes: 2_625, share: 42.5 },
+      { name: "Dionisio Jim Muchui (Maendeleo Chap Chap)", votes: 2_514, share: 40.7 },
+      { name: "Joan Gacheri Theuri (PNU)", votes: 711, share: 11.5 },
+      { name: "Three others", votes: 327, share: 5.3 },
     ],
-    turnout: 0.82,
+    turnout: null,
     lessons: [
-      "Turnout in rural Meru is high, so a low-turnout surprise is unlikely. Persuasion wins this.",
-      "With fourteen centres, a few hundred votes at Limoro and Mwanika decide it.",
-      "The undecided decide it, and most of them farm miraa.",
+      "Won by 111 votes: in Athwana a few families at one centre decide it.",
+      "Muchui lost in 2017, kept working the ward for five years (water, youth sports, self-help groups) and won in 2022 with 3,864 votes (team research).",
+      "Elders and clan leaders carry weight here: meet the Njuri Ncheke early, at every centre.",
     ],
   },
   diary: [
@@ -345,8 +346,8 @@ export const athwana: Scenario = {
     {
       level: "low",
       kind: "Money",
-      title: "Spending: 11% of the limit",
-      detail: "KES 160,000 so far. Keep the reserve for agents.",
+      title: "Spending: 19% of the limit",
+      detail: "KES 820,000 of the gazetted KES 4.22M. Keep the reserve for agents.",
     },
   ],
   night: {
@@ -389,7 +390,8 @@ export const athwana: Scenario = {
     money: {
       raised: 1_600_000,
       spent: 820_000,
-      limit: 1_500_000,
+      // The gazetted limit for an MCA in Athwana (Kenya Gazette Notice 12251, 7 August 2026).
+      limit: 4_224_052,
       cash: 780_000,
       burnPerWeek: 55_000,
       pledged: 300_000,

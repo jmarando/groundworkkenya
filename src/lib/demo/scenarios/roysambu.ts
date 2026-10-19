@@ -286,19 +286,20 @@ export const roysambu: Scenario = {
     },
   },
   lastTime: {
-    title: "2022 MCA election, Roysambu ward (illustrative)",
-    official: false,
-    source: "Illustrative figures for the demo",
+    title: "2017 MCA election, Roysambu ward",
+    official: true,
+    source: "IEBC declared results, via BallotWinners (23,195 valid votes)",
     results: [
-      { name: "Winner, 2022", votes: 7_900, share: 48.5 },
-      { name: "Runner-up", votes: 5_600, share: 34.4 },
-      { name: "Others", votes: 2_800, share: 17.1 },
+      { name: "Peter Warutere (Jubilee)", votes: 11_829, share: 51 },
+      { name: "Sospeter Gathahu (Independent)", votes: 3_364, share: 14.5 },
+      { name: "Geoffrey Mwangi Mugo (Independent)", votes: 2_797, share: 12.1 },
+      { name: "Five others", votes: 5_205, share: 22.4 },
     ],
-    turnout: 0.56,
+    turnout: null,
     lessons: [
-      "Turnout in Nairobi's estates is low, and tenants who moved since registering don't come back to vote.",
-      "In a ward race a few hundred votes at one centre decide it: Marurui and the church centre are where it is close.",
-      "Register and turn out your own: this race is mobilisation more than persuasion.",
+      "Roysambu votes for the person: Gathahu, second as an independent in 2017, won as an independent in 2022 (6,317 votes) while UDA took the rest of the constituency.",
+      "He won on hyper-local service (drains, lights, garbage, noise) and on residents' WhatsApp groups rather than party barazas (team research).",
+      "Students and young tenants move often: register them where they live now, and turn them out.",
     ],
   },
   diary: [
@@ -356,8 +357,8 @@ export const roysambu: Scenario = {
     {
       level: "low",
       kind: "Money",
-      title: "Spending: 9% of the limit",
-      detail: "KES 410,000 so far. Keep the reserve for agents.",
+      title: "Spending: 36% of the limit",
+      detail: "KES 2.4M of the gazetted KES 6.7M. Keep the reserve for agents.",
     },
   ],
   night: {
@@ -400,7 +401,8 @@ export const roysambu: Scenario = {
     money: {
       raised: 4_600_000,
       spent: 2_400_000,
-      limit: 4_500_000,
+      // The gazetted limit for an MCA in Roysambu (Kenya Gazette Notice 12251, 7 August 2026).
+      limit: 6_699_179,
       cash: 2_200_000,
       burnPerWeek: 140_000,
       pledged: 900_000,
