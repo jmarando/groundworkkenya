@@ -169,6 +169,18 @@ function Team() {
           <button className="btn btn--primary" type="submit" disabled={sendInvite.isPending}>
             {sendInvite.isPending ? "Inviting…" : "Invite"}
           </button>
+          {sendInvite.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              Not sent: {sendInvite.error.message}
+            </p>
+          )}
+          {sendInvite.isSuccess && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {sendInvite.data.result === "added"
+                ? `✓ ${sendInvite.variables ?? "They"} already had an account and are now on the team.`
+                : "✓ Invite sent. They'll get an email to set their password."}
+            </p>
+          )}
         </form>
         {data.invites.length > 0 ? (
           <ul className="team-list">
