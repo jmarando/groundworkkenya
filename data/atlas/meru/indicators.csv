@@ -1,0 +1,7 @@
+area,indicator,year,value,source
+meru/tigania-west/athwana,area_km2,2020,146.774,geoboundaries-ken-adm3
+meru/tigania-west/athwana,buildings,2023,11346,google-open-buildings-v3
+meru/tigania-west/athwana,buildings_per_km2,2023,77,google-open-buildings-v3
+meru/tigania-west/athwana,median_building_m2,2023,22,google-open-buildings-v3
+meru/tigania-west/athwana,small_building_share,2023,0.797,google-open-buildings-v3
+meru/tigania-west/athwana,large_building_share,2023,0.015,google-open-buildings-v3

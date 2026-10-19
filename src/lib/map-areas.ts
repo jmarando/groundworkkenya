@@ -52,6 +52,26 @@ export const MAP_AREAS: MapArea[] = [
     counts: "/tiles/houses-roysambu.json",
     bounds: [36.82, -1.27, 36.91, -1.19],
   },
+  {
+    key: "kiambu/githunguri",
+    id: "githunguri",
+    name: "Githunguri",
+    top: "constituency",
+    wards: "/geo/githunguri-wards.json",
+    houses: "/tiles/houses-githunguri.pmtiles",
+    counts: "/tiles/houses-githunguri.json",
+    bounds: [36.67, -1.13, 36.9, -0.97],
+  },
+  {
+    key: "meru/tigania-west/athwana",
+    id: "athwana",
+    name: "Athwana Ward",
+    top: "constituency",
+    wards: "/geo/athwana-wards.json",
+    houses: "/tiles/houses-athwana.pmtiles",
+    counts: "/tiles/houses-athwana.json",
+    bounds: [37.58, 0.19, 37.79, 0.49],
+  },
 ];
 
 export function mapAreaFor(key: string | null | undefined): MapArea | null {

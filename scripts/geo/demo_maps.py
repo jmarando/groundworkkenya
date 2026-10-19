@@ -1,4 +1,5 @@
-"""Maps for the demo scenarios: Kenya's 47 counties and Mathira's 6 wards.
+"""Maps for the demo scenarios and the campaign map areas: Kenya's 47 counties, and the wards
+of Mathira (6), Githunguri (5) and Athwana (the ward alone).
 
 Usage (run in a folder holding the two inputs):
   python3 demo_maps.py public/geo
@@ -9,7 +10,8 @@ Inputs:
       both from https://www.geoboundaries.org/api/current/gbOpen/KEN/<level>/
 
 Writes kenya-counties.json (simplified to about 900 m, enough for a national map)
-and mathira-wards.json (about 17 m), each feature carrying {slug, name}.
+and <area>-wards.json (about 17 m), each feature carrying {slug, name}. A ward is taken
+only where its middle falls in the county named for it, since names repeat across Kenya.
 """
 import json
 import re
@@ -19,7 +21,12 @@ ADM1 = "ken_adm1_full.geojson"
 ADM3 = "ken_adm3_full.geojson"
 OUT = sys.argv[1] if len(sys.argv) > 1 else "."
 
-MATHIRA = ["Ruguru", "Magutu", "Iriaini", "Konyu", "Kirimukuyu", "Karatina Town"]
+# Each map area's wards, and the county they must fall in.
+AREAS = {
+    "mathira": ("Nyeri", ["Ruguru", "Magutu", "Iriaini", "Konyu", "Kirimukuyu", "Karatina Town"]),
+    "githunguri": ("Kiambu", ["Githunguri", "Githiga", "Ikinu", "Ngewa", "Komothai"]),
+    "athwana": ("Meru", ["Athwana"]),
+}
 # geoBoundaries names that differ from the official county name.
 COUNTY_NAMES = {"Tharaka": "Tharaka-Nithi"}
 
@@ -143,23 +150,24 @@ counties.sort(key=lambda f: f["properties"]["slug"])
 write(f"{OUT}/kenya-counties.json", counties)
 print("counties:", len(counties))
 
-nyeri = next(f for f in adm1["features"] if f["properties"]["shapeName"] == "Nyeri")
 adm3 = json.load(open(ADM3))
-wards = []
-for f in adm3["features"]:
-    name = f["properties"]["shapeName"]
-    if name not in MATHIRA:
-        continue
-    p = interior_point(f["geometry"])
-    if not p or not any(inside(p, poly) for poly in rings(nyeri["geometry"])):
-        continue
-    wards.append({
-        "type": "Feature",
-        "properties": {"slug": slug(name), "name": name},
-        "geometry": shrink(f["geometry"], tol=0.00015, nd=5, min_area=0.0),
-    })
-wards.sort(key=lambda f: f["properties"]["slug"])
-write(f"{OUT}/mathira-wards.json", wards)
-print("Mathira wards:", len(wards), [w["properties"]["name"] for w in wards])
-missing = set(MATHIRA) - {w["properties"]["name"] for w in wards}
-print("missing:", sorted(missing) or "none")
+for key, (county, names) in AREAS.items():
+    home = next(f for f in adm1["features"] if f["properties"]["shapeName"] == county)
+    wards = []
+    for f in adm3["features"]:
+        name = f["properties"]["shapeName"]
+        if name not in names:
+            continue
+        p = interior_point(f["geometry"])
+        if not p or not any(inside(p, poly) for poly in rings(home["geometry"])):
+            continue
+        wards.append({
+            "type": "Feature",
+            "properties": {"slug": slug(name), "name": name},
+            "geometry": shrink(f["geometry"], tol=0.00015, nd=5, min_area=0.0),
+        })
+    wards.sort(key=lambda f: f["properties"]["slug"])
+    write(f"{OUT}/{key}-wards.json", wards)
+    print(f"{key} wards:", len(wards), [w["properties"]["name"] for w in wards])
+    missing = set(names) - {w["properties"]["name"] for w in wards}
+    print("missing:", sorted(missing) or "none")
