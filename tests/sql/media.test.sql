@@ -72,3 +72,24 @@ do $$ begin
     values ('myspace', 'x', current_date, current_date, 100, 'Paid for by x')$q$) = '23514', 'an unknown platform';
 end $$;
 rollback;
+
+-- test: Pulse payouts go to Finance once each, as pending "creators" expenses, by a manager only
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';
+do $$
+declare n int;
+begin
+  n := public.record_creator_payouts('[{"id":"p1","creator":"Amina","gross_kes":40000,"paid_at":"2026-10-10T09:00:00Z"},{"id":"p2","creator":"Brian","gross_kes":25000}]'::jsonb);
+  assert n = 2, 'two added';
+  n := public.record_creator_payouts('[{"id":"p1","creator":"Amina","gross_kes":40000}]'::jsonb);
+  assert n = 0, 'never twice';
+  assert (select count(*) from public.expenses where category = 'creators' and status = 'pending'
+           and campaign_id = 'ca000000-0000-4000-8000-000000000002') = 2, 'two pending creators expenses';
+  assert pg_temp.state_of($q$select public.record_creator_payouts('[{"id":"x","gross_kes":0}]'::jsonb)$q$) = '22023', 'no amount';
+end $$;
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
+do $$ begin
+  assert pg_temp.state_of($q$select public.record_creator_payouts('[{"id":"p3","gross_kes":10}]'::jsonb)$q$) = '42501', 'an agent can''t';
+end $$;
+rollback;

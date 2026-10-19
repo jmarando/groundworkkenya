@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { BroadcastComposer } from "@/components/gw/BroadcastComposer";
+import { Creators } from "@/components/gw/broadcast/Creators";
 import { PaidMedia } from "@/components/gw/broadcast/PaidMedia";
 import { useAccess } from "@/hooks/useAccess";
 import type { SupportBand } from "@/lib/broadcast.functions";
@@ -373,6 +374,7 @@ function Broadcast() {
       </div>
 
       <PaidMedia wards={data.wardList} canBook={isPrincipal} />
+      <Creators canBrief={isPrincipal} />
 
       <div className="card fx4" style={{ marginTop: 14 }}>
         <div className="card-head">

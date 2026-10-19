@@ -45,7 +45,11 @@ eq("a good buy, trimmed and rounded", checkBuy(good), {
     externalId: null,
   },
 });
-eq("TikTok takes no political ads", why({ platform: "tiktok" }), "TikTok doesn't take paid political ads.");
+eq(
+  "TikTok takes no political ads",
+  why({ platform: "tiktok" }),
+  "TikTok doesn't take paid political ads.",
+);
 eq("an unknown platform", why({ platform: "myspace" }), "Choose where the ad runs.");
 eq("no name", why({ name: " " }), "Give the buy a name of up to 120 letters.");
 eq("ends before it starts", why({ endsOn: "2026-10-19" }), "It can't end before it starts.");
