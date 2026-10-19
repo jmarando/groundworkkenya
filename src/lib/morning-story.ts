@@ -267,6 +267,34 @@ export function storyFromRow(r: StoryRow, editorName: string | null): StoryView 
   };
 }
 
+/** A story with something in it: the team's, a written one, or headlines from real news. */
+export const hasNews = (v: StoryView): boolean =>
+  v.writtenBy === "team" || v.story.kind === "written" || v.story.from > 0;
+
+/**
+ * What Home shows: today's story when it has news; otherwise the latest earlier
+ * one that had, until today's comes in; otherwise today's check, if any.
+ * `earlier` is newest first.
+ */
+export function homeStory(today: StoryView | null, earlier: StoryView[]): StoryView | null {
+  if (today && hasNews(today)) return today;
+  return earlier.find(hasNews) ?? today;
+}
+
+const dayName = (day: string) =>
+  new Date(`${day}T12:00:00+03:00`).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Africa/Nairobi",
+  });
+
+/** Said over an earlier day's story shown while today's is not in; null for today's. */
+export function carriedLine(v: StoryView, today: string): string | null {
+  if (v.day >= today) return null;
+  return `Today's story is not in yet. This is ${dayName(v.day)}'s, until it is.`;
+}
+
 const clock = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", {
     timeZone: "Africa/Nairobi",

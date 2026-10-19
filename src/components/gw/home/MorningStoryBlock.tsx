@@ -1,9 +1,10 @@
-import { kicker, noStoryLine, type StoryView } from "@/lib/morning-story";
+import { carriedLine, kicker, noStoryLine, type StoryView } from "@/lib/morning-story";
 
 /** This morning's story: its kicker, the story with its sources, and the morning's other news. */
 export function MorningStoryBlock({
   view,
   loading,
+  today,
   time,
   canEdit,
   onEdit,
@@ -12,6 +13,8 @@ export function MorningStoryBlock({
   view: StoryView | null;
   /** Home's data is still on its way: say so, not that there is no news. */
   loading: boolean;
+  /** Nairobi's date today: an earlier day's story says it is one. None in the archive. */
+  today?: string;
   /** Nairobi's time now, HH:MM. */
   time: string;
   canEdit: boolean;
@@ -36,13 +39,15 @@ export function MorningStoryBlock({
     );
   }
   const st = view.story;
+  const carried = today ? carriedLine(view, today) : null;
   return (
     <article className="mb-story" aria-labelledby="mb-story-h">
+      {carried ? <p className="mb-story-sum morning-status" role="status">{carried}</p> : null}
       <p className="mb-story-kicker">
         {kicker(view)}
         {canEdit ? (
           <button type="button" className="btn btn--ghost btn--sm" onClick={onEdit}>
-            {st.kind === "written" ? "Edit" : "Write today's story"}
+            {st.kind === "written" && !carried ? "Edit" : "Write today's story"}
           </button>
         ) : null}
       </p>

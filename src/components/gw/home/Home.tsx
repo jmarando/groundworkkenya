@@ -68,6 +68,7 @@ export function Home({
         items={items}
         loading={!data}
         story={d.story}
+        today={today}
         time={now}
         plan={plan}
         watch={watchList(d.diary, today)}
@@ -76,7 +77,12 @@ export function Home({
         onEditStory={() => setEditing("story")}
       />
       <FindingsBlock today={items.map((t) => t.title)} />
-      {editing === "story" && <StoryEditor view={d.story} onClose={() => setEditing(null)} />}
+      {editing === "story" && (
+        <StoryEditor
+          view={d.story?.day === today ? d.story : null}
+          onClose={() => setEditing(null)}
+        />
+      )}
       <RaceSection
         mode={modes.race}
         race={d.race}

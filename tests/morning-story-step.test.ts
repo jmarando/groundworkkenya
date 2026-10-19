@@ -214,10 +214,13 @@ async function main() {
 
   {
     const now = at("06:05");
-    const sb = world(now, { listening_jobs: [{ key: "morning_story", status: "paused", paused_reason: "AI access denied" }] });
+    const sb = world(now, { listening_jobs: [{ key: "morning_story", status: "paused", paused_reason: "AI access denied", last_run_at: hoursBefore(now, 2) }] });
     const prompts = stubAi();
     const r = await runMorningStory(sb as never, { now, force: true });
-    eq("force never bypasses a persisted provider pause", [r.ran, prompts.length], [false, 0]);
+    const story = stories(sb).find((s) => s["campaign_id"] === "c2")?.["story"] as { kind: string; from: number };
+    eq("a pause keeps the AI off but still saves the headlines", [r.ran, prompts.length, story?.kind, story?.from], [true, 0, "headlines", 2]);
+    const job = sb.tables["listening_jobs"]?.find((j) => j["key"] === "morning_story");
+    eq("and leaves the pause and its time as they were", [job?.["status"], job?.["last_run_at"]], ["paused", hoursBefore(now, 2)]);
   }
   {
     const now = at("06:05");
@@ -226,7 +229,17 @@ async function main() {
     await runMorningStory(sb as never, { now });
     await runMorningStory(sb as never, { now: at("07:05") });
     const job = sb.tables["listening_jobs"]?.find(j => j["key"] === "morning_story");
-    eq("AI denial persists and stops later campaigns and runs", [job?.["status"], prompts.length], ["paused", 1]);
+    eq("AI denial persists and the AI is not asked again within the hour", [job?.["status"], prompts.length], ["paused", 1]);
+    eq("the campaign denied the AI still gets its headlines", (stories(sb).find((s) => s["campaign_id"] === "c2")?.["story"] as { kind: string })?.kind, "headlines");
+  }
+  {
+    // Paused two days ago: the next morning tries the AI again and writes the story.
+    const now = at("06:05");
+    const sb = world(now, { listening_jobs: [{ key: "morning_story", status: "paused", paused_reason: "AI stopped (402): credits", last_run_at: hoursBefore(now, 48) }] });
+    const prompts = stubAi();
+    const r = await runMorningStory(sb as never, { now });
+    const job = sb.tables["listening_jobs"]?.find((j) => j["key"] === "morning_story");
+    eq("an old pause is tried again and lifts when the AI answers", [r.written, prompts.length, job?.["status"]], [1, 1, "idle"]);
   }
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

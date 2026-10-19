@@ -26,6 +26,9 @@ const JOB_KEY = "morning_story";
 /** 06:00 on a Nairobi day, as a moment. */
 const sixOn = (day: string) => Date.parse(`${day}T06:00:00+03:00`);
 
+/** How long a provider pause keeps the AI off before it is tried again. */
+const PROBE_AFTER = 6 * 3600_000;
+
 export const STORY_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -192,17 +195,34 @@ export async function runMorningStory(
     .select("*")
     .eq("key", JOB_KEY)
     .maybeSingle();
-  if (job?.status === "paused") return out;
-  if (job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
-  const claim = await sb.rpc("claim_morning_job", { _key: JOB_KEY, _now: now.toISOString() });
-  if (claim.error) throw new Error("Could not reserve the morning briefing.");
-  if (!claim.data) return out;
+  // A provider pause keeps the AI off, but never the morning: the headlines
+  // need no AI, and after six hours the AI is tried once more, as collection is.
+  let paused: string | null = job?.status === "paused" ? String(job.paused_reason ?? "Paused") : null;
+  const pausedAt = job?.last_run_at ? Date.parse(job.last_run_at) : 0;
+  if (paused && now.getTime() - pausedAt > PROBE_AFTER) {
+    const lift = sb
+      .from("listening_jobs")
+      .update({ status: "idle", paused_reason: null, locked_until: null })
+      .eq("key", JOB_KEY)
+      .eq("status", "paused");
+    const { data: cleared } = await (job?.last_run_at
+      ? lift.eq("last_run_at", job.last_run_at)
+      : lift.is("last_run_at", null)
+    ).select("key");
+    if (cleared?.length) paused = null;
+  }
+  // Ran without the lease, under a pause: the pause's own time is left as it is.
+  const underPause = paused !== null;
+  if (!paused) {
+    if (job?.status !== "paused" && job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
+    const claim = await sb.rpc("claim_morning_job", { _key: JOB_KEY, _now: now.toISOString() });
+    if (claim.error) throw new Error("Could not reserve the morning briefing.");
+    if (!claim.data) return out;
+  }
   out.ran = true;
   const { data: collection } = await sb.from("listening_jobs").select("status, paused_reason").eq("key", "listening_scan").maybeSingle();
-  let paused: string | null = null;
-  if (collection?.status === "paused" && /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))) {
-    await sb.from("listening_jobs").update({ status: "paused", paused_reason: collection.paused_reason, locked_until: null }).eq("key", JOB_KEY);
-    return out;
+  if (!paused && collection?.status === "paused" && /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))) {
+    paused = String(collection.paused_reason);
   }
 
   const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(5);
@@ -235,13 +255,13 @@ export async function runMorningStory(
       continue;
     }
     let story: MorningStory | null = null;
-    try {
-      story = await writeStory(c, g);
-    } catch (err) {
-      out.notes.push(`Story writing: ${(err as Error).message}`);
-      if (err instanceof PauseError) {
-        paused = err.message;
-        break;
+    // While the AI is paused, every campaign still gets the morning's headlines.
+    if (!paused) {
+      try {
+        story = await writeStory(c, g);
+      } catch (err) {
+        out.notes.push(`Story writing: ${(err as Error).message}`);
+        if (err instanceof PauseError) paused = err.message;
       }
     }
     if (story) out.written++;
@@ -275,8 +295,7 @@ export async function runMorningStory(
       key: JOB_KEY,
       status: paused ? "paused" : "idle",
       paused_reason: paused,
-      locked_until: null,
-      last_run_at: now.toISOString(),
+      ...(underPause ? {} : { locked_until: null, last_run_at: now.toISOString() }),
       detail,
       updated_at: now.toISOString(),
     },

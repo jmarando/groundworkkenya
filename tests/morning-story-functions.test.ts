@@ -4,6 +4,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/morning-story-functions.test.ts
 
 import {
+  loadHomeStory,
   loadStory,
   reviseAround,
   saveTeamStory,
@@ -161,6 +162,54 @@ async function main() {
     [STORY_DENIED, "Someone saved this morning's story at the same moment. Open Home again."],
   );
 
+  {
+    const row = (day: string, story: unknown, by = "groundwork") => ({
+      id: day,
+      day,
+      story,
+      written_by: by,
+      created_at: `${day}T03:04:00Z`,
+      edited_at: null,
+      edited_by: null,
+    });
+    const check = {
+      ...GROUNDWORK,
+      kind: "headlines",
+      headline: null,
+      summary: "No fresh source items.",
+      sources: [],
+      from: 0,
+    };
+    const old = (day: string) => ({ ...GROUNDWORK, headline: `Story of ${day}` });
+    const head = async (rows: unknown[]) =>
+      (await loadHomeStory(fakeSupabase({ morning_stories: rows as never }) as never, "2026-10-19"))
+        ?.day ?? null;
+    eq(
+      "today's story when it is in",
+      await head([row("2026-10-18", old("18")), row("2026-10-19", GROUNDWORK)]),
+      "2026-10-19",
+    );
+    eq(
+      "no row today: the latest earlier story",
+      await head([row("2026-10-16", old("16")), row("2026-10-17", old("17"))]),
+      "2026-10-17",
+    );
+    eq(
+      "a check with no sources today: still the earlier story",
+      await head([
+        row("2026-10-17", old("17")),
+        row("2026-10-18", check),
+        row("2026-10-19", check),
+      ]),
+      "2026-10-17",
+    );
+    eq(
+      "nothing within the week: today's check",
+      await head([row("2026-10-01", old("1")), row("2026-10-19", check)]),
+      "2026-10-19",
+    );
+    eq("nothing at all: none", await head([]), null);
+  }
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

@@ -39,14 +39,19 @@ export function spokenHome(o: {
     `Good morning, ${o.name}. Let's get you ready for ${spokenDate(o.today)}. ${daysBetween(o.today, ELECTION_DAY)} days to the election. Here's your campaign morning.`,
   ];
   const st = o.story?.story;
+  const earlier = o.story && o.story.day < o.today ? o.story.day : null;
   if (st?.kind === "written") {
-    out.push(`First, the story making headlines. ${st.headline}. ${st.summary}`);
+    out.push(
+      earlier
+        ? `Today's story is not in yet, so here is ${spokenDate(earlier)}'s. ${st.headline}. ${st.summary}`
+        : `First, the story making headlines. ${st.headline}. ${st.summary}`,
+    );
     if (st.why) out.push(`Why it matters to your campaign: ${st.why}`);
     if (st.rivals) out.push(`What rivals are saying: ${st.rivals}`);
     if (st.line) out.push(`For your next conversation, a suggested line: ${st.line}`);
   } else if (st?.kind === "headlines" && st.also.length) {
     out.push(
-      `First, the headlines: ${st.also
+      `${earlier ? `Today's headlines are not in yet. ${spokenDate(earlier)}'s` : "First, the headlines"}: ${st.also
         .slice(0, 3)
         .map((a) => a.title)
         .join(". ")}.`,

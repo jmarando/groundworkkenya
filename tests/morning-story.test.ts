@@ -4,6 +4,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/morning-story.test.ts
 
 import {
+  carriedLine,
   checkStory,
   cleanTeamStory,
   headlinesStory,
@@ -208,6 +209,22 @@ eq(
     "No news about the race in the last day.",
   ],
 );
+
+{
+  const v = {
+    day: "2026-10-17",
+    story: headlinesStory([]),
+    writtenBy: "groundwork" as const,
+    at: "2026-10-17T03:00:00Z",
+    editedBy: null,
+  };
+  eq(
+    "an earlier day's story says so",
+    carriedLine(v, "2026-10-19"),
+    "Today's story is not in yet. This is Saturday 17 October's, until it is.",
+  );
+  eq("today's says nothing", carriedLine({ ...v, day: "2026-10-19" }, "2026-10-19"), null);
+}
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
