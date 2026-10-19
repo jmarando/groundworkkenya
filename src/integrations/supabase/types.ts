@@ -882,6 +882,8 @@ export type Database = {
           owns_channels: boolean
           seat: string
           slug: string
+          spending_limit_kes: number | null
+          spending_limit_source: string | null
           updated_at: string
         }
         Insert: {
@@ -895,6 +897,8 @@ export type Database = {
           owns_channels?: boolean
           seat: string
           slug: string
+          spending_limit_kes?: number | null
+          spending_limit_source?: string | null
           updated_at?: string
         }
         Update: {
@@ -908,6 +912,8 @@ export type Database = {
           owns_channels?: boolean
           seat?: string
           slug?: string
+          spending_limit_kes?: number | null
+          spending_limit_source?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1744,6 +1750,91 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_buys: {
+        Row: {
+          amount_kes: number
+          booked_by: string | null
+          campaign_id: string
+          clicks: number | null
+          created_at: string
+          ends_on: string
+          expense_id: string | null
+          external_id: string | null
+          id: string
+          impressions: number | null
+          name: string
+          paid_for_by: string
+          platform: string
+          reach: number | null
+          results_on: string | null
+          starts_on: string
+          updated_at: string
+          ward_id: string | null
+        }
+        Insert: {
+          amount_kes: number
+          booked_by?: string | null
+          campaign_id?: string
+          clicks?: number | null
+          created_at?: string
+          ends_on: string
+          expense_id?: string | null
+          external_id?: string | null
+          id?: string
+          impressions?: number | null
+          name: string
+          paid_for_by: string
+          platform: string
+          reach?: number | null
+          results_on?: string | null
+          starts_on: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Update: {
+          amount_kes?: number
+          booked_by?: string | null
+          campaign_id?: string
+          clicks?: number | null
+          created_at?: string
+          ends_on?: string
+          expense_id?: string | null
+          external_id?: string | null
+          id?: string
+          impressions?: number | null
+          name?: string
+          paid_for_by?: string
+          platform?: string
+          reach?: number | null
+          results_on?: string | null
+          starts_on?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_buys_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_buys_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_buys_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
             referencedColumns: ["id"]
           },
         ]

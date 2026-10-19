@@ -90,7 +90,7 @@ function Finance() {
     );
   }
 
-  const pct = (data.spendKes / data.statutoryLimit) * 100;
+  const pct = data.statutoryLimit ? (data.spendKes / data.statutoryLimit) * 100 : 0;
   const maxCat = Math.max(...data.byCategory.map((c) => c.amount), 1);
 
   return (
@@ -120,7 +120,9 @@ function Finance() {
         <div className="limit-top">
           <span className="limit-big stat">KES {money(data.spendKes)}</span>
           <span className="limit-of">
-            of KES {money(data.statutoryLimit)} · {pct.toFixed(1)}%
+            {data.statutoryLimit
+              ? `of KES ${money(data.statutoryLimit)} · ${pct.toFixed(1)}%`
+              : "The seat's gazetted limit isn't on file yet (Kenya Gazette Notice 12251, 7 August 2026)."}
           </span>
         </div>
         <div
@@ -138,6 +140,11 @@ function Finance() {
           <span style={{ left: "75%" }}>75</span>
           <span style={{ left: "90%" }}>90</span>
         </div>
+        {data.statutoryLimitSource ? (
+          <p className="meta" style={{ marginTop: 18 }}>
+            Limit: {data.statutoryLimitSource}
+          </p>
+        ) : null}
       </div>
 
       <div className="g3 fx3">

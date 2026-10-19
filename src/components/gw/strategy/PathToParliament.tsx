@@ -108,7 +108,9 @@ export function PathToParliament({ seat }: { seat: MpSeat }) {
         <p className="meta pth-intro">
           Start from the {seat.year} result and move your side's share, or a ward's turnout. The
           seat goes to the most votes in one round.
-          {seat.defaulted ? " Your side isn't set in Elections, so this starts from the winner's." : ""}
+          {seat.defaulted
+            ? " Your side isn't set in Elections, so this starts from the winner's."
+            : ""}
         </p>
         <div className="pth-side">
           <span className="eyebrow">Start from</span>

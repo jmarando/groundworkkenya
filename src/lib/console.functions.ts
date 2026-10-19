@@ -5,13 +5,14 @@ import { doorsByWard } from "@/lib/canvass";
 import { pageAll } from "@/lib/page-all";
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const STATUTORY_LIMIT = 433_800_000;
+import { spendingLimit } from "@/lib/spending-limit";
 
 /* ------------------------------------------------------------------ finance */
 
 export type FinanceData = {
-  statutoryLimit: number;
+  /** The seat's gazetted limit; null when it isn't on file. */
+  statutoryLimit: number | null;
+  statutoryLimitSource: string | null;
   spendKes: number;
   contributionsKes: number;
   contributors: number;
@@ -55,17 +56,16 @@ export const getFinance = createServerFn({ method: "GET" })
     const { data: roles } = await myRoles(sb);
     const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
     if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
-    const [{ data: expenses }, { data: contributions }] = await Promise.all([
+    const [{ data: expenses }, { data: contributions }, limit] = await Promise.all([
       sb.from("expenses").select("*").order("incurred_at", { ascending: false }),
       sb.from("contributions").select("*").order("received_at", { ascending: false }),
+      spendingLimit(sb as never),
     ]);
 
     const ex = expenses ?? [];
     const co = contributions ?? [];
     const spendKes = ex.reduce((s, e) => s + Number(e.amount_kes ?? 0), 0);
-    const documented = ex.length
-      ? (ex.filter((e) => !!e.reference).length / ex.length) * 100
-      : 100;
+    const documented = ex.length ? (ex.filter((e) => !!e.reference).length / ex.length) * 100 : 100;
 
     const catMap = new Map<string, number>();
     for (const e of ex) {
@@ -73,7 +73,8 @@ export const getFinance = createServerFn({ method: "GET" })
     }
 
     return {
-      statutoryLimit: STATUTORY_LIMIT,
+      statutoryLimit: limit?.kes ?? null,
+      statutoryLimitSource: limit?.source ?? null,
       spendKes,
       contributionsKes: co.reduce((s, c) => s + Number(c.amount_kes ?? 0), 0),
       contributors: new Set(co.map((c) => c.donor_name)).size,
@@ -464,9 +465,7 @@ export const getInbox = createServerFn({ method: "GET" })
         tags: (c.tags as string[]) ?? [],
         unread: c.unread,
         lastMessageAt: c.last_message_at as string,
-        thread:
-          byConversation.get(c.id) ??
-          (c.person_id ? (byPerson.get(c.person_id) ?? []) : []),
+        thread: byConversation.get(c.id) ?? (c.person_id ? (byPerson.get(c.person_id) ?? []) : []),
       };
     });
 
@@ -476,9 +475,7 @@ export const getInbox = createServerFn({ method: "GET" })
         all: conversations.length,
         unread: conversations.filter((c) => c.unread).length,
         open: conversations.filter((c) => c.status === "open").length,
-        byTag: [...tagMap.entries()]
-          .map(([tag, n]) => ({ tag, n }))
-          .sort((a, b) => b.n - a.n),
+        byTag: [...tagMap.entries()].map(([tag, n]) => ({ tag, n })).sort((a, b) => b.n - a.n),
       },
     };
   });
@@ -1160,7 +1157,9 @@ export const getCanvassing = createServerFn({ method: "GET" })
       }>((from, to) =>
         sb
           .from("people")
-          .select("id, full_name, phone, ward_id, segment, support_score, opted_out, last_contacted_at")
+          .select(
+            "id, full_name, phone, ward_id, segment, support_score, opted_out, last_contacted_at",
+          )
           .range(from, to),
       ),
       pageAll<{
@@ -1487,7 +1486,14 @@ export type BriefingData = {
     staffed: number;
     topIssue: string | null;
   }[];
-  issues: { label: string; total: number; inbox: number; web: number; angry: number; topWard: string | null }[];
+  issues: {
+    label: string;
+    total: number;
+    inbox: number;
+    web: number;
+    angry: number;
+    topWard: string | null;
+  }[];
   segments: { label: string; people: number; strong: number; reachable: number }[];
   languages: { label: string; people: number }[];
   consent: { sms: number; whatsapp: number; call: number; optedOut: number };
@@ -1501,22 +1507,28 @@ export const getBriefing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BriefingData> => {
     const sb = context.supabase;
-    const [{ data: wards }, people, { data: stations }, { data: convos }, { data: mentions }, { data: incidents }] =
-      await Promise.all([
-        sb.from("wards").select("*").order("constituency"),
-        pageAll((from, to) =>
-          sb
-            .from("people")
-            .select(
-              "id, ward_id, segment, language, support_score, last_contacted_at, opted_out, consent_sms, consent_whatsapp, consent_call",
-            )
-            .range(from, to),
-        ),
-        sb.from("polling_stations").select("id, ward_id, status"),
-        sb.from("conversations").select("id, issue, sentiment, person_id"),
-        sb.from("listening_mentions").select("id, issue, sentiment, ward"),
-        sb.from("incidents").select("id, status, ward_id"),
-      ]);
+    const [
+      { data: wards },
+      people,
+      { data: stations },
+      { data: convos },
+      { data: mentions },
+      { data: incidents },
+    ] = await Promise.all([
+      sb.from("wards").select("*").order("constituency"),
+      pageAll((from, to) =>
+        sb
+          .from("people")
+          .select(
+            "id, ward_id, segment, language, support_score, last_contacted_at, opted_out, consent_sms, consent_whatsapp, consent_call",
+          )
+          .range(from, to),
+      ),
+      sb.from("polling_stations").select("id, ward_id, status"),
+      sb.from("conversations").select("id, issue, sentiment, person_id"),
+      sb.from("listening_mentions").select("id, issue, sentiment, ward"),
+      sb.from("incidents").select("id, status, ward_id"),
+    ]);
 
     const w = wards ?? [];
     const st = stations ?? [];
@@ -1555,19 +1567,34 @@ export const getBriefing = createServerFn({ method: "GET" })
     }
 
     // issues raised, from the inbox and from the web
-    const issueTotals = new Map<string, { inbox: number; web: number; angry: number; wards: Map<string, number> }>();
-    const bump = (raw: string | null, kind: "inbox" | "web", angry: boolean, ward: string | null) => {
+    const issueTotals = new Map<
+      string,
+      { inbox: number; web: number; angry: number; wards: Map<string, number> }
+    >();
+    const bump = (
+      raw: string | null,
+      kind: "inbox" | "web",
+      angry: boolean,
+      ward: string | null,
+    ) => {
       if (!raw) return;
       const key = raw.toLowerCase().trim();
       if (!key) return;
-      const cur = issueTotals.get(key) ?? { inbox: 0, web: 0, angry: 0, wards: new Map<string, number>() };
+      const cur = issueTotals.get(key) ?? {
+        inbox: 0,
+        web: 0,
+        angry: 0,
+        wards: new Map<string, number>(),
+      };
       cur[kind] += 1;
       if (angry) cur.angry += 1;
       if (ward) cur.wards.set(ward, (cur.wards.get(ward) ?? 0) + 1);
       issueTotals.set(key, cur);
     };
-    for (const c of cv) bump(c.issue, "inbox", c.sentiment === "angry" || c.sentiment === "negative", null);
-    for (const m of mn) bump(m.issue, "web", m.sentiment === "angry" || m.sentiment === "negative", m.ward ?? null);
+    for (const c of cv)
+      bump(c.issue, "inbox", c.sentiment === "angry" || c.sentiment === "negative", null);
+    for (const m of mn)
+      bump(m.issue, "web", m.sentiment === "angry" || m.sentiment === "negative", m.ward ?? null);
 
     const wardRows = w.map((x) => {
       const a = byWard.get(x.id) ?? blank();
@@ -1627,7 +1654,7 @@ export const getBriefing = createServerFn({ method: "GET" })
       c.contacted += row.contacted;
       c.strong += row.strong;
       c.persuadable += row.persuadable;
-      c.cold += (byWard.get(row.id)?.cold ?? 0);
+      c.cold += byWard.get(row.id)?.cold ?? 0;
       c.stations += row.stations;
       c.staffed += row.staffed;
       c.incidents += inc.filter((i) => i.ward_id === row.id && i.status !== "resolved").length;
@@ -1685,7 +1712,9 @@ export const getBriefing = createServerFn({ method: "GET" })
     const sortedWards = [...wardRows].sort((a, b) => b.gap - a.gap);
     const thinnest = [...wardRows]
       .filter((x) => x.people > 0)
-      .sort((a, b) => a.people / Math.max(1, a.registered) - b.people / Math.max(1, b.registered))[0];
+      .sort(
+        (a, b) => a.people / Math.max(1, a.registered) - b.people / Math.max(1, b.registered),
+      )[0];
 
     const headlines: string[] = [];
     const shortfall = Math.max(0, totals.target - totals.supporters);
@@ -1726,12 +1755,19 @@ export const getBriefing = createServerFn({ method: "GET" })
         optedOut: people.filter((p) => p.opted_out).length,
       },
       support: [
-        { label: "Strong · 70+", people: people.filter((p) => (p.support_score ?? 0) >= 70).length },
+        {
+          label: "Strong · 70+",
+          people: people.filter((p) => (p.support_score ?? 0) >= 70).length,
+        },
         {
           label: "Persuadable · 40-69",
-          people: people.filter((p) => (p.support_score ?? 0) >= 40 && (p.support_score ?? 0) < 70).length,
+          people: people.filter((p) => (p.support_score ?? 0) >= 40 && (p.support_score ?? 0) < 70)
+            .length,
         },
-        { label: "Cold · under 40", people: people.filter((p) => (p.support_score ?? 0) < 40).length },
+        {
+          label: "Cold · under 40",
+          people: people.filter((p) => (p.support_score ?? 0) < 40).length,
+        },
       ],
       headlines,
     };

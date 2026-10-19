@@ -28,7 +28,12 @@ export type MpSeat = {
   /** The wards inside the seat, biggest register first; empty for a ward's own race. */
   parts: MpPart[];
   /** The race before, when the atlas has it: its winner, runner-up and valid votes. */
-  before: { year: number; winner: MpCandidate; second: MpCandidate | null; valid: number | null } | null;
+  before: {
+    year: number;
+    winner: MpCandidate;
+    second: MpCandidate | null;
+    valid: number | null;
+  } | null;
   /** Where the figures come from, as "publisher: title". */
   source: { result: string; register: string; before: string | null };
 };

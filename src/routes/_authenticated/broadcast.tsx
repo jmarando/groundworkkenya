@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { BroadcastComposer } from "@/components/gw/BroadcastComposer";
+import { PaidMedia } from "@/components/gw/broadcast/PaidMedia";
 import { useAccess } from "@/hooks/useAccess";
 import type { SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
@@ -42,33 +43,6 @@ export const Route = createFileRoute("/_authenticated/broadcast")({
 const nf = new Intl.NumberFormat("en-KE");
 const stamp = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-
-const PAID = [
-  {
-    code: "M",
-    cls: "ch--fb",
-    name: "Meta · FB + IG",
-    note: 'Election ads need page authorisation and a "Paid for by" disclaimer.',
-  },
-  {
-    code: "G",
-    cls: "ch--gg",
-    name: "Google Search + Display",
-    note: "Election ads need advertiser verification for Kenya.",
-  },
-  {
-    code: "YT",
-    cls: "ch--yt",
-    name: "YouTube",
-    note: "Same verification as Google. Cut long video to 15s bumpers.",
-  },
-  {
-    code: "TT",
-    cls: "ch--tt",
-    name: "TikTok",
-    note: "Bans paid political ads. Contracted, disclosed creators instead.",
-  },
-];
 
 function Broadcast() {
   const fetchBroadcast = useServerFn(getBroadcast);
@@ -398,27 +372,7 @@ function Broadcast() {
         </div>
       </div>
 
-      <div className="card fx3" style={{ marginTop: 14 }}>
-        <div className="card-head">
-          <h2>Paid media · same audience, bought</h2>
-          <span className="mono">ward-level geo · disclosed sponsor</span>
-        </div>
-        <div className="g4">
-          {PAID.map((p) => (
-            <div className="conn-item" key={p.code}>
-              <span className={`ch ${p.cls}`}>{p.code}</span>
-              <b>{p.name}</b>
-              <p>{p.note}</p>
-              <span className="pill pill--amber">
-                <span className="g" aria-hidden="true">
-                  ◐
-                </span>{" "}
-                Verify before launch
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <PaidMedia wards={data.wardList} canBook={isPrincipal} />
 
       <div className="card fx4" style={{ marginTop: 14 }}>
         <div className="card-head">

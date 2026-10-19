@@ -3,7 +3,15 @@
 // The sums are src/lib/mp-path.ts.
 
 import { count, percent, type Figure } from "@/lib/findings/core";
-import { pointWorth, runMp, turnoutWorth, isMpBaseline, type MpScenario, type MpSeat, NO_MP_MOVE } from "@/lib/mp-path";
+import {
+  pointWorth,
+  runMp,
+  turnoutWorth,
+  isMpBaseline,
+  type MpScenario,
+  type MpSeat,
+  NO_MP_MOVE,
+} from "@/lib/mp-path";
 import { sharePercent, type PathLine } from "@/lib/path-lines";
 
 const MINE = { source: "Your changes on the result", period: "scenario" };
@@ -36,10 +44,25 @@ export function mpLines(seat: MpSeat, sc: MpScenario = NO_MP_MOVE): PathLine[] {
 
   // Where it stands.
   const gap = Math.round(Math.abs(run.margin));
-  const share = figure("Your side's share of the two", run.share, sharePercent(run.share), base ? result : MINE);
+  const share = figure(
+    "Your side's share of the two",
+    run.share,
+    sharePercent(run.share),
+    base ? result : MINE,
+  );
   const margin = figure("Margin", gap, count(gap), base ? result : MINE);
-  const yours = figure(seat.yours.name, Math.round(run.yours), count(Math.round(run.yours)), base ? result : MINE);
-  const rival = figure(seat.rival.name, Math.round(run.rival), count(Math.round(run.rival)), base ? result : MINE);
+  const yours = figure(
+    seat.yours.name,
+    Math.round(run.yours),
+    count(Math.round(run.yours)),
+    base ? result : MINE,
+  );
+  const rival = figure(
+    seat.rival.name,
+    Math.round(run.rival),
+    count(Math.round(run.rival)),
+    base ? result : MINE,
+  );
   out.push({
     id: "stands",
     figures: [year, yours, rival, margin, share],
@@ -66,8 +89,18 @@ export function mpLines(seat: MpSeat, sc: MpScenario = NO_MP_MOVE): PathLine[] {
   if (big) {
     const w = turnoutWorth(seat, big, FIVE);
     const reg = figure(`${big.name} registered`, big.registered, count(big.registered), register);
-    const voters = figure(`Five points of turnout in ${big.name}`, w.voters, tens(w.voters), result);
-    const net = figure("On the margin at the seat's split", Math.abs(w.net), tens(Math.abs(w.net)), result);
+    const voters = figure(
+      `Five points of turnout in ${big.name}`,
+      w.voters,
+      tens(w.voters),
+      result,
+    );
+    const net = figure(
+      "On the margin at the seat's split",
+      Math.abs(w.net),
+      tens(Math.abs(w.net)),
+      result,
+    );
     out.push({
       id: "lever",
       figures: [worth, reg, voters, net],
@@ -102,7 +135,12 @@ export function mpLines(seat: MpSeat, sc: MpScenario = NO_MP_MOVE): PathLine[] {
     let tail = "";
     if (b.valid) {
       const of = figure("Valid votes", b.valid, count(b.valid), origin);
-      const pct = figure("Winner's share", b.winner.votes / b.valid, percent(b.winner.votes / b.valid), origin);
+      const pct = figure(
+        "Winner's share",
+        b.winner.votes / b.valid,
+        percent(b.winner.votes / b.valid),
+        origin,
+      );
       figs.push(of, pct);
       tail = ` of ${of.text} valid votes (${pct.text})`;
     }
