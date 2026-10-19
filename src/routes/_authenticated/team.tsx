@@ -177,7 +177,7 @@ function Team() {
           {sendInvite.isSuccess && (
             <p role="status" className="text-sm text-muted-foreground">
               {sendInvite.data.result === "added"
-                ? `✓ ${sendInvite.variables ?? "They"} already had an account and are now on the team.`
+                ? "✓ They already had an account and are now on the team."
                 : "✓ Invite sent. They'll get an email to set their password."}
             </p>
           )}
