@@ -44,12 +44,19 @@ export type Database = {
         Row: {
           agent_name: string
           amount_kes: number
+          approved_at: string | null
+          approved_by: string | null
           campaign_id: string
           created_at: string
           days: number
+          doors: number | null
+          expense_id: string | null
           id: string
           method: string
+          mpesa_request: string | null
           paid_at: string | null
+          paid_by: string | null
+          payment_error: string | null
           phone: string | null
           rate_kes: number
           reference: string | null
@@ -57,17 +64,26 @@ export type Database = {
           station_id: string | null
           status: string
           updated_at: string
+          user_id: string | null
           ward_id: string | null
+          work_date: string | null
         }
         Insert: {
           agent_name: string
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           campaign_id?: string
           created_at?: string
           days?: number
+          doors?: number | null
+          expense_id?: string | null
           id?: string
           method?: string
+          mpesa_request?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_error?: string | null
           phone?: string | null
           rate_kes?: number
           reference?: string | null
@@ -75,17 +91,26 @@ export type Database = {
           station_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           ward_id?: string | null
+          work_date?: string | null
         }
         Update: {
           agent_name?: string
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           campaign_id?: string
           created_at?: string
           days?: number
+          doors?: number | null
+          expense_id?: string | null
           id?: string
           method?: string
+          mpesa_request?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_error?: string | null
           phone?: string | null
           rate_kes?: number
           reference?: string | null
@@ -93,7 +118,9 @@ export type Database = {
           station_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           ward_id?: string | null
+          work_date?: string | null
         }
         Relationships: [
           {
@@ -3045,12 +3072,14 @@ export type Database = {
           closed_by: string | null
           created_at: string
           done_at: string | null
+          due_on: string | null
           first_sent_at: string | null
           given_at: string | null
           given_to: string | null
           id: string
           made_by: string | null
           name: string
+          shift: string | null
           status: string
           ward_id: string | null
         }
@@ -3060,12 +3089,14 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           done_at?: string | null
+          due_on?: string | null
           first_sent_at?: string | null
           given_at?: string | null
           given_to?: string | null
           id?: string
           made_by?: string | null
           name: string
+          shift?: string | null
           status?: string
           ward_id?: string | null
         }
@@ -3075,12 +3106,14 @@ export type Database = {
           closed_by?: string | null
           created_at?: string
           done_at?: string | null
+          due_on?: string | null
           first_sent_at?: string | null
           given_at?: string | null
           given_to?: string | null
           id?: string
           made_by?: string | null
           name?: string
+          shift?: string | null
           status?: string
           ward_id?: string | null
         }

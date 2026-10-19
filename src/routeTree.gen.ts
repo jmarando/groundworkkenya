@@ -23,6 +23,7 @@ import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
+import { Route as AuthenticatedFieldPlanRouteImport } from './routes/_authenticated/field-plan'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
@@ -45,6 +46,8 @@ import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
 import { Route as SSlugPrivacyRouteImport } from './routes/s.$slug_.privacy'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
+import { Route as ApiPublicMpesaB2cResultRouteImport } from './routes/api/public/mpesa/b2c-result'
+import { Route as ApiPublicMpesaB2cTimeoutRouteImport } from './routes/api/public/mpesa/b2c-timeout'
 import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
 import { Route as ApiPublicSmsDeliveryRouteImport } from './routes/api/public/sms/delivery'
 import { Route as ApiPublicSmsInboundRouteImport } from './routes/api/public/sms/inbound'
@@ -126,6 +129,11 @@ const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
 const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
   id: '/field',
   path: '/field',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFieldPlanRoute = AuthenticatedFieldPlanRouteImport.update({
+  id: '/field-plan',
+  path: '/field-plan',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
@@ -239,6 +247,17 @@ const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
   path: '/api/public/listening/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMpesaB2cResultRoute = ApiPublicMpesaB2cResultRouteImport.update({
+  id: '/api/public/mpesa/b2c-result',
+  path: '/api/public/mpesa/b2c-result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMpesaB2cTimeoutRoute =
+  ApiPublicMpesaB2cTimeoutRouteImport.update({
+    id: '/api/public/mpesa/b2c-timeout',
+    path: '/api/public/mpesa/b2c-timeout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOutboxDrainRoute = ApiPublicOutboxDrainRouteImport.update({
   id: '/api/public/outbox/drain',
   path: '/api/public/outbox/drain',
@@ -322,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/diary': typeof AuthenticatedDiaryRoute
   '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
+  '/field-plan': typeof AuthenticatedFieldPlanRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -344,6 +364,8 @@ export interface FileRoutesByFullPath {
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
@@ -372,6 +394,7 @@ export interface FileRoutesByTo {
   '/diary': typeof AuthenticatedDiaryRoute
   '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
+  '/field-plan': typeof AuthenticatedFieldPlanRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -394,6 +417,8 @@ export interface FileRoutesByTo {
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
@@ -424,6 +449,7 @@ export interface FileRoutesById {
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
   '/_authenticated/elections': typeof AuthenticatedElectionsRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
+  '/_authenticated/field-plan': typeof AuthenticatedFieldPlanRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -446,6 +472,8 @@ export interface FileRoutesById {
   '/s/$slug_/privacy': typeof SSlugPrivacyRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
@@ -476,6 +504,7 @@ export interface FileRouteTypes {
     | '/diary'
     | '/elections'
     | '/field'
+    | '/field-plan'
     | '/finance'
     | '/foundations'
     | '/home'
@@ -498,6 +527,8 @@ export interface FileRouteTypes {
     | '/s/$slug/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
@@ -526,6 +557,7 @@ export interface FileRouteTypes {
     | '/diary'
     | '/elections'
     | '/field'
+    | '/field-plan'
     | '/finance'
     | '/foundations'
     | '/home'
@@ -548,6 +580,8 @@ export interface FileRouteTypes {
     | '/s/$slug/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
@@ -577,6 +611,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diary'
     | '/_authenticated/elections'
     | '/_authenticated/field'
+    | '/_authenticated/field-plan'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
     | '/_authenticated/home'
@@ -599,6 +634,8 @@ export interface FileRouteTypes {
     | '/s/$slug_/privacy'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
@@ -628,6 +665,8 @@ export interface RootRouteChildren {
   SSlugPrivacyRoute: typeof SSlugPrivacyRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
+  ApiPublicMpesaB2cResultRoute: typeof ApiPublicMpesaB2cResultRoute
+  ApiPublicMpesaB2cTimeoutRoute: typeof ApiPublicMpesaB2cTimeoutRoute
   ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
   ApiPublicSmsDeliveryRoute: typeof ApiPublicSmsDeliveryRoute
   ApiPublicSmsInboundRoute: typeof ApiPublicSmsInboundRoute
@@ -741,6 +780,13 @@ declare module '@tanstack/react-router' {
       path: '/field'
       fullPath: '/field'
       preLoaderRoute: typeof AuthenticatedFieldRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/field-plan': {
+      id: '/_authenticated/field-plan'
+      path: '/field-plan'
+      fullPath: '/field-plan'
+      preLoaderRoute: typeof AuthenticatedFieldPlanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/finance': {
@@ -897,6 +943,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicListeningScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/mpesa/b2c-result': {
+      id: '/api/public/mpesa/b2c-result'
+      path: '/api/public/mpesa/b2c-result'
+      fullPath: '/api/public/mpesa/b2c-result'
+      preLoaderRoute: typeof ApiPublicMpesaB2cResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mpesa/b2c-timeout': {
+      id: '/api/public/mpesa/b2c-timeout'
+      path: '/api/public/mpesa/b2c-timeout'
+      fullPath: '/api/public/mpesa/b2c-timeout'
+      preLoaderRoute: typeof ApiPublicMpesaB2cTimeoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/outbox/drain': {
       id: '/api/public/outbox/drain'
       path: '/api/public/outbox/drain'
@@ -1001,6 +1061,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
+  AuthenticatedFieldPlanRoute: typeof AuthenticatedFieldPlanRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -1027,6 +1088,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
+  AuthenticatedFieldPlanRoute: AuthenticatedFieldPlanRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
@@ -1060,6 +1122,8 @@ const rootRouteChildren: RootRouteChildren = {
   SSlugPrivacyRoute: SSlugPrivacyRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
+  ApiPublicMpesaB2cResultRoute: ApiPublicMpesaB2cResultRoute,
+  ApiPublicMpesaB2cTimeoutRoute: ApiPublicMpesaB2cTimeoutRoute,
   ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,
   ApiPublicSmsDeliveryRoute: ApiPublicSmsDeliveryRoute,
   ApiPublicSmsInboundRoute: ApiPublicSmsInboundRoute,

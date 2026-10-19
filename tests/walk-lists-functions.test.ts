@@ -346,6 +346,8 @@ const myRow = {
   done: 15,
   given_at: "2026-10-20T08:00:00Z",
   first_sent_at: "2026-10-20T08:00:00Z",
+  due_on: "2026-10-22",
+  shift: "morning",
 };
 const withRows = fakeSupabase({}, { my_walk_lists: () => [myRow] });
 eq("my lists are read as summaries", (await readMyLists(withRows))![0], {
@@ -362,6 +364,8 @@ eq("my lists are read as summaries", (await readMyLists(withRows))![0], {
   notHome: 0,
   firstSentAt: "2026-10-20T08:00:00Z",
   givenAt: "2026-10-20T08:00:00Z",
+  dueOn: "2026-10-22",
+  shift: "morning",
 });
 
 const openRows = fakeSupabase(
@@ -414,6 +418,8 @@ eq("a ward's open lists are read as summaries", await readOpenLists(openRows, WA
     notHome: 0,
     firstSentAt: null,
     givenAt: null,
+    dueOn: null,
+    shift: null,
   },
   {
     id: "L3",
@@ -429,6 +435,8 @@ eq("a ward's open lists are read as summaries", await readOpenLists(openRows, WA
     notHome: 4,
     firstSentAt: "2026-10-20T08:00:00Z",
     givenAt: "2026-10-20T08:30:00Z",
+    dueOn: null,
+    shift: null,
   },
 ]);
 eq(

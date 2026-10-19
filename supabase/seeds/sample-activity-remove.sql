@@ -1,6 +1,6 @@
 -- Removes the sample activity scripts/demo/sample-activity.ts wrote for Githunguri, Roysambu and
 -- Athwana: every row it writes carries a mark this finds (the tag "sample", a SAMPLE- reference
--- or code, a "(sample)" diary note, incident, pollster or ad buy (with its expense), a sample-msg- message, the
+-- or code, a "(sample)" diary note, incident, pollster, walk list or ad buy (with its expense), a sample-msg- message, the
 -- "<ward> town centre/market road/feeder roads" canvass streets, or a door visit's client id
 -- from md5('sample-visit:…')).
 -- Nothing else is touched; the segments it added stay. Not a migration: run it by hand.
@@ -26,6 +26,8 @@ delete from public.canvass_streets x using sample_campaigns c, public.wards w
    and x.name in (w.name || ' town centre', w.name || ' market road', w.name || ' feeder roads');
 delete from public.race_polls x using sample_campaigns c
  where x.campaign_id = c.id and x.pollster like '%(sample)';
+delete from public.walk_lists x using sample_campaigns c
+ where x.campaign_id = c.id and x.name like '%(sample)';
 delete from public.media_buys x using sample_campaigns c
  where x.campaign_id = c.id and x.name like '%(sample)';
 delete from public.expenses x using sample_campaigns c

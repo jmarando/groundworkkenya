@@ -170,6 +170,9 @@ export type ListSummary = {
   notHome: number;
   firstSentAt: string | null;
   givenAt: string | null;
+  /** The day it's planned for (yyyy-mm-dd) and the shift, when the field plan set them. */
+  dueOn: string | null;
+  shift: "morning" | "afternoon" | "day" | null;
 };
 
 export type ListDoor = {
@@ -220,6 +223,11 @@ function summary(r: Row, status: ListSummary["status"] | null, wardId: string): 
     notHome: count(r["not_home"]),
     firstSentAt: text(r["first_sent_at"]),
     givenAt: text(r["given_at"]),
+    dueOn: text(r["due_on"]),
+    shift:
+      r["shift"] === "morning" || r["shift"] === "afternoon" || r["shift"] === "day"
+        ? r["shift"]
+        : null,
   };
 }
 

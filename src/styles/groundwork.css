@@ -2368,3 +2368,34 @@ figure { margin: 0; }
 .pm-results .pb-field input { min-height:36px; padding:6px 8px; font-size:13px; }
 @media (max-width:1100px) { .pm-form { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:560px) { .pm-form { grid-template-columns:1fr; } .pm-wide { grid-column:auto; } .pm-results { grid-template-columns:1fr; min-width:0; } }
+
+/* Field plan: the fortnight board, list chips and the planning form. */
+.fp-nav { display:flex; gap:6px; flex-wrap:wrap; }
+.fp-board { min-width:1100px; table-layout:fixed; }
+.fp-board th[scope="col"] { font-size:10px; }
+.fp-board th[scope="row"] { width:140px; font-size:12.5px; font-weight:600; text-transform:none; letter-spacing:0; color:var(--foreground); padding-right:10px; }
+.fp-board td { padding:6px 4px; vertical-align:top; }
+.fp-board [data-today="true"] { background:hsl(38 92% 40% / .06); }
+.fp-chip { position:relative; display:flex; flex-direction:column; gap:1px; width:100%; margin-bottom:4px; padding:5px 6px 7px; text-align:left; font:inherit; font-size:11px; line-height:1.25; background:var(--card); border:1px solid var(--border); border-radius:8px; cursor:pointer; overflow:hidden; }
+.fp-chip b { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fp-chip span { color:var(--muted-foreground); font-family:var(--font-mono); font-size:10px; }
+.fp-chip i { position:absolute; left:0; bottom:0; height:3px; background:var(--status-reporting); }
+.fp-chip[aria-pressed="true"] { border-color:var(--foreground); box-shadow:0 0 0 1px var(--foreground); }
+.fp-chip[data-done="true"] { opacity:.6; }
+.fp-chip:focus-visible { outline:2px solid var(--foreground); outline-offset:2px; }
+.fp-tray { display:flex; flex-wrap:wrap; gap:8px; }
+.fp-tray .fp-chip { width:180px; margin:0; }
+.fp-sub { margin:14px 0 8px; font-size:13px; font-weight:600; }
+.fp-editor { margin-top:14px; }
+.fp-fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; align-items:end; }
+.fp-capacity { grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:12px; }
+@media (max-width:1100px) { .fp-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:560px) { .fp-fields, .fp-capacity { grid-template-columns:1fr; } .fp-tray .fp-chip { width:100%; } }
+.wl-row[data-today="true"] { border-color:var(--status-onstation); box-shadow:inset 3px 0 0 var(--status-onstation); }
+
+/* Stipends: making them from the field plan, and each line's next step. */
+.st-tools { margin:0 0 14px; padding-top:0; border-top:0; }
+.st-actions { display:flex; flex-wrap:wrap; gap:6px; align-items:center; min-width:180px; }
+.st-error { flex-basis:100%; font-size:11px; color:var(--status-missed); }
+.st-receipt { display:flex; gap:6px; align-items:center; min-width:260px; }
+.st-receipt input { flex:1; min-width:0; min-height:32px; padding:4px 8px; font:inherit; font-size:12px; font-family:var(--font-mono); border:1px solid var(--border); border-radius:8px; background:var(--card); color:var(--foreground); }

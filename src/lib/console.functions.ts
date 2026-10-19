@@ -1298,6 +1298,8 @@ export const getCanvassing = createServerFn({ method: "GET" })
 export type AgentsData = {
   /** Admins and managers put agents on stations. */
   canAssign: boolean;
+  /** The candidate and managers make, approve and pay stipends. */
+  canPay: boolean;
   stations: { total: number; confirmed: number; unstaffed: number; registered: number };
   money: { pending: number; approved: number; paid: number; total: number };
   counts: { agents: number; coordinators: number; lines: number };
@@ -1322,6 +1324,11 @@ export type AgentsData = {
     status: string;
     reference: string | null;
     paidAt: string | null;
+    /** The day worked and the doors knocked, for stipends made from the field plan. */
+    workDate: string | null;
+    doors: number | null;
+    /** Why the last M-Pesa payout didn't go, or what to check. */
+    paymentError: string | null;
   }[];
   gaps: { code: string; name: string; ward: string | null; registered: number }[];
   board: {
@@ -1345,13 +1352,23 @@ export const getAgents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AgentsData> => {
     const sb = context.supabase;
-    const [{ data: stipends }, { data: stations }, { data: wards }, { data: roles }] =
-      await Promise.all([
-        sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
-        sb.from("polling_stations").select("*").order("code"),
-        sb.from("wards").select("id, name, constituency").order("name"),
-        myRoles(sb),
-      ]);
+    const [
+      { data: stipends },
+      { data: stations },
+      { data: wards },
+      { data: roles },
+      { data: role },
+    ] = await Promise.all([
+      sb
+        .from("agent_stipends")
+        .select("*")
+        .order("work_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }),
+      sb.from("polling_stations").select("*").order("code"),
+      sb.from("wards").select("id, name, constituency").order("name"),
+      myRoles(sb),
+      sb.rpc("my_campaign_role"),
+    ]);
 
     const sp = stipends ?? [];
     const st = stations ?? [];
@@ -1377,6 +1394,7 @@ export const getAgents = createServerFn({ method: "GET" })
 
     return {
       canAssign: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
+      canPay: ["super", "candidate", "manager"].includes(String(role ?? "")),
       stations: {
         total: st.length,
         confirmed: st.filter((s) => s.status === "confirmed").length,
@@ -1408,6 +1426,9 @@ export const getAgents = createServerFn({ method: "GET" })
         status: s.status,
         reference: s.reference,
         paidAt: s.paid_at as string | null,
+        workDate: (s as { work_date?: string | null }).work_date ?? null,
+        doors: (s as { doors?: number | null }).doors ?? null,
+        paymentError: (s as { payment_error?: string | null }).payment_error ?? null,
       })),
       gaps: st
         .filter((s) => s.status !== "confirmed")

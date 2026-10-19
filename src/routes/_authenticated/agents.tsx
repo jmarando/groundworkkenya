@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+
+import { StipendAction, StipendTools } from "@/components/gw/agents/StipendTools";
 import { useMemo, useState } from "react";
 
 import { AssignAgent } from "@/components/gw/AssignAgent";
@@ -38,6 +40,7 @@ const STATUS: { key: string; label: string }[] = [
   { key: "", label: "All" },
   { key: "pending", label: "Pending" },
   { key: "approved", label: "Approved" },
+  { key: "sending", label: "With M-Pesa" },
   { key: "paid", label: "Paid" },
 ];
 
@@ -175,7 +178,8 @@ function Agents() {
             Every station staffed, <span className="serif">every shilling accounted.</span>
           </h1>
           <p className="meta">
-            Who is standing in which station, what they are owed, and the receipt when they are paid.
+            Who is standing in which station, what they are owed, and the receipt when they are
+            paid.
           </p>
         </div>
         <div className="vh-side">
@@ -285,8 +289,8 @@ function Agents() {
             )}
           </div>
           <p className="f-note" style={{ marginTop: 12 }}>
-            Stipends are paid by M-Pesa against the station record, and each payment posts to Finance
-            as a field expense with its receipt.
+            Stipends come from the days each person knocked doors on a walk list. Once approved and
+            paid, each posts to Finance with its M-Pesa receipt.
           </p>
         </div>
       </div>
@@ -323,11 +327,15 @@ function Agents() {
             </button>
           </div>
         </div>
+        {data?.canPay ? (
+          <StipendTools pendingIds={rows.filter((r) => r.status === "pending").map((r) => r.id)} />
+        ) : null}
         <div className="tblwrap">
           <table className="tbl">
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Day</th>
                 <th>Phone</th>
                 <th>Role</th>
                 <th>Ward</th>
@@ -337,6 +345,7 @@ function Agents() {
                 <th style={{ textAlign: "right" }}>Amount</th>
                 <th>Status</th>
                 <th>Receipt</th>
+                {data?.canPay ? <th /> : null}
               </tr>
             </thead>
             <tbody>
@@ -344,6 +353,10 @@ function Agents() {
                 <tr key={r.id}>
                   <td>
                     <b>{r.name}</b>
+                  </td>
+                  <td className="meta">
+                    {r.workDate ? day(r.workDate) : "—"}
+                    {r.doors ? <div className="ref">{nf.format(r.doors)} doors</div> : null}
                   </td>
                   <td className="mono">{r.phone ?? "—"}</td>
                   <td className="meta">{r.role}</td>
@@ -356,11 +369,16 @@ function Agents() {
                   <td className="mono">
                     {r.reference ? `${r.reference} · ${day(r.paidAt)}` : "—"}
                   </td>
+                  {data?.canPay ? (
+                    <td>
+                      <StipendAction id={r.id} status={r.status} paymentError={r.paymentError} />
+                    </td>
+                  ) : null}
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="meta">
+                  <td colSpan={data?.canPay ? 12 : 11} className="meta">
                     Nothing matches that filter.
                   </td>
                 </tr>
