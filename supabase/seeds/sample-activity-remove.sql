@@ -1,6 +1,8 @@
 -- Removes the sample activity scripts/demo/sample-activity.ts wrote for Githunguri, Roysambu and
 -- Athwana: every row it writes carries a mark this finds (the tag "sample", a SAMPLE- reference
--- or code, a "(sample)" diary note, or a door visit's client id from md5('sample-visit:…')).
+-- or code, a "(sample)" diary note, incident or pollster, a sample-msg- message, the
+-- "<ward> town centre/market road/feeder roads" canvass streets, or a door visit's client id
+-- from md5('sample-visit:…')).
 -- Nothing else is touched; the segments it added stay. Not a migration: run it by hand.
 
 begin;
@@ -13,8 +15,17 @@ delete from public.poll_responses r
  where r.poll_id = p.id and p.campaign_id = c.id and p.code like 'SAMPLE-%';
 delete from public.polls p using sample_campaigns c
  where p.campaign_id = c.id and p.code like 'SAMPLE-%';
+delete from public.messages m using sample_campaigns c
+ where m.campaign_id = c.id and m.external_id like 'sample-msg-%';
 delete from public.conversations x using sample_campaigns c
  where x.campaign_id = c.id and 'sample' = any(x.tags);
+delete from public.incidents x using sample_campaigns c
+ where x.campaign_id = c.id and x.title like '%(sample)';
+delete from public.canvass_streets x using sample_campaigns c, public.wards w
+ where x.campaign_id = c.id and w.id = x.ward_id
+   and x.name in (w.name || ' town centre', w.name || ' market road', w.name || ' feeder roads');
+delete from public.race_polls x using sample_campaigns c
+ where x.campaign_id = c.id and x.pollster like '%(sample)';
 delete from public.person_events e using public.people p, sample_campaigns c
  where e.person_id = p.id and p.campaign_id = c.id and 'sample' = any(p.tags);
 delete from public.house_visits v using sample_campaigns c
