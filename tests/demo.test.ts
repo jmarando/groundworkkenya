@@ -42,9 +42,16 @@ function slugsOf(file: string): Set<string> {
 
 // ---- scenarios
 eq(
-  "one scenario per office, and Githunguri's own",
+  "one scenario per office, and Githunguri's and Athwana's own",
   SCENARIOS.map((s) => `${s.key}:${s.office}`),
-  ["kalonzo:president", "sakaja:governor", "mathira:mp", "roysambu:mca", "githunguri:mp"],
+  [
+    "kalonzo:president",
+    "sakaja:governor",
+    "mathira:mp",
+    "roysambu:mca",
+    "githunguri:mp",
+    "athwana:mca",
+  ],
 );
 eq(
   "an unknown candidate falls back to the workspace's own race",
@@ -54,7 +61,7 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6, 5, 5],
+  [47, 85, 6, 5, 5, 14],
 );
 
 for (const s of SCENARIOS) {
@@ -65,9 +72,11 @@ for (const s of SCENARIOS) {
     [...mine].filter((x) => !geo.has(x)),
     [],
   );
+  // With no area on the map (no centre placed yet), the map is the seat's outline alone.
+  const outlineOnly = s.areas.every((a) => a.offMap) && geo.size === 1;
   eq(
-    `${s.key}: every map shape has an area`,
-    [...geo].filter((x) => !mine.has(x)),
+    `${s.key}: every map shape has an area, or the map is the seat's outline`,
+    outlineOnly ? [] : [...geo].filter((x) => !mine.has(x)),
     [],
   );
   ok(
@@ -117,7 +126,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false, false, false],
+  [true, true, false, false, false, false],
 );
 
 // ---- insights
@@ -322,7 +331,7 @@ for (const s of SCENARIOS) {
       scenarioFor({ slug: "githunguri", level: "governor" }),
       scenarioFor(null),
     ],
-    ["githunguri", "roysambu", "roysambu", "mathira", "sakaja", "sakaja"],
+    ["githunguri", "roysambu", "athwana", "mathira", "sakaja", "sakaja"],
   );
   eq(
     "Githunguri's demo carries its candidate",

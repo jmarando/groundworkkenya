@@ -16,9 +16,10 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 | 2022 governor | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 1 of 1 | 0 of 1 | n/a |
 
-Registered voters by ward: 2013: 0 of 5 · 2017: 0 of 5 · 2022: 0 of 5.
+Registered voters by ward: 2013: 0 of 5 · 2017: 0 of 5 · 2022: 5 of 5.
 Population estimates: 5 of 5 wards.
 Buildings measured: 5 of 5 wards.
+Population estimate below the 2022 register in 1 of 5 wards: Githunguri.
 
 Missing:
 - 2013 president: results for 1 of 1 constituencies
@@ -50,7 +51,7 @@ Missing:
 | 2022 governor | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 0 of 1 | 0 of 1 | n/a |
 
-Registered voters by ward: 2013: 0 of 1 · 2017: 0 of 1 · 2022: 0 of 1.
+Registered voters by ward: 2013: 0 of 1 · 2017: 0 of 1 · 2022: 1 of 1.
 Population estimates: 1 of 1 wards.
 Buildings measured: 1 of 1 wards.
 
@@ -160,9 +161,10 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 - `geoboundaries-ken-adm3`: geoBoundaries Kenya ADM3 (wards), geoBoundaries, https://www.geoboundaries.org/. Ward boundaries (Omare & Omare 2020, CC BY 4.0), simplified to about 3 m for the ward maps; areas are measured from them.
 - `google-open-buildings-v3`: Open Buildings v3: building footprints, Google Open Buildings, https://sites.research.google/gr/open-buildings/. Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map's house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more.
 - `iebc-2022-form-34c`: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022, IEBC, https://www.iebc.or.ke/uploads/resources/QLTlLJx0Vr.pdf. County and national totals as printed. Votes cast is valid plus rejected. The national valid total (14,213,137) is 110 more than the four candidates' votes added up (14,213,027), as printed.
+- `iebc-2022-rov-per-polling-station`: Register of voters per polling station, 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_polling_station.pdf. 712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri's wards add up to 104,592 and Tigania West's to 70,283, the constituency registers Mzalendo gives.
 - `kna-2022-nyeri-mps`: Political newcomers dominate Nyeri MP seats, Kenya News Agency, https://www.kenyanews.go.ke/political-newcomers-dominate-nyeri-mp-seats/1000/. The government news agency's report of five of Nyeri's six MP races, the leading candidates as printed. Its '58,534 votes cast' in Mukurweini is that constituency's register, so it isn't entered as votes cast; Othaya's '44,676 votes' is entered as votes cast.
-- `mzalendo-2022-kiambu`: Kiambu County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/kiambu/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered; Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.
-- `mzalendo-2022-meru`: Meru County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/meru/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered. Read 19 October 2026.
+- `mzalendo-2022-kiambu`: Kiambu County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/kiambu/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered (99,384 in 2017; its wards as IEBC's register adds them up); Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.
+- `mzalendo-2022-meru`: Meru County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/meru/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC's register adds them up). Read 19 October 2026.
 - `nairobileo-2025-wamuchomba`: Woman MP Who Holds Record for Receiving Highest Number of Votes in Kenya, Nairobi Leo, https://www.nairobileo.co.ke/features/article/18973/woman-mp-who-holds-record-for-receiving-highest-number-of-votes-in-kenya. 25 January 2025. Githunguri's 2022 MP race, the top two as printed: Wamuchomba 34,646 and Jubilee's Gabriel Kago 31,127. The winner's figure agrees with the Gazette as Mzalendo gives it. No valid total, so shares are of the candidates listed.
 - `provisional-2017-governor-nairobi`: 2017 Governor result, Nairobi City County, Provisional results. Public provisional figures for the county, eight candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.
 - `provisional-2017-governor-nyeri`: 2017 Governor result, Nyeri County, Provisional results. Public provisional figures for the county, three candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.

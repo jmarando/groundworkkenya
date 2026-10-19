@@ -9,9 +9,10 @@ insert into public.atlas_sources (id, title, publisher, url, note) values
   ('electionskenya-2022-candidates', '2022 candidates and registered voters by constituency', 'electionskenya.org', 'http://www.electionskenya.org/constituency/274/', 'Constituency pages of a third-party site carrying IEBC''s 2022 candidate list (official names and parties) and register; names are given here as other names then surname. Its county pages give the 2022 governor candidates; both lists are what the provisional results were checked against for completeness.'),
   ('google-open-buildings-v3', 'Open Buildings v3: building footprints', 'Google Open Buildings', 'https://sites.research.google/gr/open-buildings/', 'Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map''s house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more.'),
   ('geoboundaries-ken-adm3', 'geoBoundaries Kenya ADM3 (wards)', 'geoBoundaries', 'https://www.geoboundaries.org/', 'Ward boundaries (Omare & Omare 2020, CC BY 4.0), simplified to about 3 m for the ward maps; areas are measured from them.'),
-  ('mzalendo-2022-kiambu', 'Kiambu County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/kiambu/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered; Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.'),
+  ('iebc-2022-rov-per-polling-station', 'Register of voters per polling station, 2022 General Election', 'IEBC', 'https://www.iebc.or.ke/docs/rov_per_polling_station.pdf', '712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri''s wards add up to 104,592 and Tigania West''s to 70,283, the constituency registers Mzalendo gives.'),
+  ('mzalendo-2022-kiambu', 'Kiambu County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/kiambu/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered (99,384 in 2017; its wards as IEBC''s register adds them up); Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.'),
   ('nairobileo-2025-wamuchomba', 'Woman MP Who Holds Record for Receiving Highest Number of Votes in Kenya', 'Nairobi Leo', 'https://www.nairobileo.co.ke/features/article/18973/woman-mp-who-holds-record-for-receiving-highest-number-of-votes-in-kenya', '25 January 2025. Githunguri''s 2022 MP race, the top two as printed: Wamuchomba 34,646 and Jubilee''s Gabriel Kago 31,127. The winner''s figure agrees with the Gazette as Mzalendo gives it. No valid total, so shares are of the candidates listed.'),
-  ('mzalendo-2022-meru', 'Meru County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/meru/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered. Read 19 October 2026.')
+  ('mzalendo-2022-meru', 'Meru County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/meru/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC''s register adds them up). Read 19 October 2026.')
 on conflict (id) do update set title = excluded.title, publisher = excluded.publisher, url = excluded.url, note = excluded.note;
 
 insert into public.atlas_areas (key, level, name, parent, iebc_code) values
@@ -70,7 +71,15 @@ on conflict (election_id, area_key) do update set registered = excluded.register
 
 insert into public.atlas_register (year, area_key, registered, source_id) values
   (2022, 'kiambu/githunguri', 104592, 'mzalendo-2022-kiambu'),
-  (2022, 'meru/tigania-west', 70283, 'mzalendo-2022-meru')
+  (2022, 'kiambu/githunguri/githunguri', 27596, 'iebc-2022-rov-per-polling-station'),
+  (2022, 'kiambu/githunguri/githiga', 20616, 'iebc-2022-rov-per-polling-station'),
+  (2022, 'kiambu/githunguri/ikinu', 17450, 'iebc-2022-rov-per-polling-station'),
+  (2022, 'kiambu/githunguri/ngewa', 18876, 'iebc-2022-rov-per-polling-station'),
+  (2022, 'kiambu/githunguri/komothai', 20054, 'iebc-2022-rov-per-polling-station'),
+  (2017, 'kiambu/githunguri', 99384, 'mzalendo-2022-kiambu'),
+  (2022, 'meru/tigania-west', 70283, 'mzalendo-2022-meru'),
+  (2022, 'meru/tigania-west/athwana', 9123, 'iebc-2022-rov-per-polling-station'),
+  (2017, 'meru/tigania-west', 64114, 'mzalendo-2022-meru')
 on conflict (year, area_key) do update set registered = excluded.registered, source_id = excluded.source_id;
 
 insert into public.atlas_population (area_key, year, total, adults, young_adults, source_id) values
