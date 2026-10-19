@@ -31,7 +31,15 @@ export function WardView({
 }) {
   const f = figuresFor(d, area.key, race, year);
   const parent = d.areas.find((a) => a.key === area.parent);
-  const blocks = parent ? resultBlocks(d, parent.key, [race]) : [];
+  // A ward's own race is counted in the ward; every other race is shown for its constituency.
+  const own = race === "mca";
+  const blocks = own
+    ? resultBlocks(d, area.key, [race])
+    : parent
+      ? resultBlocks(d, parent.key, [race])
+      : [];
+  const where = own ? area.name : (parent?.name ?? "Its constituency");
+  const caption = own ? "ward figure" : "constituency figure";
   const county = area.key.split("/")[0] ?? "";
   return (
     <>
@@ -42,19 +50,22 @@ export function WardView({
         <section className="card">
           <div className="card-head">
             <h2>
-              {parent?.name ?? "Its constituency"}: {RACE_NAMES[race]}
+              {where}: {RACE_NAMES[race]}
             </h2>
-            <span className="mono">constituency figure</span>
+            <span className="mono">{caption}</span>
           </div>
           {blocks.map((b) => (
-            <ResultList key={b.year} block={b} caption="constituency figure" />
+            <ResultList key={b.year} block={b} caption={caption} />
           ))}
           {blocks.length ? null : (
             <p className="f-note">
-              No {raceInText(race)} result found for {parent?.name ?? "its constituency"} yet.
+              No {raceInText(race)} result found for{" "}
+              {own ? area.name : (parent?.name ?? "its constituency")} yet.
             </p>
           )}
-          <p className="meta">Results for the ward itself come with the station data.</p>
+          {own ? null : (
+            <p className="meta">Results for the ward itself come with the station data.</p>
+          )}
         </section>
       </div>
       <section className="card">

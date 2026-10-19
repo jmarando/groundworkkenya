@@ -3,8 +3,8 @@
 // why, and the votes within reach. Pure: the screens hand it an area's count
 // and show what comes back.
 
-export type Race = "president" | "governor" | "mp";
-export const RACES: Race[] = ["president", "governor", "mp"];
+export type Race = "president" | "governor" | "mp" | "mca";
+export const RACES: Race[] = ["president", "governor", "mp", "mca"];
 export const YEARS = [2013, 2017, 2022] as const;
 
 export const electionId = (year: number, race: Race) => `${year}-${race}`;

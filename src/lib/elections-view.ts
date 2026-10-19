@@ -40,9 +40,9 @@ export function nextElectionsSearch(
   return validateElectionsSearch(out);
 }
 
-/** The race a campaign looks at first: its own, or for a ward's, its constituency's MP race. */
+/** The race a campaign looks at first: its own. */
 export const defaultRace = (level: string | null | undefined): Race =>
-  level === "mp" || level === "mca" ? "mp" : level === "president" ? "president" : "governor";
+  level === "mp" || level === "mca" || level === "president" ? level : "governor";
 
 /** The campaign's home area: what it set, else its seat ("MP · Mathira", "MCA · Roysambu", "Governor · Nairobi"), else Kenya. */
 export function homeAreaFor(

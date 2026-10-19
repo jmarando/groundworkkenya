@@ -9,12 +9,15 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 | 2013 president | 0 of 1 | 0 of 1 | no |
 | 2013 governor | 0 of 1 | 0 of 1 | no |
 | 2013 mp | 0 of 1 | 0 of 1 | n/a |
+| 2013 mca | 0 of 1 | 0 of 1 | no |
 | 2017 president | 0 of 1 | 0 of 1 | no |
 | 2017 governor | 0 of 1 | 0 of 1 | no |
-| 2017 mp | 0 of 1 | 0 of 1 | n/a |
+| 2017 mp | 1 of 1 | 1 of 1 | n/a |
+| 2017 mca | 0 of 1 | 0 of 1 | no |
 | 2022 president | 0 of 1 | 0 of 1 | no |
 | 2022 governor | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 1 of 1 | 0 of 1 | n/a |
+| 2022 mca | 0 of 1 | 0 of 1 | no |
 
 Registered voters by ward: 2013: 0 of 5 · 2017: 0 of 5 · 2022: 5 of 5.
 Population estimates: 5 of 5 wards.
@@ -27,15 +30,20 @@ Missing:
 - 2013 governor: results for 1 of 1 constituencies
 - 2013 governor: the county total
 - 2013 mp: results for 1 of 1 constituencies
+- 2013 mca: results for 1 of 1 constituencies
+- 2013 mca: the county total
 - 2017 president: results for 1 of 1 constituencies
 - 2017 president: the county total
 - 2017 governor: results for 1 of 1 constituencies
 - 2017 governor: the county total
-- 2017 mp: results for 1 of 1 constituencies
+- 2017 mca: results for 1 of 1 constituencies
+- 2017 mca: the county total
 - 2022 president: results for 1 of 1 constituencies
 - 2022 president: the county total
 - 2022 governor: results for 1 of 1 constituencies
 - 2022 governor: the county total
+- 2022 mca: results for 1 of 1 constituencies
+- 2022 mca: the county total
 
 ## Meru
 
@@ -44,12 +52,15 @@ Missing:
 | 2013 president | 0 of 1 | 0 of 1 | no |
 | 2013 governor | 0 of 1 | 0 of 1 | no |
 | 2013 mp | 0 of 1 | 0 of 1 | n/a |
+| 2013 mca | 0 of 1 | 0 of 1 | no |
 | 2017 president | 0 of 1 | 0 of 1 | no |
 | 2017 governor | 0 of 1 | 0 of 1 | no |
 | 2017 mp | 0 of 1 | 0 of 1 | n/a |
+| 2017 mca | 0 of 1 | 0 of 1 | no |
 | 2022 president | 0 of 1 | 0 of 1 | no |
 | 2022 governor | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 0 of 1 | 0 of 1 | n/a |
+| 2022 mca | 0 of 1 | 0 of 1 | no |
 
 Registered voters by ward: 2013: 0 of 1 · 2017: 0 of 1 · 2022: 1 of 1.
 Population estimates: 1 of 1 wards.
@@ -61,16 +72,22 @@ Missing:
 - 2013 governor: results for 1 of 1 constituencies
 - 2013 governor: the county total
 - 2013 mp: results for 1 of 1 constituencies
+- 2013 mca: results for 1 of 1 constituencies
+- 2013 mca: the county total
 - 2017 president: results for 1 of 1 constituencies
 - 2017 president: the county total
 - 2017 governor: results for 1 of 1 constituencies
 - 2017 governor: the county total
 - 2017 mp: results for 1 of 1 constituencies
+- 2017 mca: results for 1 of 1 constituencies
+- 2017 mca: the county total
 - 2022 president: results for 1 of 1 constituencies
 - 2022 president: the county total
 - 2022 governor: results for 1 of 1 constituencies
 - 2022 governor: the county total
 - 2022 mp: results for 1 of 1 constituencies
+- 2022 mca: results for 1 of 1 constituencies
+- 2022 mca: the county total
 
 ## Nairobi
 
@@ -79,12 +96,15 @@ Missing:
 | 2013 president | 0 of 17 | 0 of 17 | yes |
 | 2013 governor | 0 of 17 | 0 of 17 | no |
 | 2013 mp | 1 of 17 | 0 of 17 | n/a |
+| 2013 mca | 0 of 17 | 0 of 17 | no |
 | 2017 president | 0 of 17 | 0 of 17 | yes |
 | 2017 governor | 0 of 17 | 0 of 17 | yes |
 | 2017 mp | 17 of 17 | 0 of 17 | n/a |
+| 2017 mca | 0 of 17 | 0 of 17 | no |
 | 2022 president | 1 of 17 | 1 of 17 | yes |
 | 2022 governor | 13 of 17 | 0 of 17 | yes |
 | 2022 mp | 15 of 17 | 11 of 17 | n/a |
+| 2022 mca | 0 of 17 | 0 of 17 | no |
 
 Registered voters by ward: 2013: 0 of 85 · 2017: 0 of 85 · 2022: 85 of 85.
 Population estimates: 85 of 85 wards.
@@ -97,11 +117,17 @@ Missing:
 - 2013 governor: results for 17 of 17 constituencies
 - 2013 governor: the county total
 - 2013 mp: results for 16 of 17 constituencies
+- 2013 mca: results for 17 of 17 constituencies
+- 2013 mca: the county total
 - 2017 president: results for 17 of 17 constituencies
 - 2017 governor: results for 17 of 17 constituencies
+- 2017 mca: results for 17 of 17 constituencies
+- 2017 mca: the county total
 - 2022 president: results for 16 of 17 constituencies
 - 2022 governor: results for 4 of 17 constituencies
 - 2022 mp: results for 2 of 17 constituencies
+- 2022 mca: results for 17 of 17 constituencies
+- 2022 mca: the county total
 
 ## Nyeri
 
@@ -110,12 +136,15 @@ Missing:
 | 2013 president | 0 of 6 | 0 of 6 | yes |
 | 2013 governor | 0 of 6 | 0 of 6 | no |
 | 2013 mp | 0 of 6 | 0 of 6 | n/a |
+| 2013 mca | 0 of 6 | 0 of 6 | no |
 | 2017 president | 0 of 6 | 0 of 6 | no |
 | 2017 governor | 0 of 6 | 0 of 6 | yes |
 | 2017 mp | 6 of 6 | 0 of 6 | n/a |
+| 2017 mca | 0 of 6 | 0 of 6 | no |
 | 2022 president | 1 of 6 | 1 of 6 | yes |
 | 2022 governor | 0 of 6 | 0 of 6 | yes |
 | 2022 mp | 5 of 6 | 2 of 6 | n/a |
+| 2022 mca | 0 of 6 | 0 of 6 | no |
 
 Registered voters by ward: 2013: 0 of 6 · 2017: 0 of 6 · 2022: 6 of 6.
 Population estimates: 6 of 6 wards.
@@ -127,12 +156,18 @@ Missing:
 - 2013 governor: results for 6 of 6 constituencies
 - 2013 governor: the county total
 - 2013 mp: results for 6 of 6 constituencies
+- 2013 mca: results for 6 of 6 constituencies
+- 2013 mca: the county total
 - 2017 president: results for 6 of 6 constituencies
 - 2017 president: the county total
 - 2017 governor: results for 6 of 6 constituencies
+- 2017 mca: results for 6 of 6 constituencies
+- 2017 mca: the county total
 - 2022 president: results for 5 of 6 constituencies
 - 2022 governor: results for 6 of 6 constituencies
 - 2022 mp: results for 1 of 6 constituencies
+- 2022 mca: results for 6 of 6 constituencies
+- 2022 mca: the county total
 
 ## Coalitions
 
@@ -149,6 +184,9 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 
 ## Sources
 
+- `ballotwinners-athwana-ward`: ATHWANA Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/0266. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 6,177 valid votes, which the six candidates add up to. 2022 lists the winner only (Dionisio Jim Muchui, UDA, 3,864, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
+- `ballotwinners-githunguri`: GITHUNGURI Constituency: MP, Wards and Results, BallotWinners, https://ballotwinners.com/geography/constituency/116. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 86,306 valid votes, which the eight candidates add up to. 2013 gives no parties, so it isn't entered. Read 19 October 2026.
+- `ballotwinners-roysambu-ward`: ROYSAMBU Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/1394. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 23,195 valid votes, which the eight candidates add up to. 2022 lists the winner only (Mumbi Sospeter Gathahu, independent, 6,317, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
 - `citizen-2022-dagoretti-north-mp`: Beatrice Elachi wins Dagoretti North MP race, Citizen Digital, https://citizen.digital/article/beatrice-elachi-wins-dagoretti-north-mp-race-n303832. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `citizen-2022-dagoretti-south-mp`: John 'KJ' Kiarie retains Dagoretti South MP seat, Citizen Digital, https://citizen.digital/article/john-kj-kiarie-retains-dagoretti-south-mp-seat-n303794. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `citizen-2022-embakasi-east-mp`: Babu Owino retains Embakasi East MP seat, Citizen Digital, https://citizen.digital/article/babu-owino-retains-embakasi-east-mp-seat-n303795. The top two at the declaration. The Star's round-up of 11 August printed 65,540 and 34,450 from an unfinished count.

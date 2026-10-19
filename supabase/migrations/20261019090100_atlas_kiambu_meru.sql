@@ -12,7 +12,9 @@ insert into public.atlas_sources (id, title, publisher, url, note) values
   ('iebc-2022-rov-per-polling-station', 'Register of voters per polling station, 2022 General Election', 'IEBC', 'https://www.iebc.or.ke/docs/rov_per_polling_station.pdf', '712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri''s wards add up to 104,592 and Tigania West''s to 70,283, the constituency registers Mzalendo gives.'),
   ('mzalendo-2022-kiambu', 'Kiambu County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/kiambu/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered (99,384 in 2017; its wards as IEBC''s register adds them up); Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.'),
   ('nairobileo-2025-wamuchomba', 'Woman MP Who Holds Record for Receiving Highest Number of Votes in Kenya', 'Nairobi Leo', 'https://www.nairobileo.co.ke/features/article/18973/woman-mp-who-holds-record-for-receiving-highest-number-of-votes-in-kenya', '25 January 2025. Githunguri''s 2022 MP race, the top two as printed: Wamuchomba 34,646 and Jubilee''s Gabriel Kago 31,127. The winner''s figure agrees with the Gazette as Mzalendo gives it. No valid total, so shares are of the candidates listed.'),
-  ('mzalendo-2022-meru', 'Meru County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/meru/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC''s register adds them up). Read 19 October 2026.')
+  ('ballotwinners-githunguri', 'GITHUNGURI Constituency: MP, Wards and Results', 'BallotWinners', 'https://ballotwinners.com/geography/constituency/116', 'A third-party site carrying IEBC''s declared results, every candidate as printed (surname first). 2017: 86,306 valid votes, which the eight candidates add up to. 2013 gives no parties, so it isn''t entered. Read 19 October 2026.'),
+  ('mzalendo-2022-meru', 'Meru County: elections, Parliament and public money', 'Mzalendo', 'https://mzalendo.com/mps-performance/counties/meru/', 'Reproduces IEBC''s 2022 register by constituency and the Kenya Gazette''s declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC''s register adds them up). Read 19 October 2026.'),
+  ('ballotwinners-athwana-ward', 'ATHWANA Ward: MCA and Election Results', 'BallotWinners', 'https://ballotwinners.com/geography/ward/0266', 'A third-party site carrying IEBC''s declared results, every candidate as printed (surname first). 2017: 6,177 valid votes, which the six candidates add up to. 2022 lists the winner only (Dionisio Jim Muchui, UDA, 3,864, as the Gazette gives), so it isn''t entered. 2013 gives no parties, so it isn''t entered either. Read 19 October 2026.')
 on conflict (id) do update set title = excluded.title, publisher = excluded.publisher, url = excluded.url, note = excluded.note;
 
 insert into public.atlas_areas (key, level, name, parent, iebc_code) values
@@ -45,7 +47,21 @@ insert into public.atlas_candidates (id, election_id, seat, name, party, bloc) v
   ('2017-president:kenya:uhuru-kenyatta', '2017-president', 'kenya', 'Uhuru Kenyatta', 'Jubilee', 'Jubilee'),
   ('2017-president:kenya:raila-odinga', '2017-president', 'kenya', 'Raila Odinga', 'ODM', 'NASA'),
   ('2022-mp:kiambu/githunguri:gathoni-wamuchomba', '2022-mp', 'kiambu/githunguri', 'Gathoni Wamuchomba', 'UDA', 'UDA'),
-  ('2022-mp:kiambu/githunguri:gabriel-kago', '2022-mp', 'kiambu/githunguri', 'Gabriel Kago', 'Jubilee', 'Jubilee')
+  ('2022-mp:kiambu/githunguri:gabriel-kago', '2022-mp', 'kiambu/githunguri', 'Gabriel Kago', 'Jubilee', 'Jubilee'),
+  ('2017-mp:kiambu/githunguri:mukuha-gabriel-kago', '2017-mp', 'kiambu/githunguri', 'Mukuha Gabriel Kago', 'JUBILEE PARTY', 'JUBILEE PARTY'),
+  ('2017-mp:kiambu/githunguri:machua-francis-mburu', '2017-mp', 'kiambu/githunguri', 'Machua Francis Mburu', 'NATIONAL RAINBOW COALITION-KENYA', 'NATIONAL RAINBOW COALITION-KENYA'),
+  ('2017-mp:kiambu/githunguri:kinuthia-stephen-ndichu', '2017-mp', 'kiambu/githunguri', 'Kinuthia Stephen Ndichu', 'INDEPENDENT', 'Independent: Kinuthia Stephen Ndichu'),
+  ('2017-mp:kiambu/githunguri:gachuki-john-ngata', '2017-mp', 'kiambu/githunguri', 'Gachuki John Ngata', 'INDEPENDENT', 'Independent: Gachuki John Ngata'),
+  ('2017-mp:kiambu/githunguri:muiruri-james-githae-mburu', '2017-mp', 'kiambu/githunguri', 'Muiruri James Githae Mburu', 'PARTY OF NATIONAL UNITY', 'PARTY OF NATIONAL UNITY'),
+  ('2017-mp:kiambu/githunguri:thuku-harrison-kariira', '2017-mp', 'kiambu/githunguri', 'Thuku Harrison Kariira', 'ORANGE DEMOCRATIC MOVEMENT', 'ORANGE DEMOCRATIC MOVEMENT'),
+  ('2017-mp:kiambu/githunguri:miller-christine', '2017-mp', 'kiambu/githunguri', 'Miller Christine', 'INDEPENDENT', 'Independent: Miller Christine'),
+  ('2017-mp:kiambu/githunguri:ngaruiya-mumbi-mungai', '2017-mp', 'kiambu/githunguri', 'Ngaruiya Mumbi Mungai', 'SAFINA', 'SAFINA'),
+  ('2017-mca:meru/tigania-west/athwana:mutumah-victor-karithi', '2017-mca', 'meru/tigania-west/athwana', 'Mutumah Victor Karithi', 'JUBILEE PARTY', 'JUBILEE PARTY'),
+  ('2017-mca:meru/tigania-west/athwana:dionisio-jim-muchui', '2017-mca', 'meru/tigania-west/athwana', 'Dionisio Jim Muchui', 'MAENDELEO CHAP CHAP PARTY', 'MAENDELEO CHAP CHAP PARTY'),
+  ('2017-mca:meru/tigania-west/athwana:theuri-joan-gacheri', '2017-mca', 'meru/tigania-west/athwana', 'Theuri Joan Gacheri', 'PARTY OF NATIONAL UNITY', 'PARTY OF NATIONAL UNITY'),
+  ('2017-mca:meru/tigania-west/athwana:mugambi-thumata-japhet', '2017-mca', 'meru/tigania-west/athwana', 'Mugambi Thumata Japhet', 'INDEPENDENT', 'Independent: Mugambi Thumata Japhet'),
+  ('2017-mca:meru/tigania-west/athwana:mikuari-simon-mureithi', '2017-mca', 'meru/tigania-west/athwana', 'Mikuari Simon Mureithi', 'CHAMA MWANGAZA DAIMA', 'CHAMA MWANGAZA DAIMA'),
+  ('2017-mca:meru/tigania-west/athwana:muriungi-bundi-samuel', '2017-mca', 'meru/tigania-west/athwana', 'Muriungi Bundi Samuel', 'KENYA AFRICAN NATIONAL UNION', 'KENYA AFRICAN NATIONAL UNION')
 on conflict (id) do update set election_id = excluded.election_id, seat = excluded.seat, name = excluded.name, party = excluded.party, bloc = excluded.bloc;
 
 insert into public.atlas_results (candidate_id, area_key, votes, source_id) values
@@ -62,11 +78,27 @@ insert into public.atlas_results (candidate_id, area_key, votes, source_id) valu
   ('2022-president:kenya:david-mwaure-waihiga', 'kenya', 31987, 'iebc-2022-form-34c'),
   ('2022-president:kenya:george-wajackoyah', 'kenya', 61969, 'iebc-2022-form-34c'),
   ('2022-mp:kiambu/githunguri:gathoni-wamuchomba', 'kiambu/githunguri', 34646, 'nairobileo-2025-wamuchomba'),
-  ('2022-mp:kiambu/githunguri:gabriel-kago', 'kiambu/githunguri', 31127, 'nairobileo-2025-wamuchomba')
+  ('2022-mp:kiambu/githunguri:gabriel-kago', 'kiambu/githunguri', 31127, 'nairobileo-2025-wamuchomba'),
+  ('2017-mp:kiambu/githunguri:mukuha-gabriel-kago', 'kiambu/githunguri', 76906, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:machua-francis-mburu', 'kiambu/githunguri', 5611, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:kinuthia-stephen-ndichu', 'kiambu/githunguri', 1081, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:gachuki-john-ngata', 'kiambu/githunguri', 937, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:muiruri-james-githae-mburu', 'kiambu/githunguri', 553, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:thuku-harrison-kariira', 'kiambu/githunguri', 470, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:miller-christine', 'kiambu/githunguri', 443, 'ballotwinners-githunguri'),
+  ('2017-mp:kiambu/githunguri:ngaruiya-mumbi-mungai', 'kiambu/githunguri', 305, 'ballotwinners-githunguri'),
+  ('2017-mca:meru/tigania-west/athwana:mutumah-victor-karithi', 'meru/tigania-west/athwana', 2625, 'ballotwinners-athwana-ward'),
+  ('2017-mca:meru/tigania-west/athwana:dionisio-jim-muchui', 'meru/tigania-west/athwana', 2514, 'ballotwinners-athwana-ward'),
+  ('2017-mca:meru/tigania-west/athwana:theuri-joan-gacheri', 'meru/tigania-west/athwana', 711, 'ballotwinners-athwana-ward'),
+  ('2017-mca:meru/tigania-west/athwana:mugambi-thumata-japhet', 'meru/tigania-west/athwana', 234, 'ballotwinners-athwana-ward'),
+  ('2017-mca:meru/tigania-west/athwana:mikuari-simon-mureithi', 'meru/tigania-west/athwana', 80, 'ballotwinners-athwana-ward'),
+  ('2017-mca:meru/tigania-west/athwana:muriungi-bundi-samuel', 'meru/tigania-west/athwana', 13, 'ballotwinners-athwana-ward')
 on conflict (candidate_id, area_key) do update set votes = excluded.votes, source_id = excluded.source_id;
 
 insert into public.atlas_turnout (election_id, area_key, registered, cast_votes, rejected, valid, source_id) values
-  ('2022-president', 'kenya', 22120458, 14326751, 113614, 14213137, 'iebc-2022-form-34c')
+  ('2022-president', 'kenya', 22120458, 14326751, 113614, 14213137, 'iebc-2022-form-34c'),
+  ('2017-mp', 'kiambu/githunguri', null, null, null, 86306, 'ballotwinners-githunguri'),
+  ('2017-mca', 'meru/tigania-west/athwana', null, null, null, 6177, 'ballotwinners-athwana-ward')
 on conflict (election_id, area_key) do update set registered = excluded.registered, cast_votes = excluded.cast_votes, rejected = excluded.rejected, valid = excluded.valid, source_id = excluded.source_id;
 
 insert into public.atlas_register (year, area_key, registered, source_id) values
