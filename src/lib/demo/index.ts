@@ -1,36 +1,44 @@
-// The three demo campaigns, one per office.
+// The demo campaigns: one per office, and a campaign's own where it has one.
 
 import { kalonzo } from "@/lib/demo/scenarios/kalonzo";
 import { mathira } from "@/lib/demo/scenarios/mathira";
+import { roysambu } from "@/lib/demo/scenarios/roysambu";
 import { sakaja } from "@/lib/demo/scenarios/sakaja";
 import type { Contender, Scenario, ScenarioKey } from "@/lib/demo/types";
 
-export const SCENARIOS: Scenario[] = [kalonzo, sakaja, mathira];
+export const SCENARIOS: Scenario[] = [kalonzo, sakaja, mathira, roysambu];
 
 /** Nairobi's governor race is this workspace's own campaign, so it comes first. */
 export const DEFAULT_SCENARIO: ScenarioKey = "sakaja";
 
 /** A scenario key from the URL, or the default for anything else. */
 export function scenarioKey(v: unknown): ScenarioKey {
-  return v === "kalonzo" || v === "sakaja" || v === "mathira" ? v : DEFAULT_SCENARIO;
+  return SCENARIOS.some((s) => s.key === v) ? (v as ScenarioKey) : DEFAULT_SCENARIO;
 }
 
-/** The demo scenario for a campaign's race: president, governor or MP. */
+/** The demo scenario for a campaign's race: president, governor, MP or MCA. */
 export function scenarioForLevel(level: string | null | undefined): ScenarioKey {
-  if (level === "president") return "kalonzo";
-  if (level === "mp") return "mathira";
-  return DEFAULT_SCENARIO;
+  return OWN_DEMO[level ?? ""] ?? DEFAULT_SCENARIO;
+}
+
+/** A campaign's demo: its own place's, where there is one, else its race's. */
+export function scenarioFor(
+  campaign: { slug: string; level: string } | null | undefined,
+): ScenarioKey {
+  const own = SCENARIOS.find((s) => s.key === campaign?.slug && s.office === campaign?.level);
+  return own ? own.key : scenarioForLevel(campaign?.level);
 }
 
 export function getScenario(key: ScenarioKey): Scenario {
   return SCENARIOS.find((s) => s.key === key) ?? sakaja;
 }
 
-/** Which demo is a race's own: only these three have one. */
+/** Which demo is a race's own: only these four have one. */
 const OWN_DEMO: Record<string, ScenarioKey> = {
   president: "kalonzo",
   governor: "sakaja",
   mp: "mathira",
+  mca: "roysambu",
 };
 
 /**
@@ -42,7 +50,7 @@ export function forCampaign(
   campaign: { candidate: string | null; level: string } | null | undefined,
 ): Scenario {
   const name = campaign?.candidate?.trim();
-  if (!name || OWN_DEMO[campaign?.level ?? ""] !== s.key || name === s.candidate.name) return s;
+  if (!name || s.office !== campaign?.level || name === s.candidate.name) return s;
   const words = name.split(/\s+/);
   const first = words[0]!;
   const initials = (

@@ -225,7 +225,7 @@ export async function runMorningStory(
     paused = String(collection.paused_reason);
   }
 
-  const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(5);
+  const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(50);
   if (campaignError) throw new Error("Could not read campaigns for the morning briefing.");
   for (const c of (campaigns ?? []) as CampaignInfo[]) {
     const { data: have } = await sb

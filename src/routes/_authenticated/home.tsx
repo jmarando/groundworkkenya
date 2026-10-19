@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { Home } from "@/components/gw/home/Home";
 import { useAccess } from "@/hooks/useAccess";
-import { forCampaign, getScenario, scenarioForLevel } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioFor } from "@/lib/demo";
 import { getHome } from "@/lib/home.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
@@ -38,7 +38,7 @@ function HomePage() {
     queryFn: () => fetchHome(),
     enabled: Boolean(campaign?.id),
   });
-  const s = forCampaign(getScenario(scenarioForLevel(campaign?.level)), campaign);
+  const s = forCampaign(getScenario(scenarioFor(campaign)), campaign);
   return (
     <section className="view active" aria-label="Home">
       <Home s={s} canEdit={isPrincipal} {...(data ? { data } : {})} />

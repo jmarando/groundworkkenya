@@ -42,9 +42,9 @@ function slugsOf(file: string): Set<string> {
 
 // ---- scenarios
 eq(
-  "three scenarios, one per office",
+  "four scenarios, one per office",
   SCENARIOS.map((s) => `${s.key}:${s.office}`),
-  ["kalonzo:president", "sakaja:governor", "mathira:mp"],
+  ["kalonzo:president", "sakaja:governor", "mathira:mp", "roysambu:mca"],
 );
 eq(
   "an unknown candidate falls back to the workspace's own race",
@@ -54,14 +54,14 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6],
+  [47, 85, 6, 5],
 );
 
 for (const s of SCENARIOS) {
   const geo = slugsOf(s.geo.file);
-  const mine = new Set(s.areas.map((a) => a.slug));
+  const mine = new Set(s.areas.filter((a) => !a.offMap).map((a) => a.slug));
   eq(
-    `${s.key}: every area is on the map`,
+    `${s.key}: every area is on the map, unless it says it isn't`,
     [...mine].filter((x) => !geo.has(x)),
     [],
   );
@@ -117,7 +117,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false],
+  [true, true, false, false],
 );
 
 // ---- insights

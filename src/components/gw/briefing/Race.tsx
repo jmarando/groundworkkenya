@@ -161,7 +161,7 @@ export function Race({ s }: { s: Scenario }) {
                   <tr key={a.slug}>
                     <td>
                       <b>{a.name}</b>
-                      {a.group !== a.name && s.office !== "mp" && (
+                      {a.group !== a.name && s.office !== "mp" && s.office !== "mca" && (
                         <small className="dim"> {a.group}</small>
                       )}
                     </td>

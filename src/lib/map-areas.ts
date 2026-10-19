@@ -41,6 +41,17 @@ export const MAP_AREAS: MapArea[] = [
     counts: "/tiles/houses-mathira.json",
     bounds: [37.03, -0.57, 37.31, -0.1],
   },
+  {
+    // A ward campaign's map is its ward alone: it opens on the ward, as a constituency's does.
+    key: "nairobi/roysambu/roysambu",
+    id: "roysambu",
+    name: "Roysambu Ward",
+    top: "constituency",
+    wards: "/geo/roysambu-wards.json",
+    houses: "/tiles/houses-roysambu.pmtiles",
+    counts: "/tiles/houses-roysambu.json",
+    bounds: [36.82, -1.27, 36.91, -1.19],
+  },
 ];
 
 export function mapAreaFor(key: string | null | undefined): MapArea | null {

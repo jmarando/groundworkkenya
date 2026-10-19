@@ -74,9 +74,10 @@ for (const s of SCENARIOS) {
     features: { properties: { slug: string } }[];
   };
   const slugs = new Set(geo.features.map((f) => f.properties.slug));
+  const offMap = new Set(s.areas.filter((a) => a.offMap).map((a) => a.slug));
   ok(
-    `${s.key}: every area is on the map`,
-    areas.every((a) => slugs.has(a.slug)),
+    `${s.key}: every area is on the map, unless it says it isn't`,
+    areas.every((a) => slugs.has(a.slug) || offMap.has(a.slug)),
   );
 
   const hist = weeklyHistory(s, TODAY);
