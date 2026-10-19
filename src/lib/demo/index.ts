@@ -1,12 +1,13 @@
 // The demo campaigns: one per office, and a campaign's own where it has one.
 
+import { githunguri } from "@/lib/demo/scenarios/githunguri";
 import { kalonzo } from "@/lib/demo/scenarios/kalonzo";
 import { mathira } from "@/lib/demo/scenarios/mathira";
 import { roysambu } from "@/lib/demo/scenarios/roysambu";
 import { sakaja } from "@/lib/demo/scenarios/sakaja";
 import type { Contender, Scenario, ScenarioKey } from "@/lib/demo/types";
 
-export const SCENARIOS: Scenario[] = [kalonzo, sakaja, mathira, roysambu];
+export const SCENARIOS: Scenario[] = [kalonzo, sakaja, mathira, roysambu, githunguri];
 
 /** Nairobi's governor race is this workspace's own campaign, so it comes first. */
 export const DEFAULT_SCENARIO: ScenarioKey = "sakaja";

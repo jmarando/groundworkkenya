@@ -4,7 +4,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { forCampaign, getScenario, scenarioKey, SCENARIOS } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioFor, scenarioKey, SCENARIOS } from "@/lib/demo";
 import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
 import {
   countAtLeast,
@@ -42,9 +42,9 @@ function slugsOf(file: string): Set<string> {
 
 // ---- scenarios
 eq(
-  "four scenarios, one per office",
+  "one scenario per office, and Githunguri's own",
   SCENARIOS.map((s) => `${s.key}:${s.office}`),
-  ["kalonzo:president", "sakaja:governor", "mathira:mp", "roysambu:mca"],
+  ["kalonzo:president", "sakaja:governor", "mathira:mp", "roysambu:mca", "githunguri:mp"],
 );
 eq(
   "an unknown candidate falls back to the workspace's own race",
@@ -54,7 +54,7 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6, 5],
+  [47, 85, 6, 5, 5],
 );
 
 for (const s of SCENARIOS) {
@@ -117,7 +117,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false, false],
+  [true, true, false, false, false],
 );
 
 // ---- insights
@@ -312,6 +312,24 @@ for (const s of SCENARIOS) {
     forCampaign(sakaja, { candidate: "A Senator", level: "senator" }) === sakaja,
   );
   ok("no campaign, no change", forCampaign(mathira, null) === mathira);
+  eq(
+    "a campaign's own demo where it has one, else its office's",
+    [
+      scenarioFor({ slug: "githunguri", level: "mp" }),
+      scenarioFor({ slug: "roysambu", level: "mca" }),
+      scenarioFor({ slug: "athwana", level: "mca" }),
+      scenarioFor({ slug: "mathira", level: "mp" }),
+      scenarioFor({ slug: "githunguri", level: "governor" }),
+      scenarioFor(null),
+    ],
+    ["githunguri", "roysambu", "roysambu", "mathira", "sakaja", "sakaja"],
+  );
+  eq(
+    "Githunguri's demo carries its candidate",
+    forCampaign(getScenario("githunguri"), { candidate: "Gathoni Wamuchomba", level: "mp" })
+      .candidate.name,
+    "Gathoni Wamuchomba",
+  );
 }
 
 // ---- the war room shows its own race
