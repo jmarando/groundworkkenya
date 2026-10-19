@@ -3435,6 +3435,7 @@ export type Database = {
         Args: { _key: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
+      record_creator_payouts: { Args: { _rows: Json }; Returns: number }
       record_door: {
         Args: {
           _client_id: string
