@@ -30,9 +30,9 @@
 .campaign-home-signin{ color:var(--gw-paper); border:1px solid var(--gw-sidebar-border); }
 .campaign-home-signin:hover{ border-color:var(--gw-paper); }
 .campaign-home-main{ width:min(100% - 48px, 1200px); margin:0 auto; padding:72px 0 56px; display:grid; grid-template-columns:minmax(0,.9fr) minmax(420px,1.1fr); gap:72px; align-items:center; }
-.campaign-home-copy{ max-width:620px; }
+.campaign-home-copy{ max-width:620px; min-width:0; container-type:inline-size; }
 .campaign-home-kicker{ display:block; color:hsl(150 10% 62%); font-size:11px; letter-spacing:.22em; text-transform:uppercase; }
-.campaign-home h1{ margin:24px 0 0; max-width:11ch; font-family:var(--font-display); font-size:clamp(50px,7.6vw,104px); font-stretch:112%; font-weight:800; line-height:.94; letter-spacing:0; text-wrap:balance; }
+.campaign-home h1{ margin:24px 0 0; max-width:11ch; font-family:var(--font-display); font-size:clamp(40px,14cqi,104px); font-stretch:112%; overflow-wrap:anywhere; hyphens:auto; font-weight:800; line-height:.94; letter-spacing:0; text-wrap:balance; }
 .campaign-home-seat{ margin-top:22px; color:var(--gw-accent); font-family:var(--font-display); font-size:clamp(20px,2.5vw,30px); font-weight:700; }
 .campaign-home-lede{ max-width:48ch; margin-top:20px; color:hsl(60 8% 76%); font-size:17px; line-height:1.6; }
 .campaign-home-actions{ margin-top:34px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
