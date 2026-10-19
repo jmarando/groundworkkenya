@@ -1301,6 +1301,7 @@ export type Database = {
           person_id: string | null
           support: number | null
           visited_at: string
+          walk_list_id: string | null
           ward_id: string | null
         }
         Insert: {
@@ -1318,6 +1319,7 @@ export type Database = {
           person_id?: string | null
           support?: number | null
           visited_at: string
+          walk_list_id?: string | null
           ward_id?: string | null
         }
         Update: {
@@ -1335,6 +1337,7 @@ export type Database = {
           person_id?: string | null
           support?: number | null
           visited_at?: string
+          walk_list_id?: string | null
           ward_id?: string | null
         }
         Relationships: [
@@ -1350,6 +1353,13 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_visits_walk_list_id_fkey"
+            columns: ["walk_list_id"]
+            isOneToOne: false
+            referencedRelation: "walk_lists"
             referencedColumns: ["id"]
           },
           {
@@ -2882,6 +2892,131 @@ export type Database = {
         }
         Relationships: []
       }
+      walk_list_doors: {
+        Row: {
+          campaign_id: string
+          lat: number
+          lng: number
+          outline: Json | null
+          pc: string
+          position: number
+          walk_list_id: string
+          ward_id: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          lat: number
+          lng: number
+          outline?: Json | null
+          pc: string
+          position: number
+          walk_list_id: string
+          ward_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          lat?: number
+          lng?: number
+          outline?: Json | null
+          pc?: string
+          position?: number
+          walk_list_id?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walk_list_doors_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_list_doors_walk_list_id_fkey"
+            columns: ["walk_list_id"]
+            isOneToOne: false
+            referencedRelation: "walk_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_list_doors_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      walk_lists: {
+        Row: {
+          campaign_id: string
+          centre_id: string | null
+          closed_by: string | null
+          created_at: string
+          done_at: string | null
+          first_sent_at: string | null
+          given_at: string | null
+          given_to: string | null
+          id: string
+          made_by: string | null
+          name: string
+          status: string
+          ward_id: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          centre_id?: string | null
+          closed_by?: string | null
+          created_at?: string
+          done_at?: string | null
+          first_sent_at?: string | null
+          given_at?: string | null
+          given_to?: string | null
+          id?: string
+          made_by?: string | null
+          name: string
+          status?: string
+          ward_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          centre_id?: string | null
+          closed_by?: string | null
+          created_at?: string
+          done_at?: string | null
+          first_sent_at?: string | null
+          given_at?: string | null
+          given_to?: string | null
+          id?: string
+          made_by?: string | null
+          name?: string
+          status?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walk_lists_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_lists_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "polling_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_lists_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wards: {
         Row: {
           campaign_id: string
@@ -3026,6 +3161,7 @@ export type Database = {
         Args: { _key: string; _now: string }
         Returns: boolean
       }
+      close_walk_list: { Args: { _id: string }; Returns: undefined }
       create_campaign: {
         Args: {
           _candidate: string
@@ -3036,6 +3172,16 @@ export type Database = {
           _slug: string
         }
         Returns: string
+      }
+      create_walk_list: {
+        Args: {
+          _centre_id: string
+          _doors: Json
+          _give_to?: string
+          _name: string
+          _ward_id: string
+        }
+        Returns: Json
       }
       file_stream_result: {
         Args: {
@@ -3049,6 +3195,7 @@ export type Database = {
         Returns: Json
       }
       focus_campaign: { Args: { _campaign: string }; Returns: undefined }
+      give_walk_list: { Args: { _id: string; _to: string }; Returns: undefined }
       groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
@@ -3111,6 +3258,37 @@ export type Database = {
       }
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
+      my_walk_lists: {
+        Args: never
+        Returns: {
+          centre_id: string
+          centre_name: string
+          done: number
+          doors: number
+          first_sent_at: string
+          given_at: string
+          id: string
+          name: string
+          ward_id: string
+        }[]
+      }
+      open_walk_lists: {
+        Args: { _ward_id: string }
+        Returns: {
+          centre_id: string
+          done: number
+          doors: number
+          first_sent_at: string
+          given_at: string
+          given_to: string
+          given_to_name: string
+          id: string
+          name: string
+          not_home: number
+          status: string
+          ward_id: string
+        }[]
+      }
       outbox_block_reason: {
         Args: {
           _channel: string
@@ -3171,6 +3349,7 @@ export type Database = {
           _client_id: string
           _consent: Json
           _consent_source: string
+          _door_pc?: string
           _issue: string
           _new: Json
           _outcome: string
@@ -3178,6 +3357,7 @@ export type Database = {
           _place?: Json
           _support: number
           _visited_at: string
+          _walk_list_id?: string
         }
         Returns: Json
       }
@@ -3257,6 +3437,54 @@ export type Database = {
           phone_masked: string
           segment: string
           support_score: number
+        }[]
+      }
+      walk_list_counts: {
+        Args: { _ids: string[] }
+        Returns: {
+          done: number
+          doors: number
+          list_id: string
+          not_home: number
+        }[]
+      }
+      walk_list_door_ward: {
+        Args: { _list_id: string; _pc: string }
+        Returns: {
+          door_ward: string
+        }[]
+      }
+      walk_list_doors: {
+        Args: { _list_id: string }
+        Returns: {
+          last_at: string
+          last_outcome: string
+          lat: number
+          lng: number
+          outline: Json
+          pc: string
+          position: number
+          ward_id: string
+        }[]
+      }
+      walk_list_planning: {
+        Args: { _ward_id: string }
+        Returns: {
+          not_home_at: string
+          on_list: string
+          pc: string
+          spoke_or_refused_at: string
+        }[]
+      }
+      walk_list_settle: { Args: { _pc: string }; Returns: undefined }
+      walk_list_staff_only: { Args: never; Returns: undefined }
+      walk_list_team: {
+        Args: never
+        Returns: {
+          doors_open: number
+          full_name: string
+          role: string
+          user_id: string
         }[]
       }
       ward_houses: {
