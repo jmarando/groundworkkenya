@@ -26,16 +26,16 @@ function eq(name: string, got: unknown, want: unknown) {
 
 const bridge = (status: string, voter_status: string | null = null, error: string | null = null) =>
   describeCall({ kind: "bridge", status, voter_status, error });
-eq("ringing you", bridge("ringing").text, "Your phone is ringing. Pick up.");
+eq("ringing you", bridge("ringing").text, "Ringing your line. Pick up.");
 eq(
   "you answered, voter ringing",
   [bridge("in-progress").text, bridge("in-progress").live],
-  ["You're on. Now ringing the voter…", true],
+  ["Answered. Now ringing the voter…", true],
 );
 eq(
   "you didn't answer",
   bridge("no-answer").text,
-  "Your phone wasn't answered, so the voter wasn't called.",
+  "Your line wasn't answered, so the voter wasn't called.",
 );
 eq(
   "voter didn't answer",

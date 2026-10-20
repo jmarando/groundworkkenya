@@ -18,7 +18,7 @@ import {
   searchPeopleForMessage,
   startConversation,
 } from "@/lib/social.functions";
-import { callFromInbox } from "@/lib/voice.functions";
+import { callFromInbox, callSetup } from "@/lib/voice.functions";
 import {
   firstName,
   validateWaTemplate,
@@ -638,7 +638,7 @@ function Thread({
         </div>
       </div>
 
-      {calling && row.phone && <CallBox conversationId={target.id} name={row.name} />}
+      {calling && row.phone && <CallBox conversationId={target.id} />}
 
       <div className="th2-body">
         {row.thread.map((m) => (
@@ -722,22 +722,25 @@ function Thread({
   );
 }
 
-/** Ring the team member's own phone, then the person; followed live when Twilio reports. */
-function CallBox({ conversationId, name }: { conversationId: string; name: string }) {
+/** A call to the person through the campaign's line, followed live when Twilio reports. */
+function CallBox({ conversationId }: { conversationId: string }) {
   const placeCall = useServerFn(callFromInbox);
+  const fetchSetup = useServerFn(callSetup);
+  const { data: setup } = useQuery({ queryKey: ["call-setup"], queryFn: () => fetchSetup() });
   const [mine, setMine] = useState(() => rememberedPhone());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [callId, setCallId] = useState<string | null | undefined>(undefined);
+  const needsPhone = setup ? !setup.officeLine : false;
   async function go() {
     setBusy(true);
     setErr(null);
     setCallId(undefined);
-    rememberPhone(mine);
+    if (needsPhone) rememberPhone(mine);
     try {
-      const r = await placeCall({ data: { conversationId, myPhone: mine } });
+      const r = await placeCall({ data: { conversationId, myPhone: needsPhone ? mine : "" } });
       if (r.ok) setCallId(r.callId);
-      else setErr(r.error);
+      else setErr(r.error === "needs-phone" ? "Enter the phone to take the call on." : r.error);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "The call couldn't be placed.");
     } finally {
@@ -746,21 +749,23 @@ function CallBox({ conversationId, name }: { conversationId: string; name: strin
   }
   return (
     <div className="th2-call">
-      <p className="meta">
-        We ring your phone first; when you pick up, we connect you to {name}. They see the
-        campaign&apos;s number.
-      </p>
       <div className="ac-row">
-        <input
-          className="input"
-          inputMode="tel"
-          aria-label="Your phone"
-          placeholder="Your phone, 0712 345 678"
-          value={mine}
-          onChange={(e) => setMine(e.target.value)}
-        />
-        <Button size="sm" disabled={busy || !mine.trim()} onClick={() => void go()}>
-          <Phone aria-hidden="true" /> {busy ? "Calling…" : "Ring me now"}
+        {needsPhone && (
+          <input
+            className="input"
+            inputMode="tel"
+            aria-label="Phone to take the call on"
+            placeholder="Phone to take the call on, 0712 345 678"
+            value={mine}
+            onChange={(e) => setMine(e.target.value)}
+          />
+        )}
+        <Button
+          size="sm"
+          disabled={busy || !setup || (needsPhone && !mine.trim())}
+          onClick={() => void go()}
+        >
+          <Phone aria-hidden="true" /> {busy ? "Calling…" : "Call now"}
         </Button>
       </div>
       {err && (
@@ -769,12 +774,7 @@ function CallBox({ conversationId, name }: { conversationId: string; name: strin
         </p>
       )}
       {callId && <CallProgress callId={callId} />}
-      {callId === null && (
-        <p className="call-line call-line--busy">
-          Your phone will ring now. (Live progress shows once Twilio&apos;s call reports are set
-          up.)
-        </p>
-      )}
+      {callId === null && <p className="call-line call-line--busy">Calling…</p>}
     </div>
   );
 }

@@ -57,9 +57,9 @@ export function describeCall(c: CallRow): CallView {
     const them = c.voter_status ?? null;
     const youAnswered = you === "in-progress" || (you === "completed" && them !== null);
     const steps = [
-      { label: "Calling your phone", done: you !== "queued" },
+      { label: "Ringing your line", done: you !== "queued" },
       {
-        label: "You picked up",
+        label: "Answered",
         done: youAnswered,
         failed: ["busy", "no-answer", "failed", "canceled"].includes(you) && !them,
       },
@@ -88,18 +88,18 @@ export function describeCall(c: CallRow): CallView {
       return {
         live: false,
         tone: "bad",
-        text: "Your phone wasn't answered, so the voter wasn't called.",
+        text: "Your line wasn't answered, so the voter wasn't called.",
         steps,
       };
     if (you === "busy") return { live: false, tone: "bad", text: "Your line was busy.", steps };
     if (you === "failed" || you === "canceled")
-      return { live: false, tone: "bad", text: "Twilio couldn't ring your phone.", steps };
+      return { live: false, tone: "bad", text: "Twilio couldn't ring your line.", steps };
     if (you === "completed")
       return { live: false, tone: "bad", text: "The call ended before the voter answered.", steps };
     if (youAnswered)
-      return { live: true, tone: "busy", text: "You're on. Now ringing the voter…", steps };
+      return { live: true, tone: "busy", text: "Answered. Now ringing the voter…", steps };
     if (you === "ringing")
-      return { live: true, tone: "busy", text: "Your phone is ringing. Pick up.", steps };
+      return { live: true, tone: "busy", text: "Ringing your line. Pick up.", steps };
     return { live: true, tone: "busy", text: "Placing the call…", steps };
   }
   if (err) return { live: false, tone: "bad", text: err };

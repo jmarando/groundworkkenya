@@ -28,8 +28,10 @@ export const callFromInbox = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Calling starts once the Twilio number is added." };
     const followed = Boolean(process.env["TWILIO_CALLBACK_TOKEN"]);
 
-    const mine = phoneDigits(data.myPhone);
-    if (!mine) return { ok: false as const, error: "Enter your phone number, like 0712 345 678." };
+    // The office line takes the call (the number incoming calls already ring), unless a phone is given.
+    const mine =
+      phoneDigits(data.myPhone) || phoneDigits(process.env["TWILIO_VOICE_FORWARD_TO"] ?? "");
+    if (!mine) return { ok: false as const, error: "needs-phone" };
 
     const { data: convo } = await context.supabase
       .from("conversations")
@@ -125,4 +127,12 @@ export const getCall = createServerFn({ method: "GET" })
         at: c.updated_at,
       };
     return { ...view, at: c.updated_at };
+  });
+
+/** Whether calls go to the office line without asking for a phone. */
+export const callSetup = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireOffice(context.supabase);
+    return { officeLine: Boolean(phoneDigits(process.env["TWILIO_VOICE_FORWARD_TO"] ?? "")) };
   });
