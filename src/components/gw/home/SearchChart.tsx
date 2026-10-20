@@ -17,7 +17,13 @@ const shortDay = (d: string) => dayName(d).split(" ").slice(1).join(" ");
  * Thirty days of search interest, a line per candidate, 100 being the busiest
  * day of any of them. Hover a day for every candidate's figure.
  */
-export function SearchChart({ model, peaks = [] }: { model: SearchChartModel; peaks?: SearchPeak[] }) {
+export function SearchChart({
+  model,
+  peaks = [],
+}: {
+  model: SearchChartModel;
+  peaks?: SearchPeak[];
+}) {
   const [at, setAt] = useState<number | null>(null);
   const { days, series } = model;
   const last = days.length - 1;

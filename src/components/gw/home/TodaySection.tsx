@@ -42,12 +42,28 @@ export function TodaySection({
 }) {
   const checkMorning = useServerFn(catchUpMorning);
   const queryClient = useQueryClient();
-  const catchUp = useMutation({ mutationFn: () => checkMorning(), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }) });
+  const catchUp = useMutation({
+    mutationFn: () => checkMorning(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }),
+  });
   return (
     <section className="home-sec" aria-labelledby="home-today">
       <div className="morning-tools">
-        <Button variant="ghost" size="sm" asChild><Link to="/archive" search={{ month: new Date().toISOString().slice(0, 7) }}><Archive /> News & diary archive</Link></Button>
-        {canEdit && (!story || !story.story.from || story.day < today) && <Button variant="outline" size="sm" disabled={catchUp.isPending} onClick={() => catchUp.mutate()}><RefreshCw /> {catchUp.isPending ? "Checking…" : "Check morning run"}</Button>}
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/archive" search={{ month: new Date().toISOString().slice(0, 7) }}>
+            <Archive /> News & diary archive
+          </Link>
+        </Button>
+        {canEdit && (!story || !story.story.from || story.day < today) && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={catchUp.isPending}
+            onClick={() => catchUp.mutate()}
+          >
+            <RefreshCw /> {catchUp.isPending ? "Checking…" : "Check morning run"}
+          </Button>
+        )}
         {catchUp.isError && <p role="alert">{catchUp.error.message}</p>}
       </div>
       <div className="mb-three">
@@ -74,7 +90,13 @@ export function TodaySection({
           onEdit={onEditStory}
         />
         <aside className="mb-side" aria-label="Today's plan">
-          <DiaryPlan plan={plan} watch={watch} upcoming={upcoming} loading={loading} canEdit={canEdit} />
+          <DiaryPlan
+            plan={plan}
+            watch={watch}
+            upcoming={upcoming}
+            loading={loading}
+            canEdit={canEdit}
+          />
         </aside>
       </div>
       <MorningNews view={story} />

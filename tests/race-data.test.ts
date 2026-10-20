@@ -66,6 +66,7 @@ const rival = (
   facebook: null,
   x: null,
   tiktok: null,
+  searchAs: null,
 });
 const RIVALS: RaceRival[] = [
   rival("s", "Johnson Sakaja", "us", 0, true),

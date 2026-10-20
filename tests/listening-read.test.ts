@@ -85,18 +85,18 @@ eq(
   convos.map((c) => c.label),
   ["Our candidate", "Gabriel Kago", "Gabriel Kago's own posts", "Dairy farmers"],
 );
-const ours = convos[0];
+const ours = convos[0]!;
 eq("this week and the week before", [ours.week, ours.prevWeek], [4, 1]);
 eq("mood this week", [ours.positive, ours.neutral, ours.negative], [1, 0, 3]);
 eq("angry and unhandled", ours.unhandledAngry, 2);
 eq("top issue, not 'general'", ours.topIssue, "housing");
-const own = convos[2];
+const own = convos[2]!;
 eq(
   "own posts: reach and replies",
   [own.own, own.reach, own.commentsRead, own.commentsNegative],
   [true, 447, 30, 2],
 );
-eq("published date wins over found date", [convos[3].week, convos[3].prevWeek], [2, 1]);
+eq("published date wins over found date", [convos[3]!.week, convos[3]!.prevWeek], [2, 1]);
 
 const acts = actions(convos, posts, NOW);
 eq(
@@ -104,19 +104,19 @@ eq(
   acts.map((a) => a.key),
   ["angry-you", "rising-jobs", "warmer-t:kago", "own-r:r1", "warm-you"],
 );
-eq("angry headline", acts[0].headline, "2 angry posts about you have not been handled");
-eq("angry names the issue", acts[0].why.startsWith("Most are about housing."), true);
+eq("angry headline", acts[0]!.headline, "2 angry posts about you have not been handled");
+eq("angry names the issue", acts[0]!.why.startsWith("Most are about housing."), true);
 eq(
   "rising issue figures",
-  acts[1].headline,
+  acts[1]!.headline,
   "Jobs is coming up: 3 posts this week, 1 the week before",
 );
 eq(
   "rival warmer figures",
-  acts[2].headline,
+  acts[2]!.headline,
   "Gabriel Kago had warmer coverage than you this week: 3 warm posts to your 1",
 );
-eq("own posts headline", acts[3].headline, "Gabriel Kago posted 2 times this week, reaching 447");
+eq("own posts headline", acts[3]!.headline, "Gabriel Kago posted 2 times this week, reaching 447");
 eq(
   "each action's count is the posts it opens",
   acts.map((a) => postsFor(posts, a.focus, NOW).length),

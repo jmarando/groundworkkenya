@@ -12,7 +12,10 @@ export const Route = createFileRoute("/set-password")({
       { title: "Set your password · Groundwork" },
       { name: "description", content: "Choose a password for your Groundwork campaign account." },
       { property: "og:title", content: "Set your password · Groundwork" },
-      { property: "og:description", content: "Choose a password for your Groundwork campaign account." },
+      {
+        property: "og:description",
+        content: "Choose a password for your Groundwork campaign account.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -69,8 +72,8 @@ function SetPassword() {
         {ready === false ? (
           <>
             <p className="meta">
-              This link has expired or was already used. Ask your campaign to resend the invite,
-              or use "Forgot password?" on the sign-in page.
+              This link has expired or was already used. Ask your campaign to resend the invite, or
+              use "Forgot password?" on the sign-in page.
             </p>
             <a className="btn btn--primary" href="/auth">
               Go to sign in

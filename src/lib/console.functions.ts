@@ -62,8 +62,22 @@ export const getFinance = createServerFn({ method: "GET" })
     const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
     if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
     const [{ data: expenses }, { data: contributions }, limit] = await Promise.all([
-      every((a, b) => sb.from("expenses").select("*").order("incurred_at", { ascending: false }).order("id").range(a, b)),
-      every((a, b) => sb.from("contributions").select("*").order("received_at", { ascending: false }).order("id").range(a, b)),
+      every((a, b) =>
+        sb
+          .from("expenses")
+          .select("*")
+          .order("incurred_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
+      every((a, b) =>
+        sb
+          .from("contributions")
+          .select("*")
+          .order("received_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
       spendingLimit(sb as never),
     ]);
 
@@ -414,7 +428,14 @@ export const getInbox = createServerFn({ method: "GET" })
     await requireOffice(context.supabase, "The inbox is for the campaign office.");
     const sb = context.supabase;
     const [{ data: convos }, people, { data: wards }, messages] = await Promise.all([
-      every((a, b) => sb.from("conversations").select("*").order("last_message_at", { ascending: false }).order("id").range(a, b)),
+      every((a, b) =>
+        sb
+          .from("conversations")
+          .select("*")
+          .order("last_message_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
       pageAll((from, to) =>
         sb.from("people").select("id, full_name, phone, ward_id").range(from, to),
       ),
@@ -847,9 +868,18 @@ export const getWarRoom = createServerFn({ method: "GET" })
       { data: roles },
       { data: campaignId },
     ] = await Promise.all([
-      every((a, b) => sb.from("polling_stations").select("*").order("code").order("id").range(a, b)),
+      every((a, b) =>
+        sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
+      ),
       sb.from("wards").select("id, name, constituency"),
-      every((a, b) => sb.from("incidents").select("*").order("occurred_at", { ascending: false }).order("id").range(a, b)),
+      every((a, b) =>
+        sb
+          .from("incidents")
+          .select("*")
+          .order("occurred_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
       sb
         .from("stream_results")
         .select("id, station_id, stream, valid_votes, rejected, corrected, over_register, filed_at")
@@ -1376,7 +1406,9 @@ export const getAgents = createServerFn({ method: "GET" })
           .order("id")
           .range(a, b),
       ),
-      every((a, b) => sb.from("polling_stations").select("*").order("code").order("id").range(a, b)),
+      every((a, b) =>
+        sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
+      ),
       sb.from("wards").select("id, name, constituency").order("name"),
       myRoles(sb),
       sb.rpc("my_campaign_role"),
@@ -1558,9 +1590,15 @@ export const getBriefing = createServerFn({ method: "GET" })
           )
           .range(from, to),
       ),
-      every((a, b) => sb.from("polling_stations").select("id, ward_id, status").order("id").range(a, b)),
-      every((a, b) => sb.from("conversations").select("id, issue, sentiment, person_id").order("id").range(a, b)),
-      every((a, b) => sb.from("listening_mentions").select("id, issue, sentiment, ward").order("id").range(a, b)),
+      every((a, b) =>
+        sb.from("polling_stations").select("id, ward_id, status").order("id").range(a, b),
+      ),
+      every((a, b) =>
+        sb.from("conversations").select("id, issue, sentiment, person_id").order("id").range(a, b),
+      ),
+      every((a, b) =>
+        sb.from("listening_mentions").select("id, issue, sentiment, ward").order("id").range(a, b),
+      ),
       every((a, b) => sb.from("incidents").select("id, status, ward_id").order("id").range(a, b)),
     ]);
 
@@ -1731,7 +1769,11 @@ export const getBriefing = createServerFn({ method: "GET" })
       .map(([label, v]) => {
         let topWard: string | null = null;
         let best = 0;
-        for (const [ward, n] of v.wards) if (n > best) ((best = n), (topWard = ward));
+        for (const [ward, n] of v.wards)
+          if (n > best) {
+            best = n;
+            topWard = ward;
+          }
         return {
           label: ISSUE_LABEL(label),
           total: v.inbox + v.web,

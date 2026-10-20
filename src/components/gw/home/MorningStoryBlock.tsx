@@ -42,7 +42,11 @@ export function MorningStoryBlock({
   const carried = today ? carriedLine(view, today) : null;
   return (
     <article className="mb-story" aria-labelledby="mb-story-h">
-      {carried ? <p className="mb-story-sum morning-status" role="status">{carried}</p> : null}
+      {carried ? (
+        <p className="mb-story-sum morning-status" role="status">
+          {carried}
+        </p>
+      ) : null}
       <p className="mb-story-kicker">
         {kicker(view)}
         {canEdit ? (
@@ -60,8 +64,12 @@ export function MorningStoryBlock({
           {!separateDetails && <MorningStoryDetails view={view} />}
         </>
       ) : (
-        <><h2 id="mb-story-h" className="mb-story-h">{st.from ? "This morning’s top stories" : "This morning’s check"}</h2>
-        {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}</>
+        <>
+          <h2 id="mb-story-h" className="mb-story-h">
+            {st.from ? "This morning’s top stories" : "This morning’s check"}
+          </h2>
+          {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}
+        </>
       )}
     </article>
   );
@@ -73,46 +81,46 @@ export function MorningStoryDetails({ view }: { view: StoryView | null }) {
   const st = view.story;
   return (
     <div className="mb-story-details">
-          {st.why ? <p className="mb-story-sum">{st.why}</p> : null}
-          {st.figures.length ? (
-            <dl className="mb-figs">
-              {st.figures.map((f) => (
-                <div key={f.label}>
-                  <dt>{f.value}</dt>
-                  <dd>{f.label}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-          {st.rivals || st.line ? (
-            <div className="mb-story-cols">
-              {st.rivals ? (
-                <div>
-                  <h3>How rivals are playing it</h3>
-                  <p>{st.rivals}</p>
-                </div>
-              ) : null}
-              {st.line ? (
-                <div className="mb-line">
-                  <h3>Suggested line</h3>
-                  <p>{st.line}</p>
-                </div>
-              ) : null}
+      {st.why ? <p className="mb-story-sum">{st.why}</p> : null}
+      {st.figures.length ? (
+        <dl className="mb-figs">
+          {st.figures.map((f) => (
+            <div key={f.label}>
+              <dt>{f.value}</dt>
+              <dd>{f.label}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {st.rivals || st.line ? (
+        <div className="mb-story-cols">
+          {st.rivals ? (
+            <div>
+              <h3>How rivals are playing it</h3>
+              <p>{st.rivals}</p>
             </div>
           ) : null}
-          {st.sources.length ? (
-            <p className="mb-source">
-              Sources:{" "}
-              {st.sources.map((s, i) => (
-                <span key={s.url}>
-                  {i ? " · " : ""}
-                  <a href={s.url} target="_blank" rel="noopener noreferrer">
-                    {s.source}
-                  </a>
-                </span>
-              ))}
-            </p>
+          {st.line ? (
+            <div className="mb-line">
+              <h3>Suggested line</h3>
+              <p>{st.line}</p>
+            </div>
           ) : null}
+        </div>
+      ) : null}
+      {st.sources.length ? (
+        <p className="mb-source">
+          Sources:{" "}
+          {st.sources.map((s, i) => (
+            <span key={s.url}>
+              {i ? " · " : ""}
+              <a href={s.url} target="_blank" rel="noopener noreferrer">
+                {s.source}
+              </a>
+            </span>
+          ))}
+        </p>
+      ) : null}
     </div>
   );
 }

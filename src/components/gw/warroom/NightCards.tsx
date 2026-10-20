@@ -523,7 +523,11 @@ export function Feed({ s, f }: { s: Scenario; f: NightFrame }) {
   return (
     <div className="card w-span12">
       <div className="card-head">
-        <h2>{s.office === "mp" || s.office === "mca" ? "Polling centres reporting" : "Latest forms in"}</h2>
+        <h2>
+          {s.office === "mp" || s.office === "mca"
+            ? "Polling centres reporting"
+            : "Latest forms in"}
+        </h2>
         <span className="mono">newest first</span>
       </div>
       <ul className="en-feed">

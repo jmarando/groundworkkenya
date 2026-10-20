@@ -20,7 +20,13 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
   const model = useMemo(() => searchChart(read, rivals), [read, rivals]);
   const averages = monthAverages(read, rivals);
   const peaks = useMemo(
-    () => (model && read ? searchPeaks(model, read.series.map((t) => t.term)) : []),
+    () =>
+      model && read
+        ? searchPeaks(
+            model,
+            read.series.map((t) => t.term),
+          )
+        : [],
     [model, read],
   );
   const from = peaks.length ? peakWindow(peaks[0]!.day).from : null;
@@ -95,14 +101,16 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
                                 <a href={m.url} target="_blank" rel="noreferrer">
                                   {m.title ?? m.url}
                                 </a>
-                                {m.domain ? <span className="search-peak-src"> · {m.domain}</span> : null}
+                                {m.domain ? (
+                                  <span className="search-peak-src"> · {m.domain}</span>
+                                ) : null}
                               </li>
                             ))}
                           </ul>
                         ) : (
                           <p className="search-peak-none">
-                            Listening found no story naming {p.term} around then, so the cause isn&apos;t
-                            on record.
+                            Listening found no story naming {p.term} around then, so the cause
+                            isn&apos;t on record.
                           </p>
                         )}
                       </div>
@@ -126,4 +134,5 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
   );
 }
 
-const addDaysIso = (d: string, n: number) => new Date(Date.parse(d) + n * 86400000).toISOString().slice(0, 10);
+const addDaysIso = (d: string, n: number) =>
+  new Date(Date.parse(d) + n * 86400000).toISOString().slice(0, 10);

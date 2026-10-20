@@ -5,6 +5,7 @@
 //   npx tsx --tsconfig tsconfig.json tests/walk-lists-functions.test.ts
 
 import type { Client } from "@/lib/houses.functions";
+import type { Door } from "@/lib/walk-lists.functions";
 import {
   cleanDoors,
   cleanNewList,
@@ -62,7 +63,7 @@ const WARD = "8f1a2b3c-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 const CENTRE = "11111111-2222-4333-8444-555555555555";
 const USER = "99999999-aaaa-4bbb-8ccc-dddddddddddd";
 
-const door = (pc: string, extra: Record<string, unknown> = {}) => ({
+const door = (pc: string, extra: Record<string, unknown> = {}): Door => ({
   pc,
   lat: -1.28,
   lng: 36.78,

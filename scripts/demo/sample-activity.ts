@@ -33,22 +33,108 @@ type Config = {
 };
 
 const KIKUYU: Names = {
-  first: ["Wanjiru", "Njeri", "Wambui", "Wairimu", "Nyambura", "Muthoni", "Wangari", "Wanjiku",
-    "Kamau", "Mwangi", "Njoroge", "Kariuki", "Waweru", "Gitau", "Ndungu", "Kimani", "Maina", "Mugo"],
-  last: ["Kamau", "Mwangi", "Njoroge", "Kariuki", "Waweru", "Gitau", "Ndungu", "Kimani", "Mugo",
-    "Maina", "Githinji", "Macharia", "Wainaina", "Kinyua", "Muriuki", "Ngugi"],
+  first: [
+    "Wanjiru",
+    "Njeri",
+    "Wambui",
+    "Wairimu",
+    "Nyambura",
+    "Muthoni",
+    "Wangari",
+    "Wanjiku",
+    "Kamau",
+    "Mwangi",
+    "Njoroge",
+    "Kariuki",
+    "Waweru",
+    "Gitau",
+    "Ndungu",
+    "Kimani",
+    "Maina",
+    "Mugo",
+  ],
+  last: [
+    "Kamau",
+    "Mwangi",
+    "Njoroge",
+    "Kariuki",
+    "Waweru",
+    "Gitau",
+    "Ndungu",
+    "Kimani",
+    "Mugo",
+    "Maina",
+    "Githinji",
+    "Macharia",
+    "Wainaina",
+    "Kinyua",
+    "Muriuki",
+    "Ngugi",
+  ],
 };
 const NAIROBI: Names = {
-  first: [...KIKUYU.first.slice(0, 10), "Achieng", "Otieno", "Atieno", "Wafula", "Mutiso",
-    "Mwikali", "Chebet", "Kiptoo", "Auma", "Omondi"],
-  last: [...KIKUYU.last.slice(0, 10), "Onyango", "Odhiambo", "Barasa", "Wekesa", "Kilonzo",
-    "Musyoka", "Rotich", "Cherono", "Okoth"],
+  first: [
+    ...KIKUYU.first.slice(0, 10),
+    "Achieng",
+    "Otieno",
+    "Atieno",
+    "Wafula",
+    "Mutiso",
+    "Mwikali",
+    "Chebet",
+    "Kiptoo",
+    "Auma",
+    "Omondi",
+  ],
+  last: [
+    ...KIKUYU.last.slice(0, 10),
+    "Onyango",
+    "Odhiambo",
+    "Barasa",
+    "Wekesa",
+    "Kilonzo",
+    "Musyoka",
+    "Rotich",
+    "Cherono",
+    "Okoth",
+  ],
 };
 const MERU: Names = {
-  first: ["Kendi", "Kawira", "Gatwiri", "Nkatha", "Karimi", "Makena", "Kagendo", "Mwendwa",
-    "Mwiti", "Murithi", "Mutwiri", "Kirimi", "Muthomi", "Gitonga", "Mugambi", "Kinoti", "Koome"],
-  last: ["Mwiti", "Murithi", "Mutwiri", "Kirimi", "Gitonga", "Mugambi", "Kinoti", "Mutuma",
-    "Koome", "Kaimenyi", "Muriuki", "Mbaabu", "Kiogora", "Mworia"],
+  first: [
+    "Kendi",
+    "Kawira",
+    "Gatwiri",
+    "Nkatha",
+    "Karimi",
+    "Makena",
+    "Kagendo",
+    "Mwendwa",
+    "Mwiti",
+    "Murithi",
+    "Mutwiri",
+    "Kirimi",
+    "Muthomi",
+    "Gitonga",
+    "Mugambi",
+    "Kinoti",
+    "Koome",
+  ],
+  last: [
+    "Mwiti",
+    "Murithi",
+    "Mutwiri",
+    "Kirimi",
+    "Gitonga",
+    "Mugambi",
+    "Kinoti",
+    "Mutuma",
+    "Koome",
+    "Kaimenyi",
+    "Muriuki",
+    "Mbaabu",
+    "Kiogora",
+    "Mworia",
+  ],
 };
 
 // The groups the team's research names for each place (Kenya Electoral Strategy Research, 2026).
@@ -63,7 +149,12 @@ const GITHUNGURI_SEGMENTS: Config["segments"] = [
 const ROYSAMBU_SEGMENTS: Config["segments"] = [
   ["students", "Students", "USIU-Africa, PAC University and Kenyatta University", "#B0324B"],
   ["tenants", "Young professionals", "Renters in apartments and gated courts", "#2B6CB0"],
-  ["residents", "Residents' associations", "Resident welfare associations and court committees", "#3D7A6B"],
+  [
+    "residents",
+    "Residents' associations",
+    "Resident welfare associations and court committees",
+    "#3D7A6B",
+  ],
   ["traders", "Businesses", "Traders along TRM, Lumumba and Mirema drives", "#1F6F4A"],
   ["boda", "Boda riders", "Motorcycle taxi operators and stage committees", "#D9481C"],
   ["women", "Women's groups", "Chamas and church groups", "#7A4FB5"],
@@ -87,18 +178,59 @@ const CONFIGS: Config[] = [
     names: KIKUYU,
     segments: GITHUNGURI_SEGMENTS,
     places: [
-      { title: "Githunguri town market walkabout", kind: "market", ward: "githunguri", note: "Market day: the traders' lines before the crowds" },
-      { title: "Milk collection centre, Komothai", kind: "visit", ward: "komothai", note: "Farmers at the morning delivery: milk prices" },
-      { title: "Women's group meeting, Ngewa", kind: "meeting", ward: "ngewa", note: "Bursaries and safety" },
-      { title: "Sunday service, Githiga", kind: "church", ward: "githiga", note: "Greet the congregation after the service" },
-      { title: "Youth fellowship, Ikinu", kind: "church", ward: "ikinu", note: "Young men: jobs and the boda stage" },
-      { title: "Kameme FM breakfast show", kind: "media", ward: "githunguri", note: "Dairy prices and the bursary fund" },
-      { title: "Tea buying centre, Githiga", kind: "visit", ward: "githiga", note: "Second payment questions" },
+      {
+        title: "Githunguri town market walkabout",
+        kind: "market",
+        ward: "githunguri",
+        note: "Market day: the traders' lines before the crowds",
+      },
+      {
+        title: "Milk collection centre, Komothai",
+        kind: "visit",
+        ward: "komothai",
+        note: "Farmers at the morning delivery: milk prices",
+      },
+      {
+        title: "Women's group meeting, Ngewa",
+        kind: "meeting",
+        ward: "ngewa",
+        note: "Bursaries and safety",
+      },
+      {
+        title: "Sunday service, Githiga",
+        kind: "church",
+        ward: "githiga",
+        note: "Greet the congregation after the service",
+      },
+      {
+        title: "Youth fellowship, Ikinu",
+        kind: "church",
+        ward: "ikinu",
+        note: "Young men: jobs and the boda stage",
+      },
+      {
+        title: "Kameme FM breakfast show",
+        kind: "media",
+        ward: "githunguri",
+        note: "Dairy prices and the bursary fund",
+      },
+      {
+        title: "Tea buying centre, Githiga",
+        kind: "visit",
+        ward: "githiga",
+        note: "Second payment questions",
+      },
     ],
     expenses: [
       ["Fuel for Saturday's Komothai meeting", "transport", "Total Githunguri", 18_500, "pending"],
       ["Hall hire, Ngewa women's group", "events", "Ngewa Social Hall", 12_000, "pending"],
-      ["Printing: bursary posters (2,000)", "merchandise", "Githunguri Printers", 46_000, "approved"],
+      [
+        "Printing: bursary posters (2,000)",
+        "merchandise",
+        "Githunguri Printers",
+        46_000,
+        "approved",
+      ],
       ["Bulk SMS credit", "comms", "Africa's Talking", 30_000, "paid"],
       ["Sound system, market walkabout", "events", "Kiambu Sound Hire", 15_000, "paid"],
     ],
@@ -113,7 +245,13 @@ const CONFIGS: Config[] = [
     poll: {
       question: "What should the MP fix first in Githunguri?",
       questionSw: "Mbunge ashughulikie nini kwanza Githunguri?",
-      options: [["milk", "Milk prices"], ["roads", "Roads"], ["water", "Water"], ["jobs", "Jobs for youth"], ["bursaries", "Bursaries"]],
+      options: [
+        ["milk", "Milk prices"],
+        ["roads", "Roads"],
+        ["water", "Water"],
+        ["jobs", "Jobs for youth"],
+        ["bursaries", "Bursaries"],
+      ],
     },
   },
   {
@@ -125,13 +263,48 @@ const CONFIGS: Config[] = [
     names: NAIROBI,
     segments: ROYSAMBU_SEGMENTS,
     places: [
-      { title: "Thika Road service lane walk", kind: "visit", ward: "roysambu", note: "Flooded lanes with residents" },
-      { title: "Garden Estate residents' association", kind: "meeting", ward: "roysambu", note: "Water rationing list" },
-      { title: "Marurui market walkabout", kind: "market", ward: "roysambu", note: "Traders and the parking fee" },
-      { title: "Women's group, church centre", kind: "meeting", ward: "roysambu", note: "Bring two neighbours each" },
-      { title: "Youth football, Marurui", kind: "rally", ward: "roysambu", note: "Be seen at the final" },
-      { title: "Sunday service, Garden Estate", kind: "church", ward: "roysambu", note: "Greet the congregation" },
-      { title: "Ghetto Radio drive show", kind: "media", ward: "roysambu", note: "Drains and the ward fund" },
+      {
+        title: "Thika Road service lane walk",
+        kind: "visit",
+        ward: "roysambu",
+        note: "Flooded lanes with residents",
+      },
+      {
+        title: "Garden Estate residents' association",
+        kind: "meeting",
+        ward: "roysambu",
+        note: "Water rationing list",
+      },
+      {
+        title: "Marurui market walkabout",
+        kind: "market",
+        ward: "roysambu",
+        note: "Traders and the parking fee",
+      },
+      {
+        title: "Women's group, church centre",
+        kind: "meeting",
+        ward: "roysambu",
+        note: "Bring two neighbours each",
+      },
+      {
+        title: "Youth football, Marurui",
+        kind: "rally",
+        ward: "roysambu",
+        note: "Be seen at the final",
+      },
+      {
+        title: "Sunday service, Garden Estate",
+        kind: "church",
+        ward: "roysambu",
+        note: "Greet the congregation",
+      },
+      {
+        title: "Ghetto Radio drive show",
+        kind: "media",
+        ward: "roysambu",
+        note: "Drains and the ward fund",
+      },
     ],
     expenses: [
       ["Tea and hall, women's group meeting", "events", "Garden Estate Hall", 8_500, "pending"],
@@ -140,7 +313,12 @@ const CONFIGS: Config[] = [
       ["Transport, centre captains", "transport", "Petty cash", 6_000, "approved"],
     ],
     inbox: [
-      ["Flooding in our lane", "Every rain the lane becomes a river, tusaidie.", "drainage", "negative"],
+      [
+        "Flooding in our lane",
+        "Every rain the lane becomes a river, tusaidie.",
+        "drainage",
+        "negative",
+      ],
       ["Water in Garden Estate", "Maji yanakuja Jumanne na Ijumaa tu.", "water", "negative"],
       ["Garbage", "Taka hazijachukuliwa tangu Jumatatu.", "garbage", "negative"],
       ["Street lights", "Bypass iko giza usiku, ni hatari.", "lighting", "negative"],
@@ -149,7 +327,13 @@ const CONFIGS: Config[] = [
     poll: {
       question: "What should the MCA fix first in Roysambu ward?",
       questionSw: "Diwani ashughulikie nini kwanza Roysambu?",
-      options: [["drainage", "Drains and flooding"], ["water", "Water"], ["garbage", "Garbage"], ["lighting", "Street lights"], ["jobs", "Jobs for youth"]],
+      options: [
+        ["drainage", "Drains and flooding"],
+        ["water", "Water"],
+        ["garbage", "Garbage"],
+        ["lighting", "Street lights"],
+        ["jobs", "Jobs for youth"],
+      ],
     },
   },
   {
@@ -161,13 +345,48 @@ const CONFIGS: Config[] = [
     names: MERU,
     segments: ATHWANA_SEGMENTS,
     places: [
-      { title: "Kadebene livestock market", kind: "market", ward: "athwana", note: "Herders before the trading starts" },
-      { title: "Kibiru borehole with residents", kind: "visit", ward: "athwana", note: "Photos for the update" },
-      { title: "Miraa buying centre, Limoro", kind: "visit", ward: "athwana", note: "Farm-gate prices" },
-      { title: "Women's group, Mwanika", kind: "meeting", ward: "athwana", note: "Bring two neighbours each" },
-      { title: "Youth fellowship, Maitha", kind: "church", ward: "athwana", note: "Young men: jobs" },
-      { title: "Chief's baraza on cattle theft", kind: "meeting", ward: "athwana", note: "Back the chief's plan" },
-      { title: "Muuga FM morning show", kind: "media", ward: "athwana", note: "Miraa prices and the ward fund" },
+      {
+        title: "Kadebene livestock market",
+        kind: "market",
+        ward: "athwana",
+        note: "Herders before the trading starts",
+      },
+      {
+        title: "Kibiru borehole with residents",
+        kind: "visit",
+        ward: "athwana",
+        note: "Photos for the update",
+      },
+      {
+        title: "Miraa buying centre, Limoro",
+        kind: "visit",
+        ward: "athwana",
+        note: "Farm-gate prices",
+      },
+      {
+        title: "Women's group, Mwanika",
+        kind: "meeting",
+        ward: "athwana",
+        note: "Bring two neighbours each",
+      },
+      {
+        title: "Youth fellowship, Maitha",
+        kind: "church",
+        ward: "athwana",
+        note: "Young men: jobs",
+      },
+      {
+        title: "Chief's baraza on cattle theft",
+        kind: "meeting",
+        ward: "athwana",
+        note: "Back the chief's plan",
+      },
+      {
+        title: "Muuga FM morning show",
+        kind: "media",
+        ward: "athwana",
+        note: "Miraa prices and the ward fund",
+      },
     ],
     expenses: [
       ["Transport, women's group meeting", "transport", "Petty cash", 6_000, "pending"],
@@ -183,7 +402,13 @@ const CONFIGS: Config[] = [
     poll: {
       question: "What should the MCA fix first in Athwana?",
       questionSw: "Diwani ashughulikie nini kwanza Athwana?",
-      options: [["prices", "Miraa and farm prices"], ["water", "Water"], ["roads", "Roads"], ["security", "Cattle theft"], ["bursaries", "Bursaries"]],
+      options: [
+        ["prices", "Miraa and farm prices"],
+        ["water", "Water"],
+        ["roads", "Roads"],
+        ["security", "Cattle theft"],
+        ["bursaries", "Bursaries"],
+      ],
     },
   },
 ];
@@ -200,7 +425,7 @@ function rng(seed: number) {
   };
 }
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
-const pick = <T,>(r: () => number, xs: readonly T[]): T => xs[Math.floor(r() * xs.length)]!;
+const pick = <T>(r: () => number, xs: readonly T[]): T => xs[Math.floor(r() * xs.length)]!;
 const ISSUES = ["Water", "Roads", "Jobs", "Bursaries", "Security", "Health", "Rubbish", "Lighting"];
 
 async function houses(mapArea: string, shapes: WardShape[]) {
@@ -336,7 +561,11 @@ ${c.expenses.map((e, i) => `  (${q(e[0])}, ${q(e[1])}, ${q(e[2])}, ${e[3]}, ${q(
   ) as v(description, category, vendor, amount_kes, status, reference, incurred_at)
  where not exists (select 1 from public.expenses x where x.campaign_id = ${q(c.id)} and x.reference = v.reference);`);
 
-  const donors = [["Friends of the campaign (harambee)", "group", 85_000], ["Local business owners", "group", 40_000], ["Individual supporters (M-Pesa)", "individual", 26_500]] as const;
+  const donors = [
+    ["Friends of the campaign (harambee)", "group", 85_000],
+    ["Local business owners", "group", 40_000],
+    ["Individual supporters (M-Pesa)", "individual", 26_500],
+  ] as const;
   out.push(`insert into public.contributions (campaign_id, donor_name, donor_type, amount_kes, method, reference, received_at)
 select ${q(c.id)}, v.* from (values
 ${donors.map((d, i) => `  (${q(d[0])}, ${q(d[1])}, ${Math.round((d[2] * c.people) / 200)}, 'mpesa', ${q(`SAMPLE-${c.slug.toUpperCase()}-C${i + 1}`)}, now() - interval '${4 + i * 5} days')`).join(",\n")}

@@ -85,10 +85,10 @@ function host(mode: "ranges" | "whole", failFirst = 0) {
     if (reads <= failFirst) throw new TypeError("Failed to fetch");
     const range = new Headers(init?.headers).get("Range") ?? "";
     const m = /^bytes=(\d+)-(\d+)$/.exec(range);
-    if (mode === "whole" || !m) return new Response(FILE, { status: 200 });
+    if (mode === "whole" || !m) return new Response(FILE as BodyInit, { status: 200 });
     const from = Number(m[1]);
     const to = Math.min(Number(m[2]), FILE.length - 1);
-    return new Response(FILE.subarray(from, to + 1), { status: 206 });
+    return new Response(FILE.subarray(from, to + 1) as BodyInit, { status: 206 });
   };
   return { fetch: f, reads: () => reads };
 }

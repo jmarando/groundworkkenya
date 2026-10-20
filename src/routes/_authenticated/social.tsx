@@ -130,7 +130,11 @@ function Social() {
           <Link to="/listening" className="btn btn--ghost btn--sm">
             Listening
           </Link>
-          <button className="btn btn--primary btn--sm" onClick={() => void analyse()} disabled={busy}>
+          <button
+            className="btn btn--primary btn--sm"
+            onClick={() => void analyse()}
+            disabled={busy}
+          >
             {busy ? "Reading…" : "Read the mood"}
           </button>
           <button

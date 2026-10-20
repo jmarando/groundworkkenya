@@ -20,7 +20,8 @@ export const callFromInbox = createServerFn({ method: "POST" })
       return { ok: false as const, error: "Calling starts once the Twilio number is added." };
 
     const mine = phoneKey(data.myPhone);
-    if (mine.length < 9) return { ok: false as const, error: "Enter the phone number to ring you on." };
+    if (mine.length < 9)
+      return { ok: false as const, error: "Enter the phone number to ring you on." };
 
     const { data: convo } = await context.supabase
       .from("conversations")
@@ -34,7 +35,8 @@ export const callFromInbox = createServerFn({ method: "POST" })
       .eq("id", convo.person_id)
       .maybeSingle();
     const theirs = phoneKey(person?.phone);
-    if (!person || theirs.length < 9) return { ok: false as const, error: "No phone number for this person." };
+    if (!person || theirs.length < 9)
+      return { ok: false as const, error: "No phone number for this person." };
 
     const r = await bridgeCall(mine, theirs, person.full_name ?? "the voter");
     if (!r.ok) {

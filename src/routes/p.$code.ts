@@ -202,7 +202,12 @@ export const Route = createFileRoute("/p/$code")({
         const { settleIfDryRun } = await import("@/lib/outbox.server");
 
         // The answer belongs to the poll's own campaign, not to whoever owns the shared SMS line.
-        const person = await upsertPersonByPhone(supabaseAdmin, phone, "web_poll", found.campaignId);
+        const person = await upsertPersonByPhone(
+          supabaseAdmin,
+          phone,
+          "web_poll",
+          found.campaignId,
+        );
         if (!person) return form(poll, "Something went wrong. Please try again.");
 
         const outcome = await recordResponse(supabaseAdmin, poll, person, "web", answer);

@@ -43,7 +43,10 @@ export type ScanResult = {
 
 export class PauseError extends Error {
   reason: string;
-  constructor(reason: string, public status?: number) {
+  constructor(
+    reason: string,
+    public status?: number,
+  ) {
     super(reason);
     this.reason = reason;
   }
@@ -132,7 +135,12 @@ async function firecrawlSearch(query: string, limit: number, tbs: string): Promi
 
 /* -------------------------------------------------------------- ai moods */
 
-type Verdict = { id: string; sentiment: "positive" | "neutral" | "negative"; issue: string; score: number };
+type Verdict = {
+  id: string;
+  sentiment: "positive" | "neutral" | "negative";
+  issue: string;
+  score: number;
+};
 
 const MOOD_SCHEMA = {
   type: "object",
@@ -253,7 +261,11 @@ export async function runListeningScan(
   };
   const now = new Date();
 
-  const { data: job } = await sb.from("listening_jobs").select("*").eq("key", JOB_KEY).maybeSingle();
+  const { data: job } = await sb
+    .from("listening_jobs")
+    .select("*")
+    .eq("key", JOB_KEY)
+    .maybeSingle();
 
   // Paused because the search service refused work (402/403/429): try one
   // keyword six hours later. If it is still refused the pause stands, so no
@@ -297,12 +309,16 @@ export async function runListeningScan(
   }
 
   const lockedUntil = new Date(now.getTime() + LEASE_MINUTES * 60_000).toISOString();
-  await sb
-    .from("listening_jobs")
-    .upsert(
-      { key: JOB_KEY, locked_until: lockedUntil, status: "running", paused_reason: null, updated_at: now.toISOString() },
-      { onConflict: "key" },
-    );
+  await sb.from("listening_jobs").upsert(
+    {
+      key: JOB_KEY,
+      locked_until: lockedUntil,
+      status: "running",
+      paused_reason: null,
+      updated_at: now.toISOString(),
+    },
+    { onConflict: "key" },
+  );
 
   let found = 0;
   let stored = 0;
@@ -322,7 +338,10 @@ export async function runListeningScan(
     for (const topic of topics ?? []) {
       const extra = (topic.keywords ?? []).slice(0, 3).join(" OR ");
       const exclude = (topic.exclude_terms ?? []).map((t: string) => `-${t}`).join(" ");
-      const query = [topic.query, extra ? `(${extra})` : "", exclude].filter(Boolean).join(" ").slice(0, 300);
+      const query = [topic.query, extra ? `(${extra})` : "", exclude]
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 300);
 
       let hits: Found[] = [];
       try {
@@ -339,7 +358,9 @@ export async function runListeningScan(
       const feed = typeof topic.alert_feed_url === "string" ? topic.alert_feed_url : "";
       if (feed && !ALERT_FEED.test(feed)) {
         failed.feeds++;
-        notes.push(`${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`);
+        notes.push(
+          `${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`,
+        );
       } else if (feed) {
         try {
           const res = await fetch(feed, {
@@ -416,7 +437,10 @@ export async function runListeningScan(
         stored += ins?.length ?? 0;
       }
 
-      await sb.from("listening_topics").update({ last_scanned_at: new Date().toISOString() }).eq("id", topic.id);
+      await sb
+        .from("listening_topics")
+        .update({ last_scanned_at: new Date().toISOString() })
+        .eq("id", topic.id);
     }
 
     // read the mood on anything not yet rated
@@ -516,7 +540,11 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
     .gte("created_at", since);
   const already = new Set((fired ?? []).map((f: any) => `${f.alert_id}:${f.mention_id}`));
 
-  const { data: wa } = await sb.from("social_accounts").select("live").eq("platform", "whatsapp").maybeSingle();
+  const { data: wa } = await sb
+    .from("social_accounts")
+    .select("live")
+    .eq("platform", "whatsapp")
+    .maybeSingle();
   const whatsappLive = wa?.live === true;
 
   let count = 0;
@@ -525,7 +553,9 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
     if (alert.frequency === "daily" && alert.last_fired_at) {
       if (Date.now() - new Date(alert.last_fired_at).getTime() < HOURS(24)) continue;
     }
-    const words: string[] = (alert.keywords ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
+    const words: string[] = (alert.keywords ?? [])
+      .map((k: string) => k.toLowerCase())
+      .filter(Boolean);
     const moods: string[] = alert.sentiments ?? [];
 
     const matched = (mentions ?? []).filter((m: any) => {
@@ -568,7 +598,10 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
     const { error } = await sb.from("listening_alert_events").insert(events);
     if (error) continue;
 
-    await sb.from("listening_alerts").update({ last_fired_at: new Date().toISOString() }).eq("id", alert.id);
+    await sb
+      .from("listening_alerts")
+      .update({ last_fired_at: new Date().toISOString() })
+      .eq("id", alert.id);
     count += events.length;
   }
 

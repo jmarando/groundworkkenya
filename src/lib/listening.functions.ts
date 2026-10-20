@@ -88,7 +88,12 @@ export type ListeningData = {
   byIssue: { issue: string; n: number; negative: number; prev: number }[];
   byDomain: { domain: string; n: number; negative: number }[];
   ownedIssues: { issue: string; n: number }[];
-  job: { status: string; lastRunAt: string | null; pausedReason: string | null; detail: string | null } | null;
+  job: {
+    status: string;
+    lastRunAt: string | null;
+    pausedReason: string | null;
+    detail: string | null;
+  } | null;
   /** The daily read of candidates' own posts; one for every campaign, so it names no one. */
   rivalJob: { lastRunAt: string | null; detail: string | null } | null;
   /** This campaign's candidates' own posts from the last 30 days. */
@@ -136,9 +141,9 @@ export const getListening = createServerFn({ method: "GET" })
         .gte("published_at", since30),
       sb.from("race_rivals").select("id, name, is_us"),
     ]);
-    const rivalById = new Map((rivals ?? []).map((r: any) => [r.id, r]));
+    const rivalById = new Map((rivals ?? []).map((r) => [r.id, r]));
 
-    const topicById = new Map((topics ?? []).map((t: any) => [t.id, t]));
+    const topicById = new Map((topics ?? []).map((t) => [t.id, t]));
     const rows = mentions ?? [];
     const now = Date.now();
     const H24 = 86_400_000;
@@ -151,7 +156,7 @@ export const getListening = createServerFn({ method: "GET" })
     const issueMap = new Map<string, { n: number; negative: number; prev: number }>();
     const domainMap = new Map<string, { n: number; negative: number }>();
 
-    for (const m of rows as any[]) {
+    for (const m of rows) {
       const found = new Date(m.found_at).getTime();
       const recent = now - found <= H24;
       const b = bucket(m.sentiment);
@@ -181,13 +186,13 @@ export const getListening = createServerFn({ method: "GET" })
     }
 
     const ownedMap = new Map<string, number>();
-    for (const c of (convos ?? []) as any[]) {
+    for (const c of convos ?? []) {
       if (!c.issue) continue;
       ownedMap.set(c.issue, (ownedMap.get(c.issue) ?? 0) + 1);
     }
 
     const perTopic = new Map<string, { n: number; negative: number }>();
-    for (const m of rows as any[]) {
+    for (const m of rows) {
       if (!m.topic_id) continue;
       const cur = perTopic.get(m.topic_id) ?? { n: 0, negative: 0 };
       cur.n += 1;
@@ -196,7 +201,7 @@ export const getListening = createServerFn({ method: "GET" })
     }
 
     return {
-      topics: (topics ?? []).map((t: any) => ({
+      topics: (topics ?? []).map((t) => ({
         id: t.id,
         label: t.label,
         query: t.query,
@@ -209,7 +214,7 @@ export const getListening = createServerFn({ method: "GET" })
         mentions: perTopic.get(t.id)?.n ?? 0,
         negative: perTopic.get(t.id)?.negative ?? 0,
       })),
-      mentions: (rows as any[]).map((m) => ({
+      mentions: rows.map((m) => ({
         id: m.id,
         topicId: m.topic_id,
         topic: m.topic_id ? (topicById.get(m.topic_id)?.label ?? null) : null,
@@ -234,7 +239,7 @@ export const getListening = createServerFn({ method: "GET" })
         commentsPositive: m.comments_positive ?? null,
         commentsNegative: m.comments_negative ?? null,
       })),
-      alerts: (alerts ?? []).map((a: any) => ({
+      alerts: (alerts ?? []).map((a) => ({
         id: a.id,
         name: a.name,
         topicId: a.topic_id,
@@ -249,13 +254,13 @@ export const getListening = createServerFn({ method: "GET" })
       })),
       events: (() => {
         // one alert fires across several mentions at once — show it as a single line
-        const seen = new Map<string, any>();
-        for (const e of (events ?? []) as any[]) {
+        const seen = new Map<string, ListeningData["events"][number]>();
+        for (const e of events ?? []) {
           const key = `${e.alert_id}:${e.subject}:${String(e.created_at).slice(0, 16)}`;
           if (seen.has(key)) continue;
           seen.set(key, {
             id: e.id,
-            alert: (alerts ?? []).find((a: any) => a.id === e.alert_id)?.name ?? null,
+            alert: (alerts ?? []).find((a) => a.id === e.alert_id)?.name ?? null,
             channel: e.channel,
             destination: e.destination,
             subject: e.subject,
@@ -268,16 +273,16 @@ export const getListening = createServerFn({ method: "GET" })
       })(),
       totals: {
         mentions: rows.length,
-        last24h: (rows as any[]).filter((m) => now - new Date(m.found_at).getTime() <= H24).length,
-        prev24h: (rows as any[]).filter((m) => {
+        last24h: rows.filter((m) => now - new Date(m.found_at).getTime() <= H24).length,
+        prev24h: rows.filter((m) => {
           const age = now - new Date(m.found_at).getTime();
           return age > H24 && age <= H24 * 2;
         }).length,
-        positive: (rows as any[]).filter((m) => m.sentiment === "positive").length,
-        neutral: (rows as any[]).filter((m) => m.sentiment === "neutral").length,
-        negative: (rows as any[]).filter((m) => m.sentiment === "negative").length,
-        unrated: (rows as any[]).filter((m) => !m.sentiment).length,
-        needsReview: (rows as any[]).filter((m) => m.status === "new" && m.sentiment === "negative").length,
+        positive: rows.filter((m) => m.sentiment === "positive").length,
+        neutral: rows.filter((m) => m.sentiment === "neutral").length,
+        negative: rows.filter((m) => m.sentiment === "negative").length,
+        unrated: rows.filter((m) => !m.sentiment).length,
+        needsReview: rows.filter((m) => m.status === "new" && m.sentiment === "negative").length,
         inboundIssues: ownedMap.size,
       },
       byDay: [...dayMap.entries()]
@@ -482,7 +487,11 @@ export const testAlert = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const { data: alert } = await sb.from("listening_alerts").select("*").eq("id", data.id).maybeSingle();
+    const { data: alert } = await sb
+      .from("listening_alerts")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!alert) throw new Error("That alert no longer exists.");
     const { error } = await sb.from("listening_alert_events").insert({
       alert_id: alert.id,

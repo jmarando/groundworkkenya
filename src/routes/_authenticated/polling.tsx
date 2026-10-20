@@ -25,12 +25,14 @@ export const Route = createFileRoute("/_authenticated/polling")({
       { title: "Polling · Groundwork" },
       {
         name: "description",
-        content: "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
+        content:
+          "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
       },
       { property: "og:title", content: "Polling · Groundwork" },
       {
         property: "og:description",
-        content: "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
+        content:
+          "Send campaign polls by WhatsApp, email, SMS and USSD and read results ward by ward.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -120,7 +122,12 @@ function Polling() {
   };
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
-  const [recipientPoll, setRecipientPoll] = useState<{ id: string; code: string; question: string; status: string } | null>(null);
+  const [recipientPoll, setRecipientPoll] = useState<{
+    id: string;
+    code: string;
+    question: string;
+    status: string;
+  } | null>(null);
   const { data } = useQuery({ queryKey: ["polling"], queryFn: () => fetchPolling() });
 
   const refresh = async (id?: string) => {
@@ -179,7 +186,9 @@ function Polling() {
   return (
     <section className="view active" aria-label="Polling">
       {building && <PollBuilder onClose={closeBuilder} initialQuestion={ask} />}
-      {recipientPoll && <PollRecipients poll={recipientPoll} onClose={() => setRecipientPoll(null)} />}
+      {recipientPoll && (
+        <PollRecipients poll={recipientPoll} onClose={() => setRecipientPoll(null)} />
+      )}
       <div className="vh fx">
         <div>
           <span className="eyebrow">Listening · polling</span>

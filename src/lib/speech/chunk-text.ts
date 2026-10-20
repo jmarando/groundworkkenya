@@ -1,5 +1,6 @@
 export function chunkText(text: string, maxCodePoints = 1200): string[] {
-  if (!Number.isInteger(maxCodePoints) || maxCodePoints < 1) throw new Error("Invalid chunk budget");
+  if (!Number.isInteger(maxCodePoints) || maxCodePoints < 1)
+    throw new Error("Invalid chunk budget");
   const chunks: string[] = [];
   let current = "";
   for (const sentence of text.match(/[^.!?。！？]+[.!?。！？]*\s*|[.!?。！？]+\s*/gu) ?? []) {

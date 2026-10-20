@@ -86,7 +86,12 @@ export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]>
 /* --------------------------------------------------------------- reddit */
 
 export async function scSearchReddit(query: string, limit = 8): Promise<Found[]> {
-  const json = await scGet("/v1/reddit/search", { query, filter: "posts", timeframe: "week", trim: "true" });
+  const json = await scGet("/v1/reddit/search", {
+    query,
+    filter: "posts",
+    timeframe: "week",
+    trim: "true",
+  });
   const posts: any[] = json?.posts ?? [];
   return posts
     .map((p: any): Found => {

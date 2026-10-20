@@ -12,8 +12,13 @@ export function replyAddress(slug: string, conversationId: string) {
 }
 
 /** Parse "slug+uuid@in.groundwork.ke" (or "slug@…"). */
-export function parseInboundAddress(addr: string): { slug: string; conversationId: string | null } | null {
-  const m = addr.trim().toLowerCase().match(/^([a-z0-9-]+)(?:\+([0-9a-f-]{36}))?@/);
+export function parseInboundAddress(
+  addr: string,
+): { slug: string; conversationId: string | null } | null {
+  const m = addr
+    .trim()
+    .toLowerCase()
+    .match(/^([a-z0-9-]+)(?:\+([0-9a-f-]{36}))?@/);
   return m && m[1] ? { slug: m[1], conversationId: m[2] ?? null } : null;
 }
 
@@ -38,7 +43,9 @@ export async function sendConversationEmail(
   if (!campaign) throw new Error("No campaign is open.");
 
   const subject = convo.subject
-    ? convo.subject.startsWith("Re:") ? convo.subject : `Re: ${convo.subject}`
+    ? convo.subject.startsWith("Re:")
+      ? convo.subject
+      : `Re: ${convo.subject}`
     : `A message from ${campaign.name}`;
 
   const { data: inserted, error } = await sb
@@ -78,7 +85,11 @@ export async function sendConversationEmail(
   }
   await sb
     .from("messages")
-    .update(status === "accepted" ? { status, sent_at: new Date().toISOString() } : { status, error: failure })
+    .update(
+      status === "accepted"
+        ? { status, sent_at: new Date().toISOString() }
+        : { status, error: failure },
+    )
     .eq("id", inserted.id);
   await sb
     .from("conversations")

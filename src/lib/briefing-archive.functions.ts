@@ -17,21 +17,42 @@ export const getBriefingArchive = createServerFn({ method: "GET" })
   })
   .handler(async ({ data, context }) => {
     const { data: role } = await context.supabase.rpc("my_campaign_role");
-    if (!TEAM_ROLES.includes(role as MyRole) || role === "agent") throw new Error("This archive is for the campaign office team.");
+    if (!TEAM_ROLES.includes(role as MyRole) || role === "agent")
+      throw new Error("This archive is for the campaign office team.");
     const [rows, diary] = await Promise.all([
-      context.supabase.from("morning_stories").select("day, story, written_by, created_at, edited_at").gte("day", data.from).lte("day", data.to).order("day", { ascending: false }).limit(31),
+      context.supabase
+        .from("morning_stories")
+        .select("day, story, written_by, created_at, edited_at")
+        .gte("day", data.from)
+        .lte("day", data.to)
+        .order("day", { ascending: false })
+        .limit(31),
       loadDiary(context.supabase, data.from, data.to),
     ]);
     if (rows.error) throw new Error("Could not read the morning archive.");
-    return { month: data.month, stories: (rows.data ?? []).map(r => storyFromRow(r, null)).filter((s): s is StoryView => s !== null), diary };
+    return {
+      month: data.month,
+      stories: (rows.data ?? [])
+        .map((r) => storyFromRow(r, null))
+        .filter((s): s is StoryView => s !== null),
+      diary,
+    };
   });
 
 export const catchUpMorning = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: role } = await context.supabase.rpc("my_campaign_role");
-    if (!PRINCIPAL_ROLES.includes(role as MyRole)) throw new Error("Only the candidate or manager can check the morning run.");
+    if (!PRINCIPAL_ROLES.includes(role as MyRole))
+      throw new Error("Only the candidate or manager can check the morning run.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { runMorningStory } = await import("@/lib/morning-story.server");
-    return runMorningStory({ from: table => supabaseAdmin.from(table as "listening_jobs"), rpc: (_fn, args) => supabaseAdmin.rpc("claim_morning_job", { _key: String(args["_key"]), _now: String(args["_now"]) }) });
+    return runMorningStory({
+      from: (table) => supabaseAdmin.from(table as "listening_jobs"),
+      rpc: (_fn, args) =>
+        supabaseAdmin.rpc("claim_morning_job", {
+          _key: String(args["_key"]),
+          _now: String(args["_now"]),
+        }),
+    });
   });

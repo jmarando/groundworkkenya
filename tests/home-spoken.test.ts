@@ -86,7 +86,7 @@ ok(
 ok(
   "today's list",
   text.includes(
-      "One thing to focus on.\n\nFirst: 2 expenses to approve. Approval needs the supporting document on file.",
+    "One thing to focus on.\n\nFirst: 2 expenses to approve. Approval needs the supporting document on file.",
   ),
 );
 ok(
@@ -119,10 +119,18 @@ const quiet = spokenHome({
 });
 ok(
   "a quiet morning says only what there is",
-  !quiet.includes("headlines") && !quiet.includes("priorities") && quiet.endsWith("You're up to speed. Have a good day."),
+  !quiet.includes("headlines") &&
+    !quiet.includes("priorities") &&
+    quiet.endsWith("You're up to speed. Have a good day."),
 );
-ok("story leads before priorities", text.indexOf("story making headlines") < text.indexOf("today's priorities"));
-ok("suggestion is not an established position", text.includes("a suggested line: Tankers to every ward this week."));
+ok(
+  "story leads before priorities",
+  text.indexOf("story making headlines") < text.indexOf("today's priorities"),
+);
+ok(
+  "suggestion is not an established position",
+  text.includes("a suggested line: Tankers to every ward this week."),
+);
 ok("closing priority", text.includes("your first priority: 2 expenses to approve."));
 ok("spoken times", spokenTime("00:00") === "12 a.m." && spokenTime("13:05") === "1 oh 5 p.m.");
 

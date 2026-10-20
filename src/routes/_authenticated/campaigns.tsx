@@ -14,10 +14,16 @@ export const Route = createFileRoute("/_authenticated/campaigns")({
     meta: [
       { title: "Campaigns · Groundwork" },
       { property: "og:title", content: "Campaigns · Groundwork" },
-      { property: "og:description", content: "Every campaign on Groundwork, each with its own team and data." },
+      {
+        property: "og:description",
+        content: "Every campaign on Groundwork, each with its own team and data.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "description", content: "Every campaign on Groundwork, each with its own team and data." },
+      {
+        name: "description",
+        content: "Every campaign on Groundwork, each with its own team and data.",
+      },
     ],
   }),
 });
@@ -42,9 +48,7 @@ function Campaigns() {
     mutationFn: () => add({ data: form }),
     onSuccess: async () => {
       toast.success(
-        form.candidateEmail
-          ? "Campaign added and the candidate invited."
-          : "Campaign added.",
+        form.candidateEmail ? "Campaign added and the candidate invited." : "Campaign added.",
       );
       setForm(EMPTY);
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
@@ -157,7 +161,12 @@ function Campaigns() {
           </label>
           <label>
             <span className="eyebrow">Seat</span>
-            <input className="team-select" required placeholder="Governor · Nairobi" {...field("seat")} />
+            <input
+              className="team-select"
+              required
+              placeholder="Governor · Nairobi"
+              {...field("seat")}
+            />
           </label>
           <label>
             <span className="eyebrow">Level</span>

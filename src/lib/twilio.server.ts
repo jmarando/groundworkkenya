@@ -16,15 +16,17 @@ const GATEWAY = "https://connector-gateway.lovable.dev/twilio";
 export function twilioConfigured(): boolean {
   return Boolean(
     process.env["TWILIO_SMS_ENABLED"] === "true" &&
-      process.env["LOVABLE_API_KEY"] &&
-      process.env["TWILIO_API_KEY"] &&
-      (process.env["TWILIO_FROM_NUMBER"] || process.env["TWILIO_MESSAGING_SERVICE_SID"]),
+    process.env["LOVABLE_API_KEY"] &&
+    process.env["TWILIO_API_KEY"] &&
+    (process.env["TWILIO_FROM_NUMBER"] || process.env["TWILIO_MESSAGING_SERVICE_SID"]),
   );
 }
 
 export function twilioVoiceConfigured(): boolean {
   return Boolean(
-    process.env["LOVABLE_API_KEY"] && process.env["TWILIO_API_KEY"] && process.env["TWILIO_FROM_NUMBER"],
+    process.env["LOVABLE_API_KEY"] &&
+    process.env["TWILIO_API_KEY"] &&
+    process.env["TWILIO_FROM_NUMBER"],
   );
 }
 
@@ -122,8 +124,9 @@ export async function sendSmsBatchTwilio(digits: string[], body: string): Promis
 }
 
 export function escapeXml(s: string): string {
-  return s.replace(/[<>&"']/g, (c) =>
-    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]!,
+  return s.replace(
+    /[<>&"']/g,
+    (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]!,
   );
 }
 
@@ -151,7 +154,8 @@ export async function bridgeCall(
     From: from,
     Twiml: `<Response>${inner}</Response>`,
   });
-  if (r.status >= 200 && r.status < 300 && r.json?.["sid"]) return { ok: true, sid: String(r.json["sid"]) };
+  if (r.status >= 200 && r.status < 300 && r.json?.["sid"])
+    return { ok: true, sid: String(r.json["sid"]) };
   return {
     ok: false,
     error: `Twilio ${String(r.json?.["code"] ?? r.status)}: ${String(r.json?.["message"] ?? r.text).slice(0, 200)}`,

@@ -21,7 +21,10 @@ export const listCampaigns = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<CampaignRow[]> => {
     const sb = context.supabase;
     const [{ data: campaigns }, { data: members }] = await Promise.all([
-      sb.from("campaigns").select("id, slug, name, candidate, seat, level, host").order("created_at"),
+      sb
+        .from("campaigns")
+        .select("id, slug, name, candidate, seat, level, host")
+        .order("created_at"),
       sb.from("campaign_members").select("campaign_id").neq("role", "pending"),
     ]);
     const count = new Map<string, number>();
@@ -126,14 +129,25 @@ export const listChannels = createServerFn({ method: "POST" })
 export const saveChannel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (input: { campaignId: string; kind: ChannelKind; identifier: string; display: string; status: Channel["status"] }) => {
+    (input: {
+      campaignId: string;
+      kind: ChannelKind;
+      identifier: string;
+      display: string;
+      status: Channel["status"];
+    }) => {
       if (!input?.campaignId) throw new Error("Which campaign?");
       if (!CHANNEL_KINDS.includes(input.kind)) throw new Error("Unknown channel.");
-      if (!["not_started", "pending", "live"].includes(input.status)) throw new Error("Unknown status.");
+      if (!["not_started", "pending", "live"].includes(input.status))
+        throw new Error("Unknown status.");
       const identifier = (input.identifier ?? "").trim().slice(0, 200);
       if (input.kind === "email" && identifier && !/^[a-z0-9-]{2,40}$/i.test(identifier))
         throw new Error("Use letters, numbers or dashes for the email name.");
-      return { ...input, identifier: identifier || null, display: (input.display ?? "").trim().slice(0, 200) || null };
+      return {
+        ...input,
+        identifier: identifier || null,
+        display: (input.display ?? "").trim().slice(0, 200) || null,
+      };
     },
   )
   .handler(async ({ data, context }) => {
@@ -141,7 +155,8 @@ export const saveChannel = createServerFn({ method: "POST" })
       {
         campaign_id: data.campaignId,
         kind: data.kind,
-        identifier: data.kind === "email" ? data.identifier?.toLowerCase() ?? null : data.identifier,
+        identifier:
+          data.kind === "email" ? (data.identifier?.toLowerCase() ?? null) : data.identifier,
         display: data.display,
         status: data.status,
       },
@@ -149,7 +164,9 @@ export const saveChannel = createServerFn({ method: "POST" })
     );
     if (error)
       throw new Error(
-        error.code === "23505" ? "Another campaign already uses that." : "Could not save that channel.",
+        error.code === "23505"
+          ? "Another campaign already uses that."
+          : "Could not save that channel.",
       );
     return { ok: true };
   });

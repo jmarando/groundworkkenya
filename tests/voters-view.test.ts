@@ -205,6 +205,7 @@ const person = (over: Record<string, unknown> = {}) => ({
   channels: ["SMS"],
   optedOut: false,
   lastTouch: daysAgo(3),
+  segment: null as string | null,
   ...over,
 });
 eq(

@@ -18,7 +18,10 @@ import {
 type Client = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the Supabase builder, loosely
   from: (table: string) => any;
-  rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
 const JOB_KEY = "morning_story";
@@ -197,7 +200,8 @@ export async function runMorningStory(
     .maybeSingle();
   // A provider pause keeps the AI off, but never the morning: the headlines
   // need no AI, and after six hours the AI is tried once more, as collection is.
-  let paused: string | null = job?.status === "paused" ? String(job.paused_reason ?? "Paused") : null;
+  let paused: string | null =
+    job?.status === "paused" ? String(job.paused_reason ?? "Paused") : null;
   const pausedAt = job?.last_run_at ? Date.parse(job.last_run_at) : 0;
   if (paused && now.getTime() - pausedAt > PROBE_AFTER) {
     const lift = sb
@@ -205,27 +209,43 @@ export async function runMorningStory(
       .update({ status: "idle", paused_reason: null, locked_until: null })
       .eq("key", JOB_KEY)
       .eq("status", "paused");
-    const { data: cleared } = await (job?.last_run_at
-      ? lift.eq("last_run_at", job.last_run_at)
-      : lift.is("last_run_at", null)
+    const { data: cleared } = await (
+      job?.last_run_at ? lift.eq("last_run_at", job.last_run_at) : lift.is("last_run_at", null)
     ).select("key");
     if (cleared?.length) paused = null;
   }
   // Ran without the lease, under a pause: the pause's own time is left as it is.
   const underPause = paused !== null;
   if (!paused) {
-    if (job?.status !== "paused" && job?.locked_until && Date.parse(job.locked_until) > now.getTime()) return out;
+    if (
+      job?.status !== "paused" &&
+      job?.locked_until &&
+      Date.parse(job.locked_until) > now.getTime()
+    )
+      return out;
     const claim = await sb.rpc("claim_morning_job", { _key: JOB_KEY, _now: now.toISOString() });
     if (claim.error) throw new Error("Could not reserve the morning briefing.");
     if (!claim.data) return out;
   }
   out.ran = true;
-  const { data: collection } = await sb.from("listening_jobs").select("status, paused_reason").eq("key", "listening_scan").maybeSingle();
-  if (!paused && collection?.status === "paused" && /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))) {
+  const { data: collection } = await sb
+    .from("listening_jobs")
+    .select("status, paused_reason")
+    .eq("key", "listening_scan")
+    .maybeSingle();
+  if (
+    !paused &&
+    collection?.status === "paused" &&
+    /^AI stopped \((402|403)\)/.test(String(collection.paused_reason))
+  ) {
     paused = String(collection.paused_reason);
   }
 
-  const { data: campaigns, error: campaignError } = await sb.from("campaigns").select("id, name, candidate, seat").order("id").limit(50);
+  const { data: campaigns, error: campaignError } = await sb
+    .from("campaigns")
+    .select("id, name, candidate, seat")
+    .order("id")
+    .limit(50);
   if (campaignError) throw new Error("Could not read campaigns for the morning briefing.");
   for (const c of (campaigns ?? []) as CampaignInfo[]) {
     const { data: have } = await sb
@@ -234,7 +254,10 @@ export async function runMorningStory(
       .eq("campaign_id", c.id)
       .eq("day", day)
       .maybeSingle();
-    if (have && (have.written_by === "team" || have.story?.kind === "written" || Number(have.story?.from) > 0)) {
+    if (
+      have &&
+      (have.written_by === "team" || have.story?.kind === "written" || Number(have.story?.from) > 0)
+    ) {
       out.kept++;
       continue;
     }
@@ -243,13 +266,27 @@ export async function runMorningStory(
       out.quiet++;
       {
         const quiet = headlinesStory([]);
-        quiet.summary = collection?.status === "paused"
-          ? "News collection is paused. Today's briefing has no fresh sources; this does not mean there was no news. Open Listening to resolve the collection problem."
-          : "No fresh source items were collected for this campaign. This morning's check is saved; new sources will be picked up on the next scheduled run.";
-        const quietRow = { campaign_id: c.id, day, story: quiet, written_by: "groundwork", edited_by: null };
+        quiet.summary =
+          collection?.status === "paused"
+            ? "News collection is paused. Today's briefing has no fresh sources; this does not mean there was no news. Open Listening to resolve the collection problem."
+            : "No fresh source items were collected for this campaign. This morning's check is saved; new sources will be picked up on the next scheduled run.";
+        const quietRow = {
+          campaign_id: c.id,
+          day,
+          story: quiet,
+          written_by: "groundwork",
+          edited_by: null,
+        };
         const { error } = have
-          ? await sb.from("morning_stories").update(quietRow).eq("id", have.id).eq("written_by", "groundwork").eq("story->>from", "0")
-          : await sb.from("morning_stories").upsert(quietRow, { onConflict: "campaign_id,day", ignoreDuplicates: true });
+          ? await sb
+              .from("morning_stories")
+              .update(quietRow)
+              .eq("id", have.id)
+              .eq("written_by", "groundwork")
+              .eq("story->>from", "0")
+          : await sb
+              .from("morning_stories")
+              .upsert(quietRow, { onConflict: "campaign_id,day", ignoreDuplicates: true });
         if (error) out.notes.push("A briefing status could not be stored.");
       }
       continue;
@@ -272,11 +309,18 @@ export async function runMorningStory(
     // Never over a story the team saved while this one was being written.
     const row = { campaign_id: c.id, day, story, written_by: "groundwork", edited_by: null };
     const { error } = have
-      ? await sb.from("morning_stories").update(row).eq("id", have.id).eq("written_by", "groundwork").eq("story->>from", "0")
-      : await sb.from("morning_stories").upsert(
-        { campaign_id: c.id, day, story, written_by: "groundwork", edited_by: null },
-        { onConflict: "campaign_id,day", ignoreDuplicates: true },
-      );
+      ? await sb
+          .from("morning_stories")
+          .update(row)
+          .eq("id", have.id)
+          .eq("written_by", "groundwork")
+          .eq("story->>from", "0")
+      : await sb
+          .from("morning_stories")
+          .upsert(
+            { campaign_id: c.id, day, story, written_by: "groundwork", edited_by: null },
+            { onConflict: "campaign_id,day", ignoreDuplicates: true },
+          );
     if (error) out.notes.push(`${c.name}: the story could not be stored (${error.message}).`);
   }
 

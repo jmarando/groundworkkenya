@@ -8,7 +8,12 @@ import { BarChart3, MessageCircle, Phone, Send } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccess } from "@/hooks/useAccess";
 import { WhatsAppTemplateFields } from "@/components/gw/WhatsAppTemplateFields";
-import { firstName, validateWaTemplate, WA_TEMPLATES_ALL, type WaTemplateInput } from "@/lib/wa-templates";
+import {
+  firstName,
+  validateWaTemplate,
+  WA_TEMPLATES_ALL,
+  type WaTemplateInput,
+} from "@/lib/wa-templates";
 
 import { getInbox } from "@/lib/console.functions";
 import {
@@ -67,14 +72,62 @@ const MOOD: Record<string, string> = {
 };
 
 const CONNECTIONS = [
-  { code: "SMS", cls: "ch--sms", name: "SMS · sender ID", note: "Two-way on a shortcode. The workhorse.", state: "ok" },
-  { code: "US", cls: "ch--us", name: "USSD *xyz#", note: "Feature phones. Polls, sign-ups and call-me-back requests.", state: "ok" },
-  { code: "EM", cls: "ch--em", name: "Email", note: "Any IMAP mailbox. Threads keep their history.", state: "ok" },
-  { code: "FB", cls: "ch--fb", name: "Messenger", note: "Page inbox via Meta Graph API. 24-hour reply window.", state: "ok" },
-  { code: "IG", cls: "ch--ig", name: "Instagram DMs", note: "Business account via the same Meta app.", state: "ok" },
-  { code: "X", cls: "ch--x", name: "X DMs & mentions", note: "Needs a paid X API tier.", state: "amber" },
-  { code: "TT", cls: "ch--tt", name: "TikTok", note: "No DM API. Comments come in through listening.", state: "amber" },
-  { code: "WA", cls: "ch--wa", name: "WhatsApp", note: "Meta bars political campaigns from the API. Handsets run by people.", state: "red" },
+  {
+    code: "SMS",
+    cls: "ch--sms",
+    name: "SMS · sender ID",
+    note: "Two-way on a shortcode. The workhorse.",
+    state: "ok",
+  },
+  {
+    code: "US",
+    cls: "ch--us",
+    name: "USSD *xyz#",
+    note: "Feature phones. Polls, sign-ups and call-me-back requests.",
+    state: "ok",
+  },
+  {
+    code: "EM",
+    cls: "ch--em",
+    name: "Email",
+    note: "Any IMAP mailbox. Threads keep their history.",
+    state: "ok",
+  },
+  {
+    code: "FB",
+    cls: "ch--fb",
+    name: "Messenger",
+    note: "Page inbox via Meta Graph API. 24-hour reply window.",
+    state: "ok",
+  },
+  {
+    code: "IG",
+    cls: "ch--ig",
+    name: "Instagram DMs",
+    note: "Business account via the same Meta app.",
+    state: "ok",
+  },
+  {
+    code: "X",
+    cls: "ch--x",
+    name: "X DMs & mentions",
+    note: "Needs a paid X API tier.",
+    state: "amber",
+  },
+  {
+    code: "TT",
+    cls: "ch--tt",
+    name: "TikTok",
+    note: "No DM API. Comments come in through listening.",
+    state: "amber",
+  },
+  {
+    code: "WA",
+    cls: "ch--wa",
+    name: "WhatsApp",
+    note: "Meta bars political campaigns from the API. Handsets run by people.",
+    state: "red",
+  },
 ];
 
 const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
@@ -113,16 +166,32 @@ function Inbox() {
   const [composing, setComposing] = useState(false);
   const [pq, setPq] = useState("");
   const [results, setResults] = useState<
-    { id: string; name: string; phone: string | null; email: string | null; ward: string | null; optedOut: boolean; consentSms: boolean; consentWhatsapp: boolean }[]
+    {
+      id: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+      ward: string | null;
+      optedOut: boolean;
+      consentSms: boolean;
+      consentWhatsapp: boolean;
+    }[]
   >([]);
   const [searching, setSearching] = useState(false);
-  const [picked, setPicked] = useState<{ id: string; name: string; email: string | null } | null>(null);
+  const [picked, setPicked] = useState<{ id: string; name: string; email: string | null } | null>(
+    null,
+  );
   const [channel, setChannel] = useState<"sms" | "whatsapp" | "email">("sms");
   const [newSubject, setNewSubject] = useState("");
   const [newBody, setNewBody] = useState("");
   const [wa, setWa] = useState<WaTemplateInput>({ template: "rally_invitation_v2", fields: [] });
   let waReady = false;
-  try { validateWaTemplate(wa); waReady = true; } catch { /* incomplete fields */ }
+  try {
+    validateWaTemplate(wa);
+    waReady = true;
+  } catch {
+    /* incomplete fields */
+  }
   const [newNote, setNewNote] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<string>("all");
@@ -192,7 +261,13 @@ function Inbox() {
     setNewNote(null);
     try {
       const r = await startConvo({
-        data: { personId: picked.id, channel, body: newBody.trim(), subject: newSubject.trim(), ...(channel === "whatsapp" ? { whatsapp: wa } : {}) },
+        data: {
+          personId: picked.id,
+          channel,
+          body: newBody.trim(),
+          subject: newSubject.trim(),
+          ...(channel === "whatsapp" ? { whatsapp: wa } : {}),
+        },
       });
       setNewNote(r.note);
       setNewBody("");
@@ -255,7 +330,13 @@ function Inbox() {
           <p>Choose one person for a message, poll invitation or phone call.</p>
         </div>
         <div className="ibx-individual-buttons">
-          <Button variant="outline" onClick={() => { setComposing(true); setNewNote(null); }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setComposing(true);
+              setNewNote(null);
+            }}
+          >
             <MessageCircle aria-hidden="true" /> Message
           </Button>
           <Button variant="outline" onClick={() => void navigate({ to: "/polling" })}>
@@ -280,7 +361,11 @@ function Inbox() {
                 <span className="eyebrow">Inbox · outbound</span>
                 <h2 id="nm-title">Start a conversation.</h2>
               </div>
-              <button className="btn btn--ghost btn--sm" type="button" onClick={() => setComposing(false)}>
+              <button
+                className="btn btn--ghost btn--sm"
+                type="button"
+                onClick={() => setComposing(false)}
+              >
                 Close
               </button>
             </div>
@@ -314,12 +399,20 @@ function Inbox() {
                       className="cv"
                       onClick={() => {
                         setPicked({ id: p.id, name: p.name, email: p.email });
-                        setChannel(p.consentWhatsapp ? "whatsapp" : p.phone?.startsWith("email:") ? "email" : "sms");
+                        setChannel(
+                          p.consentWhatsapp
+                            ? "whatsapp"
+                            : p.phone?.startsWith("email:")
+                              ? "email"
+                              : "sms",
+                        );
                       }}
                     >
                       <span className="cv-name">{p.name}</span>
                       <span className="cv-snip">
-                        {p.phone?.startsWith("email:") ? "" : `${p.phone ?? "no number"} · `}{p.email ? `${p.email} · ` : ""}{p.ward ?? "ward unknown"}
+                        {p.phone?.startsWith("email:") ? "" : `${p.phone ?? "no number"} · `}
+                        {p.email ? `${p.email} · ` : ""}
+                        {p.ward ?? "ward unknown"}
                         {p.optedOut ? " · opted out" : ""}
                       </span>
                     </button>
@@ -332,7 +425,11 @@ function Inbox() {
                 <>
                   <p className="f-note">
                     To <b>{picked.name}</b>{" "}
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPicked(null)}>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => setPicked(null)}
+                    >
                       Change
                     </button>
                   </p>
@@ -364,26 +461,41 @@ function Inbox() {
                   {channel === "email" && (
                     <label className="pb-field">
                       <span>Subject</span>
-                      <input value={newSubject} maxLength={150} onChange={(e) => setNewSubject(e.target.value)} />
+                      <input
+                        value={newSubject}
+                        maxLength={150}
+                        onChange={(e) => setNewSubject(e.target.value)}
+                      />
                     </label>
                   )}
                   {channel === "whatsapp" && (
-                    <WhatsAppTemplateFields templates={WA_TEMPLATES_ALL} value={wa} onChange={setWa} name={firstName(picked.name)} campaign={campaign?.candidate ?? campaign?.name} disabled={sending} />
-                  )}
-                  {channel !== "whatsapp" && <label className="pb-field">
-                    <span>Message</span>
-                    <textarea
-                      rows={4}
-                      value={newBody}
-                      maxLength={2000}
-                      onChange={(e) => setNewBody(e.target.value)}
+                    <WhatsAppTemplateFields
+                      templates={WA_TEMPLATES_ALL}
+                      value={wa}
+                      onChange={setWa}
+                      name={firstName(picked.name)}
+                      campaign={campaign?.candidate ?? campaign?.name}
+                      disabled={sending}
                     />
-                  </label>}
+                  )}
+                  {channel !== "whatsapp" && (
+                    <label className="pb-field">
+                      <span>Message</span>
+                      <textarea
+                        rows={4}
+                        value={newBody}
+                        maxLength={2000}
+                        onChange={(e) => setNewBody(e.target.value)}
+                      />
+                    </label>
+                  )}
                 </>
               )}
             </div>
             <div className="pb-foot">
-              <p className="f-note" aria-live="polite">{newNote ?? ""}</p>
+              <p className="f-note" aria-live="polite">
+                {newNote ?? ""}
+              </p>
               {picked && (
                 <button
                   type="button"
@@ -391,7 +503,9 @@ function Inbox() {
                   disabled={sending || (channel === "whatsapp" ? !waReady : !newBody.trim())}
                   onClick={() => void sendNew()}
                 >
-                  {sending ? "Sending…" : `Send by ${channel === "sms" ? "SMS" : channel === "email" ? "email" : "WhatsApp"}`}
+                  {sending
+                    ? "Sending…"
+                    : `Send by ${channel === "sms" ? "SMS" : channel === "email" ? "email" : "WhatsApp"}`}
                 </button>
               )}
             </div>
@@ -409,8 +523,15 @@ function Inbox() {
                 { key: "unread", label: "Unread", count: data.counts.unread },
                 { key: "open", label: "Open", count: data.counts.open },
               ].map((item) => (
-                <Button key={item.key} variant="ghost" className="ibx-f" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)}>
-                  <span>{item.label}</span><span className="n">{item.count}</span>
+                <Button
+                  key={item.key}
+                  variant="ghost"
+                  className="ibx-f"
+                  aria-pressed={filter === item.key}
+                  onClick={() => setFilter(item.key)}
+                >
+                  <span>{item.label}</span>
+                  <span className="n">{item.count}</span>
                 </Button>
               ))}
             </div>
@@ -418,21 +539,47 @@ function Inbox() {
           <div className="ibx-filter-group">
             <h2 className="ibx-group-label">Channel & sentiment</h2>
             <div className="ibx-filter-options">
-              <Button variant="ghost" className="ibx-f" aria-pressed={filter === "social"} onClick={() => setFilter("social")}>
-                <span>Social</span><span className="n">{data.conversations.filter((c) => SOCIAL.includes(c.platform)).length}</span>
+              <Button
+                variant="ghost"
+                className="ibx-f"
+                aria-pressed={filter === "social"}
+                onClick={() => setFilter("social")}
+              >
+                <span>Social</span>
+                <span className="n">
+                  {data.conversations.filter((c) => SOCIAL.includes(c.platform)).length}
+                </span>
               </Button>
-              <Button variant="ghost" className="ibx-f" aria-pressed={filter === "angry"} onClick={() => setFilter("angry")}>
-                <span>Negative sentiment</span><span className="n">{data.conversations.filter((c) => c.sentiment === "negative").length}</span>
+              <Button
+                variant="ghost"
+                className="ibx-f"
+                aria-pressed={filter === "angry"}
+                onClick={() => setFilter("angry")}
+              >
+                <span>Negative sentiment</span>
+                <span className="n">
+                  {data.conversations.filter((c) => c.sentiment === "negative").length}
+                </span>
               </Button>
             </div>
           </div>
           <div className="ibx-filter-group">
-            <label className="ibx-group-label" htmlFor="ibx-topic">Topics</label>
-            <select id="ibx-topic" value={["all", "unread", "open", "social", "angry"].includes(filter) ? "" : filter} onChange={(e) => setFilter(e.target.value || "all")}>
+            <label className="ibx-group-label" htmlFor="ibx-topic">
+              Topics
+            </label>
+            <select
+              id="ibx-topic"
+              value={["all", "unread", "open", "social", "angry"].includes(filter) ? "" : filter}
+              onChange={(e) => setFilter(e.target.value || "all")}
+            >
               <option value="">All topics</option>
-              {[...data.counts.byTag].sort((a, b) => a.tag.localeCompare(b.tag)).map((t) => (
-                <option key={t.tag} value={t.tag}>{t.tag} ({t.n})</option>
-              ))}
+              {[...data.counts.byTag]
+                .sort((a, b) => a.tag.localeCompare(b.tag))
+                .map((t) => (
+                  <option key={t.tag} value={t.tag}>
+                    {t.tag} ({t.n})
+                  </option>
+                ))}
             </select>
           </div>
         </nav>
@@ -469,11 +616,19 @@ function Inbox() {
                 {c.sentiment && <span className="tag">{MOOD[c.sentiment] ?? c.sentiment}</span>}
                 {c.issue && <span className="tag">{c.issue}</span>}
                 {c.ward && <span className="tag">{c.ward}</span>}
-                {[...new Set(c.tags)].filter((t) => t !== c.issue && t !== c.ward && t !== c.sentiment && t !== MOOD[c.sentiment ?? ""]).map((t) => (
-                  <span className="tag" key={t}>
-                    {t}
-                  </span>
-                ))}
+                {[...new Set(c.tags)]
+                  .filter(
+                    (t) =>
+                      t !== c.issue &&
+                      t !== c.ward &&
+                      t !== c.sentiment &&
+                      t !== MOOD[c.sentiment ?? ""],
+                  )
+                  .map((t) => (
+                    <span className="tag" key={t}>
+                      {t}
+                    </span>
+                  ))}
               </span>
             </button>
           ))}
@@ -495,12 +650,18 @@ function Inbox() {
                 </div>
                 <div className="th-head-actions">
                   {open.phone && (
-                    <Button size="sm" onClick={() => setCallPanelOpen((visible) => !visible)} aria-expanded={callPanelOpen}>
+                    <Button
+                      size="sm"
+                      onClick={() => setCallPanelOpen((visible) => !visible)}
+                      aria-expanded={callPanelOpen}
+                    >
                       <Phone aria-hidden="true" /> Call {open.name.split(" ")[0]}
                     </Button>
                   )}
                   <span className="pill pill--ok">
-                    <span className="g" aria-hidden="true">●</span>{" "}
+                    <span className="g" aria-hidden="true">
+                      ●
+                    </span>{" "}
                     {open.status}
                   </span>
                 </div>
@@ -518,8 +679,14 @@ function Inbox() {
                     value={myPhone}
                     onChange={(e) => setMyPhone(e.target.value)}
                   />
-                  <Button variant="outline" className="th-call-button" disabled={calling || !myPhone.trim()} onClick={() => void call(open.id)}>
-                    <Phone aria-hidden="true" />{calling ? "Calling…" : "Call"}
+                  <Button
+                    variant="outline"
+                    className="th-call-button"
+                    disabled={calling || !myPhone.trim()}
+                    onClick={() => void call(open.id)}
+                  >
+                    <Phone aria-hidden="true" />
+                    {calling ? "Calling…" : "Call"}
                   </Button>
                   {callNote && <p className="f-note">{callNote}</p>}
                 </div>
@@ -529,7 +696,10 @@ function Inbox() {
                   <div className="msg msg--in">{open.snippet}</div>
                 )}
                 {open.thread.map((m) => (
-                  <div key={m.id} className={`msg ${m.direction === "out" ? "msg--out" : "msg--in"}`}>
+                  <div
+                    key={m.id}
+                    className={`msg ${m.direction === "out" ? "msg--out" : "msg--in"}`}
+                  >
                     <div className="msg-text">{m.body}</div>
                     <small className="msg-meta">
                       <time dateTime={m.at}>{stamp(m.at)}</time>
@@ -560,8 +730,13 @@ function Inbox() {
                     }
                   }}
                 />
-                <Button className="btn btn--primary btn--sm th-send" disabled={sending || !draft.trim()} onClick={() => void send(open.id)}>
-                  <Send aria-hidden="true" />{sending ? "Sending…" : "Send"}
+                <Button
+                  className="btn btn--primary btn--sm th-send"
+                  disabled={sending || !draft.trim()}
+                  onClick={() => void send(open.id)}
+                >
+                  <Send aria-hidden="true" />
+                  {sending ? "Sending…" : "Send"}
                 </Button>
               </div>
               {sendNote && <p className="f-note">{sendNote}</p>}

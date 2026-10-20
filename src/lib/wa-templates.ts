@@ -69,11 +69,15 @@ export const WA_TEMPLATES_IMG: WaTemplate[] = [
 
 export const WA_TEMPLATES_ALL: WaTemplate[] = [...WA_TEMPLATES, ...WA_TEMPLATES_IMG];
 
-export const WA_POLL_TEMPLATES = WA_TEMPLATES_ALL.filter((t) => t.name.startsWith("poll_invitation_"));
+export const WA_POLL_TEMPLATES = WA_TEMPLATES_ALL.filter((t) =>
+  t.name.startsWith("poll_invitation_"),
+);
 export type WaTemplateInput = { template: string; fields: string[]; imageUrl?: string | undefined };
 
 export function validateWaTemplate(input: WaTemplateInput, pollOnly = false) {
-  const t = (pollOnly ? WA_POLL_TEMPLATES : WA_TEMPLATES_ALL).find((t) => t.name === input.template);
+  const t = (pollOnly ? WA_POLL_TEMPLATES : WA_TEMPLATES_ALL).find(
+    (t) => t.name === input.template,
+  );
   if (!t) throw new Error("Pick an approved WhatsApp template.");
   const fields = (input.fields ?? []).map((f) => String(f ?? "").trim());
   if (fields.length !== t.fields.length || fields.some((f) => !f || f.length > 200))

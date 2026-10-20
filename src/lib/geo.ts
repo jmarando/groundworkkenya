@@ -164,7 +164,7 @@ export function boundsOf(geometry: { type: string; coordinates: unknown }): Box 
 /** A ward's outline and slug, for finding the ward a point is in. */
 export type WardShape = { slug: string; polygons: Ring[][]; box: Box };
 
-type ShapeFile = {
+export type ShapeFile = {
   features: { properties: { slug: string }; geometry: { type: string; coordinates: unknown } }[];
 };
 

@@ -63,7 +63,10 @@ export function spokenHome(o: {
       `On people's minds this week: ${o.mind.label.toLowerCase()}. It accounts for ${pct(o.mind.score)} of what was raised across ${sourcesOf(o.mind)}.`,
     );
   }
-  if (o.items.length) out.push(`Over to today's priorities. ${COUNT[o.items.length] ?? `${o.items.length} things`} to focus on.`);
+  if (o.items.length)
+    out.push(
+      `Over to today's priorities. ${COUNT[o.items.length] ?? `${o.items.length} things`} to focus on.`,
+    );
   o.items.forEach((t, i) => out.push(`${ORDINAL[i] ?? "Next"}: ${t.title}. ${t.detail}`));
   if (o.plan.length) {
     out.push("And now, your day on the ground.");

@@ -24,7 +24,8 @@ import { sourceName } from "@/lib/listening-read";
 export const Route = createFileRoute("/_authenticated/listening")({
   // ?issue=water: a link from Home opens the mentions about that issue.
   validateSearch: (search: Record<string, unknown>): { issue?: string } => {
-    const v = typeof search["issue"] === "string" ? search["issue"].trim().toLowerCase().slice(0, 40) : "";
+    const v =
+      typeof search["issue"] === "string" ? search["issue"].trim().toLowerCase().slice(0, 40) : "";
     return v ? { issue: v } : {};
   },
   component: Listening,
@@ -132,7 +133,19 @@ function Listening() {
   const exportMentions = () =>
     downloadCSV(
       stampName("listening-mentions"),
-      ["found", "published", "topic", "source", "domain", "title", "mood", "score", "issue", "status", "url"],
+      [
+        "found",
+        "published",
+        "topic",
+        "source",
+        "domain",
+        "title",
+        "mood",
+        "score",
+        "issue",
+        "status",
+        "url",
+      ],
       mentions.map((m) => [
         m.foundAt,
         m.publishedAt ?? "",
@@ -166,10 +179,19 @@ function Listening() {
             Social & sentiment
           </Link>
           <span className="syncline">
-            <span className={data?.job?.status === "paused" ? "dot-stale" : "dot-live"} aria-hidden="true" />{" "}
-            {data?.job?.status === "paused" ? "sweeping paused" : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
+            <span
+              className={data?.job?.status === "paused" ? "dot-stale" : "dot-live"}
+              aria-hidden="true"
+            />{" "}
+            {data?.job?.status === "paused"
+              ? "sweeping paused"
+              : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
           </span>
-          <button className="btn btn--primary" disabled={busy} onClick={() => act(() => sweep({ data: {} }), "Sweep finished.")}>
+          <button
+            className="btn btn--primary"
+            disabled={busy}
+            onClick={() => act(() => sweep({ data: {} }), "Sweep finished.")}
+          >
             {busy ? "Sweeping…" : "Sweep now"}
           </button>
         </div>
@@ -179,7 +201,10 @@ function Listening() {
         <div className="card note--flag" style={{ marginTop: 12 }}>
           <div className="card-head">
             <h2>Sweeping stopped</h2>
-            <button className="btn btn--sm" onClick={() => act(() => resume(), "Sweeping restarted.")}>
+            <button
+              className="btn btn--sm"
+              onClick={() => act(() => resume(), "Sweeping restarted.")}
+            >
               Restart
             </button>
           </div>
@@ -187,7 +212,11 @@ function Listening() {
         </div>
       )}
 
-      {note && <p className="f-note" style={{ marginTop: 10 }}>{note}</p>}
+      {note && (
+        <p className="f-note" style={{ marginTop: 10 }}>
+          {note}
+        </p>
+      )}
 
       <div className="fchips" style={{ marginTop: 14 }}>
         {TABS.map((x) => (
@@ -206,7 +235,11 @@ function Listening() {
           <p className="meta lsn-status">
             Following {(data?.topics ?? []).filter((tp) => tp.active).length} keywords
             {" · "}
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTab("keywords")}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => setTab("keywords")}
+            >
               change
             </button>
             {" · "}
@@ -230,7 +263,9 @@ function Listening() {
           <div className="card-head">
             <div>
               <h2>Every post found</h2>
-              <p className="meta">{nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.</p>
+              <p className="meta">
+                {nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.
+              </p>
             </div>
             <button className="btn btn--sm" onClick={exportMentions}>
               Download CSV
@@ -371,7 +406,9 @@ function Keywords({
                 <button
                   className="btn btn--sm"
                   disabled={busy}
-                  onClick={() => act(() => flip({ data: { id: tp.id, active: !tp.active } }), "Updated.")}
+                  onClick={() =>
+                    act(() => flip({ data: { id: tp.id, active: !tp.active } }), "Updated.")
+                  }
                 >
                   {tp.active ? "on" : "off"}
                 </button>
@@ -397,19 +434,35 @@ function Keywords({
         <div className="auth-form">
           <label className="auth-field">
             <span>Name</span>
-            <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Water in Embakasi" />
+            <input
+              value={form.label}
+              onChange={(e) => setForm({ ...form, label: e.target.value })}
+              placeholder="Water in Embakasi"
+            />
           </label>
           <label className="auth-field">
             <span>Search phrase</span>
-            <input value={form.query} onChange={(e) => setForm({ ...form, query: e.target.value })} placeholder="Embakasi water shortage Nairobi" />
+            <input
+              value={form.query}
+              onChange={(e) => setForm({ ...form, query: e.target.value })}
+              placeholder="Embakasi water shortage Nairobi"
+            />
           </label>
           <label className="auth-field">
             <span>Extra keywords, comma separated</span>
-            <input value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} placeholder="borehole, tanker, rationing" />
+            <input
+              value={form.keywords}
+              onChange={(e) => setForm({ ...form, keywords: e.target.value })}
+              placeholder="borehole, tanker, rationing"
+            />
           </label>
           <label className="auth-field">
             <span>Words to exclude</span>
-            <input value={form.excludeTerms} onChange={(e) => setForm({ ...form, excludeTerms: e.target.value })} placeholder="football, betting" />
+            <input
+              value={form.excludeTerms}
+              onChange={(e) => setForm({ ...form, excludeTerms: e.target.value })}
+              placeholder="football, betting"
+            />
           </label>
           <label className="auth-field">
             <span>Google Alert feed (optional)</span>
@@ -482,7 +535,9 @@ function Alerts({
   const toggleMood = (m: string) =>
     setForm((f) => ({
       ...f,
-      sentiments: f.sentiments.includes(m) ? f.sentiments.filter((x) => x !== m) : [...f.sentiments, m],
+      sentiments: f.sentiments.includes(m)
+        ? f.sentiments.filter((x) => x !== m)
+        : [...f.sentiments, m],
     }));
 
   return (
@@ -492,7 +547,9 @@ function Alerts({
           <div className="card-head">
             <div>
               <h2>Who gets told what</h2>
-              <p className="meta">Alerts fire as soon as a matching mention is read, or once a day.</p>
+              <p className="meta">
+                Alerts fire as soon as a matching mention is read, or once a day.
+              </p>
             </div>
             <span className="mono">{data?.alerts.length ?? 0} rules</span>
           </div>
@@ -510,17 +567,27 @@ function Alerts({
                   </span>
                 </span>
                 <b style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <button className="btn btn--sm" disabled={busy} onClick={() => act(() => test({ data: { id: a.id } }), "Test alert queued.")}>
+                  <button
+                    className="btn btn--sm"
+                    disabled={busy}
+                    onClick={() => act(() => test({ data: { id: a.id } }), "Test alert queued.")}
+                  >
                     test
                   </button>
                   <button
                     className="btn btn--sm"
                     disabled={busy}
-                    onClick={() => act(() => flip({ data: { id: a.id, active: !a.active } }), "Updated.")}
+                    onClick={() =>
+                      act(() => flip({ data: { id: a.id, active: !a.active } }), "Updated.")
+                    }
                   >
                     {a.active ? "on" : "off"}
                   </button>
-                  <button className="btn btn--sm" disabled={busy} onClick={() => act(() => drop({ data: { id: a.id } }), "Alert removed.")}>
+                  <button
+                    className="btn btn--sm"
+                    disabled={busy}
+                    onClick={() => act(() => drop({ data: { id: a.id } }), "Alert removed.")}
+                  >
                     remove
                   </button>
                 </b>
@@ -538,11 +605,18 @@ function Alerts({
           <div className="auth-form">
             <label className="auth-field">
               <span>Name</span>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Anything angry about water" />
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Anything angry about water"
+              />
             </label>
             <label className="auth-field">
               <span>Topic</span>
-              <select value={form.topicId} onChange={(e) => setForm({ ...form, topicId: e.target.value })}>
+              <select
+                value={form.topicId}
+                onChange={(e) => setForm({ ...form, topicId: e.target.value })}
+              >
                 <option value="">Any topic</option>
                 {(data?.topics ?? []).map((tp) => (
                   <option key={tp.id} value={tp.id}>
@@ -553,7 +627,11 @@ function Alerts({
             </label>
             <label className="auth-field">
               <span>Keywords, comma separated</span>
-              <input value={form.keywords} onChange={(e) => setForm({ ...form, keywords: e.target.value })} placeholder="water, rationing" />
+              <input
+                value={form.keywords}
+                onChange={(e) => setForm({ ...form, keywords: e.target.value })}
+                placeholder="water, rationing"
+              />
             </label>
             <div className="fchips">
               {["negative", "neutral", "positive"].map((m) => (
@@ -568,7 +646,10 @@ function Alerts({
             </div>
             <label className="auth-field">
               <span>Send by</span>
-              <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value })}>
+              <select
+                value={form.channel}
+                onChange={(e) => setForm({ ...form, channel: e.target.value })}
+              >
                 <option value="email">Email</option>
                 <option value="whatsapp">WhatsApp</option>
               </select>
@@ -583,7 +664,10 @@ function Alerts({
             </label>
             <label className="auth-field">
               <span>How often</span>
-              <select value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
+              <select
+                value={form.frequency}
+                onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+              >
                 <option value="instant">The moment it appears</option>
                 <option value="daily">Once a day, bundled</option>
               </select>
@@ -618,7 +702,9 @@ function Alerts({
         <div className="card-head">
           <div>
             <h2>Alert log</h2>
-            <p className="meta">Every alert raised, where it was headed and whether it has gone out.</p>
+            <p className="meta">
+              Every alert raised, where it was headed and whether it has gone out.
+            </p>
           </div>
           <span className="mono">{data?.events.length ?? 0} recent</span>
         </div>
