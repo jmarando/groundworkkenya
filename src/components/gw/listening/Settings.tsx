@@ -147,6 +147,8 @@ export function Keywords({
               <option value="campaign">Us</option>
               <option value="rival">A rival</option>
               <option value="issue">An issue</option>
+              <option value="county">County news</option>
+              <option value="national">National news</option>
             </select>
           </label>
           <button

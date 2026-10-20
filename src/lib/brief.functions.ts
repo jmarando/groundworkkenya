@@ -13,6 +13,8 @@ import type { PlanList, PlanWard } from "@/lib/field-plan";
 import { loadFieldPlan } from "@/lib/field-plan.functions";
 import { addDays, nairobiToday } from "@/lib/nairobi-date";
 import { requireOffice, requireRole } from "@/lib/require-role";
+import type { NewsImpact } from "@/lib/roadmap";
+import { loadImpacts } from "@/lib/roadmap.functions";
 
 export type PlanData = {
   today: string;
@@ -21,6 +23,8 @@ export type PlanData = {
   diary: DiaryEntry[];
   lists: PlanList[];
   wards: PlanWard[];
+  /** The latest wider stories read for the seat. */
+  impacts: NewsImpact[];
 };
 
 export const getPlan = createServerFn({ method: "GET" })
@@ -29,7 +33,7 @@ export const getPlan = createServerFn({ method: "GET" })
     const role = await requireOffice(context.supabase, "The plan is for the campaign office.");
     const sb = context.supabase;
     const today = nairobiToday();
-    const [brief, diary, field] = await Promise.all([
+    const [brief, diary, field, impacts] = await Promise.all([
       sb
         .from("campaign_briefs")
         .select("*")
@@ -39,6 +43,7 @@ export const getPlan = createServerFn({ method: "GET" })
         .maybeSingle(),
       loadDiary(sb, today, addDays(today, 13)),
       loadFieldPlan(sb, today).catch(() => null),
+      loadImpacts(sb as never, 4).catch(() => []),
     ]);
     return {
       today,
@@ -47,6 +52,7 @@ export const getPlan = createServerFn({ method: "GET" })
       diary,
       lists: field?.lists ?? [],
       wards: field?.wards ?? [],
+      impacts,
     };
   });
 

@@ -74,6 +74,11 @@ export function Overview({
     { key: "you", title: "About you", note: "Your name, your party and your own accounts." },
     { key: "rivals", title: "Your rivals", note: "What is said about them, and what they post." },
     { key: "issues", title: "Issues", note: "The subjects you asked us to follow." },
+    {
+      key: "wider",
+      title: "County and national news",
+      note: "Stories beyond the seat that move votes in it. Read them for the seat on Road to election day.",
+    },
   ];
 
   return (

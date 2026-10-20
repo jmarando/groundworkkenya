@@ -116,7 +116,10 @@ function Plan() {
               : "No plan has been written for this campaign yet. What your own records say is below."}
           </p>
         </div>
-        <div className="vh-side">
+        <div className="vh-side" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link to="/roadmap" className="btn btn--sm">
+            Road to election day →
+          </Link>
           <button type="button" className="btn btn--ghost btn--sm" onClick={() => window.print()}>
             Print
           </button>
@@ -244,6 +247,33 @@ function Plan() {
           ))}
         </ol>
       </div>
+
+      {data && data.impacts.length > 0 && (
+        <>
+          <h2 className="plan-h">Wider news, read for this seat</h2>
+          <div className="plan-read">
+            {data.impacts.map((i) => (
+              <article className="card plan-card" key={i.id}>
+                <span className={`pill ${STANCE[i.stance].cls}`}>{STANCE[i.stance].label}</span>{" "}
+                <span className="tag">{i.scope}</span>
+                <h3>{i.title}</h3>
+                <p>{i.reading.split(/\n+/)[0]}</p>
+                {i.moves.length > 0 && (
+                  <ul className="rm-moves">
+                    {i.moves.map((m, j) => (
+                      <li key={j}>{m}</li>
+                    ))}
+                  </ul>
+                )}
+                <Sources sources={i.sources} />
+              </article>
+            ))}
+          </div>
+          <p className="f-note">
+            <Link to="/roadmap">Every story read for the seat, and the road to election day →</Link>
+          </p>
+        </>
+      )}
 
       {brief && brief.watch.length > 0 && (
         <>

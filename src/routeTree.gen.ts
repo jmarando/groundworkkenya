@@ -33,6 +33,7 @@ import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
+import { Route as AuthenticatedRoadmapRouteImport } from './routes/_authenticated/roadmap'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
@@ -182,6 +183,11 @@ const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
 const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
   id: '/polling',
   path: '/polling',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoadmapRoute = AuthenticatedRoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
@@ -363,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/people': typeof AuthenticatedPeopleRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/roadmap': typeof AuthenticatedRoadmapRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -418,6 +425,7 @@ export interface FileRoutesByTo {
   '/people': typeof AuthenticatedPeopleRoute
   '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/roadmap': typeof AuthenticatedRoadmapRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -475,6 +483,7 @@ export interface FileRoutesById {
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
+  '/_authenticated/roadmap': typeof AuthenticatedRoadmapRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
@@ -532,6 +541,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/plan'
     | '/polling'
+    | '/roadmap'
     | '/social'
     | '/strategy'
     | '/team'
@@ -587,6 +597,7 @@ export interface FileRouteTypes {
     | '/people'
     | '/plan'
     | '/polling'
+    | '/roadmap'
     | '/social'
     | '/strategy'
     | '/team'
@@ -643,6 +654,7 @@ export interface FileRouteTypes {
     | '/_authenticated/people'
     | '/_authenticated/plan'
     | '/_authenticated/polling'
+    | '/_authenticated/roadmap'
     | '/_authenticated/social'
     | '/_authenticated/strategy'
     | '/_authenticated/team'
@@ -875,6 +887,13 @@ declare module '@tanstack/react-router' {
       path: '/polling'
       fullPath: '/polling'
       preLoaderRoute: typeof AuthenticatedPollingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/roadmap': {
+      id: '/_authenticated/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof AuthenticatedRoadmapRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/social': {
@@ -1110,6 +1129,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
+  AuthenticatedRoadmapRoute: typeof AuthenticatedRoadmapRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
@@ -1138,6 +1158,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
+  AuthenticatedRoadmapRoute: AuthenticatedRoadmapRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,

@@ -3,6 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
 
+/** What a keyword follows: you, a rival, an issue, or news beyond the seat. */
+const TOPIC_KINDS = ["campaign", "rival", "issue", "county", "national"] as const;
+
 export type Mention = {
   id: string;
   topicId: string | null;
@@ -371,6 +374,7 @@ export const saveTopic = createServerFn({ method: "POST" })
         label: label.slice(0, 80),
         query: query.slice(0, 200),
         alertFeedUrl: cleanAlertFeed(input.alertFeedUrl),
+        kind: TOPIC_KINDS.find((k) => k === input.kind) ?? "issue",
       };
     },
   )
@@ -381,7 +385,7 @@ export const saveTopic = createServerFn({ method: "POST" })
       keywords: words(data.keywords),
       exclude_terms: words(data.excludeTerms),
       alert_feed_url: data.alertFeedUrl,
-      kind: data.kind ?? "issue",
+      kind: data.kind,
       active: data.active ?? true,
     };
     const sb = context.supabase;

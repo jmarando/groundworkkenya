@@ -53,7 +53,7 @@ export type Action = {
 
 export type Conversation = {
   key: string;
-  group: "you" | "rivals" | "issues";
+  group: "you" | "rivals" | "issues" | "wider";
   label: string;
   /** A keyword, or a candidate's own account. */
   own: boolean;
@@ -163,7 +163,14 @@ export function conversations(
   for (const t of topics) {
     const rows = posts.filter((p) => p.topicId === t.id);
     if (!t.active && rows.length === 0) continue;
-    const group = t.kind === "campaign" ? "you" : t.kind === "rival" ? "rivals" : "issues";
+    const group =
+      t.kind === "campaign"
+        ? "you"
+        : t.kind === "rival"
+          ? "rivals"
+          : t.kind === "national" || t.kind === "county"
+            ? "wider"
+            : "issues";
     build(`t:${t.id}`, group, t.label, false, rows, { label: t.label, topicId: t.id });
   }
   const rivals = new Map<string, { name: string; us: boolean }>();
@@ -183,7 +190,7 @@ export function conversations(
       },
     );
   }
-  const order = { you: 0, rivals: 1, issues: 2 };
+  const order = { you: 0, rivals: 1, issues: 2, wider: 3 };
   return out.sort(
     (a, b) => order[a.group] - order[b.group] || b.week - a.week || a.label.localeCompare(b.label),
   );
