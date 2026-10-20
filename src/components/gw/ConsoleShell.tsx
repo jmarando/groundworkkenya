@@ -46,7 +46,6 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
   {
     title: "Money",
     items: [{ to: "/finance", label: "Finance", principalOnly: true }],
-    inert: [{ to: "#", label: "Disclosure", faint: "§9.4" }],
   },
   {
     title: "Election day",

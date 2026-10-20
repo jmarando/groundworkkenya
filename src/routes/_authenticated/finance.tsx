@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { getFinance } from "@/lib/console.functions";
 import { approveExpense } from "@/lib/finance.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
+import { RecordMoney } from "@/components/gw/finance/RecordMoney";
 import { useAccess } from "@/hooks/useAccess";
 
 export const Route = createFileRoute("/_authenticated/finance")({
@@ -109,8 +111,54 @@ function Finance() {
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> Reconciled against live data
           </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            id="disclosure"
+            onClick={() =>
+              downloadCSV(
+                stampName("disclosure"),
+                [
+                  "kind",
+                  "date",
+                  "name",
+                  "type or category",
+                  "method",
+                  "reference",
+                  "amount_kes",
+                  "status",
+                ],
+                [
+                  ...data.contributions.map((c) => [
+                    "contribution",
+                    c.date.slice(0, 10),
+                    c.donor,
+                    c.type,
+                    c.method,
+                    c.reference ?? "",
+                    c.amount,
+                    c.disclosed ? "disclosed" : "received",
+                  ]),
+                  ...data.expenses.map((e) => [
+                    "expense",
+                    e.date.slice(0, 10),
+                    e.vendor ? `${e.description} (${e.vendor})` : e.description,
+                    e.category,
+                    "",
+                    e.reference ?? "",
+                    e.amount,
+                    e.status,
+                  ]),
+                ],
+              )
+            }
+          >
+            Download for disclosure
+          </button>
         </div>
       </div>
+
+      <RecordMoney />
 
       <div className="card limit-strip fx2">
         <div className="card-head" style={{ marginBottom: 6 }}>

@@ -32,7 +32,9 @@ export type FinanceData = {
     category: string;
   }[];
   byCategory: { name: string; amount: number }[];
-  ledger: {
+  ledger: FinanceData["expenses"];
+  /** Every expense, newest first (the ledger shows the latest twelve). */
+  expenses: {
     id: string;
     date: string;
     category: string;
@@ -114,6 +116,16 @@ export const getFinance = createServerFn({ method: "GET" })
       byCategory: [...catMap.entries()]
         .map(([name, amount]) => ({ name, amount }))
         .sort((a, b) => b.amount - a.amount),
+      expenses: ex.map((e) => ({
+        id: e.id,
+        date: e.incurred_at as string,
+        category: e.category,
+        description: e.description,
+        vendor: e.vendor,
+        reference: e.reference,
+        amount: Number(e.amount_kes ?? 0),
+        status: e.status,
+      })),
       ledger: ex.slice(0, 12).map((e) => ({
         id: e.id,
         date: e.incurred_at as string,
