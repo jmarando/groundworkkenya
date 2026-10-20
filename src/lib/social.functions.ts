@@ -395,7 +395,7 @@ export const replyToConversation = createServerFn({ method: "POST" })
     const sb = context.supabase;
     const { data: convo, error } = await sb
       .from("conversations")
-      .select("id, person_id, platform, channel, subject")
+      .select("id, person_id, platform, channel, subject, external_thread_id")
       .eq("id", data.conversationId)
       .maybeSingle();
     if (error || !convo) throw new Error("That conversation is no longer available.");
@@ -413,12 +413,37 @@ export const replyToConversation = createServerFn({ method: "POST" })
 
     const { data: account } = await sb
       .from("social_accounts")
-      .select("live")
+      .select("id, live")
       .eq("platform", convo.platform)
       .maybeSingle();
 
     const live = account?.live === true;
-    const status = live ? "queued" : "staged";
+    let status = live ? "queued" : "staged";
+    let sent: { ref: string | null; error: string | null } = { ref: null, error: null };
+
+    // Facebook and Instagram go out at once through Meta, with the Page token Groundwork set.
+    if (live && account && (convo.platform === "facebook" || convo.platform === "instagram")) {
+      const { metaReplyRequest } = await import("@/lib/meta-send");
+      const req = metaReplyRequest(
+        convo.platform,
+        /^(comment|mention)/i.test(convo.subject ?? "") ? "comment" : "dm",
+        convo.external_thread_id,
+        data.body,
+      );
+      if ("error" in req) throw new Error(req.error);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: key } = await supabaseAdmin
+        .from("social_account_tokens")
+        .select("page_token")
+        .eq("account_id", account.id)
+        .maybeSingle();
+      if (!key)
+        throw new Error("This Page isn't connected for replies yet. Ask Groundwork to connect it.");
+      const { sendMetaReply } = await import("@/lib/meta-send.server");
+      const answer = await sendMetaReply(key.page_token, req);
+      status = answer.ok ? "sent" : "failed";
+      sent = answer.ok ? { ref: answer.id, error: null } : { ref: null, error: answer.error };
+    }
 
     const { error: insertError } = await sb.from("messages").insert({
       person_id: convo.person_id,
@@ -429,8 +454,12 @@ export const replyToConversation = createServerFn({ method: "POST" })
       direction: "out",
       body: data.body,
       status,
+      provider_ref: sent.ref,
+      error: sent.error,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
     });
     if (insertError) throw new Error("The reply could not be saved.");
+    if (status === "failed") throw new Error(sent.error ?? "Meta did not take the reply.");
 
     await sb
       .from("conversations")
@@ -439,9 +468,12 @@ export const replyToConversation = createServerFn({ method: "POST" })
 
     return {
       status,
-      note: live
-        ? "Reply queued for sending."
-        : "Reply saved. It goes out once this account is switched live.",
+      note:
+        status === "sent"
+          ? "Reply sent."
+          : live
+            ? "Reply queued for sending."
+            : "Reply saved. It goes out once this account is switched live.",
     };
   });
 

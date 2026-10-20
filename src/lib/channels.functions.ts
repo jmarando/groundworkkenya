@@ -16,6 +16,8 @@ export type ChannelsData = {
     displayName: string | null;
     live: boolean;
     lastEventAt: string | null;
+    /** Groundwork has set the Page token replies go out with. */
+    canReply: boolean;
   }[];
 };
 
@@ -39,6 +41,12 @@ export const getChannels = createServerFn({ method: "GET" })
         .order("platform"),
     ]);
     const provider = atConfigured() || twilioConfigured();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const ids = (accounts ?? []).map((a) => a.id);
+    const { data: keys } = ids.length
+      ? await supabaseAdmin.from("social_account_tokens").select("account_id").in("account_id", ids)
+      : { data: [] };
+    const keyed = new Set((keys ?? []).map((k) => k.account_id));
     return {
       statuses: channelStatuses({
         smsLive: channelsAreLive(),
@@ -58,6 +66,31 @@ export const getChannels = createServerFn({ method: "GET" })
         displayName: a.display_name,
         live: a.live,
         lastEventAt: a.last_event_at,
+        canReply: keyed.has(a.id),
       })),
     };
+  });
+
+/** Groundwork sets (or, with an empty token, removes) the Page token a campaign's replies use. */
+export const setSocialToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { accountId: string; token: string }) => {
+    if (!/^[0-9a-f-]{36}$/i.test(input?.accountId ?? "")) throw new Error("Which account?");
+    const token = (input.token ?? "").trim();
+    if (token && (token.length < 20 || token.length > 1000 || /\s/.test(token)))
+      throw new Error("That doesn't look like a Page access token.");
+    return { accountId: input.accountId, token };
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.rpc("set_social_token", {
+      _account: data.accountId,
+      _token: data.token,
+    });
+    if (error)
+      throw new Error(
+        error.code === "42501" || error.code === "P0001"
+          ? error.message
+          : "Could not save the token.",
+      );
+    return { ok: true };
   });

@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
-import { getChannels } from "@/lib/channels.functions";
+import { useAccess } from "@/hooks/useAccess";
+import { getChannels, setSocialToken } from "@/lib/channels.functions";
 import { stamp } from "@/lib/format";
 import { analyseSentiment, saveSocialAccount } from "@/lib/social.functions";
 
@@ -17,6 +18,10 @@ const PILL: Record<string, { cls: string; glyph: string }> = {
 export function Channels() {
   const fetchChannels = useServerFn(getChannels);
   const saveAccount = useServerFn(saveSocialAccount);
+  const saveToken = useServerFn(setSocialToken);
+  const { access } = useAccess();
+  const isSuper = access?.role === "super";
+  const [tokens, setTokens] = useState<Record<string, string>>({});
   const runAnalysis = useServerFn(analyseSentiment);
   const qc = useQueryClient();
   const { data, isError, refetch } = useQuery({
@@ -100,8 +105,37 @@ export function Channels() {
               </span>
               <span className="num mono">
                 {a.live ? "live" : "not live"}
+                {a.platform === "facebook" || a.platform === "instagram"
+                  ? a.canReply
+                    ? " · replies connected"
+                    : " · replies not connected"
+                  : ""}
                 {a.lastEventAt ? ` · last in ${stamp(a.lastEventAt)}` : ""}
               </span>
+              {isSuper && (a.platform === "facebook" || a.platform === "instagram") && (
+                <span className="row-gap">
+                  <input
+                    aria-label={`Page access token for ${a.handle}`}
+                    placeholder={a.canReply ? "Replace the Page token" : "Page access token"}
+                    value={tokens[a.id] ?? ""}
+                    onChange={(e) => setTokens({ ...tokens, [a.id]: e.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    disabled={busy || !(tokens[a.id] ?? "").trim()}
+                    onClick={() =>
+                      void act(async () => {
+                        await saveToken({ data: { accountId: a.id, token: tokens[a.id] ?? "" } });
+                        setTokens({ ...tokens, [a.id]: "" });
+                        return `Replies on ${a.handle} are connected.`;
+                      })
+                    }
+                  >
+                    Connect replies
+                  </button>
+                </span>
+              )}
               <button
                 type="button"
                 className="btn btn--ghost btn--sm"

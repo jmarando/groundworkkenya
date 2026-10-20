@@ -2894,6 +2894,30 @@ export type Database = {
           },
         ]
       }
+      social_account_tokens: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          page_token: string
+          set_at: string
+          set_by: string | null
+        }
+        Insert: {
+          account_id: string
+          campaign_id?: string
+          page_token: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          page_token?: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Relationships: []
+      }
       social_accounts: {
         Row: {
           campaign_id: string
@@ -3487,6 +3511,7 @@ export type Database = {
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
       prune_old_records: { Args: never; Returns: Json }
+      set_social_token: { Args: { _account: string; _token: string }; Returns: undefined }
       comms_to_ledger: { Args: never; Returns: number }
       my_walk_lists: {
         Args: never

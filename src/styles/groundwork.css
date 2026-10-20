@@ -9932,3 +9932,11 @@ figure {
     grid-column: 3;
   }
 }
+
+/* A row of small controls that wraps on a phone. */
+.row-gap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
