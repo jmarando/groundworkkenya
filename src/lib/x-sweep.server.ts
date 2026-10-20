@@ -2,7 +2,8 @@
 // longest ago first (X_TOPICS_PER_HOUR, default 12, so every keyword about every six hours),
 // each search one call from the day's "x" budget. Posts are kept like any other Listening post,
 // under the keyword's campaign, with who posted, views and reposts; a post found again keeps its
-// latest counts. Moods are read by the main sweep. Without TWITTERAPI_IO_KEY it does nothing.
+// latest counts. Moods are read by the main sweep. It searches through ScrapeCreators, or
+// TwitterAPI.io when that key is set (src/lib/x-search.server.ts); with neither it does nothing.
 
 import { takeCredits } from "@/lib/social-credits";
 import { searchX, xConfigured, XCreditError } from "@/lib/x-search.server";

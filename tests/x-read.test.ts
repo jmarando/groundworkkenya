@@ -3,7 +3,7 @@
 // Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/x-read.test.ts
 
-import { readXSearch } from "@/lib/x-read";
+import { readScXSearch, readXSearch } from "@/lib/x-read";
 
 let pass = 0;
 let fail = 0;
@@ -42,6 +42,57 @@ eq("views and reposts", [hits[0]!.reach, hits[0]!.shares], [12500, 45]);
 eq("published time read", hits[0]!.publishedAt, "2026-10-20T07:00:30.000Z");
 eq("no negative counts, no empty text", [hits[1]!.reach, hits[1]!.title], [null, null]);
 eq("not an answer: nothing", readXSearch({ error: "x" }), []);
+
+// ScrapeCreators: X's GraphQL tweets, flat tweets and found links all read.
+const sc = readScXSearch({
+  success: true,
+  tweets: [
+    {
+      rest_id: "1848000000000000010",
+      core: { user_results: { result: { legacy: { screen_name: "nation" } } } },
+      legacy: {
+        full_text: "Kiambu dairy prices fall",
+        created_at: "Mon Oct 19 08:00:00 +0000 2026",
+        retweet_count: 12,
+        quote_count: 3,
+      },
+      views: { count: "45000" },
+    },
+    {
+      id: "1848000000000000011",
+      text: "Githunguri roads",
+      author: { screen_name: "kiambu_voice" },
+      view_count: "8660",
+    },
+    {
+      url: "https://twitter.com/someone/status/1848000000000000012",
+      title: "A found post",
+      description: "body",
+    },
+    { url: "https://x.com/someone/status/1848000000000000012", title: "the same again" },
+    { url: "https://example.com/not-x", title: "no" },
+  ],
+});
+eq(
+  "every shape read, each post once",
+  sc.map((h) => h.url),
+  [
+    "https://x.com/nation/status/1848000000000000010",
+    "https://x.com/kiambu_voice/status/1848000000000000011",
+    "https://x.com/someone/status/1848000000000000012",
+  ],
+);
+eq(
+  "views as digits, reposts and quotes",
+  [sc[0]!.reach, sc[0]!.shares, sc[1]!.reach],
+  [45000, 15, 8660],
+);
+eq("a found link keeps its text", sc[2]!.snippet, "body");
+eq(
+  "posts under data",
+  readScXSearch({ data: [{ id: "1", text: "t", username: "kenya" }] }).length,
+  1,
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
