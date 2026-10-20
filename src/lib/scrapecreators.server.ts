@@ -23,6 +23,17 @@ export type Found = {
   title: string | null;
   snippet: string | null;
   publishedAt: string | null;
+  /** Who posted it: the handle, channel or username the platform gives. */
+  author?: string | null;
+  /** Views, where the platform counts them. */
+  reach?: number | null;
+  shares?: number | null;
+};
+
+/** A count from the platform (a number, or digits only), or null when it gives none. */
+const count = (v: unknown): number | null => {
+  const n = typeof v === "number" ? v : typeof v === "string" && /^\d+$/.test(v) ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
 };
 
 export class ScrapeCreatorsCreditError extends Error {
@@ -80,6 +91,9 @@ export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]>
         title: desc.slice(0, 300) || null,
         snippet: desc.slice(0, 1200) || null,
         publishedAt: it?.create_time ? new Date(Number(it.create_time) * 1000).toISOString() : null,
+        author: handle !== "-" ? `@${handle}` : null,
+        reach: count(it?.statistics?.play_count),
+        shares: count(it?.statistics?.share_count),
       };
     })
     .filter((h) => Boolean(h.url))
@@ -104,6 +118,9 @@ export async function scSearchReddit(query: string, limit = 8): Promise<Found[]>
         title: (p?.title ?? "").slice(0, 300) || null,
         snippet: (self || p?.title || "").slice(0, 1200) || null,
         publishedAt: p?.created_utc ? new Date(Number(p.created_utc) * 1000).toISOString() : null,
+        author: typeof p?.author === "string" && p.author ? `u/${p.author}` : null,
+        reach: null,
+        shares: null,
       };
     })
     .filter((h) => Boolean(h.url))
@@ -121,6 +138,12 @@ export async function scSearchYouTube(query: string, limit = 8): Promise<Found[]
       title: (v?.title ?? "").slice(0, 300) || null,
       snippet: null,
       publishedAt: typeof v?.publishedTime === "string" ? v.publishedTime : null,
+      author:
+        (typeof v?.channel?.title === "string" && v.channel.title) ||
+        (typeof v?.channel?.handle === "string" && v.channel.handle) ||
+        null,
+      reach: count(v?.viewCountInt),
+      shares: null,
     }))
     .filter((h) => Boolean(h.url))
     .slice(0, limit);

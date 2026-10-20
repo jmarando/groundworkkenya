@@ -217,3 +217,92 @@ export function payoutsForFinance(r: PulseReport) {
       paid_at: p.paid_at,
     }));
 }
+
+/* ------------------------------------------------------------ rapid response */
+
+/** A reaction brief: what happened online, the campaign's angle, and what creators should do now. */
+export type PulseRapid = {
+  rapid_id: string;
+  post_url: string | null;
+  platform: string | null;
+  what_happened: string;
+  angle: string;
+  creator_brief: string;
+  dos: string[];
+  donts: string[];
+  respond_by: string | null;
+  platforms: string[];
+  /** Creators on the campaign's Pulse roster the office picked; empty lets Pulse choose. */
+  creator_ids: string[];
+  paid_for_by: string;
+};
+
+/** The two lines every reaction carries, whatever else the office writes. */
+export const RAPID_RULES = {
+  dos: ['Label every paid post as a paid partnership with the campaign\'s "Paid for by" line.'],
+  donts: [
+    "Never appeal to or target anyone by tribe or community.",
+    "Never attack the person who posted; answer the claim.",
+  ],
+};
+
+/** The reaction as Pulse takes it, or the sentence saying what's missing. */
+export function checkRapid(
+  raw: unknown,
+): { ok: true; rapid: PulseRapid } | { ok: false; why: string } {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const rapid_id = text(r["rapid_id"], 40);
+  const what_happened = text(r["what_happened"], 2000);
+  const angle = text(r["angle"], 2000);
+  const creator_brief = text(r["creator_brief"], 4000);
+  if (!rapid_id) return { ok: false, why: "Save the reaction first." };
+  if (!what_happened || !angle || !creator_brief)
+    return { ok: false, why: "Say what happened, the angle and what creators should post." };
+  const paid_for_by = text(r["paid_for_by"], 160);
+  if (paid_for_by.length < 3) return { ok: false, why: 'Give the "Paid for by" line.' };
+  const url = text(r["post_url"], 500);
+  const by = text(r["respond_by"], 40);
+  const unique = (xs: string[]) => [...new Set(xs)];
+  return {
+    ok: true,
+    rapid: {
+      rapid_id,
+      post_url: /^https:\/\//.test(url) ? url : null,
+      platform: text(r["platform"], 20) || null,
+      what_happened,
+      angle,
+      creator_brief,
+      dos: unique([...lines(r["dos"], 8), ...RAPID_RULES.dos]),
+      donts: unique([...lines(r["donts"], 8), ...RAPID_RULES.donts]),
+      respond_by: by && !Number.isNaN(Date.parse(by)) ? new Date(by).toISOString() : null,
+      platforms: lines(r["platforms"], 6, 20),
+      creator_ids: lines(r["creator_ids"], 30, 40),
+      paid_for_by,
+    },
+  };
+}
+
+/** The same brief as a message to paste to creators on WhatsApp. */
+export function rapidText(r: Omit<PulseRapid, "rapid_id" | "creator_ids">): string {
+  return [
+    `*Quick reaction brief*${r.respond_by ? ` · post by ${new Date(r.respond_by).toLocaleString("en-GB", { timeZone: "Africa/Nairobi", weekday: "short", hour: "2-digit", minute: "2-digit" })}` : ""}`,
+    "",
+    `*What happened:* ${r.what_happened}`,
+    r.post_url ? `The post: ${r.post_url}` : "",
+    "",
+    `*Our angle:* ${r.angle}`,
+    "",
+    `*What to post:* ${r.creator_brief}`,
+    r.platforms.length ? `*Where:* ${r.platforms.join(", ")}` : "",
+    "",
+    "*Do:*",
+    ...r.dos.map((d) => `• ${d}`),
+    "*Don't:*",
+    ...r.donts.map((d) => `• ${d}`),
+    "",
+    r.paid_for_by,
+  ]
+    .filter((l, i, all) => l !== "" || all[i - 1] !== "")
+    .join("\n")
+    .trim();
+}

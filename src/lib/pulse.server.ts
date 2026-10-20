@@ -1,4 +1,4 @@
-// The two calls to Daraja Pulse, server to server, with Groundwork's job key. The key and the
+// The calls to Daraja Pulse, server to server, with Groundwork's job key. The key and the
 // functions' base URL are secrets (PULSE_JOB_KEY, PULSE_FUNCTIONS_URL); neither is ever logged
 // or sent to the browser. The contract is docs/superpowers/specs/2026-10-20-daraja-pulse-link-design.md.
 
@@ -10,7 +10,7 @@ export const pulseConfigured = () =>
 
 /** Pulse's answer: its JSON and status, or why there is none. */
 export async function callPulse(
-  fn: "groundwork-brief" | "groundwork-report",
+  fn: "groundwork-brief" | "groundwork-report" | "groundwork-rapid",
   body: unknown,
 ): Promise<{ status: number; json: unknown } | { status: 0; json: null; why: string }> {
   const base = process.env["PULSE_FUNCTIONS_URL"];

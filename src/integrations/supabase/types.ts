@@ -1621,6 +1621,7 @@ export type Database = {
           id: string
           keywords: string[]
           last_fired_at: string | null
+          min_reach: number | null
           min_matches: number
           name: string
           sentiments: string[]
@@ -1637,6 +1638,7 @@ export type Database = {
           id?: string
           keywords?: string[]
           last_fired_at?: string | null
+          min_reach?: number | null
           min_matches?: number
           name: string
           sentiments?: string[]
@@ -1653,6 +1655,7 @@ export type Database = {
           id?: string
           keywords?: string[]
           last_fired_at?: string | null
+          min_reach?: number | null
           min_matches?: number
           name?: string
           sentiments?: string[]
@@ -1724,6 +1727,7 @@ export type Database = {
           rival_id: string | null
           sentiment: string | null
           sentiment_score: number | null
+          shares: number | null
           snippet: string | null
           source: string
           status: string
@@ -1749,6 +1753,7 @@ export type Database = {
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
+          shares?: number | null
           snippet?: string | null
           source?: string
           status?: string
@@ -1774,6 +1779,7 @@ export type Database = {
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
+          shares?: number | null
           snippet?: string | null
           source?: string
           status?: string

@@ -197,6 +197,7 @@ export function Alerts({
     channel: "email",
     destination: "",
     minMatches: 1,
+    minReach: "",
     frequency: "instant",
   });
 
@@ -228,7 +229,10 @@ export function Alerts({
                   <b>{a.name}</b>
                   <br />
                   <span className="meta">
-                    {a.channel === "email" ? "Email" : "WhatsApp"} to {a.destination} ·{" "}
+                    {a.channel === "app"
+                      ? "In Groundwork"
+                      : `${a.channel === "email" ? "Email" : "WhatsApp"} to ${a.destination}`}{" "}
+                    · {a.minReach ? `seen ${a.minReach.toLocaleString("en-KE")}+ times · ` : ""}
                     {a.keywords.length ? a.keywords.join(", ") : "any keyword"} ·{" "}
                     {a.sentiments.map((s) => MOOD[s] ?? s).join("/")} · {a.frequency} · last fired{" "}
                     {stamp(a.lastFiredAt)}
@@ -325,14 +329,27 @@ export function Alerts({
               >
                 <option value="email">Email</option>
                 <option value="whatsapp">WhatsApp</option>
+                <option value="app">Here in Groundwork only</option>
               </select>
             </label>
+            {form.channel !== "app" && (
+              <label className="auth-field">
+                <span>{form.channel === "email" ? "Email address" : "WhatsApp number"}</span>
+                <input
+                  value={form.destination}
+                  onChange={(e) => setForm({ ...form, destination: e.target.value })}
+                  placeholder={form.channel === "email" ? "comms@campaign.co.ke" : "+254712345678"}
+                />
+              </label>
+            )}
             <label className="auth-field">
-              <span>{form.channel === "email" ? "Email address" : "WhatsApp number"}</span>
+              <span>Only posts seen at least this many times (optional)</span>
               <input
-                value={form.destination}
-                onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                placeholder={form.channel === "email" ? "comms@campaign.co.ke" : "+254712345678"}
+                type="number"
+                min={1}
+                value={form.minReach}
+                placeholder="e.g. 5000: tells you when something spreads"
+                onChange={(e) => setForm({ ...form, minReach: e.target.value })}
               />
             </label>
             <label className="auth-field">
@@ -361,7 +378,9 @@ export function Alerts({
               disabled={busy}
               onClick={() =>
                 act(async () => {
-                  await save({ data: form });
+                  await save({
+                    data: { ...form, minReach: form.minReach ? Number(form.minReach) : null },
+                  });
                   setForm({ ...form, name: "", keywords: "", destination: "" });
                 }, "Alert saved.")
               }

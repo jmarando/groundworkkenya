@@ -29,6 +29,7 @@ export type Mention = {
   rivalIsUs: boolean;
   author: string | null;
   reach: number | null;
+  shares: number | null;
   commentsRead: number | null;
   commentsPositive: number | null;
   commentsNegative: number | null;
@@ -43,6 +44,8 @@ export type ListeningAlert = {
   channel: string;
   destination: string;
   minMatches: number;
+  /** Fires only for posts seen at least this many times. */
+  minReach: number | null;
   frequency: string;
   active: boolean;
   lastFiredAt: string | null;
@@ -238,6 +241,7 @@ export const getListening = createServerFn({ method: "GET" })
         rivalIsUs: m.rival_id ? Boolean(rivalById.get(m.rival_id)?.is_us) : false,
         author: m.author ?? null,
         reach: m.reach === null || m.reach === undefined ? null : Number(m.reach),
+        shares: m.shares === null || m.shares === undefined ? null : Number(m.shares),
         commentsRead: m.comments_read ?? null,
         commentsPositive: m.comments_positive ?? null,
         commentsNegative: m.comments_negative ?? null,
@@ -251,6 +255,7 @@ export const getListening = createServerFn({ method: "GET" })
         channel: a.channel,
         destination: a.destination,
         minMatches: a.min_matches,
+        minReach: a.min_reach ?? null,
         frequency: a.frequency,
         active: a.active,
         lastFiredAt: a.last_fired_at,
@@ -431,18 +436,27 @@ export const saveAlert = createServerFn({ method: "POST" })
       channel: string;
       destination: string;
       minMatches?: number;
+      minReach?: number | null;
       frequency?: string;
       active?: boolean;
     }) => {
       const name = (input.name ?? "").trim();
-      const destination = (input.destination ?? "").trim();
+      if (!["email", "whatsapp", "app"].includes(input.channel))
+        throw new Error("Choose how to be told.");
+      const destination = input.channel === "app" ? "Groundwork" : (input.destination ?? "").trim();
       if (!name) throw new Error("Name the alert.");
       if (!destination) throw new Error("Add an email address or phone number.");
       if (input.channel === "email" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(destination))
         throw new Error("That does not look like an email address.");
       if (input.channel === "whatsapp" && !/^\+?\d{9,15}$/.test(destination.replace(/\s/g, "")))
         throw new Error("Use a phone number like +254712345678.");
-      return { ...input, name: name.slice(0, 80), destination };
+      const reach = Math.round(Number(input.minReach));
+      return {
+        ...input,
+        name: name.slice(0, 80),
+        destination,
+        minReach: Number.isFinite(reach) && reach > 0 ? reach : null,
+      };
     },
   )
   .handler(async ({ data, context }) => {
@@ -454,6 +468,7 @@ export const saveAlert = createServerFn({ method: "POST" })
       channel: data.channel,
       destination: data.destination,
       min_matches: Math.min(Math.max(data.minMatches ?? 1, 1), 20),
+      min_reach: data.minReach,
       frequency: data.frequency ?? "instant",
       active: data.active ?? true,
     };

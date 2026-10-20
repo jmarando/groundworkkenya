@@ -93,6 +93,9 @@ type Found = {
   publishedAt: string | null;
   /** Set when the address doesn't say where it came from (Google Alerts). */
   source?: string;
+  author?: string | null;
+  reach?: number | null;
+  shares?: number | null;
 };
 
 async function firecrawlSearch(query: string, limit: number, tbs: string): Promise<Found[]> {
@@ -425,6 +428,9 @@ export async function runListeningScan(
         url: h.url,
         snippet: h.snippet?.slice(0, 1200) ?? null,
         published_at: h.publishedAt ? new Date(h.publishedAt).toISOString() : null,
+        author: h.author?.slice(0, 120) ?? null,
+        reach: h.reach ?? null,
+        shares: h.shares ?? null,
       }));
 
       if (rows.length) {
@@ -438,6 +444,15 @@ export async function runListeningScan(
           notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
         }
         stored += ins?.length ?? 0;
+        // A post found again keeps its latest views and shares, so a spreading post shows it.
+        for (const r of rows.filter((x) => x.reach !== null && topic.campaign_id)) {
+          await sb
+            .from("listening_mentions")
+            .update({ reach: r.reach, shares: r.shares })
+            .eq("campaign_id", topic.campaign_id)
+            .eq("url", r.url)
+            .lt("reach", r.reach);
+        }
       }
 
       await sb
@@ -524,18 +539,19 @@ export async function runListeningScan(
 
 const HOURS = (h: number) => h * 3600_000;
 
+/**
+ * Each campaign's alerts against its own posts of the last 48 hours: keywords, moods and, when an
+ * alert asks, how far a post spread. Email goes out at once through the managed sender; "app"
+ * alerts wait in Listening; WhatsApp waits until the campaign's number is live.
+ */
 export async function evaluateAlerts(sb: AnyClient): Promise<number> {
   const { data: alerts } = await sb.from("listening_alerts").select("*").eq("active", true);
   if (!alerts?.length) return 0;
 
   const since = new Date(Date.now() - HOURS(48)).toISOString();
-  const { data: mentions } = await sb
-    .from("listening_mentions")
-    .select("id, topic_id, title, snippet, url, sentiment, issue, found_at")
-    .gte("found_at", since)
-    .not("sentiment", "is", null)
-    .order("found_at", { ascending: false })
-    .limit(300);
+  const campaigns = [...new Set(alerts.map((a: any) => a.campaign_id as string))].filter(Boolean);
+  const { data: names } = await sb.from("campaigns").select("id, name").in("id", campaigns);
+  const nameOf = new Map((names ?? []).map((c: any) => [c.id, c.name as string]));
 
   const { data: fired } = await sb
     .from("listening_alert_events")
@@ -543,69 +559,115 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
     .gte("created_at", since);
   const already = new Set((fired ?? []).map((f: any) => `${f.alert_id}:${f.mention_id}`));
 
-  const { data: wa } = await sb
-    .from("social_accounts")
-    .select("live")
-    .eq("platform", "whatsapp")
-    .maybeSingle();
-  const whatsappLive = wa?.live === true;
-
   let count = 0;
 
-  for (const alert of alerts) {
-    if (alert.frequency === "daily" && alert.last_fired_at) {
-      if (Date.now() - new Date(alert.last_fired_at).getTime() < HOURS(24)) continue;
+  for (const campaignId of campaigns) {
+    const { data: mentions } = await sb
+      .from("listening_mentions")
+      .select(
+        "id, topic_id, title, snippet, url, sentiment, issue, found_at, reach, author, source",
+      )
+      .eq("campaign_id", campaignId)
+      .gte("found_at", since)
+      .order("found_at", { ascending: false })
+      .limit(400);
+    const { data: wa } = await sb
+      .from("social_accounts")
+      .select("live")
+      .eq("campaign_id", campaignId)
+      .eq("platform", "whatsapp")
+      .maybeSingle();
+    const whatsappLive = wa?.live === true;
+
+    for (const alert of alerts.filter((a: any) => a.campaign_id === campaignId)) {
+      if (alert.frequency === "daily" && alert.last_fired_at) {
+        if (Date.now() - new Date(alert.last_fired_at).getTime() < HOURS(24)) continue;
+      }
+      const words: string[] = (alert.keywords ?? [])
+        .map((k: string) => k.toLowerCase())
+        .filter(Boolean);
+      const moods: string[] = alert.sentiments ?? [];
+      const minReach: number | null = alert.min_reach ?? null;
+
+      const matched = (mentions ?? []).filter((m: any) => {
+        if (already.has(`${alert.id}:${m.id}`)) return false;
+        if (alert.topic_id && m.topic_id !== alert.topic_id) return false;
+        if (minReach !== null) {
+          if ((m.reach ?? 0) < minReach) return false;
+        } else {
+          // Without a reach rule an alert waits for the mood to be read.
+          if (!m.sentiment) return false;
+          if (moods.length && !moods.includes(m.sentiment)) return false;
+        }
+        if (minReach !== null && moods.length && m.sentiment && !moods.includes(m.sentiment))
+          return false;
+        if (!words.length) return true;
+        const hay = `${m.title ?? ""} ${m.snippet ?? ""}`.toLowerCase();
+        return words.some((w) => hay.includes(w));
+      });
+
+      if (matched.length < (alert.min_matches ?? 1)) continue;
+
+      const subject = `Groundwork alert · ${alert.name} (${matched.length})`;
+      const body = matched
+        .slice(0, 10)
+        .map(
+          (m: any) =>
+            `• ${m.sentiment ? `[${m.sentiment}] ` : ""}${m.title ?? m.url}${m.reach ? ` (seen ${Number(m.reach).toLocaleString("en-KE")} times)` : ""}${m.author ? ` by ${m.author}` : ""}\n  ${m.url}`,
+        )
+        .join("\n");
+
+      const channel = alert.channel as string;
+      let status = "staged";
+      let detail: string | null = null;
+      if (channel === "app") {
+        status = "delivered";
+      } else if (channel === "email") {
+        try {
+          const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+          const r = await sendTemplateEmail("campaign-message", alert.destination, {
+            templateData: {
+              campaignName: nameOf.get(campaignId) ?? "Groundwork",
+              subject,
+              body: `${body}\n\nOpen Listening in Groundwork to react.`,
+              senderName: "Groundwork Listening",
+            },
+            idempotencyKey: `alert-${alert.id}-${matched[0].id}`,
+            fromName: "Groundwork Listening",
+          });
+          status = r.sent ? "sent" : "failed";
+          detail = r.sent ? null : "This address bounced or unsubscribed earlier.";
+        } catch (e) {
+          status = "failed";
+          detail = e instanceof Error ? e.message.slice(0, 200) : "The email could not be sent.";
+        }
+      } else if (whatsappLive) {
+        status = "queued";
+      } else {
+        detail = "Waiting on the WhatsApp Business number being switched live.";
+      }
+
+      const events = matched.slice(0, 10).map((m: any) => ({
+        campaign_id: campaignId,
+        alert_id: alert.id,
+        mention_id: m.id,
+        channel,
+        destination: alert.destination,
+        subject,
+        body,
+        status,
+        detail,
+      }));
+
+      const { error } = await sb.from("listening_alert_events").insert(events);
+      if (error) continue;
+
+      await sb
+        .from("listening_alerts")
+        .update({ last_fired_at: new Date().toISOString() })
+        .eq("id", alert.id);
+      count += events.length;
     }
-    const words: string[] = (alert.keywords ?? [])
-      .map((k: string) => k.toLowerCase())
-      .filter(Boolean);
-    const moods: string[] = alert.sentiments ?? [];
-
-    const matched = (mentions ?? []).filter((m: any) => {
-      if (already.has(`${alert.id}:${m.id}`)) return false;
-      if (alert.topic_id && m.topic_id !== alert.topic_id) return false;
-      if (moods.length && !moods.includes(m.sentiment)) return false;
-      if (!words.length) return true;
-      const hay = `${m.title ?? ""} ${m.snippet ?? ""}`.toLowerCase();
-      return words.some((w) => hay.includes(w));
-    });
-
-    if (matched.length < (alert.min_matches ?? 1)) continue;
-
-    const subject = `Groundwork alert · ${alert.name} (${matched.length})`;
-    const body = matched
-      .slice(0, 10)
-      .map((m: any) => `• [${m.sentiment}] ${m.title ?? m.url}\n  ${m.url}`)
-      .join("\n");
-
-    const channel = alert.channel as string;
-    const deliverable = channel === "whatsapp" ? whatsappLive : false;
-    const detail =
-      channel === "email"
-        ? "Waiting on the campaign sender domain being set up."
-        : whatsappLive
-          ? null
-          : "Waiting on the WhatsApp Business number being switched live.";
-
-    const events = matched.slice(0, 10).map((m: any) => ({
-      alert_id: alert.id,
-      mention_id: m.id,
-      channel,
-      destination: alert.destination,
-      subject,
-      body,
-      status: deliverable ? "queued" : "staged",
-      detail,
-    }));
-
-    const { error } = await sb.from("listening_alert_events").insert(events);
-    if (error) continue;
-
-    await sb
-      .from("listening_alerts")
-      .update({ last_fired_at: new Date().toISOString() })
-      .eq("id", alert.id);
-    count += events.length;
   }
 
   return count;

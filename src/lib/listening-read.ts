@@ -37,6 +37,8 @@ export type Focus = {
   aboutYou?: boolean;
   /** Only the last seven days. */
   week?: boolean;
+  /** Exactly these posts (a voice's, or what is spreading). */
+  ids?: string[];
 };
 
 export type Action = {
@@ -107,6 +109,7 @@ export function matches(p: Post, f: Focus, now: number): boolean {
   if (f.unhandled && !unhandled(p)) return false;
   if (f.aboutYou && p.topicKind !== "campaign") return false;
   if (f.week && !inWeek(p, now)) return false;
+  if (f.ids && !f.ids.includes(p.id)) return false;
   return true;
 }
 
