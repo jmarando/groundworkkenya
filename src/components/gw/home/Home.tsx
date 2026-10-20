@@ -6,6 +6,7 @@ import { HomeHeader } from "@/components/gw/home/HomeHeader";
 import { AddPoll, EditRivals, useRemovePoll } from "@/components/gw/home/RaceEditor";
 import { RaceSection } from "@/components/gw/home/RaceSection";
 import { StoryEditor } from "@/components/gw/home/StoryEditor";
+import { StrategyBlock } from "@/components/gw/home/StrategyBlock";
 import { TodaySection } from "@/components/gw/home/TodaySection";
 import { nairobiToday } from "@/lib/nairobi-date";
 import type { Scenario } from "@/lib/demo/types";
@@ -76,6 +77,7 @@ export function Home({
         canEdit={canEdit}
         onEditStory={() => setEditing("story")}
       />
+      {data && <StrategyBlock />}
       <FindingsBlock today={items.map((t) => t.title)} />
       {editing === "story" && (
         <StoryEditor

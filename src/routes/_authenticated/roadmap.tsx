@@ -380,7 +380,9 @@ function WiderNews({ data, refresh }: { data: RoadmapData; refresh: () => Promis
   });
   return (
     <>
-      <h2 className="plan-h">Wider news, read for this seat</h2>
+      <h2 className="plan-h" id="news">
+        Wider news, read for this seat
+      </h2>
       <p className="meta" style={{ marginTop: -4 }}>
         National and county stories move local votes. Each is read for this seat: who it helps here,
         and what to do in the next fortnight.

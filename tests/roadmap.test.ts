@@ -3,7 +3,8 @@
 // Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/roadmap.test.ts
 
-import { daysUntil, keyDates } from "@/lib/election-calendar";
+import { daysUntil, keyDates, nextKeyDate } from "@/lib/election-calendar";
+import { movesAhead } from "@/lib/brief";
 import {
   baseRoadmap,
   currentPhase,
@@ -166,6 +167,28 @@ eq(
   "an impact with an unknown stance is none",
   readImpact({ id: "1", title: "t", reading: "r", scope: "national", stance: "big" }),
   null,
+);
+
+eq("next key date", nextKeyDate("mp", "2026-10-20")?.key, "rules");
+eq("a stretch counts until its last day", nextKeyDate("mp", "2027-03-15")?.key, "audit");
+eq("none after polling day", nextKeyDate("mp", "2027-08-11"), null);
+const mv = (from: number, to: number) => ({
+  from,
+  to,
+  title: `m${from}`,
+  why: "",
+  how: [],
+  where: [],
+  measure: null,
+  diary: null,
+  sources: [],
+});
+eq(
+  "moves running this week",
+  movesAhead({ startsOn: "2026-10-21", moves: [mv(1, 2), mv(3, 14), mv(9, 9)] }, "2026-10-23").map(
+    (m) => m.title,
+  ),
+  ["m3", "m9"],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

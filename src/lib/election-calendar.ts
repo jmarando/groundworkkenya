@@ -215,3 +215,7 @@ export const RALLY_RULE: { text: string; sources: Source[] } = {
 /** Days from `today` to `day`, both Nairobi dates. */
 export const daysUntil = (today: string, day: string) =>
   Math.round((Date.parse(`${day}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+
+/** The next date that hasn't passed (a stretch counts until its last day), or null after polling day. */
+export const nextKeyDate = (level: string, today: string) =>
+  keyDates(level).find((d) => (d.until ?? d.on) >= today) ?? null;

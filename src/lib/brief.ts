@@ -253,3 +253,19 @@ export function liveActions(input: {
   }
   return out;
 }
+
+/** The moves running in the `days` from `today` (started already and not yet over, or starting). */
+export function movesAhead(
+  brief: Pick<Brief, "startsOn" | "moves">,
+  today: string,
+  days = 7,
+): (Move & { on: string; until: string })[] {
+  const last = addDays(today, days - 1);
+  return brief.moves
+    .map((m) => ({
+      ...m,
+      on: addDays(brief.startsOn, m.from - 1),
+      until: addDays(brief.startsOn, m.to - 1),
+    }))
+    .filter((m) => m.until >= today && m.on <= last);
+}
