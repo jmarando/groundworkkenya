@@ -5,7 +5,7 @@
 //   npx tsx --tsconfig tsconfig.json scripts/demo/sample-activity.ts <out.sql> <slug>...
 // Every row it writes can be told apart: people and conversations carry the tag "sample",
 // expenses and contributions a SAMPLE- reference, polls a SAMPLE- code, diary notes
-// "(sample)", and door visits client ids from md5('sample:…'). No sample person has agreed to
+// "(sample)", and door visits client ids from md5('sample-visit:…'). No sample person has agreed to
 // SMS, WhatsApp or calls, so nothing the campaign sends can reach the numbers.
 // supabase/seeds/sample-activity-remove.sql removes the lot.
 import { readFileSync, writeFileSync } from "node:fs";

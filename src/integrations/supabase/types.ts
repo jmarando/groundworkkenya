@@ -3483,6 +3483,7 @@ export type Database = {
       my_calendar_feed: { Args: { _reset?: boolean }; Returns: string }
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
+      prune_old_records: { Args: never; Returns: Json }
       my_walk_lists: {
         Args: never
         Returns: {

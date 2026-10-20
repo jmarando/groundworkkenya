@@ -48,7 +48,11 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
-        return Response.json({ ...result, rivals, story, search });
+        // Last, records past their keeping time (old webhook payloads, alert events, posts).
+        const pruned = await sb
+          .rpc("prune_old_records")
+          .then(({ data, error }) => (error ? { error: error.message } : data));
+        return Response.json({ ...result, rivals, story, search, pruned });
       },
     },
   },
