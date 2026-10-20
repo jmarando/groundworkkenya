@@ -42,7 +42,10 @@ async function scGet(path: string, params: Record<string, string>): Promise<any>
   if (!key) throw new ScrapeCreatorsCreditError("ScrapeCreators key is not set.");
 
   const url = `${SC_BASE}${path}?${new URLSearchParams(params)}`;
-  const res = await fetch(url, { headers: { "x-api-key": key } });
+  const res = await fetch(url, {
+    headers: { "x-api-key": key },
+    signal: AbortSignal.timeout(30_000),
+  });
 
   if (res.status === 402 || res.status === 403) {
     throw new ScrapeCreatorsCreditError("ScrapeCreators is out of credits.");

@@ -10,6 +10,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { toCentres, type Centre, type HereResult } from "@/lib/centres";
 import type { Client } from "@/lib/houses.functions";
 import { pageAll } from "@/lib/page-all";
+import { refused, type Failure } from "@/lib/db-error";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -97,14 +98,6 @@ export function cleanHere(input: unknown): Here {
   const a = (input as { accuracyM?: unknown }).accuracyM;
   return { ...pin, accuracyM: typeof a === "number" && Number.isFinite(a) && a >= 0 ? a : null };
 }
-
-type Failure = { code?: string; message?: string };
-
-/** The database's own words when it wrote them for people (our two error codes); ours otherwise. */
-const refused = (error: Failure, fallback: string) =>
-  new Error(
-    (error.code === "P0001" || error.code === "42501") && error.message ? error.message : fallback,
-  );
 
 /** An organiser's pin; the database says who may. */
 export async function placeStation(sb: Client, pin: Pin): Promise<void> {

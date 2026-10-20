@@ -12,6 +12,7 @@ import type { Client } from "@/lib/houses.functions";
 import { pageAll } from "@/lib/page-all";
 import { PLUS_CODE } from "@/lib/pluscode";
 import { DRAW_CAP, type HouseHistory } from "@/lib/walk-lists";
+import { refused, type Failure } from "@/lib/db-error";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
@@ -109,14 +110,6 @@ export function cleanNewList(input: unknown): NewList {
   if (giveTo !== null && !isId(giveTo)) throw new Error("Pick someone on the team.");
   return { name, centreId: centre, wardId: l["wardId"], doors: cleanDoors(l["doors"]), giveTo };
 }
-
-type Failure = { code?: string; message?: string };
-
-/** The database's own words when it wrote them for people (our two error codes); ours otherwise. */
-const refused = (error: Failure, fallback: string) =>
-  new Error(
-    (error.code === "P0001" || error.code === "42501") && error.message ? error.message : fallback,
-  );
 
 /** Makes a list; the answer says how many houses were left off because another list has them. */
 export async function createList(

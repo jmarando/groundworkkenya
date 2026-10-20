@@ -27,7 +27,7 @@ export async function trendsAnswer(terms: string[], geo: Geo): Promise<unknown> 
     tz: "-180",
     api_key: key,
   });
-  const res = await fetch(`${SERP}?${params}`);
+  const res = await fetch(`${SERP}?${params}`, { signal: AbortSignal.timeout(30_000) });
   const body: unknown = await res.json().catch(() => null);
   const error =
     body && typeof body === "object" ? (body as Record<string, unknown>)["error"] : null;

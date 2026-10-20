@@ -101,6 +101,7 @@ async function firecrawlSearch(query: string, limit: number, tbs: string): Promi
   if (!lovableKey || !connKey) throw new PauseError("Web search is not connected.");
 
   const res = await fetch(`${FIRECRAWL_GATEWAY}/search`, {
+    signal: AbortSignal.timeout(45_000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -185,6 +186,7 @@ export async function askAiJson<T>(prompt: string, name: string, schema: object)
   if (!key) throw new PauseError("AI is not configured.");
 
   const res = await fetch(AI_GATEWAY, {
+    signal: AbortSignal.timeout(90_000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -364,6 +366,7 @@ export async function runListeningScan(
       } else if (feed) {
         try {
           const res = await fetch(feed, {
+            signal: AbortSignal.timeout(15_000),
             headers: { Accept: "application/atom+xml, application/xml" },
           });
           if (!res.ok) throw new Error(`the feed answered ${res.status}`);

@@ -6,12 +6,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { addDays, type PlanList, type PlanWard, type Shift } from "@/lib/field-plan";
 import { readTeam, type TeamMember } from "@/lib/walk-lists.functions";
+import { refused, type Failure } from "@/lib/db-error";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Row = Record<string, unknown>;
-type Failure = { code?: string; message?: string };
 type Sb = {
   rpc: (fn: string, args?: Row) => PromiseLike<{ data: unknown; error: Failure | null }>;
 };
@@ -22,12 +22,6 @@ const rows = (d: unknown): Row[] =>
   Array.isArray(d) ? (d.filter((r) => r && typeof r === "object") as Row[]) : [];
 const shiftOf = (v: unknown): Shift | null =>
   v === "morning" || v === "afternoon" || v === "day" ? v : null;
-const refused = (e: Failure, fallback: string) =>
-  new Error(
-    (e.code === "P0001" || e.code === "42501" || e.code === "22023") && e.message
-      ? e.message
-      : fallback,
-  );
 
 export type FieldPlanData = {
   from: string;

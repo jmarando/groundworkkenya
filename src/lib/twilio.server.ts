@@ -45,6 +45,7 @@ export async function twilioPost(
   params: Record<string, string>,
 ): Promise<{ status: number; json: Record<string, unknown> | null; text: string }> {
   const res = await fetch(`${GATEWAY}${path}`, {
+    signal: AbortSignal.timeout(20_000),
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,

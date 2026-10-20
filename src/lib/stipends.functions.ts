@@ -4,23 +4,17 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { refused, type Failure } from "@/lib/db-error";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Failure = { code?: string; message?: string };
 type Sb = {
   rpc: (
     fn: string,
     args?: Record<string, unknown>,
   ) => PromiseLike<{ data: unknown; error: Failure | null }>;
 };
-const refused = (e: Failure, fallback: string) =>
-  new Error(
-    (e.code === "P0001" || e.code === "42501" || e.code === "22023") && e.message
-      ? e.message
-      : fallback,
-  );
 const sbOf = (context: { supabase: unknown }) => context.supabase as Sb;
 
 /** One pending stipend per person per day they knocked doors on a walk list in the window. */

@@ -31,6 +31,7 @@ export async function sendWhatsAppText(phone: string, body: string): Promise<WaS
   let text: string;
   try {
     res = await fetch(`${GATEWAY_URL}/messages`, {
+      signal: AbortSignal.timeout(20_000),
       method: "POST",
       headers: {
         Authorization: `Bearer ${lovableKey}`,
@@ -96,6 +97,7 @@ export async function sendWhatsAppTemplate(
   let text: string;
   try {
     res = await fetch(`${GATEWAY_URL}/messages`, {
+      signal: AbortSignal.timeout(20_000),
       method: "POST",
       headers: {
         Authorization: `Bearer ${lovableKey}`,

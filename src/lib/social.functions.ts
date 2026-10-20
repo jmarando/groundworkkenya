@@ -257,6 +257,7 @@ export const analyseSentiment = createServerFn({ method: "POST" })
       let verdicts: Verdict[] = [];
       try {
         const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+          signal: AbortSignal.timeout(60_000),
           method: "POST",
           headers: {
             "Content-Type": "application/json",

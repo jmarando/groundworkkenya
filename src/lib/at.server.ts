@@ -157,6 +157,7 @@ export async function sendSmsBatch(phones: string[], body: string): Promise<AtBa
   let res: Response;
   try {
     res = await fetch(atApi(), {
+      signal: AbortSignal.timeout(20_000),
       method: "POST",
       headers: {
         apiKey,
