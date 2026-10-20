@@ -13,6 +13,7 @@ import {
   type Focus,
 } from "@/lib/listening-read";
 import { nf } from "@/lib/format";
+import { spreading, voiceOf, SPREAD_DEFAULT } from "@/lib/voices";
 
 const MOOD: Record<string, { word: string; cls: string }> = {
   positive: { word: "warm", cls: "pill--ok" },
@@ -32,6 +33,8 @@ const when = (iso: string | null) =>
 
 type Topic = { id: string; label: string; kind: string; active: boolean };
 type Mark = (ids: string[], status: "new" | "actioned") => void;
+/** Opens a reaction to a post; absent where the caller can't react. */
+export type React = ((mentionId: string) => void) | undefined;
 
 export function Overview({
   topics,
@@ -39,12 +42,20 @@ export function Overview({
   busy,
   mark,
   openKeywords,
+  react,
+  threshold = SPREAD_DEFAULT,
+  pings = 0,
 }: {
   topics: Topic[];
   mentions: Mention[];
   busy: boolean;
   mark: Mark;
   openKeywords: () => void;
+  react?: React;
+  /** Views a post needs to count as spreading. */
+  threshold?: number;
+  /** In-app alerts raised in the last two days. */
+  pings?: number;
 }) {
   const [focus, setFocus] = useState<Focus | null>(null);
   // A week back from when the posts were loaded; recomputed with each load.
@@ -66,9 +77,11 @@ export function Overview({
         back={() => setFocus(null)}
         busy={busy}
         mark={mark}
+        react={react}
       />
     );
   }
+  const spread = spreading(mentions, threshold, now);
 
   const groups: { key: Conversation["group"]; title: string; note: string }[] = [
     { key: "you", title: "About you", note: "Your name, your party and your own accounts." },
@@ -83,7 +96,61 @@ export function Overview({
 
   return (
     <>
-      <div className="card lsn-todo">
+      <div className={`card lsn-spread${spread.length ? " lsn-spread--on" : ""}`}>
+        <div className="card-head">
+          <div>
+            <h2>Spreading now</h2>
+            <p className="meta">
+              Posts of the last two days seen at least {nf.format(threshold)} times, where the
+              platform counts views (TikTok and YouTube today).
+              {pings > 0 ? ` ${pings} alert${pings === 1 ? "" : "s"} raised in Groundwork.` : ""}
+            </p>
+          </div>
+          {spread.length > 0 && (
+            <button
+              type="button"
+              className="btn btn--sm"
+              onClick={() => setFocus({ label: "Spreading now", ids: spread.map((p) => p.id) })}
+            >
+              All {spread.length} →
+            </button>
+          )}
+        </div>
+        {spread.length === 0 ? (
+          <p className="f-note">Nothing over the bar. Set the bar in Alerts (seen at least…).</p>
+        ) : (
+          <ol className="lsn-acts">
+            {spread.slice(0, 4).map((p) => (
+              <li
+                key={p.id}
+                className={`lsn-act lsn-act--${p.sentiment === "negative" ? "urgent" : "watch"}`}
+              >
+                <div>
+                  <b>
+                    <a href={p.url} target="_blank" rel="noreferrer">
+                      {(p.title ?? p.url).split("\n")[0]!.slice(0, 140)} ↗
+                    </a>
+                  </b>
+                  <p className="meta">
+                    {sourceName(p.source)} · {voiceOf(p)?.name ?? "unknown account"} · seen{" "}
+                    {nf.format(p.reach ?? 0)}
+                    {p.shares ? `, shared ${nf.format(p.shares)}` : ""}
+                    {p.sentiment ? ` · ${MOOD[p.sentiment]?.word ?? p.sentiment}` : ""}
+                    {p.status !== "new" ? " · handled" : ""}
+                  </p>
+                </div>
+                {react && (
+                  <button type="button" className="btn btn--sm" onClick={() => react(p.id)}>
+                    React →
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      <div className="card lsn-todo" style={{ marginTop: 14 }}>
         <div className="card-head">
           <div>
             <h2>What to do this week</h2>
@@ -219,18 +286,20 @@ function MoodBar({ c }: { c: Conversation }) {
   );
 }
 
-function Drill({
+export function Drill({
   focus,
   posts,
   back,
   busy,
   mark,
+  react,
 }: {
   focus: Focus;
   posts: Mention[];
   back: () => void;
   busy: boolean;
   mark: Mark;
+  react?: React;
 }) {
   const [mood, setMood] = useState("all");
   const shown = mood === "all" ? posts : posts.filter((p) => (p.sentiment ?? "unrated") === mood);
@@ -281,12 +350,22 @@ function Drill({
             </button>
           ))}
       </div>
-      <PostList posts={shown} busy={busy} mark={mark} />
+      <PostList posts={shown} busy={busy} mark={mark} react={react} />
     </div>
   );
 }
 
-export function PostList({ posts, busy, mark }: { posts: Mention[]; busy: boolean; mark: Mark }) {
+export function PostList({
+  posts,
+  busy,
+  mark,
+  react,
+}: {
+  posts: Mention[];
+  busy: boolean;
+  mark: Mark;
+  react?: React;
+}) {
   const [limit, setLimit] = useState(40);
   if (posts.length === 0) return <p className="f-note">No posts here.</p>;
   return (
@@ -297,7 +376,11 @@ export function PostList({ posts, busy, mark }: { posts: Mention[]; busy: boolea
             <div className="lsn-post-meta">
               <span className="tag">{sourceName(m.source)}</span>
               <span>
-                {m.rival ? (m.rivalIsUs ? "Your account" : m.rival) : (m.author ?? m.domain ?? "")}
+                {m.rival
+                  ? m.rivalIsUs
+                    ? "Your account"
+                    : m.rival
+                  : (voiceOf(m)?.name ?? m.domain ?? "")}
               </span>
               <span className="mono">
                 {m.publishedAt ? `posted ${when(m.publishedAt)}` : `found ${when(m.foundAt)}`}
@@ -315,13 +398,19 @@ export function PostList({ posts, busy, mark }: { posts: Mention[]; busy: boolea
               )}
               {m.issue && <span className="tag">{m.issue}</span>}
               {m.topic && <span className="meta">found by “{m.topic}”</span>}
-              {m.reach !== null && <span className="meta">reach {nf.format(m.reach)}</span>}
+              {m.reach !== null && <span className="meta">seen {nf.format(m.reach)}</span>}
+              {m.shares ? <span className="meta">shared {nf.format(m.shares)}</span> : null}
               {m.commentsRead ? (
                 <span className="meta">
                   {m.commentsRead} replies read: {m.commentsPositive ?? 0} warm,{" "}
                   {m.commentsNegative ?? 0} angry
                 </span>
               ) : null}
+              {react && !m.rivalIsUs && (
+                <button type="button" className="btn btn--sm" onClick={() => react(m.id)}>
+                  React
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn--ghost btn--sm lsn-post-mark"

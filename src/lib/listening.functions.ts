@@ -104,6 +104,8 @@ export type ListeningData = {
   rivalJob: { lastRunAt: string | null; detail: string | null } | null;
   /** This campaign's candidates' own posts from the last 30 days. */
   rivalPosts: number;
+  /** The candidate and managers draft reactions to posts. */
+  canReact: boolean;
 };
 
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -112,6 +114,7 @@ export const getListening = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ListeningData> => {
     const sb = context.supabase;
+    const { data: role } = await sb.rpc("my_campaign_role");
 
     const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
     const [
@@ -321,6 +324,7 @@ export const getListening = createServerFn({ method: "GET" })
           }
         : null,
       rivalJob: rivalJob ? { lastRunAt: rivalJob.last_run_at, detail: rivalJob.detail } : null,
+      canReact: PRINCIPAL_ROLES.includes(role as MyRole),
       rivalPosts: rivalPosts ?? 0,
     };
   });

@@ -67,8 +67,22 @@ eq(
   phasesFor("mp", "2027-06-01").map((p) => p.key),
   ["campaign", "polling"],
 );
-eq("key dates in order", keyDates("governor").map((d) => d.on).join() === keyDates("governor").map((d) => d.on).sort().join(), true);
-eq("governor nominates 3 to 6 June", keyDates("governor").find((d) => d.key === "nomination")?.until, "2027-06-06");
+eq(
+  "key dates in order",
+  keyDates("governor")
+    .map((d) => d.on)
+    .join() ===
+    keyDates("governor")
+      .map((d) => d.on)
+      .sort()
+      .join(),
+  true,
+);
+eq(
+  "governor nominates 3 to 6 June",
+  keyDates("governor").find((d) => d.key === "nomination")?.until,
+  "2027-06-06",
+);
 
 const g = gaps(figures, today);
 eq("urgent gaps first", g[0]?.tone, "urgent");
@@ -77,7 +91,11 @@ eq(
   g.find((x) => x.key === "agents")?.headline,
   "0 of 120 polling streams have an agent named",
 );
-eq("spent more than raised", g.find((x) => x.key === "cash")?.headline, "KES 320,900 more spent than raised");
+eq(
+  "spent more than raised",
+  g.find((x) => x.key === "cash")?.headline,
+  "KES 320,900 more spent than raised",
+);
 eq(
   "no limit on file says so",
   gaps({ ...figures, limit: null }, today).find((x) => x.key === "limit")?.headline,
@@ -95,7 +113,11 @@ const base = baseRoadmap(figures, today);
 eq("starting plan covers every phase", base.phases.length, 5);
 const keys = base.phases.flatMap((p) => p.milestones.map((m) => m.key));
 eq("milestone keys are unique", new Set(keys).size, keys.length);
-eq("milestone keys are safe", keys.every((k) => /^[a-z0-9-]{1,80}$/.test(k)), true);
+eq(
+  "milestone keys are safe",
+  keys.every((k) => /^[a-z0-9-]{1,80}$/.test(k)),
+  true,
+);
 eq("current phase", currentPhase(base, today)?.key, "build");
 
 eq(
@@ -140,7 +162,11 @@ eq(
   })?.url,
   null,
 );
-eq("an impact with an unknown stance is none", readImpact({ id: "1", title: "t", reading: "r", scope: "national", stance: "big" }), null);
+eq(
+  "an impact with an unknown stance is none",
+  readImpact({ id: "1", title: "t", reading: "r", scope: "national", stance: "big" }),
+  null,
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

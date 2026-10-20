@@ -23,6 +23,11 @@ import { sourceName } from "@/lib/listening-read";
 import { nf, stamp } from "@/lib/format";
 import { QueryState } from "@/components/gw/QueryState";
 import { Alerts, Keywords } from "@/components/gw/listening/Settings";
+import { Reactions } from "@/components/gw/listening/Reactions";
+import { Voices } from "@/components/gw/listening/Voices";
+import { draftReaction } from "@/lib/rapid.functions";
+import { SPREAD_DEFAULT } from "@/lib/voices";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/listening")({
   // ?issue=water: a link from Home opens the mentions about that issue.
@@ -55,6 +60,8 @@ export const Route = createFileRoute("/_authenticated/listening")({
 const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", negative: "angry" };
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "voices", label: "Voices & platforms" },
+  { key: "reactions", label: "Reactions" },
   { key: "mentions", label: "All posts" },
   { key: "keywords", label: "Keywords" },
   { key: "alerts", label: "Alerts" },
@@ -74,6 +81,8 @@ function Listening() {
   const dropAlert = useServerFn(deleteAlert);
   const fireTest = useServerFn(testAlert);
   const markMention = useServerFn(setMentionStatus);
+  const draft = useServerFn(draftReaction);
+  const [openReaction, setOpenReaction] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useQuery({
@@ -92,6 +101,28 @@ function Listening() {
   const [search, setSearch] = useState("");
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["listening"] });
+
+  /** Drafts a reaction to a post with the AI, then opens it under Reactions. */
+  const react = data?.canReact
+    ? (mentionId: string) => {
+        const t = toast.loading("Reading the post and drafting a reaction…");
+        draft({ data: { mentionId } })
+          .then(async ({ id }) => {
+            toast.success("Reaction drafted.", { id: t });
+            await queryClient.invalidateQueries({ queryKey: ["reactions"] });
+            setOpenReaction(id);
+            setTab("reactions");
+          })
+          .catch((e: Error) => toast.error(e.message, { id: t }));
+      }
+    : undefined;
+  const threshold = Math.min(
+    SPREAD_DEFAULT,
+    ...(data?.alerts ?? []).filter((a) => a.active && a.minReach).map((a) => a.minReach!),
+  );
+  const pings = (data?.events ?? []).filter(
+    (e) => e.channel === "app" && Date.now() - new Date(e.at).getTime() < 2 * 864e5,
+  ).length;
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);
@@ -257,9 +288,18 @@ function Listening() {
             busy={busy}
             mark={mark}
             openKeywords={() => setTab("keywords")}
+            react={react}
+            threshold={threshold}
+            pings={pings}
           />
         </>
       )}
+
+      {tab === "voices" && (
+        <Voices mentions={data?.mentions ?? []} busy={busy} mark={mark} react={react} />
+      )}
+
+      {tab === "reactions" && <Reactions openId={openReaction} />}
 
       {tab === "mentions" && (
         <div className="card" style={{ marginTop: 14 }}>
@@ -322,7 +362,7 @@ function Listening() {
             </select>
           </div>
 
-          <PostList posts={mentions} busy={busy} mark={mark} />
+          <PostList posts={mentions} busy={busy} mark={mark} react={react} />
         </div>
       )}
 

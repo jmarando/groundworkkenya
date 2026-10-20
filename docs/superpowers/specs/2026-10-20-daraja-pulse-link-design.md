@@ -66,11 +66,39 @@ Answer: `{ "pulse_campaign_id": "…", "status": "draft", "created": true }`.
 
 Metrics are each post's peak, from `campaign_post_peak_metrics`.
 
+### POST `groundwork-rapid` (proposed 20 October 2026; Pulse to build)
+
+A reaction brief: something is spreading online and the campaign wants the creators already on its
+Pulse campaign to answer it within hours, without replacing the standing brief. Same auth and
+scope as the other two; 404 when the campaign has no Pulse link (Groundwork then tells the office
+to copy the brief to creators on WhatsApp, which it always offers).
+
+```json
+{
+  "groundwork_campaign_id": "ca000000-0000-4000-8000-000000000004",
+  "rapid_id": "…",                       // Groundwork's rapid_responses id; repeat sends update it
+  "post_url": "https://www.tiktok.com/@…/video/…",
+  "platform": "tiktok",
+  "what_happened": "…", "angle": "…", "creator_brief": "…",
+  "dos": ["…", "Label every paid post as a paid partnership with the campaign's \"Paid for by\" line."],
+  "donts": ["…", "Never appeal to or target anyone by tribe or community.", "Never attack the person who posted; answer the claim."],
+  "respond_by": "2026-10-20T18:00:00Z",
+  "platforms": ["tiktok"],
+  "creator_ids": ["…"],                  // from groundwork-report's creators; empty lets Pulse choose
+  "paid_for_by": "Paid for by …"
+}
+```
+
+Pulse files it as a task under the linked campaign for the named (or all confirmed) creators,
+keeps `require_draft_approval = true`, adds its two fixed lines, and answers
+`{ "task_id": "…", "creators_notified": 3 }`. The posts creators make for it come back in
+`groundwork-report` like any other.
+
 ### Pulse changes this needs
 
 1. Migration: `campaigns.political boolean not null default false`, `campaigns.paid_for_by text`,
    the `groundwork_links` table, and `insert into internal_job_keys(name) values ('groundwork')`.
-2. The two functions above, plus their `verify_jwt = false` entries.
+2. The functions above (`groundwork-rapid` once built), plus their `verify_jwt = false` entries.
 3. Political campaigns must not get the default "no politically sensitive content" don't, and
    `discovery-match` should stop excluding political creators *for political campaigns only*.
 4. Secret `GROUNDWORK_AGENCY_SLUG`; then read the generated key once from `internal_job_keys` and
