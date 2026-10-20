@@ -553,6 +553,8 @@ export type BroadcastData = {
     whatsapp: boolean;
     call: boolean;
     optedOut: boolean;
+    /** A sample contact: shown, never messaged or called. */
+    sample: boolean;
     lastTouch: string | null;
   }[];
   campaigns: {
@@ -579,7 +581,7 @@ export const getBroadcast = createServerFn({ method: "GET" })
         sb
           .from("people")
           .select(
-            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at",
+            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at, tags",
           )
           .range(from, to),
       ),
@@ -679,6 +681,7 @@ export const getBroadcast = createServerFn({ method: "GET" })
           whatsapp: x.consent_whatsapp,
           call: x.consent_call,
           optedOut: x.opted_out,
+          sample: (x.tags ?? []).includes("sample"),
           lastTouch: (x.last_contacted_at as string | null) ?? null,
         };
       }),

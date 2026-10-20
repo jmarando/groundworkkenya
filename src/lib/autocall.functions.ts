@@ -352,6 +352,8 @@ async function audience(sb: Client, blastId: string | null, a: BroadcastAudience
       .select("id, phone, ward_id, segment, support_score")
       .eq("consent_call", true)
       .eq("opted_out", false)
+      // Sample contacts carry made-up numbers that may belong to someone: never called.
+      .not("tags", "cs", "{sample}")
       .order("id")
       .range(from, from + 999)) as {
       data:

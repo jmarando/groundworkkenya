@@ -59,6 +59,8 @@ async function reachable(sb: Sb, a: BroadcastAudience): Promise<Person[]> {
       .select("id, full_name, phone, ward_id, segment, support_score, campaign_id")
       .eq("consent_whatsapp", true)
       .eq("opted_out", false)
+      // Sample contacts carry made-up numbers that may belong to someone: never sent to.
+      .not("tags", "cs", "{sample}")
       .order("id")
       .range(from, from + 999);
     if (error) throw new Error("Could not load the audience.");

@@ -197,7 +197,8 @@ function Broadcast() {
   ]
     .filter(Boolean)
     .join(" ");
-  const live = matched.filter((c) => !c.optedOut);
+  const live = matched.filter((c) => !c.optedOut && !c.sample);
+  const samples = matched.filter((c) => c.sample).length;
   const byChannel = {
     sms: live.filter((c) => c.sms).length,
     wa: live.filter((c) => c.whatsapp).length,
@@ -340,6 +341,9 @@ function Broadcast() {
             <span className="f-note">
               {nf.format(matched.filter((c) => c.optedOut).length)} opted out, left out of every
               send.
+              {samples
+                ? ` ${nf.format(samples)} sample contacts are shown but never messaged or called.`
+                : ""}
             </span>
           </div>
         </div>
