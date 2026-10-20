@@ -28,10 +28,10 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
       { to: "/diary", label: "Diary & news" },
       { to: "/voters", label: "Voters", faint: "MAP" },
       { to: "/elections", label: "Elections", faint: "ATLAS" },
-      { to: "/strategy", label: "Strategy", faint: "SO WHAT" },
+      { to: "/strategy", label: "Strategy", faint: "PATHS" },
       { to: "/polling", label: "Polling", faint: "LIVE" },
       { to: "/field-plan", label: "Field plan", faint: "2 WEEKS" },
-      { to: "/agents", label: "Agents & stipends", faint: "§3.4" },
+      { to: "/agents", label: "Agents & stipends", faint: "PAY" },
     ],
   },
   {
@@ -40,7 +40,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
       { to: "/inbox", label: "Inbox" },
       { to: "/broadcast", label: "Broadcast & ads" },
       { to: "/website", label: "Website", faint: "PUBLIC" },
-      { to: "/listening", label: "Social & listening", faint: "LIVE" },
+      { to: "/listening", label: "Listening", faint: "LIVE" },
     ],
   },
   {
@@ -58,7 +58,7 @@ const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
     title: "System",
     items: [
       { to: "/team", label: "Team", faint: "ACCESS", adminOnly: true },
-      { to: "/campaigns", label: "Campaigns", faint: "SUPER", superOnly: true },
+      { to: "/campaigns", label: "Campaigns", faint: "ALL", superOnly: true },
     ],
   },
 ];
