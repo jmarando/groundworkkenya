@@ -743,6 +743,35 @@ export type Database = {
           },
         ]
       }
+      calendar_feeds: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_feeds_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_channels: {
         Row: {
           campaign_id: string
@@ -3289,6 +3318,20 @@ export type Database = {
         }[]
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
+      calendar_feed_entries: {
+        Args: { _token: string }
+        Returns: {
+          campaign: string
+          day: string
+          id: string
+          kind: string
+          note: string
+          starts_at: string
+          title: string
+          updated_at: string
+          ward_name: string
+        }[]
+      }
       campaign_for_channel: {
         Args: { _identifier: string; _kind: string }
         Returns: string
@@ -3437,6 +3480,7 @@ export type Database = {
         Args: { _poll_id: string; _sms_body: string }
         Returns: Json
       }
+      my_calendar_feed: { Args: { _reset?: boolean }; Returns: string }
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
       my_walk_lists: {
