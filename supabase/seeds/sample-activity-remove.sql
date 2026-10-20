@@ -28,6 +28,9 @@ delete from public.race_polls x using sample_campaigns c
  where x.campaign_id = c.id and x.pollster like '%(sample)';
 delete from public.walk_lists x using sample_campaigns c
  where x.campaign_id = c.id and x.name like '%(sample)';
+-- Sakaja's sample walk lists (given to the test agent), with their doors.
+delete from public.walk_lists x using public.campaigns c
+ where x.campaign_id = c.id and c.slug = 'sakaja' and x.name like '%(sample)';
 delete from public.media_buys x using sample_campaigns c
  where x.campaign_id = c.id and x.name like '%(sample)';
 delete from public.expenses x using sample_campaigns c

@@ -18,6 +18,17 @@ export type Mention = {
   sentimentScore: number | null;
   issue: string | null;
   status: string;
+  /** The keyword's kind (campaign, rival, issue); null for a candidate's own post. */
+  topicKind: string | null;
+  rivalId: string | null;
+  /** The candidate whose own account the post came from. */
+  rival: string | null;
+  rivalIsUs: boolean;
+  author: string | null;
+  reach: number | null;
+  commentsRead: number | null;
+  commentsPositive: number | null;
+  commentsNegative: number | null;
 };
 
 export type ListeningAlert = {
@@ -101,6 +112,7 @@ export const getListening = createServerFn({ method: "GET" })
       { data: convos },
       { data: rivalJob },
       { count: rivalPosts },
+      { data: rivals },
     ] = await Promise.all([
       sb.from("listening_topics").select("*").order("label"),
       sb.from("listening_mentions").select("*").order("found_at", { ascending: false }).limit(600),
@@ -122,7 +134,9 @@ export const getListening = createServerFn({ method: "GET" })
         .select("id", { count: "exact", head: true })
         .not("rival_id", "is", null)
         .gte("published_at", since30),
+      sb.from("race_rivals").select("id, name, is_us"),
     ]);
+    const rivalById = new Map((rivals ?? []).map((r: any) => [r.id, r]));
 
     const topicById = new Map((topics ?? []).map((t: any) => [t.id, t]));
     const rows = mentions ?? [];
@@ -210,6 +224,15 @@ export const getListening = createServerFn({ method: "GET" })
         sentimentScore: m.sentiment_score === null ? null : Number(m.sentiment_score),
         issue: m.issue,
         status: m.status,
+        topicKind: m.topic_id ? (topicById.get(m.topic_id)?.kind ?? null) : null,
+        rivalId: m.rival_id ?? null,
+        rival: m.rival_id ? (rivalById.get(m.rival_id)?.name ?? null) : null,
+        rivalIsUs: m.rival_id ? Boolean(rivalById.get(m.rival_id)?.is_us) : false,
+        author: m.author ?? null,
+        reach: m.reach === null || m.reach === undefined ? null : Number(m.reach),
+        commentsRead: m.comments_read ?? null,
+        commentsPositive: m.comments_positive ?? null,
+        commentsNegative: m.comments_negative ?? null,
       })),
       alerts: (alerts ?? []).map((a: any) => ({
         id: a.id,
@@ -477,16 +500,20 @@ export const testAlert = createServerFn({ method: "POST" })
 
 export const setMentionStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: string }) => {
+  .inputValidator((input: { id?: string; ids?: string[]; status: string }) => {
     if (!["new", "reviewed", "actioned", "ignored"].includes(input.status))
       throw new Error("Unknown status.");
-    return input;
+    const ids = [...(input.ids ?? []), ...(input.id ? [input.id] : [])].filter(
+      (x) => typeof x === "string" && x.length > 0,
+    );
+    if (ids.length === 0 || ids.length > 200) throw new Error("Pick between 1 and 200 posts.");
+    return { ids, status: input.status };
   })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("listening_mentions")
       .update({ status: data.status })
-      .eq("id", data.id);
+      .in("id", data.ids);
     if (error) throw new Error("Only an admin or manager can update a mention.");
     return { ok: true };
   });

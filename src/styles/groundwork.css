@@ -2405,3 +2405,41 @@ figure { margin: 0; }
 .cal-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
 .cal-url { width:100%; min-height:40px; padding:8px 10px; font-family:var(--font-mono); font-size:12px; color:var(--foreground); background:var(--muted); border:1px solid var(--border); border-radius:10px; }
 .linkish { padding:0; font:inherit; color:inherit; text-decoration:underline; background:none; border:0; cursor:pointer; }
+
+/* Listening overview: actions, conversations, the posts behind them */
+.lsn-status { margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+.lsn-todo { margin-top:14px; }
+.lsn-acts { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.lsn-act { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:12px 14px; border:1px solid var(--border); border-left-width:4px; border-radius:10px; }
+.lsn-act p { margin:4px 0 0; }
+.lsn-act .btn { flex-shrink:0; }
+.lsn-act--urgent { border-left-color:var(--status-missed); }
+.lsn-act--watch { border-left-color:var(--status-onstation); }
+.lsn-act--good { border-left-color:var(--status-reporting); }
+.lsn-convos { list-style:none; margin:6px 0 0; padding:0; }
+.lsn-convos li + li { border-top:1px solid var(--border); }
+.lsn-convo { width:100%; display:grid; grid-template-columns:minmax(0,1fr) 110px 120px 16px; align-items:center; gap:14px; padding:12px 2px; background:none; border:0; text-align:left; color:inherit; cursor:pointer; }
+.lsn-convo:hover b { text-decoration:underline; }
+.lsn-convo:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+.lsn-convo-name, .lsn-convo-n { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.lsn-convo-n { text-align:right; font-variant-numeric:tabular-nums; }
+.lsn-mood { display:flex; height:8px; border-radius:999px; overflow:hidden; background:var(--limit-track); }
+.lsn-mood i { display:block; height:100%; }
+.lsn-mood .w { background:var(--status-reporting); }
+.lsn-mood .n { background:var(--muted-foreground); opacity:.35; }
+.lsn-mood .a { background:var(--status-missed); }
+.lsn-mood--none { background:none; }
+.lsn-go { color:var(--muted-foreground); }
+.lsn-posts { list-style:none; margin:8px 0 12px; padding:0; }
+.lsn-post { padding:14px 0; }
+.lsn-post + .lsn-post { border-top:1px solid var(--border); }
+.lsn-post-meta, .lsn-post-foot { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; font-size:12px; color:var(--muted-foreground); }
+.lsn-post-title { display:block; margin:6px 0 4px; font-weight:600; color:inherit; overflow-wrap:anywhere; }
+.lsn-post-text { margin:0 0 8px; font-size:13.5px; line-height:1.5; white-space:pre-line; overflow-wrap:anywhere; }
+.lsn-post-mark { margin-left:auto; }
+@media (max-width: 640px) {
+  .lsn-act { flex-direction:column; align-items:stretch; }
+  .lsn-convo { grid-template-columns:minmax(0,1fr) 64px 16px; }
+  .lsn-convo .lsn-mood { grid-column:1 / 3; grid-row:2; }
+  .lsn-convo .lsn-go { grid-row:1; grid-column:3; }
+}

@@ -18,6 +18,8 @@ import {
 } from "@/lib/listening.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { filterMentions } from "@/lib/listening-filter";
+import { Overview, PostList } from "@/components/gw/listening/Overview";
+import { sourceName } from "@/lib/listening-read";
 
 export const Route = createFileRoute("/_authenticated/listening")({
   // ?issue=water: a link from Home opens the mentions about that issue.
@@ -59,8 +61,8 @@ const stamp = (iso: string | null) =>
 
 const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", negative: "angry" };
 const TABS = [
-  { key: "pulse", label: "Pulse" },
-  { key: "mentions", label: "Mentions" },
+  { key: "overview", label: "Overview" },
+  { key: "mentions", label: "All posts" },
   { key: "keywords", label: "Keywords" },
   { key: "alerts", label: "Alerts" },
 ] as const;
@@ -85,7 +87,7 @@ function Listening() {
 
   const { issue } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
-  const [tab, setTab] = useState<Tab>(issue ? "mentions" : "pulse");
+  const [tab, setTab] = useState<Tab>(issue ? "mentions" : "overview");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [source, setSource] = useState("all");
@@ -109,13 +111,6 @@ function Listening() {
     }
   };
 
-  const t = data?.totals;
-  const trend = t ? t.last24h - t.prev24h : 0;
-  const moodScore = useMemo(() => {
-    const rated = (t?.positive ?? 0) + (t?.neutral ?? 0) + (t?.negative ?? 0);
-    return rated ? Math.round((((t?.positive ?? 0) - (t?.negative ?? 0)) / rated) * 100) : 0;
-  }, [t]);
-
   const mentions = useMemo(
     () =>
       filterMentions(data?.mentions ?? [], {
@@ -128,13 +123,11 @@ function Listening() {
     [data, source, mood, topicFilter, search, issue],
   );
 
-  const answerToday = (data?.mentions ?? [])
-    .filter((m) => m.sentiment === "negative" && m.status === "new")
-    .slice(0, 8);
-
-  const maxIssue = Math.max(...(data?.byIssue ?? []).map((i) => i.n), 1);
-  const maxSource = Math.max(...(data?.bySource ?? []).map((s) => s.n), 1);
-  const maxDay = Math.max(...(data?.byDay ?? []).map((d) => d.positive + d.neutral + d.negative), 1);
+  const mark = (ids: string[], status: "new" | "actioned") =>
+    act(
+      () => markMention({ data: { ids, status } }),
+      status === "actioned" ? `Marked ${ids.length} handled.` : "Reopened.",
+    );
 
   const exportMentions = () =>
     downloadCSV(
@@ -164,8 +157,8 @@ function Listening() {
             Everything said about you, <span className="serif">in one room.</span>
           </h1>
           <p className="meta">
-            News sites, blogs and public posts swept every hour against your keywords, read for mood
-            and issue, and pushed to whoever needs to know.
+            News, Facebook, X, Instagram, TikTok, YouTube and blogs swept every hour against your
+            keywords. Start with what to do; open anything to read the posts behind it.
           </p>
         </div>
         <div className="vh-side">
@@ -208,204 +201,27 @@ function Listening() {
         ))}
       </div>
 
-      {tab === "pulse" && (
+      {tab === "overview" && (
         <>
-          <div className="card lk-keywords">
-            <div>
-              <span className="eyebrow">Keywords</span>
-              <p>
-                {(data?.topics ?? [])
-                  .filter((tp) => tp.active)
-                  .map((tp) => tp.label)
-                  .join(" · ") || "No keywords yet."}
-              </p>
-            </div>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => setTab("keywords")}
-            >
-              Add keywords
+          <p className="meta lsn-status">
+            Following {(data?.topics ?? []).filter((tp) => tp.active).length} keywords
+            {" · "}
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setTab("keywords")}>
+              change
             </button>
-          </div>
-          <p className="meta" style={{ marginTop: 8 }}>
-            Candidates&apos; own posts:{" "}
+            {" · "}
+            Candidates&apos; own accounts:{" "}
             {data?.rivalJob?.lastRunAt
-              ? `last read ${stamp(data.rivalJob.lastRunAt)}; ${
-                  data.rivalPosts
-                    ? `${nf.format(data.rivalPosts)} from the last 30 days are in the feed.`
-                    : "none yet. They are read from the accounts under Who's running on Home."
-                }${data.rivalJob.detail ? ` ${data.rivalJob.detail}` : ""}`
-              : "not read yet; the first read happens with the next hourly sweep."}
+              ? `last read ${stamp(data.rivalJob.lastRunAt)}${data.rivalJob.detail ? ` (${data.rivalJob.detail})` : ""}`
+              : "not read yet"}
           </p>
-          <div className="g5" style={{ marginTop: 14 }}>
-            <div className="kpi">
-              <span className="kpi-lbl">Mentions tracked</span>
-              <span className="kpi-val">{nf.format(t?.mentions ?? 0)}</span>
-              <span className="kpi-foot">across all your keywords</span>
-            </div>
-            <div className="kpi">
-              <span className="kpi-lbl">Last 24 hours</span>
-              <span className="kpi-val">{nf.format(t?.last24h ?? 0)}</span>
-              <span className="kpi-foot">
-                {trend === 0 ? "level with yesterday" : `${trend > 0 ? "+" : ""}${trend} on yesterday`}
-              </span>
-            </div>
-            <div className="kpi">
-              <span className="kpi-lbl">Mood balance</span>
-              <span className="kpi-val">{moodScore > 0 ? `+${moodScore}` : moodScore}</span>
-              <span className="kpi-foot">warm minus angry, out of 100</span>
-            </div>
-            <div className={`kpi${(t?.needsReview ?? 0) > 0 ? " note--flag" : ""}`}>
-              <span className="kpi-lbl">Angry, unhandled</span>
-              <span className="kpi-val">{nf.format(t?.needsReview ?? 0)}</span>
-              <span className="kpi-foot">nobody has looked at these yet</span>
-            </div>
-            <div className="kpi">
-              <span className="kpi-lbl">Waiting on a read</span>
-              <span className="kpi-val">{nf.format(t?.unrated ?? 0)}</span>
-              <span className="kpi-foot">no mood attached yet</span>
-            </div>
-          </div>
-
-          <div className="g2 fx2" style={{ marginTop: 14 }}>
-            <div className="card">
-              <div className="card-head">
-                <h2>Mood, day by day</h2>
-                <span className="mono">last 14 days</span>
-              </div>
-              <div className="barlist">
-                {(data?.byDay ?? []).map((d) => {
-                  const total = d.positive + d.neutral + d.negative;
-                  return (
-                    <div className="barlist-row" key={d.day}>
-                      <span className="lbl">{d.day.slice(5)}</span>
-                      <span className="barlist-track">
-                        <i style={{ width: `${(total / maxDay) * 100}%` }} />
-                      </span>
-                      <span className="val">
-                        {total} · {d.negative} angry
-                      </span>
-                    </div>
-                  );
-                })}
-                {(data?.byDay ?? []).length === 0 && <p className="f-note">Nothing swept yet.</p>}
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-head">
-                <h2>Where it is being said</h2>
-                <span className="mono">by source</span>
-              </div>
-              <div className="barlist">
-                {(data?.bySource ?? []).map((s) => (
-                  <div className="barlist-row" key={s.source}>
-                    <span className="lbl">{s.source}</span>
-                    <span className="barlist-track">
-                      <i style={{ width: `${(s.n / maxSource) * 100}%` }} />
-                    </span>
-                    <span className="val">
-                      {nf.format(s.n)} · {s.negative} angry
-                    </span>
-                  </div>
-                ))}
-                {(data?.bySource ?? []).length === 0 && <p className="f-note">Nothing swept yet.</p>}
-              </div>
-            </div>
-          </div>
-
-          <div className="g2 fx3" style={{ marginTop: 14 }}>
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <h2>Issues running hot</h2>
-                  <p className="meta">Today against yesterday, so a spike shows up early.</p>
-                </div>
-                <span className="mono">24h</span>
-              </div>
-              <div className="barlist">
-                {(data?.byIssue ?? []).map((i) => (
-                  <div className="barlist-row" key={i.issue}>
-                    <span className="lbl">{i.issue}</span>
-                    <span className="barlist-track">
-                      <i style={{ width: `${(i.n / maxIssue) * 100}%` }} />
-                    </span>
-                    <span className="val">
-                      {nf.format(i.n)}
-                      {i.prev > 0 && i.n > i.prev * 1.5 ? " · rising" : ""}
-                    </span>
-                  </div>
-                ))}
-                {(data?.byIssue ?? []).length === 0 && <p className="f-note">No issues tagged yet.</p>}
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="card-head">
-                <h2>Answer today</h2>
-                <span className="mono">angry, untouched</span>
-              </div>
-              <div className="t-list">
-                {answerToday.map((m) => (
-                  <div className="t-row" key={m.id}>
-                    <span className="t-when mono">{stamp(m.foundAt)}</span>
-                    <span className="t-what">
-                      <a href={m.url} target="_blank" rel="noreferrer">
-                        <b>{m.title ?? m.domain ?? m.url}</b>
-                      </a>{" "}
-                      · {m.snippet?.slice(0, 120) ?? ""}
-                    </span>
-                    <span className="t-who">
-                      {m.issue ?? "unsorted"} ·{" "}
-                      <button className="btn btn--sm" onClick={() => act(() => markMention({ data: { id: m.id, status: "actioned" } }), "Marked handled.")}>
-                        handled
-                      </button>
-                    </span>
-                  </div>
-                ))}
-                {answerToday.length === 0 && <p className="f-note">Nothing angry is sitting unhandled.</p>}
-              </div>
-            </div>
-          </div>
-
-          <div className="g2 fx4" style={{ marginTop: 14 }}>
-            <div className="card">
-              <div className="card-head">
-                <h2>Loudest outlets</h2>
-                <span className="mono">by domain</span>
-              </div>
-              <div className="f-rows">
-                {(data?.byDomain ?? []).map((d) => (
-                  <div className="f-row" key={d.domain}>
-                    <span>{d.domain}</span>
-                    <b>
-                      {nf.format(d.n)} · {d.negative} angry
-                    </b>
-                  </div>
-                ))}
-                {(data?.byDomain ?? []).length === 0 && <p className="f-note">Nothing swept yet.</p>}
-              </div>
-            </div>
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <h2>Your own inbox, for comparison</h2>
-                  <p className="meta">What people write to you directly, not what is published about you.</p>
-                </div>
-                <span className="mono">issues</span>
-              </div>
-              <div className="f-rows">
-                {(data?.ownedIssues ?? []).map((i) => (
-                  <div className="f-row" key={i.issue}>
-                    <span>{i.issue}</span>
-                    <b>{nf.format(i.n)}</b>
-                  </div>
-                ))}
-                {(data?.ownedIssues ?? []).length === 0 && <p className="f-note">No tagged conversations yet.</p>}
-              </div>
-            </div>
-          </div>
+          <Overview
+            topics={data?.topics ?? []}
+            mentions={data?.mentions ?? []}
+            busy={busy}
+            mark={mark}
+            openKeywords={() => setTab("keywords")}
+          />
         </>
       )}
 
@@ -413,7 +229,7 @@ function Listening() {
         <div className="card" style={{ marginTop: 14 }}>
           <div className="card-head">
             <div>
-              <h2>Every mention</h2>
+              <h2>Every post found</h2>
               <p className="meta">{nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.</p>
             </div>
             <button className="btn btn--sm" onClick={exportMentions}>
@@ -439,7 +255,7 @@ function Listening() {
               onChange={(e) => setSearch(e.target.value)}
             />
             <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-              <option value="all">All topics</option>
+              <option value="all">All keywords</option>
               {(data?.topics ?? []).map((tp) => (
                 <option key={tp.id} value={tp.id}>
                   {tp.label}
@@ -450,7 +266,7 @@ function Listening() {
               <option value="all">All sources</option>
               {(data?.bySource ?? []).map((s) => (
                 <option key={s.source} value={s.source}>
-                  {s.source}
+                  {sourceName(s.source)}
                 </option>
               ))}
             </select>
@@ -463,39 +279,7 @@ function Listening() {
             </select>
           </div>
 
-          <div className="t-list">
-            {mentions.slice(0, 150).map((m) => (
-              <div className="t-row" key={m.id}>
-                <span className="t-when mono">{stamp(m.foundAt)}</span>
-                <span className="t-what">
-                  <a href={m.url} target="_blank" rel="noreferrer">
-                    <b>{m.title ?? m.url}</b>
-                  </a>
-                  <br />
-                  <span className="meta">{m.snippet?.slice(0, 180) ?? "no extract"}</span>
-                </span>
-                <span className="t-who">
-                  {m.domain ?? m.source} · {m.sentiment ? MOOD[m.sentiment] : "unread"} ·{" "}
-                  {m.issue ?? "unsorted"}
-                  <br />
-                  <button
-                    className="btn btn--sm"
-                    onClick={() =>
-                      act(
-                        () => markMention({ data: { id: m.id, status: m.status === "actioned" ? "new" : "actioned" } }),
-                        "Updated.",
-                      )
-                    }
-                  >
-                    {m.status === "actioned" ? "handled" : "mark handled"}
-                  </button>
-                </span>
-              </div>
-            ))}
-            {mentions.length === 0 && (
-              <p className="f-note">Nothing matches. Run a sweep or widen the filters.</p>
-            )}
-          </div>
+          <PostList posts={mentions} busy={busy} mark={mark} />
         </div>
       )}
 
