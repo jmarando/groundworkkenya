@@ -23,6 +23,7 @@ import {
 } from "@/lib/social.functions";
 
 import { stamp } from "@/lib/format";
+import { Channels } from "@/components/gw/inbox/Channels";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: Inbox,
@@ -64,65 +65,6 @@ const MOOD: Record<string, string> = {
   neutral: "neutral",
   negative: "angry",
 };
-
-const CONNECTIONS = [
-  {
-    code: "SMS",
-    cls: "ch--sms",
-    name: "SMS · sender ID",
-    note: "Two-way on a shortcode. The workhorse.",
-    state: "ok",
-  },
-  {
-    code: "US",
-    cls: "ch--us",
-    name: "USSD *xyz#",
-    note: "Feature phones. Polls, sign-ups and call-me-back requests.",
-    state: "ok",
-  },
-  {
-    code: "EM",
-    cls: "ch--em",
-    name: "Email",
-    note: "Any IMAP mailbox. Threads keep their history.",
-    state: "ok",
-  },
-  {
-    code: "FB",
-    cls: "ch--fb",
-    name: "Messenger",
-    note: "Page inbox via Meta Graph API. 24-hour reply window.",
-    state: "ok",
-  },
-  {
-    code: "IG",
-    cls: "ch--ig",
-    name: "Instagram DMs",
-    note: "Business account via the same Meta app.",
-    state: "ok",
-  },
-  {
-    code: "X",
-    cls: "ch--x",
-    name: "X DMs & mentions",
-    note: "Needs a paid X API tier.",
-    state: "amber",
-  },
-  {
-    code: "TT",
-    cls: "ch--tt",
-    name: "TikTok",
-    note: "No DM API. Comments come in through listening.",
-    state: "amber",
-  },
-  {
-    code: "WA",
-    cls: "ch--wa",
-    name: "WhatsApp",
-    note: "Meta bars political campaigns from the API. Handsets run by people.",
-    state: "red",
-  },
-];
 
 const SOCIAL = ["facebook", "messenger", "instagram", "x", "tiktok", "whatsapp"];
 
@@ -754,42 +696,7 @@ function Inbox() {
         </div>
       </div>
 
-      <div className="fd-section fx3" style={{ marginTop: 22 }}>
-        <span className="eyebrow">Channel connections · what each platform allows a campaign</span>
-        <div className="conn">
-          {CONNECTIONS.map((c) => (
-            <div className="conn-item" key={c.code}>
-              <span className={`ch ${c.cls}`}>{c.code}</span>
-              <b>{c.name}</b>
-              <p>{c.note}</p>
-              {c.state === "ok" && (
-                <span className="pill pill--ok">
-                  <span className="g" aria-hidden="true">
-                    ●
-                  </span>{" "}
-                  Ready
-                </span>
-              )}
-              {c.state === "amber" && (
-                <span className="pill pill--amber">
-                  <span className="g" aria-hidden="true">
-                    ◐
-                  </span>{" "}
-                  Limited
-                </span>
-              )}
-              {c.state === "red" && (
-                <span className="pill pill--outline-red">
-                  <span className="g" aria-hidden="true">
-                    ▲
-                  </span>{" "}
-                  No API for campaigns
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <Channels />
     </section>
   );
 }

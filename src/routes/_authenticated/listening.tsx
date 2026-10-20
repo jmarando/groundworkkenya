@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -169,9 +169,6 @@ function Listening() {
           </p>
         </div>
         <div className="vh-side">
-          <Link to="/social" className="btn btn--ghost btn--sm">
-            Social & sentiment
-          </Link>
           <span className="syncline">
             <span
               className={data?.job?.status === "paused" ? "dot-stale" : "dot-live"}
