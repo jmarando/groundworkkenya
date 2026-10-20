@@ -208,6 +208,30 @@ function valueOf(payload: unknown): WaValue {
 
 const iso = (s?: string) => new Date(s ? Number(s) * 1000 : Date.now()).toISOString();
 
+/** A reply goes to the campaign that last wrote to this number on WhatsApp within 30 days. */
+const WA_REPLY_WINDOW_MS = 30 * 86_400_000;
+
+/**
+ * The campaign a WhatsApp message from `phone` belongs to. Every campaign sends from the same
+ * WhatsApp number, so the reply is filed under whichever campaign last wrote to this person on
+ * WhatsApp (within 30 days); otherwise under the number's own campaign.
+ */
+export async function waReplyCampaign(sb: Sb, phone: string): Promise<string> {
+  const digits = phone.replace(/\D/g, "");
+  const since = new Date(Date.now() - WA_REPLY_WINDOW_MS).toISOString();
+  const { data } = await sb
+    .from("messages")
+    .select("campaign_id")
+    .in("phone", [`+${digits}`, digits])
+    .eq("direction", "out")
+    .eq("channel", "whatsapp")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.campaign_id ?? (await channelCampaignId(sb));
+}
+
 /** Returns true when fully processed; false when something must wait. */
 async function processPayload(sb: Sb, event: string, payload: unknown): Promise<boolean> {
   const v = valueOf(payload);
@@ -233,17 +257,24 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
       const phone = `+${m.from.replace(/\D/g, "")}`;
       const name = v.contacts?.find((c) => c.wa_id === m.from)?.profile?.name ?? null;
       const at = iso(m.timestamp);
+      const campaignId = await waReplyCampaign(sb, phone);
 
       let { data: person } = await sb
         .from("people")
         .select("id, opted_out")
         .eq("phone", phone)
-        .eq("campaign_id", await channelCampaignId(sb))
+        .eq("campaign_id", campaignId)
         .maybeSingle();
       if (!person) {
         const { data: created, error } = await sb
           .from("people")
-          .insert({ phone, full_name: name, source: "whatsapp", language: "sw" })
+          .insert({
+            campaign_id: campaignId,
+            phone,
+            full_name: name,
+            source: "whatsapp",
+            language: "sw",
+          })
           .select("id, opted_out")
           .single();
         if (error) throw new Error(`Could not add person: ${error.message}`);
@@ -256,6 +287,7 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
         .select("id")
         .eq("platform", "whatsapp")
         .eq("external_thread_id", threadId)
+        .eq("campaign_id", campaignId)
         .maybeSingle();
       let conversationId = existing?.id ?? null;
       if (conversationId) {
@@ -273,6 +305,7 @@ async function processPayload(sb: Sb, event: string, payload: unknown): Promise<
         const { data: convo, error } = await sb
           .from("conversations")
           .insert({
+            campaign_id: campaignId,
             person_id: person.id,
             channel: "whatsapp",
             platform: "whatsapp",
