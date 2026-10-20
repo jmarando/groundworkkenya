@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { myRoles } from "@/lib/access";
+import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { reportedTurnout } from "@/lib/atlas-app";
 import { doorsByWard } from "@/lib/canvass";
 import { pageAll } from "@/lib/page-all";
-import { requireOffice } from "@/lib/require-role";
+import { requireOffice, requireRole } from "@/lib/require-role";
 
 /** Every row of a query, past the API's 1,000-row page, in the `{ data }` shape a single read has. */
 const every = <T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>) =>
@@ -60,9 +60,11 @@ export const getFinance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FinanceData> => {
     const sb = context.supabase;
-    const { data: roles } = await myRoles(sb);
-    const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
-    if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
+    await requireRole(
+      sb,
+      PRINCIPAL_ROLES,
+      "Finance is restricted to the candidate and campaign manager.",
+    );
     const [{ data: expenses }, { data: contributions }, limit] = await Promise.all([
       every((a, b) =>
         sb
@@ -877,7 +879,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
       { data: filings },
       { data: photos },
       { data: ballot },
-      { data: roles },
+      { data: myRole },
       { data: campaignId },
     ] = await Promise.all([
       every((a, b) =>
@@ -899,7 +901,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         .order("filed_at", { ascending: false }),
       sb.from("form_photos").select("station_id, stream"),
       sb.from("ballot_candidates").select("id, position, name, party, ours").order("position"),
-      myRoles(sb),
+      sb.rpc("my_campaign_role"),
       sb.rpc("my_campaign"),
     ]);
     const { data: campaign } = campaignId
@@ -1125,7 +1127,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         seat: campaign?.seat ?? "",
         form: resultForm(campaign?.level),
       },
-      canEditBallot: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
+      canEditBallot: PRINCIPAL_ROLES.includes(myRole as MyRole),
       unstaffedList: st
         .filter((s) => s.status !== "confirmed")
         .sort((a, b) => (b.registered_voters ?? 0) - (a.registered_voters ?? 0))
@@ -1402,29 +1404,23 @@ export const getAgents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AgentsData> => {
     const sb = context.supabase;
-    const [
-      { data: stipends },
-      { data: stations },
-      { data: wards },
-      { data: roles },
-      { data: role },
-    ] = await Promise.all([
-      every((a, b) =>
-        sb
-          .from("agent_stipends")
-          .select("*")
-          .order("work_date", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .order("id")
-          .range(a, b),
-      ),
-      every((a, b) =>
-        sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
-      ),
-      sb.from("wards").select("id, name, constituency").order("name"),
-      myRoles(sb),
-      sb.rpc("my_campaign_role"),
-    ]);
+    const [{ data: stipends }, { data: stations }, { data: wards }, { data: role }] =
+      await Promise.all([
+        every((a, b) =>
+          sb
+            .from("agent_stipends")
+            .select("*")
+            .order("work_date", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
+            .order("id")
+            .range(a, b),
+        ),
+        every((a, b) =>
+          sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
+        ),
+        sb.from("wards").select("id, name, constituency").order("name"),
+        sb.rpc("my_campaign_role"),
+      ]);
 
     const sp = stipends ?? [];
     const st = stations ?? [];
@@ -1449,7 +1445,7 @@ export const getAgents = createServerFn({ method: "GET" })
     });
 
     return {
-      canAssign: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
+      canAssign: PRINCIPAL_ROLES.includes(role as MyRole),
       canPay: ["super", "candidate", "manager"].includes(String(role ?? "")),
       stations: {
         total: st.length,
