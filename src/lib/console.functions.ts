@@ -431,7 +431,15 @@ export type InboxData = {
     tags: string[];
     unread: boolean;
     lastMessageAt: string;
-    thread: { id: string; direction: string; body: string; at: string; status: string }[];
+    thread: {
+      id: string;
+      direction: string;
+      body: string;
+      at: string;
+      status: string;
+      channel: string;
+      error: string | null;
+    }[];
   }[];
   counts: { all: number; unread: number; open: number; byTag: { tag: string; n: number }[] };
 };
@@ -457,7 +465,9 @@ export const getInbox = createServerFn({ method: "GET" })
       pageAll((from, to) =>
         sb
           .from("messages")
-          .select("id, person_id, conversation_id, body, direction, status, created_at, sent_at")
+          .select(
+            "id, person_id, conversation_id, body, direction, status, created_at, sent_at, channel, error",
+          )
           .order("created_at", { ascending: true })
           .range(from, to),
       ),
@@ -475,6 +485,8 @@ export const getInbox = createServerFn({ method: "GET" })
         body: m.body,
         at: (m.sent_at as string) ?? (m.created_at as string),
         status: m.status,
+        channel: m.channel,
+        error: (m.error as string | null) ?? null,
       };
       if (m.conversation_id) {
         const list = byConversation.get(m.conversation_id) ?? [];

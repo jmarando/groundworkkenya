@@ -26,12 +26,7 @@ export const callFromInbox = createServerFn({ method: "POST" })
     const { twilioVoiceConfigured, bridgeCall } = await import("@/lib/twilio.server");
     if (!twilioVoiceConfigured())
       return { ok: false as const, error: "Calling starts once the Twilio number is added." };
-    if (!process.env["TWILIO_CALLBACK_TOKEN"])
-      return {
-        ok: false as const,
-        error:
-          "Twilio's call reports aren't set up (TWILIO_CALLBACK_TOKEN), so calls can't be followed.",
-      };
+    const followed = Boolean(process.env["TWILIO_CALLBACK_TOKEN"]);
 
     const mine = phoneDigits(data.myPhone);
     if (!mine) return { ok: false as const, error: "Enter your phone number, like 0712 345 678." };
@@ -86,7 +81,7 @@ export const callFromInbox = createServerFn({ method: "POST" })
       };
     }
     await admin.from("voice_calls").update({ sid: r.sid, status: "initiated" }).eq("id", row.id);
-    return { ok: true as const, callId: row.id };
+    return { ok: true as const, callId: followed ? row.id : null };
   });
 
 /** Where a call is now, in words, from Twilio's reports. */

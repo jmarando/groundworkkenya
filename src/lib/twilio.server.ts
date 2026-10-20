@@ -163,18 +163,22 @@ export async function bridgeCall(
   callId: string,
 ): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
   const from = process.env["TWILIO_FROM_NUMBER"]!.trim();
+  // Without the callback token Twilio's reports would be refused, so none are asked for: the call
+  // still connects, it just can't be followed on screen.
+  const reports = Boolean(process.env["TWILIO_CALLBACK_TOKEN"]);
   const status = callbackWith("/api/public/twilio/call-status", { call: callId });
   const voter = callbackWith("/api/public/twilio/call-status", { call: callId, leg: "voter" });
+  const action = reports ? ` action="${escapeXml(voter)}" method="POST"` : "";
   const inner =
     `<Say>Connecting you to ${escapeXml(voterName)}.</Say>` +
-    `<Dial callerId="${escapeXml(from)}" timeout="30" action="${escapeXml(voter)}" method="POST"><Number>+${voterDigits}</Number></Dial>`;
+    `<Dial callerId="${escapeXml(from)}" timeout="30"${action}><Number>+${voterDigits}</Number></Dial>`;
   const r = await twilioPost("/Calls.json", {
     To: `+${staffDigits}`,
     From: from,
     Twiml: `<Response>${inner}</Response>`,
-    StatusCallback: status,
-    StatusCallbackEvent: EVENTS,
-    StatusCallbackMethod: "POST",
+    ...(reports
+      ? { StatusCallback: status, StatusCallbackEvent: EVENTS, StatusCallbackMethod: "POST" }
+      : {}),
     Timeout: "30",
   });
   if (r.status >= 200 && r.status < 300 && r.json?.["sid"])

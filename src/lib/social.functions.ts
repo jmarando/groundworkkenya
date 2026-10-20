@@ -818,3 +818,25 @@ async function senderName(sb: SupabaseClient<Database>, userId: string): Promise
     .maybeSingle();
   return data?.full_name?.split(" ")[0] ?? null;
 }
+
+/** A person's conversations marked read, or done (closed), or open again. The office only. */
+export const markConversations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { ids: string[]; unread?: boolean; status?: "open" | "closed" }) => {
+    const ids = (input?.ids ?? []).filter((x) => /^[0-9a-f-]{36}$/.test(String(x))).slice(0, 20);
+    if (!ids.length) throw new Error("Which conversation?");
+    const patch: { unread?: boolean; status?: string } = {};
+    if (typeof input.unread === "boolean") patch.unread = input.unread;
+    if (input.status === "open" || input.status === "closed") patch.status = input.status;
+    return { ids, patch };
+  })
+  .handler(async ({ data, context }) => {
+    const { requireOffice } = await import("@/lib/require-role");
+    await requireOffice(context.supabase);
+    const { error } = await context.supabase
+      .from("conversations")
+      .update(data.patch)
+      .in("id", data.ids);
+    if (error) throw new Error("Could not update the conversation.");
+    return { ok: true };
+  });
