@@ -9,7 +9,8 @@
 --    sender, or an Inbox call that rings a team member and then the voter. Twilio's reports
 --    (ringing, answered, by a person or a machine, how long, a key pressed, why it failed) are
 --    written by the service role from the callbacks; the office reads its own.
--- 4. A public storage bucket for the audio Twilio plays, under unguessable names.
+-- 4. Public storage buckets for the audio Twilio plays and the pictures WhatsApp messages carry,
+--    under unguessable names.
 
 -- 1. -----------------------------------------------------------------
 create table if not exists public.campaign_voices (
@@ -117,7 +118,8 @@ do $$
 begin
   if to_regclass('storage.buckets') is not null then
     execute $q$insert into storage.buckets (id, name, public)
-             values ('voice-messages', 'voice-messages', true)
+             values ('voice-messages', 'voice-messages', true),
+                    ('broadcast-media', 'broadcast-media', true)
              on conflict (id) do nothing$q$;
   end if;
 end $$;

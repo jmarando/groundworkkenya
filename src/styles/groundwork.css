@@ -10011,6 +10011,337 @@ figure {
   font-size: 14px;
   line-height: 1.5;
 }
+/* Broadcast: tabs, who, channels; auto-calls; calls followed live; WhatsApp composer */
+.bc-tabbar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin: 6px 0 14px;
+}
+.bc-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.bc-tab.is-on {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+  font-weight: 600;
+}
+.bc-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.bc-filters select {
+  max-width: 100%;
+}
+.bc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.bc-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+.bc-channel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.bc-channel .stat {
+  font-size: 30px;
+}
+.bc-channel p {
+  margin: 0;
+}
+.bc-channel .btn {
+  margin-top: auto;
+}
+.ac-ready {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  font-size: 13px;
+}
+.ac-ready-item.is-ok span {
+  color: #1f9d55;
+}
+.ac-ready-item.is-off {
+  color: var(--muted-foreground);
+}
+.ac-howto {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.ac-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.ac-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.ac-source,
+.wa-card,
+.ac-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.ac-source.is-on,
+.wa-card.is-on,
+.ac-item.is-on {
+  border-color: var(--foreground);
+  box-shadow: inset 0 0 0 1px var(--foreground);
+}
+.ac-source:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.ac-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.ac-steps h3 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.ac-audio {
+  width: 100%;
+}
+.ac-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ac-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.ac-tally {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.ac-tally > div {
+  display: flex;
+  flex-direction: column;
+}
+.ac-list,
+.ac-calls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ac-call {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  gap: 10px;
+  font-size: 13.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ac-call--bad span:nth-child(2) {
+  color: var(--destructive, #c0392b);
+}
+.ac-call--good span:nth-child(2) {
+  color: #1f9d55;
+}
+.call-progress {
+  margin-top: 8px;
+}
+.call-steps {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.call-steps li {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+}
+.call-steps li.call-step--done {
+  border-color: #1f9d55;
+  color: #1f9d55;
+}
+.call-steps li.call-step--failed {
+  border-color: var(--destructive, #c0392b);
+  color: var(--destructive, #c0392b);
+}
+.call-line {
+  margin: 4px 0 0;
+  font-size: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.call-line--good {
+  color: #1f9d55;
+}
+.call-line--bad {
+  color: var(--destructive, #c0392b);
+}
+.call-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: call-pulse 1.2s ease-in-out infinite;
+}
+@keyframes call-pulse {
+  50% {
+    opacity: 0.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .call-dot {
+    animation: none;
+  }
+}
+.pb.pb--wide {
+  width: min(980px, 100%);
+}
+.wa-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.wa-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wa-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+.wa-preview {
+  position: sticky;
+  top: 0;
+}
+.wa-bar {
+  background: #075e54;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px 14px 0 0;
+  font-weight: 600;
+  font-size: 14px;
+}
+.wa-chat {
+  background: #e5ddd5;
+  padding: 16px 12px 22px;
+  border-radius: 0 0 14px 14px;
+  min-height: 260px;
+}
+.wa-bubble {
+  background: #fff;
+  color: #111;
+  border-radius: 0 10px 10px 10px;
+  padding: 6px 8px 18px;
+  max-width: 92%;
+  position: relative;
+  font-size: 14px;
+  line-height: 1.45;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.12);
+}
+.wa-bubble img,
+.wa-img-empty {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+.wa-img-empty {
+  height: 120px;
+  background: #d9d9d9;
+  color: #666;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+.wa-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.wa-time {
+  position: absolute;
+  right: 8px;
+  bottom: 3px;
+  font-size: 11px;
+  color: #777;
+}
+.wa-foot-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.wa-progress {
+  height: 6px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.wa-progress i {
+  display: block;
+  height: 100%;
+  background: #25d366;
+  transition: width 0.3s;
+}
+@media (max-width: 800px) {
+  .ac-steps,
+  .wa-grid {
+    grid-template-columns: 1fr;
+  }
+  .ac-sources {
+    grid-template-columns: 1fr;
+  }
+  .wa-preview {
+    position: static;
+  }
+}
+
 /* Home: strategy at a glance */
 .hs-grid {
   display: grid;

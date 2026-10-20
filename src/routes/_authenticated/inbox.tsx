@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { callFromInbox } from "@/lib/voice.functions";
+import { CallProgress, rememberedPhone, rememberPhone } from "@/components/gw/CallProgress";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BarChart3, MessageCircle, Phone, Send } from "lucide-react";
@@ -76,16 +77,20 @@ function Inbox() {
   const searchPeople = useServerFn(searchPeopleForMessage);
   const startConvo = useServerFn(startConversation);
   const placeCall = useServerFn(callFromInbox);
-  const [myPhone, setMyPhone] = useState("");
+  const [myPhone, setMyPhone] = useState(() => rememberedPhone());
   const [callNote, setCallNote] = useState<string | null>(null);
+  const [callId, setCallId] = useState<string | null>(null);
   const [calling, setCalling] = useState(false);
   const [callPanelOpen, setCallPanelOpen] = useState(false);
   async function call(conversationId: string) {
     setCalling(true);
     setCallNote(null);
+    setCallId(null);
+    rememberPhone(myPhone);
     try {
       const r = await placeCall({ data: { conversationId, myPhone } });
-      setCallNote(r.ok ? "Your phone will ring now. Pick up to be connected." : r.error);
+      if (r.ok) setCallId(r.callId);
+      else setCallNote(r.error);
     } catch {
       setCallNote("Could not place the call.");
     } finally {
@@ -618,7 +623,8 @@ function Inbox() {
               {open.phone && callPanelOpen && (
                 <div className="th-call">
                   <label className="th-compose-label" htmlFor="myPhone">
-                    Call {open.name}: we ring your phone first
+                    Call {open.name}: we ring your phone first, then connect you. They see the
+                    campaign&apos;s number.
                   </label>
                   <input
                     id="myPhone"
@@ -637,7 +643,12 @@ function Inbox() {
                     <Phone aria-hidden="true" />
                     {calling ? "Calling…" : "Call"}
                   </Button>
-                  {callNote && <p className="f-note">{callNote}</p>}
+                  {callNote && (
+                    <p className="call-line call-line--bad" role="alert">
+                      {callNote}
+                    </p>
+                  )}
+                  {callId && <CallProgress callId={callId} />}
                 </div>
               )}
               <div className="th-body">

@@ -21,6 +21,7 @@ export function BroadcastComposer({
   initialBody,
   smsRate,
   onClose,
+  initialChannel = "sms",
 }: {
   audience: BroadcastAudience;
   /** Plain-language summary of the filters, e.g. "Youth in Kileleshwa". */
@@ -28,8 +29,9 @@ export function BroadcastComposer({
   initialBody: string;
   smsRate: number;
   onClose: () => void;
+  initialChannel?: "sms" | "wa";
 }) {
-  const [channel, setChannel] = useState<"sms" | "wa">("sms");
+  const [channel, setChannel] = useState<"sms" | "wa">(initialChannel);
   if (channel === "wa") {
     return (
       <WhatsAppComposer

@@ -56,6 +56,8 @@ import { Route as ApiPublicSmsDeliveryRouteImport } from './routes/api/public/sm
 import { Route as ApiPublicSmsInboundRouteImport } from './routes/api/public/sms/inbound'
 import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
 import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
+import { Route as ApiPublicTwilioAutocallRouteImport } from './routes/api/public/twilio/autocall'
+import { Route as ApiPublicTwilioCallStatusRouteImport } from './routes/api/public/twilio/call-status'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api/public/twilio/status'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
@@ -301,6 +303,17 @@ const ApiPublicSocialXRoute = ApiPublicSocialXRouteImport.update({
   path: '/api/public/social/x',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioAutocallRoute = ApiPublicTwilioAutocallRouteImport.update({
+  id: '/api/public/twilio/autocall',
+  path: '/api/public/twilio/autocall',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioCallStatusRoute =
+  ApiPublicTwilioCallStatusRouteImport.update({
+    id: '/api/public/twilio/call-status',
+    path: '/api/public/twilio/call-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioSmsRoute = ApiPublicTwilioSmsRouteImport.update({
   id: '/api/public/twilio/sms',
   path: '/api/public/twilio/sms',
@@ -392,6 +405,8 @@ export interface FileRoutesByFullPath {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -448,6 +463,8 @@ export interface FileRoutesByTo {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -506,6 +523,8 @@ export interface FileRoutesById {
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -564,6 +583,8 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -620,6 +641,8 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -677,6 +700,8 @@ export interface FileRouteTypes {
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -709,6 +734,8 @@ export interface RootRouteChildren {
   ApiPublicSmsInboundRoute: typeof ApiPublicSmsInboundRoute
   ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
   ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
+  ApiPublicTwilioAutocallRoute: typeof ApiPublicTwilioAutocallRoute
+  ApiPublicTwilioCallStatusRoute: typeof ApiPublicTwilioCallStatusRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -1050,6 +1077,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSocialXRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/autocall': {
+      id: '/api/public/twilio/autocall'
+      path: '/api/public/twilio/autocall'
+      fullPath: '/api/public/twilio/autocall'
+      preLoaderRoute: typeof ApiPublicTwilioAutocallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/call-status': {
+      id: '/api/public/twilio/call-status'
+      path: '/api/public/twilio/call-status'
+      fullPath: '/api/public/twilio/call-status'
+      preLoaderRoute: typeof ApiPublicTwilioCallStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio/sms': {
       id: '/api/public/twilio/sms'
       path: '/api/public/twilio/sms'
@@ -1192,6 +1233,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSmsInboundRoute: ApiPublicSmsInboundRoute,
   ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
   ApiPublicSocialXRoute: ApiPublicSocialXRoute,
+  ApiPublicTwilioAutocallRoute: ApiPublicTwilioAutocallRoute,
+  ApiPublicTwilioCallStatusRoute: ApiPublicTwilioCallStatusRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
