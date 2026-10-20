@@ -183,3 +183,114 @@ export async function sendSmsBatch(phones: string[], body: string): Promise<AtBa
   }
   return interpretAtReply(res.status, text);
 }
+
+// ------------------------------------------------------------------ airtime
+
+function atAirtimeApi(): string {
+  return atIsSandbox()
+    ? "https://api.sandbox.africastalking.com/version1/airtime/send"
+    : "https://api.africastalking.com/version1/airtime/send";
+}
+
+/** Africa's Talking sends airtime from 5 to 10,000 shillings a number. */
+export const AIRTIME_MIN_KES = 5;
+export const AIRTIME_MAX_KES = 10000;
+
+/** Refusals of an airtime request that will meet every other request too. */
+const AIRTIME_ACCOUNT_WIDE = /insufficient|balance|credit|not active|unauthori[sz]ed|invalid api/i;
+
+/** Sort Africa's Talking's airtime reply into answered, refused or unknown. */
+export function interpretAirtimeReply(httpStatus: number, text: string): AtBatchResult {
+  const excerpt = text.slice(0, 300);
+  if (httpStatus >= 500)
+    return { kind: "unknown", error: `Africa's Talking ${httpStatus}: ${excerpt}` };
+  if (httpStatus < 200 || httpStatus >= 300) {
+    return {
+      kind: "refused",
+      error: `Africa's Talking refused the airtime (${httpStatus}): ${excerpt}`,
+    };
+  }
+  let json: {
+    errorMessage?: string;
+    responses?: {
+      phoneNumber?: string;
+      amount?: string;
+      status?: string;
+      requestId?: string;
+      errorMessage?: string;
+    }[];
+  };
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return { kind: "unknown", error: `Unreadable reply from Africa's Talking: ${excerpt}` };
+  }
+  const responses = Array.isArray(json?.responses) ? json.responses : null;
+  if (!responses) {
+    return { kind: "unknown", error: `Unexpected reply from Africa's Talking: ${excerpt}` };
+  }
+  if (responses.length === 0) {
+    return {
+      kind: "refused",
+      error: `Africa's Talking sent no airtime: ${json.errorMessage ?? "no reason given"}`,
+    };
+  }
+  return {
+    kind: "answered",
+    recipients: responses.map((r) => {
+      // "Sent" is done; "Queued" is accepted and will be sent.
+      const ok = r.status === "Sent" || r.status === "Queued";
+      const why =
+        r.errorMessage && r.errorMessage !== "None" ? r.errorMessage : r.status || "Not sent.";
+      return {
+        number: r.phoneNumber ?? "",
+        ok,
+        id: ok && r.requestId && r.requestId !== "None" ? r.requestId : null,
+        costKes: ok ? parseCostKes(r.amount) : null,
+        error: ok ? "" : why,
+        accountWide: !ok && AIRTIME_ACCOUNT_WIDE.test(why),
+      };
+    }),
+  };
+}
+
+/** Send airtime to a few numbers in one request; each amount in whole shillings. */
+export async function sendAirtime(
+  items: { phone: string; amountKes: number }[],
+): Promise<AtBatchResult> {
+  const username = process.env["AT_USERNAME"]!;
+  const apiKey = process.env["AT_API_KEY"]!;
+  const recipients = items.map((i) => ({
+    phoneNumber: `+${phoneKey(i.phone)}`,
+    amount: `KES ${i.amountKes}`,
+  }));
+  const form = new URLSearchParams({ username, recipients: JSON.stringify(recipients) });
+  let res: Response;
+  try {
+    res = await fetch(atAirtimeApi(), {
+      method: "POST",
+      headers: {
+        apiKey,
+        Accept: "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form,
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (e) {
+    return {
+      kind: "unknown",
+      error: `Network error reaching Africa's Talking: ${(e as Error).message}`,
+    };
+  }
+  let text: string;
+  try {
+    text = await res.text();
+  } catch (e) {
+    return {
+      kind: "unknown",
+      error: `Africa's Talking's reply was cut off: ${(e as Error).message}`,
+    };
+  }
+  return interpretAirtimeReply(res.status, text);
+}

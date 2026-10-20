@@ -18,16 +18,19 @@ insert into public.messages (campaign_id, phone, channel, direction, body, statu
   ('ca000000-0000-4000-8000-000000000002', '+254700000003', 'sms', 'out', 'c', 'failed', 0.8, now() - interval '1 day'),
   ('ca000000-0000-4000-8000-000000000002', '+254700000004', 'sms', 'out', 'd', 'sent', 0, now() - interval '1 day'),
   ('ca000000-0000-4000-8000-000000000002', '+254700000005', 'sms', 'out', 'e', 'sent', 0.8, now() + interval '1 hour'),
-  ('ca000000-0000-4000-8000-000000000003', '+254700000006', 'sms', 'out', 'f', 'sent', 0.8, now() - interval '2 days');
+  ('ca000000-0000-4000-8000-000000000003', '+254700000006', 'sms', 'out', 'f', 'sent', 0.8, now() - interval '2 days'),
+  ('ca000000-0000-4000-8000-000000000002', '+254700000007', 'airtime', 'out', '20', 'sent', 20, now() - interval '1 day');
 do $$
 declare n integer;
 begin
   n := public.comms_to_ledger();
-  assert n = 2, n::text;
+  assert n = 3, n::text;
+  assert (select amount_kes = 20 and description like 'Poll thank-you airtime on %: 1 people'
+            from public.expenses where reference like 'AIRTIME-%');
   assert (select amount_kes = 2.4 and category = 'comms' and status = 'pending' and reference like 'COMMS-%'
             from public.expenses where campaign_id = 'ca000000-0000-4000-8000-000000000002' and category = 'comms'
              and reference like 'COMMS-%');
-  assert (select count(*) from public.expenses where reference like 'COMMS-%') = 2;
+  assert (select count(*) from public.expenses where reference like 'COMMS-%' or reference like 'AIRTIME-%') = 3;
   -- Run again: nothing more.
   assert public.comms_to_ledger() = 0;
   assert (select count(*) from public.messages where not on_ledger and body in ('c', 'd', 'e')) = 3;

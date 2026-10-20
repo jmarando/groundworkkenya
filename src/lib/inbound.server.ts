@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
+import { atConfigured } from "@/lib/at.server";
 import { agentStations, campaignForm, handleForm34aUssd } from "@/lib/form34a.server";
 import { queueMessages, settleIfDryRun, type QueueItem } from "@/lib/outbox.server";
 import { normalizeKePhone } from "@/lib/phone";
@@ -320,7 +321,10 @@ export async function recordResponse(
 
   const rewarded =
     first &&
-    poll.rewardMethod !== "none" &&
+    // Only a reward that can be sent: airtime through Africa's Talking. M-Pesa thank-yous are
+    // not offered, so a poll set up with one before thanks without promising money.
+    poll.rewardMethod === "airtime" &&
+    atConfigured() &&
     poll.rewardAmount > 0 &&
     (await rewardable(sb, poll.id, person.id, channel));
   if (rewarded) {
@@ -328,7 +332,7 @@ export async function recordResponse(
       {
         personId: person.id,
         phone: person.phone,
-        channel: poll.rewardMethod === "mpesa" ? "mpesa" : "airtime",
+        channel: "airtime",
         body: String(poll.rewardAmount),
         kind: "reward",
         pollId: poll.id,

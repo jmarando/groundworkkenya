@@ -332,7 +332,6 @@ export function PollBuilder({
               >
                 <option value="none">None</option>
                 <option value="airtime">Airtime</option>
-                <option value="mpesa">M-Pesa</option>
               </select>
             </label>
             {rewardMethod !== "none" && (
@@ -340,7 +339,7 @@ export function PollBuilder({
                 <span>KES per person · max {REWARD_MAX_KES}</span>
                 <input
                   type="number"
-                  min={rewardMethod === "mpesa" ? 10 : 1}
+                  min={5}
                   max={REWARD_MAX_KES}
                   inputMode="numeric"
                   value={rewardAmount}
@@ -352,9 +351,9 @@ export function PollBuilder({
 
           {rewardMethod !== "none" && (
             <p className="f-note">
-              Paying people who answer is spending: it belongs in Finance with its purpose recorded,
-              and it is exactly what a disclosure return asks about. Only the first answer from each
-              number is paid.
+              Airtime goes through Africa&apos;s Talking (5 to {REWARD_MAX_KES} shillings each),
+              only for the first answer from each number, and each day&apos;s total posts to Finance
+              the next morning: it is exactly what a disclosure return asks about.
             </p>
           )}
         </div>
