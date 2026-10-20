@@ -196,7 +196,7 @@ function FieldPlan() {
       <section className="view active" aria-label="Field plan">
         <div className="vh">
           <div>
-            <span className="eyebrow">Operate · field plan</span>
+            <span className="eyebrow">Field · field plan</span>
             <h1>Field plan</h1>
             <p className="meta">{(error as Error).message}</p>
           </div>
@@ -216,7 +216,7 @@ function FieldPlan() {
     <section className="view active" aria-label="Field plan">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Operate · field plan</span>
+          <span className="eyebrow">Field · field plan</span>
           <h1>
             Who knocks where, <span className="serif">this fortnight.</span>
           </h1>

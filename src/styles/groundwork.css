@@ -10011,6 +10011,52 @@ figure {
   font-size: 14px;
   line-height: 1.5;
 }
+/* A section's pages as tabs above the page (Strategy, Field, Listening & polls) */
+.sec-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sec-tabs-name {
+  margin-right: 8px;
+}
+.sec-tab {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  text-decoration: none;
+  color: var(--muted-foreground);
+  border: 1px solid transparent;
+}
+.sec-tab:hover {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.sec-tab[aria-current="page"] {
+  color: var(--foreground);
+  border-color: var(--foreground);
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .sec-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sec-tab {
+    white-space: nowrap;
+  }
+}
+@media print {
+  .sec-tabs {
+    display: none !important;
+  }
+}
+
 /* Listening: spreading now, voices and platforms, reactions */
 .lsn-spread--on {
   border-color: var(--destructive, #c0392b);

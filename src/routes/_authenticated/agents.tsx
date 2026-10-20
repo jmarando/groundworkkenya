@@ -177,7 +177,7 @@ function Agents() {
     <section className="view active" aria-label="Agents and stipends">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Operate · agents &amp; stipends</span>
+          <span className="eyebrow">Field · agents &amp; stipends</span>
           <h1>
             Every station staffed, <span className="serif">every shilling accounted.</span>
           </h1>

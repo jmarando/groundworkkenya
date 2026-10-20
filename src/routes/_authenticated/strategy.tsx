@@ -101,7 +101,7 @@ function Strategy() {
     <section className="view active" aria-label="Strategy">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Operate · Strategy</span>
+          <span className="eyebrow">Strategy · what the numbers say</span>
           <h1>What the numbers say</h1>
           <p className="meta">
             {data
