@@ -34,12 +34,25 @@ const AUDIO = /^audio\/(mpeg|mp3|mp4|x-m4a|m4a|wav|x-wav|webm|ogg|aac)$/;
 
 type Upload = { name: string; type: string; base64: string };
 
+/** The upload's audio type: a WhatsApp voice note saved as .mp4 often arrives as video/mp4 or
+ * with no type at all; it is audio in an MP4 box, so it is read as audio/mp4. */
+export function audioType(name: string, type: string): string | null {
+  const t = type.toLowerCase();
+  if (AUDIO.test(t)) return t;
+  if (t === "video/mp4" || ((!t || t === "application/octet-stream") && /\.(mp4|m4a)$/i.test(name)))
+    return "audio/mp4";
+  if ((!t || t === "application/octet-stream") && /\.mp3$/i.test(name)) return "audio/mpeg";
+  if ((!t || t === "application/octet-stream") && /\.wav$/i.test(name)) return "audio/wav";
+  return null;
+}
+
 function decode(u: Upload, maxBytes: number): { name: string; type: string; bytes: Uint8Array } {
-  if (!AUDIO.test(u.type)) throw new Error("Use an audio file: MP3, M4A, WAV, WebM or OGG.");
+  const type = audioType(u.name, u.type);
+  if (!type) throw new Error("Use an audio file: MP3, M4A, MP4 voice note, WAV, WebM or OGG.");
   const bytes = Uint8Array.from(Buffer.from(u.base64, "base64"));
   if (bytes.length < 2000) throw new Error("That recording is empty.");
   if (bytes.length > maxBytes) throw new Error("That recording is too large.");
-  return { name: u.name.replace(/[^\w.-]/g, "_").slice(0, 80) || "recording", type: u.type, bytes };
+  return { name: u.name.replace(/[^\w.-]/g, "_").slice(0, 80) || "recording", type, bytes };
 }
 
 async function campaignOf(sb: Client) {

@@ -216,7 +216,7 @@ function Voice({ data }: { data: AutoCallData }) {
             <span>Recordings</span>
             <input
               type="file"
-              accept="audio/*"
+              accept="audio/*,video/mp4,.mp4,.m4a,.mp3,.wav"
               multiple
               onChange={(e) => setFiles([...(e.target.files ?? [])].slice(0, 5))}
             />
@@ -359,7 +359,7 @@ function NewBlast({ data, onMade }: { data: AutoCallData; onMade: (id: string) =
             <span>The recording</span>
             <input
               type="file"
-              accept="audio/*"
+              accept="audio/*,video/mp4,.mp4,.m4a,.mp3,.wav"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
