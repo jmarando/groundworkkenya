@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+
+import { tokenMatches } from "@/lib/webhook-token.server";
 import { createHmac, timingSafeEqual } from "crypto";
 
 /**
@@ -16,7 +18,7 @@ export const Route = createFileRoute("/api/public/social/meta")({
         const token = url.searchParams.get("hub.verify_token");
         const challenge = url.searchParams.get("hub.challenge") ?? "";
         if (!verifyToken) return new Response("Not configured", { status: 503 });
-        if (mode === "subscribe" && token === verifyToken) {
+        if (mode === "subscribe" && tokenMatches(token, verifyToken)) {
           return new Response(challenge, { headers: { "Content-Type": "text/plain" } });
         }
         return new Response("Forbidden", { status: 403 });

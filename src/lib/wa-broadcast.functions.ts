@@ -140,10 +140,16 @@ export const sendWhatsAppBroadcast = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const key = `wab:${data.clientKey}`;
+    const { data: campaignId } = await sb.rpc("my_campaign");
+    if (!campaignId) throw new Error("Open a campaign first.");
     const [people, campaign, done] = await Promise.all([
       reachable(sb, data.audience),
       campaignName(sb),
-      supabaseAdmin.from("messages").select("person_id").eq("provider_ref", key),
+      supabaseAdmin
+        .from("messages")
+        .select("person_id")
+        .eq("campaign_id", String(campaignId))
+        .eq("provider_ref", key),
     ]);
     if (done.error) throw new Error("Could not check what was already sent.");
     const seen = new Set((done.data ?? []).map((r) => r.person_id));

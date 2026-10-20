@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { requireOffice } from "@/lib/require-role";
 import { firstName, fillTemplate, validateWaTemplate, type WaTemplateInput } from "@/lib/wa-templates";
 
 export const PLATFORMS = [
@@ -364,6 +365,7 @@ export const replyToConversation = createServerFn({ method: "POST" })
     return { conversationId: input.conversationId, body };
   })
   .handler(async ({ data, context }): Promise<{ status: string; note: string }> => {
+    await requireOffice(context.supabase, "Messages to voters are sent by the campaign office.");
     const sb = context.supabase;
     const { data: convo, error } = await sb
       .from("conversations")
@@ -469,6 +471,7 @@ export const startConversation = createServerFn({ method: "POST" })
     return { personId: input.personId, channel: input.channel, body, subject, whatsapp };
   })
   .handler(async ({ data, context }): Promise<{ conversationId: string; note: string }> => {
+    await requireOffice(context.supabase, "Messages to voters are sent by the campaign office.");
     const sb = context.supabase;
     const { data: person, error: pError } = await sb
       .from("people")

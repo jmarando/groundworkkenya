@@ -67,9 +67,9 @@ do $$
 declare
   n integer;
 begin
-  -- The migrations seed demo people into Sakaja.
+  -- The migrations seed demo people into Sakaja; an agent with no list and no visits reads none.
   select count(*) into n from public.people;
-  assert n > 1, 'agent reads their campaign''s people';
+  assert n = 0, 'agent reads only the people at their own doors';
   insert into public.people (phone, full_name) values ('+254711000004', 'Achieng');
   delete from public.people where phone = '+254711000004';
   get diagnostics n = row_count;
@@ -136,7 +136,7 @@ begin;
 create temp table sakaja_phone on commit drop as
   select phone from public.people where campaign_id = 'ca000000-0000-4000-8000-000000000002' limit 1;
 grant select on sakaja_phone to authenticated;
-set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000f6';
+set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e5';
 set local role authenticated;
 do $$
 declare

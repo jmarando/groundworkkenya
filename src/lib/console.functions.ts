@@ -3,6 +3,11 @@ import { myRoles } from "@/lib/access";
 import { reportedTurnout } from "@/lib/atlas-app";
 import { doorsByWard } from "@/lib/canvass";
 import { pageAll } from "@/lib/page-all";
+import { requireOffice } from "@/lib/require-role";
+
+/** Every row of a query, past the API's 1,000-row page, in the `{ data }` shape a single read has. */
+const every = <T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>) =>
+  pageAll(build).then((data) => ({ data }));
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { spendingLimit } from "@/lib/spending-limit";
@@ -57,8 +62,8 @@ export const getFinance = createServerFn({ method: "GET" })
     const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
     if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
     const [{ data: expenses }, { data: contributions }, limit] = await Promise.all([
-      sb.from("expenses").select("*").order("incurred_at", { ascending: false }),
-      sb.from("contributions").select("*").order("received_at", { ascending: false }),
+      every((a, b) => sb.from("expenses").select("*").order("incurred_at", { ascending: false }).order("id").range(a, b)),
+      every((a, b) => sb.from("contributions").select("*").order("received_at", { ascending: false }).order("id").range(a, b)),
       spendingLimit(sb as never),
     ]);
 
@@ -156,6 +161,7 @@ export type PeopleData = {
 export const getPeople = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PeopleData> => {
+    await requireOffice(context.supabase, "The voter file is for the campaign office.");
     const sb = context.supabase;
     const [people, { data: wards }, { data: segments }] = await Promise.all([
       pageAll((from, to) =>
@@ -405,9 +411,10 @@ export type InboxData = {
 export const getInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InboxData> => {
+    await requireOffice(context.supabase, "The inbox is for the campaign office.");
     const sb = context.supabase;
     const [{ data: convos }, people, { data: wards }, messages] = await Promise.all([
-      sb.from("conversations").select("*").order("last_message_at", { ascending: false }),
+      every((a, b) => sb.from("conversations").select("*").order("last_message_at", { ascending: false }).order("id").range(a, b)),
       pageAll((from, to) =>
         sb.from("people").select("id, full_name, phone, ward_id").range(from, to),
       ),
@@ -530,6 +537,7 @@ export type BroadcastData = {
 export const getBroadcast = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BroadcastData> => {
+    await requireOffice(context.supabase, "Broadcasts are for the campaign office.");
     const sb = context.supabase;
     const [people, { data: wards }, { data: segmentRows }, messages] = await Promise.all([
       pageAll((from, to) =>
@@ -839,9 +847,9 @@ export const getWarRoom = createServerFn({ method: "GET" })
       { data: roles },
       { data: campaignId },
     ] = await Promise.all([
-      sb.from("polling_stations").select("*").order("code"),
+      every((a, b) => sb.from("polling_stations").select("*").order("code").order("id").range(a, b)),
       sb.from("wards").select("id, name, constituency"),
-      sb.from("incidents").select("*").order("occurred_at", { ascending: false }),
+      every((a, b) => sb.from("incidents").select("*").order("occurred_at", { ascending: false }).order("id").range(a, b)),
       sb
         .from("stream_results")
         .select("id, station_id, stream, valid_votes, rejected, corrected, over_register, filed_at")
@@ -1359,12 +1367,16 @@ export const getAgents = createServerFn({ method: "GET" })
       { data: roles },
       { data: role },
     ] = await Promise.all([
-      sb
-        .from("agent_stipends")
-        .select("*")
-        .order("work_date", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false }),
-      sb.from("polling_stations").select("*").order("code"),
+      every((a, b) =>
+        sb
+          .from("agent_stipends")
+          .select("*")
+          .order("work_date", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
+      every((a, b) => sb.from("polling_stations").select("*").order("code").order("id").range(a, b)),
       sb.from("wards").select("id, name, constituency").order("name"),
       myRoles(sb),
       sb.rpc("my_campaign_role"),
@@ -1527,6 +1539,7 @@ const ISSUE_LABEL = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replac
 export const getBriefing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BriefingData> => {
+    await requireOffice(context.supabase, "The briefing is for the campaign office.");
     const sb = context.supabase;
     const [
       { data: wards },
@@ -1545,10 +1558,10 @@ export const getBriefing = createServerFn({ method: "GET" })
           )
           .range(from, to),
       ),
-      sb.from("polling_stations").select("id, ward_id, status"),
-      sb.from("conversations").select("id, issue, sentiment, person_id"),
-      sb.from("listening_mentions").select("id, issue, sentiment, ward"),
-      sb.from("incidents").select("id, status, ward_id"),
+      every((a, b) => sb.from("polling_stations").select("id, ward_id, status").order("id").range(a, b)),
+      every((a, b) => sb.from("conversations").select("id, issue, sentiment, person_id").order("id").range(a, b)),
+      every((a, b) => sb.from("listening_mentions").select("id, issue, sentiment, ward").order("id").range(a, b)),
+      every((a, b) => sb.from("incidents").select("id, status, ward_id").order("id").range(a, b)),
     ]);
 
     const w = wards ?? [];

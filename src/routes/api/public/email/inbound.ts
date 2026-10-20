@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/public/email/inbound")({
           .from("campaign_channels")
           .select("campaign_id")
           .eq("kind", "email")
-          .ilike("identifier", target.slug)
+          .eq("identifier", target.slug.toLowerCase())
           .maybeSingle();
         if (!channel) return new Response("ok");
         const campaignId = channel.campaign_id;
@@ -73,7 +73,7 @@ export const Route = createFileRoute("/api/public/email/inbound")({
           .from("people")
           .select("id")
           .eq("campaign_id", campaignId)
-          .ilike("email", from)
+          .ilike("email", likeExactly(from))
           .maybeSingle();
         if (!person) {
           const { data: created, error } = await sb
@@ -173,3 +173,8 @@ export const Route = createFileRoute("/api/public/email/inbound")({
     },
   },
 });
+
+/** A value matched case-insensitively and literally: `_` and `%` in an address are not wildcards. */
+function likeExactly(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}

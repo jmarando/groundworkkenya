@@ -110,6 +110,10 @@ rollback;
 -- test: consent at the door never overrides a STOP
 begin;
 insert into public.people (phone, full_name, opted_out) values ('+254733000222', 'Njeri', true);
+-- The agent met them last week, so their record is in the agent's sight.
+insert into public.person_events (campaign_id, person_id, kind, channel, actor, created_at)
+select campaign_id, id, 'door_spoke', 'door', '00000000-0000-0000-0000-0000000000b2', now() - interval '7 days'
+  from public.people where phone = '+254733000222';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
 set local role authenticated;
 do $$
@@ -128,6 +132,10 @@ rollback;
 -- test: the visit time is kept honest and a bad location is dropped
 begin;
 insert into public.people (phone, full_name) values ('+254744000333', 'Atieno');
+-- The agent met them last week, so their record is in the agent's sight.
+insert into public.person_events (campaign_id, person_id, kind, channel, actor, created_at)
+select campaign_id, id, 'door_spoke', 'door', '00000000-0000-0000-0000-0000000000b2', now() - interval '7 days'
+  from public.people where phone = '+254744000333';
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
 set local role authenticated;
 do $$

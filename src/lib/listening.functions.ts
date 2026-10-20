@@ -322,6 +322,10 @@ export const sweepListening = createServerFn({ method: "POST" })
     // ScrapeCreators credits are counted by the server alone, and only the
     // candidate's or manager's sweep may spend them.
     const { data: role } = await context.supabase.rpc("my_campaign_role");
+    // A forced sweep skips the provider pause and the one-at-a-time lease, so it is the
+    // candidate's or a manager's call alone; field agents don't sweep at all.
+    if (role === "agent" || (data.force && !PRINCIPAL_ROLES.includes(role as MyRole)))
+      throw new Error("Only the candidate or a manager can force a sweep.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return runListeningScan(context.supabase as never, {
       topicLimit: 6,

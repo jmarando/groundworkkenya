@@ -130,14 +130,18 @@ export const payStipendByMpesa = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as unknown as Sb;
     if (sent.unclear) {
-      await admin.rpc("stipend_payment_unclear", { _request: r.request_id, _note: sent.why });
+      const noted = await admin.rpc("stipend_payment_unclear", { _request: r.request_id, _note: sent.why });
+      if (noted.error) console.error(`Could not note an unclear payout: ${noted.error.message}`);
       return { status: "unclear" as const, why: sent.why };
     }
-    await admin.rpc("finish_stipend_payment", {
+    const failed = await admin.rpc("finish_stipend_payment", {
       _request: r.request_id,
       _ok: false,
       _receipt: null,
       _error: sent.why,
     });
+    // Left as "sending" the stipend can't be paid again until someone releases it; say so.
+    if (failed.error)
+      throw new Error(`${sent.why} The payout is still marked sending; release it once you have checked the statement.`);
     throw new Error(sent.why);
   });

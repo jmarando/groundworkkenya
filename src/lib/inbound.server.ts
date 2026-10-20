@@ -434,7 +434,7 @@ async function inboundLine(
 }
 
 /** How a campaign signs its texts. The line owner keeps CAMPAIGN_NAME. */
-async function textSignature(sb: Sb, campaignId: string): Promise<string> {
+export async function textSignature(sb: Sb, campaignId: string): Promise<string> {
   if (campaignId === (await channelCampaignId(sb))) return CAMPAIGN;
   const { data } = await sb
     .from("campaigns")

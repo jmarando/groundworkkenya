@@ -11,6 +11,8 @@ export type MyRole = CampaignRole | "super" | null;
 
 export const PRINCIPAL_ROLES: MyRole[] = ["super", "candidate", "manager"];
 export const TEAM_ROLES: MyRole[] = ["super", "candidate", "manager", "organiser", "agent"];
+/** The campaign office: everyone on the team but field agents. */
+export const OFFICE_ROLES: MyRole[] = ["super", "candidate", "manager", "organiser"];
 
 /**
  * The caller's role as the older role names server code still checks:
