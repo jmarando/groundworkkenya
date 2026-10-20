@@ -772,6 +772,48 @@ export type Database = {
           },
         ]
       }
+      campaign_briefs: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          headline: string
+          id: string
+          moves: Json
+          starts_on: string
+          the_read: Json
+          watch: Json
+          written_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          headline: string
+          id?: string
+          moves?: Json
+          starts_on: string
+          the_read?: Json
+          watch?: Json
+          written_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          headline?: string
+          id?: string
+          moves?: Json
+          starts_on?: string
+          the_read?: Json
+          watch?: Json
+          written_by?: string | null
+        }
+        Relationships: []
+      }
       campaign_channels: {
         Row: {
           campaign_id: string

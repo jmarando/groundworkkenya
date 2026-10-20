@@ -9940,3 +9940,95 @@ figure {
   gap: 8px;
   align-items: center;
 }
+
+/* Next two weeks: the read, the moves by days, what the records say */
+.plan-h {
+  margin: 26px 0 10px;
+  font-size: 18px;
+}
+.plan-read {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+.plan-card h3,
+.plan-move h3 {
+  margin: 8px 0 6px;
+  font-size: 16px;
+}
+.plan-card p,
+.plan-move p {
+  margin: 0 0 8px;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.plan-sources {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.plan-bands {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.plan-band {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plan-band-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 2px solid var(--foreground);
+  padding-bottom: 6px;
+}
+.plan-move ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.plan-days {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+.plan-where {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.plan-watch {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+@media (max-width: 1100px) {
+  .plan-bands {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .plan-bands,
+  .plan-read {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  .plan .btn,
+  .sb,
+  .topbar {
+    display: none !important;
+  }
+  .plan-bands {
+    grid-template-columns: 1fr 1fr;
+  }
+}

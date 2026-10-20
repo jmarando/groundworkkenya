@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { LoaderCircle, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBriefingSpeech } from "@/hooks/useBriefingSpeech";
@@ -45,6 +46,9 @@ export function HomeHeader({
             {longDate(today)} · <b>{days}</b> days to the election
           </p>
           {verdict ? <p className="home-verdict">{verdict}</p> : null}
+          <Link to="/plan" className="btn btn--primary btn--sm" style={{ marginTop: 10 }}>
+            The next two weeks →
+          </Link>
         </div>
         <div className="flex max-w-72 flex-col items-start gap-2">
           <Button

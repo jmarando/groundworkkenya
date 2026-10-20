@@ -31,6 +31,7 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedListeningRouteImport } from './routes/_authenticated/listening'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
+import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
@@ -171,6 +172,11 @@ const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
 const AuthenticatedPeopleRoute = AuthenticatedPeopleRouteImport.update({
   id: '/people',
   path: '/people',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
@@ -355,6 +361,7 @@ export interface FileRoutesByFullPath {
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
@@ -409,6 +416,7 @@ export interface FileRoutesByTo {
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
@@ -465,6 +473,7 @@ export interface FileRoutesById {
   '/_authenticated/listening': typeof AuthenticatedListeningRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
+  '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
@@ -521,6 +530,7 @@ export interface FileRouteTypes {
     | '/listening'
     | '/overview'
     | '/people'
+    | '/plan'
     | '/polling'
     | '/social'
     | '/strategy'
@@ -575,6 +585,7 @@ export interface FileRouteTypes {
     | '/listening'
     | '/overview'
     | '/people'
+    | '/plan'
     | '/polling'
     | '/social'
     | '/strategy'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/_authenticated/listening'
     | '/_authenticated/overview'
     | '/_authenticated/people'
+    | '/_authenticated/plan'
     | '/_authenticated/polling'
     | '/_authenticated/social'
     | '/_authenticated/strategy'
@@ -849,6 +861,13 @@ declare module '@tanstack/react-router' {
       path: '/people'
       fullPath: '/people'
       preLoaderRoute: typeof AuthenticatedPeopleRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plan': {
+      id: '/_authenticated/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AuthenticatedPlanRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/polling': {
@@ -1089,6 +1108,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedListeningRoute: typeof AuthenticatedListeningRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
+  AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
@@ -1116,6 +1136,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedListeningRoute: AuthenticatedListeningRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
+  AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,

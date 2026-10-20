@@ -37,66 +37,71 @@ export const getFieldPlan = createServerFn({ method: "POST" })
     if (!input || !DATE.test(String(input.from))) throw new Error("Which fortnight?");
     return { from: input.from };
   })
-  .handler(async ({ data, context }): Promise<FieldPlanData> => {
-    const sb = context.supabase as unknown as Sb;
-    const to = addDays(data.from, 13);
-    const [lists, wards, team] = await Promise.all([
-      sb.rpc("field_plan", { _from: data.from, _to: to }),
-      sb.rpc("field_plan_wards", { _from: data.from, _to: to }),
-      readTeam(context.supabase as never),
-    ]);
-    if (lists.error) throw refused(lists.error, "Could not read the field plan.");
-    if (wards.error) throw refused(wards.error, "Could not read the wards.");
-    return {
-      from: data.from,
-      to,
-      team: team ?? [],
-      lists: rows(lists.data).flatMap((r) => {
-        const id = text(r["id"]);
-        const name = text(r["name"]);
-        const status =
-          r["status"] === "draft" || r["status"] === "out" || r["status"] === "done"
-            ? r["status"]
-            : null;
-        return id && name && status
-          ? [
-              {
-                id,
-                name,
-                status,
-                wardId: text(r["ward_id"]),
-                wardName: text(r["ward_name"]),
-                centreName: text(r["centre_name"]),
-                givenTo: text(r["given_to"]),
-                givenToName: text(r["given_to_name"]),
-                dueOn: text(r["due_on"]),
-                shift: shiftOf(r["shift"]),
-                doors: num(r["doors"]),
-                done: num(r["done"]),
-              },
-            ]
-          : [];
-      }),
-      wards: rows(wards.data).flatMap((r) => {
-        const wardId = text(r["ward_id"]);
-        const name = text(r["name"]);
-        return wardId && name
-          ? [
-              {
-                wardId,
-                slug: text(r["slug"]) ?? "",
-                name,
-                targetVotes: num(r["target_votes"]),
-                doorsPlanned: num(r["doors_planned"]),
-                doorsKnocked: num(r["doors_knocked"]),
-                spoke: num(r["spoke"]),
-                supporters: num(r["supporters"]),
-              },
-            ]
-          : [];
-      }),
-    };
-  });
+  .handler(async ({ data, context }): Promise<FieldPlanData> =>
+    loadFieldPlan(context.supabase, data.from),
+  );
+
+/** The fortnight from `from`: its lists, each ward's doors and the team (the caller's own campaign). */
+export async function loadFieldPlan(client: unknown, from: string): Promise<FieldPlanData> {
+  const sb = client as Sb;
+  const to = addDays(from, 13);
+  const [lists, wards, team] = await Promise.all([
+    sb.rpc("field_plan", { _from: from, _to: to }),
+    sb.rpc("field_plan_wards", { _from: from, _to: to }),
+    readTeam(client as never),
+  ]);
+  if (lists.error) throw refused(lists.error, "Could not read the field plan.");
+  if (wards.error) throw refused(wards.error, "Could not read the wards.");
+  return {
+    from: from,
+    to,
+    team: team ?? [],
+    lists: rows(lists.data).flatMap((r) => {
+      const id = text(r["id"]);
+      const name = text(r["name"]);
+      const status =
+        r["status"] === "draft" || r["status"] === "out" || r["status"] === "done"
+          ? r["status"]
+          : null;
+      return id && name && status
+        ? [
+            {
+              id,
+              name,
+              status,
+              wardId: text(r["ward_id"]),
+              wardName: text(r["ward_name"]),
+              centreName: text(r["centre_name"]),
+              givenTo: text(r["given_to"]),
+              givenToName: text(r["given_to_name"]),
+              dueOn: text(r["due_on"]),
+              shift: shiftOf(r["shift"]),
+              doors: num(r["doors"]),
+              done: num(r["done"]),
+            },
+          ]
+        : [];
+    }),
+    wards: rows(wards.data).flatMap((r) => {
+      const wardId = text(r["ward_id"]);
+      const name = text(r["name"]);
+      return wardId && name
+        ? [
+            {
+              wardId,
+              slug: text(r["slug"]) ?? "",
+              name,
+              targetVotes: num(r["target_votes"]),
+              doorsPlanned: num(r["doors_planned"]),
+              doorsKnocked: num(r["doors_knocked"]),
+              spoke: num(r["spoke"]),
+              supporters: num(r["supporters"]),
+            },
+          ]
+        : [];
+    }),
+  };
+}
 
 /** Puts a list on a day and shift (or takes it off with no day), and gives it to someone if named. */
 export const scheduleList = createServerFn({ method: "POST" })
