@@ -134,25 +134,29 @@ export function StrategyBlock() {
           </Link>
         </article>
 
-        {data.impact && (
-          <article className="card hs-card">
-            <span className="eyebrow">Wider news, read for this seat</span>
-            <h3>
-              <span className={`pill ${STANCE[data.impact.stance]?.cls ?? "pill--muted"}`}>
-                {STANCE[data.impact.stance]?.label ?? data.impact.stance}
-              </span>{" "}
-              {data.impact.title}
-            </h3>
-            {data.impact.moves[0] && (
-              <p className="meta">
-                <b>Do:</b> {data.impact.moves[0]}
-              </p>
-            )}
-            <Link to="/roadmap" hash="news" className="hs-more">
-              What it means here →
-            </Link>
-          </article>
-        )}
+        <article className="card hs-card">
+          <span className="eyebrow">County &amp; national, read for this seat</span>
+          {data.impacts.length ? (
+            <ol className="hs-list hs-news">
+              {data.impacts.map((n) => (
+                <li key={n.id}>
+                  <span className={`pill ${STANCE[n.stance]?.cls ?? "pill--muted"}`}>
+                    {STANCE[n.stance]?.label ?? n.stance}
+                  </span>{" "}
+                  <b>{n.title}</b>
+                  {n.moves[0] && <span className="meta"> · Do: {n.moves[0]}</span>}
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="meta">
+              No county or national story read for this seat yet. New ones are read every hour.
+            </p>
+          )}
+          <Link to="/roadmap" hash="news" className="hs-more">
+            What wider news means here →
+          </Link>
+        </article>
       </div>
     </section>
   );

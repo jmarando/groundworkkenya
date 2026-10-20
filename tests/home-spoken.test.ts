@@ -134,5 +134,41 @@ ok(
 ok("closing priority", text.includes("your first priority: 2 expenses to approve."));
 ok("spoken times", spokenTime("00:00") === "12 a.m." && spokenTime("13:05") === "1 oh 5 p.m.");
 
+const planned = spokenHome({
+  name: "Gathoni",
+  today: "2026-10-20",
+  verdict: "",
+  items: [],
+  story: null,
+  plan: [],
+  mind: null,
+  strategy: {
+    headline: "Win the farm gate and the young",
+    next: { title: "Parties file their nomination rules with IEBC", on: "2026-11-06" },
+    wider: {
+      title: "Ruto hands over homes in Eldoret",
+      stance: "context",
+      move: "Ask where Kiambu's homes are.",
+    },
+  },
+});
+ok(
+  "the fortnight's plan is read",
+  planned.includes("Your plan for these two weeks: Win the farm gate and the young."),
+);
+ok(
+  "the next deadline with its days",
+  planned.includes(
+    "The next deadline: Parties file their nomination rules with IEBC, on Friday 6 November, in 17 days.",
+  ),
+);
+ok(
+  "wider news and what to do",
+  planned.includes(
+    "Beyond the seat: Ruto hands over homes in Eldoret. For your campaign, it is context to keep in mind. What to do: Ask where Kiambu's homes are.",
+  ),
+);
+ok("no strategy, no strategy lines", !quiet.includes("two weeks") && !quiet.includes("deadline"));
+
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

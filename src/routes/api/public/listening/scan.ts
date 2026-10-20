@@ -5,6 +5,8 @@ import { runMorningStory } from "@/lib/morning-story.server";
 import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
 import { tokenMatches } from "@/lib/webhook-token.server";
+import { runXSweep } from "@/lib/x-sweep.server";
+import { autoReadWiderNews } from "@/lib/roadmap.functions";
 
 /**
  * Hourly listening sweep. Called by the scheduler with the shared cron secret.
@@ -28,8 +30,14 @@ export const Route = createFileRoute("/api/public/listening/scan")({
 
         const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
 
-        const result = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 }).catch((e: Error) => ({
+        const result = await runListeningScan(sb as never, { topicLimit: 6, classifyLimit: 40 }).catch((e: Error) => ({
           ran: false,
+          error: e.message,
+        }));
+        // X itself, keyword by keyword, the ones searched longest ago first.
+        const x = await runXSweep(sb as never).catch((e: Error) => ({ ran: false, error: e.message }));
+        // Each campaign's newest county or national story read for its seat (two a day at most).
+        const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
           error: e.message,
         }));
         // Always check the morning record, even when collection throws or pauses.
@@ -56,7 +64,7 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         const pruned = await sb
           .rpc("prune_old_records")
           .then(({ data, error }) => (error ? { error: error.message } : data));
-        return Response.json({ ...result, rivals, story, search, comms, pruned });
+        return Response.json({ ...result, x, wider, rivals, story, search, comms, pruned });
       },
     },
   },

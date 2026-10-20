@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
 import { CampaignSection } from "@/components/gw/home/CampaignSection";
@@ -14,6 +16,7 @@ import { dayPlan, nairobiTime, nextStop, watchList } from "@/lib/diary";
 import { greetingName, nextStopItem, realToday, sectionModes, todayItems } from "@/lib/home";
 import type { HomeData } from "@/lib/home.functions";
 import { spokenHome } from "@/lib/home-spoken";
+import { getHomeStrategy } from "@/lib/home-strategy.functions";
 import { realVerdict } from "@/lib/race-data";
 
 const NOTHING_YET: HomeData = {
@@ -44,6 +47,14 @@ export function Home({
 }) {
   const [editing, setEditing] = useState<null | "rivals" | "poll" | "story">(null);
   const removePollNow = useRemovePoll();
+  const fetchStrategy = useServerFn(getHomeStrategy);
+  // The same read StrategyBlock shows; shared through the query cache, so it is fetched once.
+  const { data: sg } = useQuery({
+    queryKey: ["home-strategy"],
+    queryFn: () => fetchStrategy(),
+    retry: false,
+    enabled: Boolean(data),
+  });
   const today = nairobiToday();
   const d = data ?? NOTHING_YET;
   const modes = sectionModes(d.facts);
@@ -61,6 +72,19 @@ export function Home({
     story: d.story,
     plan,
     mind: d.signals.mind,
+    strategy: sg
+      ? {
+          headline: sg.brief?.headline ?? null,
+          next: sg.next ? { title: sg.next.title, on: sg.next.on } : null,
+          wider: sg.impacts[0]
+            ? {
+                title: sg.impacts[0].title,
+                stance: sg.impacts[0].stance,
+                move: sg.impacts[0].moves[0] ?? null,
+              }
+            : null,
+        }
+      : null,
   });
   return (
     <div className="mb ov home">

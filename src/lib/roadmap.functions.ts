@@ -159,10 +159,16 @@ export type RoadmapData = {
   canWrite: boolean;
 };
 
-export async function loadImpacts(sb: Client, limit = 12): Promise<NewsImpact[]> {
-  const { data } = (await sb
-    .from("news_impacts")
-    .select("*")
+/** A query limited to one campaign: needed when the caller is the service role, which sees all. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the Supabase builder, loosely
+const only = (q: any, campaignId?: string) => (campaignId ? q.eq("campaign_id", campaignId) : q);
+
+export async function loadImpacts(
+  sb: Client,
+  limit = 12,
+  campaignId?: string,
+): Promise<NewsImpact[]> {
+  const { data } = (await only(sb.from("news_impacts").select("*"), campaignId)
     .order("created_at", { ascending: false })
     .limit(limit)) as { data: Record<string, unknown>[] | null };
   return (data ?? []).flatMap((r) => readImpact(r) ?? []);
@@ -306,36 +312,37 @@ export const removeRoadmapNote = createServerFn({ method: "POST" })
 /* ------------------------------------------------------------ the AI's memory */
 
 /** What every draft is given: the campaign's record, read back. Plain text, trimmed. */
-export async function campaignMemory(sb: Client, today: string): Promise<string> {
+export async function campaignMemory(
+  sb: Client,
+  today: string,
+  campaignId?: string,
+): Promise<string> {
   const since = new Date(Date.parse(`${today}T00:00:00Z`) - 90 * 86_400_000).toISOString();
   const [brief, impacts, notes, last, posts, topics] = await Promise.all([
-    sb
-      .from("campaign_briefs")
-      .select("*")
+    only(sb.from("campaign_briefs").select("*"), campaignId)
       .order("starts_on", { ascending: false })
       .limit(1)
       .maybeSingle() as Promise<{ data: Record<string, unknown> | null }>,
-    loadImpacts(sb, 15).catch(() => []),
-    sb
-      .from("roadmap_notes")
-      .select("workstream, body, author_name, created_at")
+    loadImpacts(sb, 15, campaignId).catch(() => []),
+    only(sb.from("roadmap_notes").select("workstream, body, author_name, created_at"), campaignId)
       .order("created_at", { ascending: false })
       .limit(40) as Promise<{
       data:
         | { workstream: string; body: string; author_name: string | null; created_at: string }[]
         | null;
     }>,
-    sb
-      .from("campaign_roadmaps")
-      .select("headline, summary, created_at")
+    only(sb.from("campaign_roadmaps").select("headline, summary, created_at"), campaignId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle() as Promise<{
       data: { headline: string; summary: string; created_at: string } | null;
     }>,
-    sb
-      .from("listening_mentions")
-      .select("title, source, sentiment, issue, topic_id, published_at, found_at")
+    only(
+      sb
+        .from("listening_mentions")
+        .select("title, source, sentiment, issue, topic_id, published_at, found_at"),
+      campaignId,
+    )
       .gte("found_at", since)
       .order("found_at", { ascending: false })
       .limit(80) as Promise<{
@@ -351,7 +358,7 @@ export async function campaignMemory(sb: Client, today: string): Promise<string>
           }[]
         | null;
     }>,
-    sb.from("listening_topics").select("id, label, kind") as Promise<{
+    only(sb.from("listening_topics").select("id, label, kind"), campaignId) as Promise<{
       data: { id: string; label: string; kind: string }[] | null;
     }>,
   ]);
@@ -528,6 +535,63 @@ const IMPACT_SCHEMA = {
   },
 };
 
+type Story = {
+  title: string;
+  url: string | null;
+  text: string;
+  publishedOn: string | null;
+  mentionId: string | null;
+};
+
+/**
+ * One story read for one campaign's seat by the AI, with the campaign's record, and kept. The
+ * campaign is named explicitly, so the hourly job (the service role, which sees every campaign)
+ * reads and writes only that campaign's rows.
+ */
+export async function readForSeat(
+  sb: Client,
+  campaign: Pick<Campaign, "id" | "name" | "candidate" | "seat">,
+  data: Story,
+  writtenBy: string,
+): Promise<{ error: { code?: string } | null }> {
+  const today = nairobiToday();
+  const memory = await campaignMemory(sb, today, campaign.id);
+  const prompt = [
+    `You advise ${campaign.candidate ?? campaign.name}, running for ${campaign.seat} in Kenya on ${ELECTION_DAY}.`,
+    "Read this story for THIS seat. Say whether it is national, county or local news; whether it is a strength, threat, opening or context for this campaign; what it means here in 3 to 6 plain sentences (who it helps among the parties and candidates in this race, why, and whether it reaches this seat's voters); and 2 to 4 concrete moves for the next fortnight.",
+    RULES,
+    "",
+    `THE STORY (${data.publishedOn ?? "date not given"}): ${data.title}`,
+    data.url ? `Link: ${data.url}` : "",
+    data.text ? `Text: ${data.text}` : "",
+    "",
+    memory,
+  ].join("\n");
+  const { askAiJson } = await import("@/lib/listening.server");
+  const out = await askAiJson<{
+    scope: string;
+    stance: string;
+    reading: string;
+    moves: string[];
+  }>(prompt, "news_impact", IMPACT_SCHEMA);
+  const { error } = await sb.from("news_impacts").insert({
+    campaign_id: campaign.id,
+    mention_id: data.mentionId,
+    title: data.title,
+    url: data.url,
+    published_on: data.publishedOn,
+    scope: out.scope,
+    stance: out.stance,
+    reading: out.reading.slice(0, 3000),
+    moves: (out.moves ?? []).slice(0, 6).map((m) => String(m).slice(0, 400)),
+    sources: data.url
+      ? [{ label: data.title.slice(0, 160), url: data.url, date: data.publishedOn }]
+      : [],
+    written_by: writtenBy,
+  });
+  return { error };
+}
+
 /** One story read for this seat: what it means here and what to do, kept with its link. */
 export const readStory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -566,41 +630,8 @@ export const readStory = createServerFn({ method: "POST" })
       "Only the candidate and managers have stories read.",
     );
     const sb = context.supabase as unknown as Client;
-    const today = nairobiToday();
     const campaign = await loadCampaign(sb);
-    const memory = await campaignMemory(sb, today);
-    const prompt = [
-      `You advise ${campaign.candidate ?? campaign.name}, running for ${campaign.seat} in Kenya on ${ELECTION_DAY}.`,
-      "Read this story for THIS seat. Say whether it is national, county or local news; whether it is a strength, threat, opening or context for this campaign; what it means here in 3 to 6 plain sentences (who it helps among the parties and candidates in this race, why, and whether it reaches this seat's voters); and 2 to 4 concrete moves for the next fortnight.",
-      RULES,
-      "",
-      `THE STORY (${data.publishedOn ?? "date not given"}): ${data.title}`,
-      data.url ? `Link: ${data.url}` : "",
-      data.text ? `Text: ${data.text}` : "",
-      "",
-      memory,
-    ].join("\n");
-    const { askAiJson } = await import("@/lib/listening.server");
-    const out = await askAiJson<{
-      scope: string;
-      stance: string;
-      reading: string;
-      moves: string[];
-    }>(prompt, "news_impact", IMPACT_SCHEMA);
-    const { error } = await sb.from("news_impacts").insert({
-      mention_id: data.mentionId,
-      title: data.title,
-      url: data.url,
-      published_on: data.publishedOn,
-      scope: out.scope,
-      stance: out.stance,
-      reading: out.reading.slice(0, 3000),
-      moves: (out.moves ?? []).slice(0, 6).map((m) => String(m).slice(0, 400)),
-      sources: data.url
-        ? [{ label: data.title.slice(0, 160), url: data.url, date: data.publishedOn }]
-        : [],
-      written_by: "Read with AI for this seat",
-    });
+    const { error } = await readForSeat(sb, campaign, data, "Read with AI for this seat");
     if (error?.code === "23505") throw new Error("That story has already been read for this seat.");
     if (error) throw new Error("Could not save the reading.");
     return { ok: true };
@@ -662,3 +693,87 @@ export const unreadWiderNews = createServerFn({ method: "GET" })
         })),
     };
   });
+
+export const AUTO_READER = "Read with AI for this seat (automatic)";
+
+/**
+ * The hourly job's share of wider news: for each campaign, its newest national or county story
+ * of the last three days not yet read is read for its seat, at most two a day per campaign.
+ * Stops at once when the AI is paused. Returns how many were read.
+ */
+export async function autoReadWiderNews(sb: Client): Promise<number> {
+  const today = nairobiToday();
+  const { data: campaigns } = (await sb.from("campaigns").select("id, name, candidate, seat")) as {
+    data: Pick<Campaign, "id" | "name" | "candidate" | "seat">[] | null;
+  };
+  const since = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  let read = 0;
+  for (const c of campaigns ?? []) {
+    const { count } = (await sb
+      .from("news_impacts")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", c.id)
+      .eq("written_by", AUTO_READER)
+      .gte("created_at", `${today}T00:00:00+03:00`)) as { count: number | null };
+    if ((count ?? 0) >= 2) continue;
+    const { data: topics } = (await sb
+      .from("listening_topics")
+      .select("id")
+      .eq("campaign_id", c.id)
+      .in("kind", ["national", "county"])) as { data: { id: string }[] | null };
+    if (!topics?.length) continue;
+    const { data: posts } = (await sb
+      .from("listening_mentions")
+      .select("id, title, url, snippet, published_at, found_at")
+      .eq("campaign_id", c.id)
+      .in(
+        "topic_id",
+        topics.map((t) => t.id),
+      )
+      .in("source", ["news", "web", "google_alerts", "x"])
+      .gte("found_at", since)
+      .order("found_at", { ascending: false })
+      .limit(20)) as {
+      data:
+        | {
+            id: string;
+            title: string | null;
+            url: string;
+            snippet: string | null;
+            published_at: string | null;
+            found_at: string;
+          }[]
+        | null;
+    };
+    const { data: done } = (await sb
+      .from("news_impacts")
+      .select("url, mention_id")
+      .eq("campaign_id", c.id)) as {
+      data: { url: string | null; mention_id: string | null }[] | null;
+    };
+    const seen = new Set((done ?? []).flatMap((d) => [d.url, d.mention_id]).filter(Boolean));
+    const story = (posts ?? []).find(
+      (p) => p.title && /^https:\/\//.test(p.url) && !seen.has(p.url) && !seen.has(p.id),
+    );
+    if (!story) continue;
+    try {
+      const { error } = await readForSeat(
+        sb,
+        c,
+        {
+          title: story.title!.split("\n")[0]!.slice(0, 300),
+          url: story.url,
+          text: story.snippet ?? "",
+          publishedOn: (story.published_at ?? story.found_at).slice(0, 10),
+          mentionId: story.id,
+        },
+        AUTO_READER,
+      );
+      if (!error) read++;
+    } catch (e) {
+      // A paused or unconfigured AI stops the whole pass; any other failure skips this campaign.
+      if (/AI (stopped|is not configured)/.test(String((e as Error).message))) break;
+    }
+  }
+  return read;
+}

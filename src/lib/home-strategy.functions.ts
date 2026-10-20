@@ -43,7 +43,8 @@ export type HomeStrategy = {
   }[];
   threshold: number;
   reactionsOpen: number;
-  impact: NewsImpact | null;
+  /** The latest wider stories read for the seat, newest first (two at most). */
+  impacts: NewsImpact[];
 };
 
 const soft = async <T>(p: PromiseLike<T>): Promise<T | null> => {
@@ -93,7 +94,7 @@ export const getHomeStrategy = createServerFn({ method: "GET" })
           data: { min_reach: number | null }[] | null;
         }>,
       ),
-      soft(loadImpacts(sb, 1)),
+      soft(loadImpacts(sb, 2)),
       soft(
         sb
           .from("rapid_responses")
@@ -167,6 +168,6 @@ export const getHomeStrategy = createServerFn({ method: "GET" })
       })),
       threshold,
       reactionsOpen: reactions?.count ?? 0,
-      impact: impacts?.[0] ?? null,
+      impacts: impacts ?? [],
     };
   });
