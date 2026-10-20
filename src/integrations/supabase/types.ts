@@ -1920,6 +1920,7 @@ export type Database = {
           error: string | null
           external_id: string | null
           id: string
+          on_ledger: boolean
           issue: string | null
           kind: string
           outbox_kind: string
@@ -1952,6 +1953,7 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          on_ledger?: boolean
           issue?: string | null
           kind?: string
           outbox_kind?: string
@@ -1984,6 +1986,7 @@ export type Database = {
           error?: string | null
           external_id?: string | null
           id?: string
+          on_ledger?: boolean
           issue?: string | null
           kind?: string
           outbox_kind?: string
@@ -3484,6 +3487,7 @@ export type Database = {
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
       prune_old_records: { Args: never; Returns: Json }
+      comms_to_ledger: { Args: never; Returns: number }
       my_walk_lists: {
         Args: never
         Returns: {

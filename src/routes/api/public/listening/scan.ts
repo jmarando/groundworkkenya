@@ -48,11 +48,15 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
+        // Yesterday's SMS charges onto the ledger, as each campaign's pending comms expense.
+        const comms = await sb
+          .rpc("comms_to_ledger")
+          .then(({ data, error }) => (error ? { error: error.message } : { posted: data }));
         // Last, records past their keeping time (old webhook payloads, alert events, posts).
         const pruned = await sb
           .rpc("prune_old_records")
           .then(({ data, error }) => (error ? { error: error.message } : data));
-        return Response.json({ ...result, rivals, story, search, pruned });
+        return Response.json({ ...result, rivals, story, search, comms, pruned });
       },
     },
   },

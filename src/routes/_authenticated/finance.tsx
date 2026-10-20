@@ -213,7 +213,10 @@ function Finance() {
               </div>
             ))}
           </div>
-          <p className="f-note">Every broadcast send posts here as comms, with its receipt.</p>
+          <p className="f-note">
+            Each day&apos;s SMS charges, as the provider reports them, post here the next morning as
+            one pending comms expense.
+          </p>
         </div>
       </div>
 

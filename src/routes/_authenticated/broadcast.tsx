@@ -364,10 +364,13 @@ function Broadcast() {
                 </div>
                 <div className="f-row">
                   <span>Opt-out line</span>
-                  <span className="mono">STOP to 22xxx</span>
+                  <span className="mono">STOP to opt out</span>
                 </div>
               </div>
-              <p className="f-note">Every send posts to Finance as comms, with its receipt.</p>
+              <p className="f-note">
+                Each day&apos;s SMS charges, as the provider reports them, post to Finance the next
+                morning as one pending comms expense.
+              </p>
             </div>
           </div>
         </div>
