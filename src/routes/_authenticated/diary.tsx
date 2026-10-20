@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
+import { CalendarLink } from "@/components/gw/diary/CalendarLink";
 import { DiaryWeek } from "@/components/gw/diary/DiaryWeek";
 import { PlaceFindings } from "@/components/gw/findings/SoWhat";
 import { useAccess } from "@/hooks/useAccess";
@@ -44,7 +45,8 @@ export const Route = createFileRoute("/_authenticated/diary")({
 
 function DiaryPage() {
   const { week, add } = Route.useSearch();
-  const { campaign, isPrincipal } = useAccess();
+  const { campaign, isPrincipal, access } = useAccess();
+  const role = access?.role;
   const fetchWeek = useServerFn(getDiaryWeek);
   const { data, isError } = useQuery({
     queryKey: ["diary", campaign?.id ?? null, week ?? null],
@@ -102,6 +104,12 @@ function DiaryPage() {
               title="Where the candidate's time goes"
             />
             <DiaryWeek week={data} canEdit={isPrincipal} addWard={add} />
+            {role === "super" ||
+            role === "candidate" ||
+            role === "manager" ||
+            role === "organiser" ? (
+              <CalendarLink />
+            ) : null}
           </>
         ) : (
           <p className="meta">{isError ? "Could not read the diary." : "Reading the diary…"}</p>
