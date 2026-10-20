@@ -19,6 +19,10 @@ export type ChannelsData = {
     /** Groundwork has set the Page token replies go out with. */
     canReply: boolean;
   }[];
+  /** Meta can deliver messages here: the app secret and verify token are set on the server. */
+  metaWebhook: boolean;
+  /** The address to give Meta for its webhook. */
+  metaWebhookUrl: string;
 };
 
 export const getChannels = createServerFn({ method: "GET" })
@@ -47,7 +51,10 @@ export const getChannels = createServerFn({ method: "GET" })
       ? await supabaseAdmin.from("social_account_tokens").select("account_id").in("account_id", ids)
       : { data: [] };
     const keyed = new Set((keys ?? []).map((k) => k.account_id));
+    const { publicBase } = await import("@/lib/twilio.server");
     return {
+      metaWebhook: Boolean(process.env["META_APP_SECRET"] && process.env["META_VERIFY_TOKEN"]),
+      metaWebhookUrl: `${publicBase()}/api/public/social/meta`,
       statuses: channelStatuses({
         smsLive: channelsAreLive(),
         smsProvider: provider,
@@ -93,4 +100,107 @@ export const setSocialToken = createServerFn({ method: "POST" })
           : "Could not save the token.",
       );
     return { ok: true };
+  });
+
+type Graph = Record<string, unknown> & { error?: { message?: string; code?: number } };
+
+/**
+ * A Facebook Page (and the Instagram account linked to it) connected to the open campaign from its
+ * Page access token: the Page's id and name are read from Meta, the accounts are kept with their
+ * ids so messages to them land here, the token is kept for replies (service role only), and the
+ * Page is subscribed to this app's message webhooks. Groundwork's super admin only.
+ */
+export const connectPage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { token: string }) => {
+    const token = String(input?.token ?? "").trim();
+    if (token.length < 20 || token.length > 1000 || /\s/.test(token))
+      throw new Error("Paste the Page access token.");
+    return { token };
+  })
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase;
+    const { data: isSuper } = await sb.rpc("is_super_admin", { _user_id: context.userId });
+    if (!isSuper) throw new Error("Groundwork connects a campaign's Page.");
+    const { GRAPH } = await import("@/lib/meta-send");
+    const get = async (path: string) => {
+      const res = await fetch(
+        `${GRAPH}${path}${path.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(data.token)}`,
+        {
+          signal: AbortSignal.timeout(20_000),
+        },
+      );
+      return (await res.json().catch(() => ({}))) as Graph;
+    };
+    const page = await get(
+      "/me?fields=id,name,username,category,instagram_business_account{id,username,name}",
+    );
+    if (page.error)
+      throw new Error(`Meta refused the token: ${page.error.message ?? "unknown error"}`);
+    if (!page["category"] || typeof page["id"] !== "string")
+      throw new Error("That is a person's token, not a Page's. Use the Page access token.");
+    const pageId = page["id"] as string;
+    const name = String(page["name"] ?? "Page");
+    const handle = String(page["username"] ?? name).slice(0, 80);
+    const ig = (page["instagram_business_account"] ?? null) as {
+      id?: string;
+      username?: string;
+      name?: string;
+    } | null;
+
+    const { data: campaignId } = await sb.rpc("my_campaign");
+    const keep = async (
+      platform: "facebook" | "instagram",
+      externalId: string,
+      h: string,
+      display: string,
+    ) => {
+      const { data: rows } = await sb
+        .from("social_accounts")
+        .select("id, external_id")
+        .eq("campaign_id", String(campaignId))
+        .eq("platform", platform);
+      const same =
+        (rows ?? []).find((r) => r.external_id === externalId) ??
+        (rows ?? []).find((r) => !r.external_id);
+      const patch = {
+        handle: h,
+        display_name: display,
+        external_id: externalId,
+        live: true,
+        status: "live",
+      };
+      if (same) {
+        const { error } = await sb.from("social_accounts").update(patch).eq("id", same.id);
+        if (error) throw new Error("The account couldn't be saved.");
+        return same.id;
+      }
+      const { data: row, error } = await sb
+        .from("social_accounts")
+        .insert({ ...patch, platform })
+        .select("id")
+        .single();
+      if (error || !row) throw new Error("The account couldn't be saved.");
+      return row.id;
+    };
+    const fbId = await keep("facebook", pageId, handle, name);
+    const ids = [fbId];
+    if (ig?.id) ids.push(await keep("instagram", ig.id, ig.username ?? handle, ig.name ?? name));
+    for (const id of ids) {
+      const { error } = await sb.rpc("set_social_token", { _account: id, _token: data.token });
+      if (error) throw new Error("The token couldn't be kept.");
+    }
+
+    const sub = await fetch(
+      `${GRAPH}/${pageId}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,feed&access_token=${encodeURIComponent(data.token)}`,
+      { method: "POST", signal: AbortSignal.timeout(20_000) },
+    )
+      .then((r) => r.json() as Promise<Graph>)
+      .catch(() => ({ error: { message: "Meta didn't answer." } }) as Graph);
+    return {
+      page: name,
+      instagram: ig?.username ?? null,
+      subscribed: !sub.error && sub["success"] === true,
+      note: sub.error?.message ?? null,
+    };
   });

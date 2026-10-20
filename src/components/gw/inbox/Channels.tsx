@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 
 import { useAccess } from "@/hooks/useAccess";
-import { getChannels, setSocialToken } from "@/lib/channels.functions";
+import { connectPage, getChannels, setSocialToken } from "@/lib/channels.functions";
 import { stamp } from "@/lib/format";
 import { analyseSentiment, saveSocialAccount } from "@/lib/social.functions";
 
@@ -19,6 +19,8 @@ export function Channels() {
   const fetchChannels = useServerFn(getChannels);
   const saveAccount = useServerFn(saveSocialAccount);
   const saveToken = useServerFn(setSocialToken);
+  const connect = useServerFn(connectPage);
+  const [pageToken, setPageToken] = useState("");
   const { access } = useAccess();
   const isSuper = access?.role === "super";
   const [tokens, setTokens] = useState<Record<string, string>>({});
@@ -153,9 +155,60 @@ export function Channels() {
           ))}
         </div>
       )}
+      {isSuper && (
+        <div className="card ch-connect" style={{ marginTop: 14 }}>
+          <b>Connect a Facebook Page (and its Instagram)</b>
+          <ol className="ac-howto">
+            <li>
+              In Meta Business Settings → System users, give a system user the Page, then Generate
+              token for this app with pages_messaging, pages_manage_metadata, pages_read_engagement
+              and instagram_manage_messages.
+            </li>
+            <li>
+              Paste the token here. Groundwork finds the Page and its Instagram, and subscribes them
+              to messages.
+            </li>
+          </ol>
+          {!data?.metaWebhook && (
+            <p className="f-note" role="alert">
+              Meta can&apos;t deliver messages yet: set META_APP_SECRET and META_VERIFY_TOKEN on the
+              server, and give Meta the webhook{" "}
+              <span className="mono">{data?.metaWebhookUrl ?? "/api/public/social/meta"}</span> with
+              the same verify token.
+            </p>
+          )}
+          <div className="ac-row">
+            <input
+              className="input"
+              aria-label="Page access token"
+              placeholder="Page access token"
+              value={pageToken}
+              onChange={(e) => setPageToken(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              disabled={busy || pageToken.trim().length < 20}
+              onClick={() =>
+                void act(async () => {
+                  const r = await connect({ data: { token: pageToken } });
+                  setPageToken("");
+                  return `${r.page}${r.instagram ? ` and @${r.instagram}` : ""} connected.${
+                    r.subscribed
+                      ? " Messages to them now land in this Inbox."
+                      : ` Subscribing to messages failed: ${r.note ?? "unknown"}.`
+                  }`;
+                })
+              }
+            >
+              Connect
+            </button>
+          </div>
+        </div>
+      )}
       <p className="f-note" style={{ marginTop: 12 }}>
         Facebook, Instagram and WhatsApp messages arrive at{" "}
-        <span className="mono">/api/public/social/meta</span>, X at{" "}
+        <span className="mono">{data?.metaWebhookUrl ?? "/api/public/social/meta"}</span>, X at{" "}
         <span className="mono">/api/public/social/x</span>. Replies to an account are held until it
         is switched live.
       </p>
