@@ -46,7 +46,10 @@ const stamp = shortDay;
 
 function Broadcast() {
   const fetchBroadcast = useServerFn(getBroadcast);
-  const { data } = useQuery({ queryKey: ["broadcast"], queryFn: () => fetchBroadcast() });
+  const { data, isError, refetch } = useQuery({
+    queryKey: ["broadcast"],
+    queryFn: () => fetchBroadcast(),
+  });
 
   const start = parseBroadcastSearch(Route.useSearch());
   const [support45, setSupport45] = useState(start.strong);
@@ -87,7 +90,20 @@ function Broadcast() {
             <h1>
               One message, <span className="serif">the right doors.</span>
             </h1>
-            <p className="meta">Loading audience…</p>
+            {isError ? (
+              <p className="meta" role="alert">
+                Couldn&apos;t load the audience.{" "}
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => void refetch()}
+                >
+                  Try again
+                </button>
+              </p>
+            ) : (
+              <p className="meta">Loading audience…</p>
+            )}
           </div>
         </div>
       </section>

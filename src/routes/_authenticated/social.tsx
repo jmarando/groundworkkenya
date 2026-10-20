@@ -6,6 +6,7 @@ import { useState } from "react";
 import { analyseSentiment, getSocial, saveSocialAccount } from "@/lib/social.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { nf, stamp } from "@/lib/format";
+import { QueryState } from "@/components/gw/QueryState";
 
 export const Route = createFileRoute("/_authenticated/social")({
   component: Social,
@@ -64,7 +65,10 @@ function Social() {
   const saveAccount = useServerFn(saveSocialAccount);
   const queryClient = useQueryClient();
 
-  const { data } = useQuery({ queryKey: ["social"], queryFn: () => fetchSocial() });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["social"],
+    queryFn: () => fetchSocial(),
+  });
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [platform, setPlatform] = useState("all");
@@ -122,6 +126,7 @@ function Social() {
             Listening
           </Link>
           <button
+            type="button"
             className="btn btn--primary btn--sm"
             onClick={() => void analyse()}
             disabled={busy}
@@ -129,6 +134,7 @@ function Social() {
             {busy ? "Reading…" : "Read the mood"}
           </button>
           <button
+            type="button"
             className="btn btn--ghost btn--sm"
             onClick={() =>
               downloadCSV(
@@ -150,6 +156,13 @@ function Social() {
           </button>
         </div>
       </div>
+
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        retry={() => void refetch()}
+        what="the social queue"
+      />
       {note && <p className="f-note">{note}</p>}
 
       <div className="g5 fx2">
@@ -372,6 +385,7 @@ function Social() {
                 {a.lastEventAt ? ` · last in ${stamp(a.lastEventAt)}` : ""}
               </span>
               <button
+                type="button"
                 className="btn btn--ghost btn--sm"
                 style={{ marginLeft: 12 }}
                 onClick={() => void toggleLive(a.id, !a.live)}

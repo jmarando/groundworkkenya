@@ -21,6 +21,7 @@ import { filterMentions } from "@/lib/listening-filter";
 import { Overview, PostList } from "@/components/gw/listening/Overview";
 import { sourceName } from "@/lib/listening-read";
 import { nf, stamp } from "@/lib/format";
+import { QueryState } from "@/components/gw/QueryState";
 
 export const Route = createFileRoute("/_authenticated/listening")({
   // ?issue=water: a link from Home opens the mentions about that issue.
@@ -74,7 +75,10 @@ function Listening() {
   const markMention = useServerFn(setMentionStatus);
 
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ["listening"], queryFn: () => fetchData() });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["listening"],
+    queryFn: () => fetchData(),
+  });
 
   const { issue } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -178,6 +182,7 @@ function Listening() {
               : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
           </span>
           <button
+            type="button"
             className="btn btn--primary"
             disabled={busy}
             onClick={() => act(() => sweep({ data: {} }), "Sweep finished.")}
@@ -187,11 +192,19 @@ function Listening() {
         </div>
       </div>
 
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        retry={() => void refetch()}
+        what="what was found"
+      />
+
       {data?.job?.status === "paused" && (
         <div className="card note--flag" style={{ marginTop: 12 }}>
           <div className="card-head">
             <h2>Sweeping stopped</h2>
             <button
+              type="button"
               className="btn btn--sm"
               onClick={() => act(() => resume(), "Sweeping restarted.")}
             >
@@ -211,8 +224,10 @@ function Listening() {
       <div className="fchips" style={{ marginTop: 14 }}>
         {TABS.map((x) => (
           <button
+            type="button"
             key={x.key}
             className={`fchip${tab === x.key ? " active" : ""}`}
+            aria-pressed={tab === x.key}
             onClick={() => setTab(x.key)}
           >
             {x.label}
@@ -257,7 +272,7 @@ function Listening() {
                 {nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.
               </p>
             </div>
-            <button className="btn btn--sm" onClick={exportMentions}>
+            <button type="button" className="btn btn--sm" onClick={exportMentions}>
               Download CSV
             </button>
           </div>
@@ -275,11 +290,16 @@ function Listening() {
             ) : null}
             <input
               className="ibx-search"
+              aria-label="Search headlines and text"
               placeholder="Search headlines and text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
+            <select
+              aria-label="Keyword"
+              value={topicFilter}
+              onChange={(e) => setTopicFilter(e.target.value)}
+            >
               <option value="all">All keywords</option>
               {(data?.topics ?? []).map((tp) => (
                 <option key={tp.id} value={tp.id}>
@@ -287,7 +307,7 @@ function Listening() {
                 </option>
               ))}
             </select>
-            <select value={source} onChange={(e) => setSource(e.target.value)}>
+            <select aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
               <option value="all">All sources</option>
               {(data?.bySource ?? []).map((s) => (
                 <option key={s.source} value={s.source}>
@@ -295,7 +315,7 @@ function Listening() {
                 </option>
               ))}
             </select>
-            <select value={mood} onChange={(e) => setMood(e.target.value)}>
+            <select aria-label="Mood" value={mood} onChange={(e) => setMood(e.target.value)}>
               <option value="all">Any mood</option>
               <option value="negative">Angry</option>
               <option value="neutral">Neutral</option>
@@ -394,6 +414,7 @@ function Keywords({
               </span>
               <span style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
                 <button
+                  type="button"
                   className="btn btn--sm"
                   disabled={busy}
                   onClick={() =>
@@ -403,6 +424,7 @@ function Keywords({
                   {tp.active ? "on" : "off"}
                 </button>
                 <button
+                  type="button"
                   className="btn btn--sm"
                   disabled={busy}
                   onClick={() => act(() => drop({ data: { id: tp.id } }), "Keyword removed.")}
@@ -475,6 +497,7 @@ function Keywords({
             </select>
           </label>
           <button
+            type="button"
             className="btn btn--primary"
             disabled={busy}
             onClick={() =>
@@ -558,6 +581,7 @@ function Alerts({
                 </span>
                 <b style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <button
+                    type="button"
                     className="btn btn--sm"
                     disabled={busy}
                     onClick={() => act(() => test({ data: { id: a.id } }), "Test alert queued.")}
@@ -565,6 +589,7 @@ function Alerts({
                     test
                   </button>
                   <button
+                    type="button"
                     className="btn btn--sm"
                     disabled={busy}
                     onClick={() =>
@@ -574,6 +599,7 @@ function Alerts({
                     {a.active ? "on" : "off"}
                   </button>
                   <button
+                    type="button"
                     className="btn btn--sm"
                     disabled={busy}
                     onClick={() => act(() => drop({ data: { id: a.id } }), "Alert removed.")}
@@ -626,8 +652,10 @@ function Alerts({
             <div className="fchips">
               {["negative", "neutral", "positive"].map((m) => (
                 <button
+                  type="button"
                   key={m}
                   className={`fchip${form.sentiments.includes(m) ? " active" : ""}`}
+                  aria-pressed={form.sentiments.includes(m)}
                   onClick={() => toggleMood(m)}
                 >
                   {MOOD[m]}
@@ -673,6 +701,7 @@ function Alerts({
               />
             </label>
             <button
+              type="button"
               className="btn btn--primary"
               disabled={busy}
               onClick={() =>

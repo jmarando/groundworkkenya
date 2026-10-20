@@ -151,7 +151,7 @@ function Inbox() {
     }
   }
   const queryClient = useQueryClient();
-  const { data } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
+  const { data, isError, refetch } = useQuery({ queryKey: ["inbox"], queryFn: () => fetchInbox() });
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendNote, setSendNote] = useState<string | null>(null);
@@ -228,7 +228,20 @@ function Inbox() {
             <h1>
               Every message, <span className="serif">answered.</span>
             </h1>
-            <p className="meta">Loading the queue…</p>
+            {isError ? (
+              <p className="meta" role="alert">
+                Couldn&apos;t load the queue.{" "}
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => void refetch()}
+                >
+                  Try again
+                </button>
+              </p>
+            ) : (
+              <p className="meta">Loading the queue…</p>
+            )}
           </div>
         </div>
       </section>

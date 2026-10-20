@@ -9,6 +9,7 @@ import { AssignAgent } from "@/components/gw/AssignAgent";
 import { getAgents } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { nf } from "@/lib/format";
+import { QueryState } from "@/components/gw/QueryState";
 
 export const Route = createFileRoute("/_authenticated/agents")({
   component: Agents,
@@ -53,7 +54,10 @@ const STATION_VIEWS: { key: string; label: string }[] = [
 
 function Agents() {
   const fetchAgents = useServerFn(getAgents);
-  const { data } = useQuery({ queryKey: ["agents"], queryFn: () => fetchAgents() });
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["agents"],
+    queryFn: () => fetchAgents(),
+  });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [stationView, setStationView] = useState("");
@@ -188,6 +192,13 @@ function Agents() {
           </span>
         </div>
       </div>
+
+      <QueryState
+        isLoading={isLoading}
+        isError={isError}
+        retry={() => void refetch()}
+        what="the field team"
+      />
 
       <div className="g5 fx2">
         <div className="card kpi">
