@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { extractEvents, type MetaPayload, type SocialEvent } from "@/lib/meta-events";
 import { tokenMatches } from "@/lib/webhook-token.server";
 import { createHmac, timingSafeEqual } from "crypto";
 
@@ -49,12 +50,47 @@ export const Route = createFileRoute("/api/public/social/meta")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { channelCampaignId } = await import("@/lib/tenant.server");
+        const sb = supabaseAdmin;
+
+        // The campaign an event belongs to: the one whose account (Page, Instagram account or
+        // WhatsApp number) it came to. Groundwork's own line takes anything no campaign claims.
+        const owners = new Map<string, string>();
+        const campaignFor = async (e: SocialEvent): Promise<string> => {
+          const key = `${e.platform}:${e.accountId ?? ""}`;
+          const known = owners.get(key);
+          if (known) return known;
+          let found: string | null = null;
+          if (e.accountId && e.platform === "whatsapp") {
+            const digits = e.accountId.replace(/\D/g, "");
+            const { data } = await sb
+              .from("campaign_channels")
+              .select("campaign_id")
+              .eq("kind", "whatsapp")
+              .in("identifier", [`+${digits}`, digits]);
+            found = data?.length === 1 ? data[0]!.campaign_id : null;
+          } else if (e.accountId) {
+            const { data } = await sb
+              .from("social_accounts")
+              .select("campaign_id")
+              .eq("platform", e.platform)
+              .eq("external_id", e.accountId);
+            found = data?.length === 1 ? data[0]!.campaign_id : null;
+          }
+          const id = found ?? (await channelCampaignId(sb));
+          owners.set(key, id);
+          return id;
+        };
+        const logged = (what: string, error: { message: string } | null) => {
+          if (error) console.error(`Meta webhook: could not ${what}: ${error.message}`);
+        };
 
         for (const e of events) {
+          const campaignId = await campaignFor(e);
           const threadId = `${e.platform}:${e.threadId}`;
-          const { data: existing } = await supabaseAdmin
+          const { data: existing } = await sb
             .from("conversations")
             .select("id, person_id")
+            .eq("campaign_id", campaignId)
             .eq("platform", e.platform)
             .eq("external_thread_id", threadId)
             .maybeSingle();
@@ -64,26 +100,33 @@ export const Route = createFileRoute("/api/public/social/meta")({
 
           if (!conversationId) {
             if (e.phone) {
-              const { data: person } = await supabaseAdmin
+              const { data: person } = await sb
                 .from("people")
                 .select("id")
                 .eq("phone", e.phone)
-                .eq("campaign_id", await channelCampaignId(supabaseAdmin))
+                .eq("campaign_id", campaignId)
                 .maybeSingle();
               if (person) {
                 personId = person.id;
               } else {
-                const { data: created } = await supabaseAdmin
+                const { data: created, error } = await sb
                   .from("people")
-                  .insert({ phone: e.phone, full_name: e.authorName ?? null, source: e.platform })
+                  .insert({
+                    campaign_id: campaignId,
+                    phone: e.phone,
+                    full_name: e.authorName ?? null,
+                    source: e.platform,
+                  })
                   .select("id")
                   .maybeSingle();
+                logged("add the person", error);
                 personId = created?.id ?? null;
               }
             }
-            const { data: convo } = await supabaseAdmin
+            const { data: convo, error } = await sb
               .from("conversations")
               .insert({
+                campaign_id: campaignId,
                 person_id: personId,
                 channel: e.platform,
                 platform: e.platform,
@@ -98,15 +141,18 @@ export const Route = createFileRoute("/api/public/social/meta")({
               })
               .select("id")
               .maybeSingle();
+            logged("open the conversation", error);
             conversationId = convo?.id ?? null;
           } else {
-            await supabaseAdmin
+            const { error } = await sb
               .from("conversations")
               .update({ unread: true, last_message_at: e.at, snippet: e.body.slice(0, 280) })
               .eq("id", conversationId);
+            logged("update the conversation", error);
           }
 
-          await supabaseAdmin.from("messages").insert({
+          const { error: messageError } = await sb.from("messages").insert({
+            campaign_id: campaignId,
             person_id: personId,
             conversation_id: conversationId,
             channel: e.platform,
@@ -121,11 +167,14 @@ export const Route = createFileRoute("/api/public/social/meta")({
             created_at: e.at,
             sent_at: e.at,
           });
+          logged("save the message", messageError);
 
-          await supabaseAdmin
+          const { error: seenError } = await sb
             .from("social_accounts")
             .update({ last_event_at: e.at })
+            .eq("campaign_id", campaignId)
             .eq("platform", e.platform);
+          logged("note the account's last message", seenError);
         }
 
         return new Response("ok");
@@ -134,106 +183,3 @@ export const Route = createFileRoute("/api/public/social/meta")({
   },
 });
 
-type MetaPayload = {
-  object?: string;
-  entry?: {
-    id?: string;
-    time?: number;
-    messaging?: {
-      sender?: { id?: string };
-      timestamp?: number;
-      message?: { mid?: string; text?: string };
-    }[];
-    changes?: {
-      field?: string;
-      value?: Record<string, unknown>;
-    }[];
-  }[];
-};
-
-type SocialEvent = {
-  platform: "facebook" | "instagram" | "whatsapp";
-  kind: "dm" | "comment" | "mention";
-  threadId: string;
-  externalId: string;
-  authorHandle: string | null;
-  authorName: string | null;
-  phone: string | null;
-  body: string;
-  permalink: string | null;
-  at: string;
-};
-
-const iso = (seconds?: number) =>
-  new Date((seconds ? seconds * 1000 : Date.now())).toISOString();
-
-function extractEvents(payload: MetaPayload): SocialEvent[] {
-  const out: SocialEvent[] = [];
-  const object = payload.object ?? "";
-  const base: SocialEvent["platform"] =
-    object === "instagram" ? "instagram" : object === "whatsapp_business_account" ? "whatsapp" : "facebook";
-
-  for (const entry of payload.entry ?? []) {
-    // Messenger / Instagram DMs
-    for (const m of entry.messaging ?? []) {
-      const text = m.message?.text;
-      if (!text) continue;
-      const sender = m.sender?.id ?? "unknown";
-      out.push({
-        platform: base === "whatsapp" ? "facebook" : base,
-        kind: "dm",
-        threadId: sender,
-        externalId: m.message?.mid ?? `${sender}-${m.timestamp ?? Date.now()}`,
-        authorHandle: sender,
-        authorName: null,
-        phone: null,
-        body: text,
-        permalink: null,
-        at: iso(m.timestamp ? Math.floor(m.timestamp / 1000) : undefined),
-      });
-    }
-
-    for (const change of entry.changes ?? []) {
-      const value = (change.value ?? {}) as Record<string, any>;
-
-      // WhatsApp Cloud API
-      for (const msg of (value["messages"] as any[]) ?? []) {
-        const body = msg?.text?.body;
-        if (!body) continue;
-        const from = String(msg.from ?? "");
-        const contact = ((value["contacts"] as any[]) ?? [])[0];
-        out.push({
-          platform: "whatsapp",
-          kind: "dm",
-          threadId: from,
-          externalId: String(msg.id ?? `${from}-${msg.timestamp ?? Date.now()}`),
-          authorHandle: from,
-          authorName: contact?.profile?.name ?? null,
-          phone: from.startsWith("+") ? from : `+${from}`,
-          body,
-          permalink: null,
-          at: iso(msg.timestamp ? Number(msg.timestamp) : undefined),
-        });
-      }
-
-      // Page / Instagram comments and mentions
-      const commentText = value["message"] ?? value["text"];
-      if (typeof commentText === "string" && commentText.trim()) {
-        const commentId = String(value["comment_id"] ?? value["id"] ?? `${entry.id}-${entry.time}`);
-        out.push({
-          platform: base === "whatsapp" ? "facebook" : base,
-          kind: change.field?.includes("mention") ? "mention" : "comment",
-          threadId: commentId,
-          externalId: commentId,
-          authorHandle: (value["from"] as any)?.username ?? (value["from"] as any)?.id ?? null,
-          authorName: (value["from"] as any)?.name ?? null,
-          phone: null,
-          body: commentText,
-          permalink: (value["permalink_url"] as string) ?? null,
-          at: iso(entry.time),
-        });
-      }
-    }
-  }
-  return out;
-}
