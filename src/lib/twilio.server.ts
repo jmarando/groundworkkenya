@@ -40,9 +40,16 @@ export function callbackUrl(path: string): string {
   return `${publicBase()}${path}${t ? `?token=${encodeURIComponent(t)}` : ""}`;
 }
 
+/** A callback address with the token and these parameters. */
+export function callbackWith(path: string, params: Record<string, string>): string {
+  const u = new URL(callbackUrl(path));
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  return u.toString();
+}
+
 export async function twilioPost(
   path: string,
-  params: Record<string, string>,
+  params: Record<string, string | string[]>,
 ): Promise<{ status: number; json: Record<string, unknown> | null; text: string }> {
   const res = await fetch(`${GATEWAY}${path}`, {
     signal: AbortSignal.timeout(20_000),
@@ -52,7 +59,12 @@ export async function twilioPost(
       "X-Connection-Api-Key": process.env["TWILIO_API_KEY"]!,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams(params),
+    // A list (StatusCallbackEvent) is sent as the same name repeated, as Twilio expects.
+    body: new URLSearchParams(
+      Object.entries(params).flatMap(([k, v]) =>
+        Array.isArray(v) ? v.map((x) => [k, x]) : [[k, v]],
+      ),
+    ),
   });
   const text = await res.text();
   let json: Record<string, unknown> | null = null;
@@ -137,23 +149,62 @@ export function twiml(inner: string): Response {
   });
 }
 
+const EVENTS = ["initiated", "ringing", "answered", "completed"];
+
 /**
- * Ring the team member first; when they pick up, connect them to the voter.
- * The voter sees the campaign's number, not the team member's.
+ * Ring the team member first; when they pick up, connect them to the voter. The voter sees the
+ * campaign's number, not the team member's. Every step is reported to call-status for `callId`
+ * (voice_calls), so the screen can say where the call is.
  */
 export async function bridgeCall(
   staffDigits: string,
   voterDigits: string,
   voterName: string,
+  callId: string,
 ): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
   const from = process.env["TWILIO_FROM_NUMBER"]!.trim();
+  const status = callbackWith("/api/public/twilio/call-status", { call: callId });
+  const voter = callbackWith("/api/public/twilio/call-status", { call: callId, leg: "voter" });
   const inner =
     `<Say>Connecting you to ${escapeXml(voterName)}.</Say>` +
-    `<Dial callerId="${escapeXml(from)}" timeout="30"><Number>+${voterDigits}</Number></Dial>`;
+    `<Dial callerId="${escapeXml(from)}" timeout="30" action="${escapeXml(voter)}" method="POST"><Number>+${voterDigits}</Number></Dial>`;
   const r = await twilioPost("/Calls.json", {
     To: `+${staffDigits}`,
     From: from,
     Twiml: `<Response>${inner}</Response>`,
+    StatusCallback: status,
+    StatusCallbackEvent: EVENTS,
+    StatusCallbackMethod: "POST",
+    Timeout: "30",
+  });
+  if (r.status >= 200 && r.status < 300 && r.json?.["sid"])
+    return { ok: true, sid: String(r.json["sid"]) };
+  return {
+    ok: false,
+    error: `Twilio ${String(r.json?.["code"] ?? r.status)}: ${String(r.json?.["message"] ?? r.text).slice(0, 200)}`,
+  };
+}
+
+/**
+ * An auto-call: Twilio rings the person and, when answered, fetches what to play from the
+ * autocall address for `callId`; every step is reported to call-status. Answering machines are
+ * told apart so a voicemail is counted as one.
+ */
+export async function autoCall(
+  toDigits: string,
+  callId: string,
+): Promise<{ ok: true; sid: string } | { ok: false; error: string }> {
+  const from = process.env["TWILIO_FROM_NUMBER"]!.trim();
+  const r = await twilioPost("/Calls.json", {
+    To: `+${toDigits}`,
+    From: from,
+    Url: callbackWith("/api/public/twilio/autocall", { call: callId }),
+    Method: "POST",
+    StatusCallback: callbackWith("/api/public/twilio/call-status", { call: callId }),
+    StatusCallbackEvent: EVENTS,
+    StatusCallbackMethod: "POST",
+    MachineDetection: "Enable",
+    Timeout: "30",
   });
   if (r.status >= 200 && r.status < 300 && r.json?.["sid"])
     return { ok: true, sid: String(r.json["sid"]) };

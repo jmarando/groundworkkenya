@@ -27,7 +27,7 @@ type Person = {
   campaign_id: string;
 };
 
-function clean(a: Partial<BroadcastAudience> | undefined): BroadcastAudience {
+export function clean(a: Partial<BroadcastAudience> | undefined): BroadcastAudience {
   return {
     wardIds: [...new Set((a?.wardIds ?? []).map(String))].slice(0, 500),
     segments: [...new Set((a?.segments ?? []).map(String))].slice(0, 100),
@@ -35,7 +35,10 @@ function clean(a: Partial<BroadcastAudience> | undefined): BroadcastAudience {
   };
 }
 
-function matches(p: Person, a: BroadcastAudience): boolean {
+export function matches(
+  p: Pick<Person, "ward_id" | "segment" | "support_score">,
+  a: BroadcastAudience,
+): boolean {
   if (a.wardIds.length && !(p.ward_id && a.wardIds.includes(p.ward_id))) return false;
   if (a.segments.length && !(p.segment && a.segments.includes(p.segment))) return false;
   if (a.support.length) {
