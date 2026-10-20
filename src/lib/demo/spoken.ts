@@ -4,8 +4,7 @@
 import { ours } from "@/lib/demo";
 import { countAtLeast, daysBetween, ELECTION_DAY, weightedShares } from "@/lib/demo/insights";
 import type { Scenario } from "@/lib/demo/types";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 function spokenDate(iso: string): string {
   return new Date(`${iso}T09:00:00Z`).toLocaleDateString("en-GB", {

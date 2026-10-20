@@ -5,8 +5,8 @@ import { toast } from "sonner";
 
 import { reportTotals, type PulseReport } from "@/lib/pulse";
 import { addPulsePayouts, getPulse, sendPulseBrief } from "@/lib/pulse.functions";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const today = () => new Date().toISOString().slice(0, 10);
 const inWeeks = (n: number) => new Date(Date.now() + n * 7 * 86_400_000).toISOString().slice(0, 10);
 

@@ -11,8 +11,8 @@ import { raceInText, whole } from "@/lib/atlas-view";
 import { getWarRoom } from "@/lib/console.functions";
 import { defaultRace } from "@/lib/elections-view";
 import { raceArea } from "@/lib/race";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const clockOf = (d: Date) =>
   d.toLocaleTimeString("en-GB", { timeZone: "Africa/Nairobi", hour12: false });

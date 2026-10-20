@@ -4,7 +4,7 @@
 // story already there (the team's, or an earlier run's) is never replaced. The
 // shared job row says what happened in counts only.
 
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { askAiJson, PauseError } from "@/lib/listening.server";
 import {
   checkStory,

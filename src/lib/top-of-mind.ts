@@ -1,3 +1,4 @@
+import { nf } from "@/lib/format";
 // What is on people's minds this week: the issues raised in the news and on
 // social media, in messages to the campaign, at the door, and in Google
 // searches. Each source is counted on its own and the shares averaged, so no
@@ -137,8 +138,6 @@ export const listOf = (parts: string[]): string =>
   parts.length <= 1
     ? (parts[0] ?? "")
     : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
-
-const nf = new Intl.NumberFormat("en-KE");
 
 /** What this week's ranking rests on, in a line. */
 export function mindBasis(m: TopOfMind): string {

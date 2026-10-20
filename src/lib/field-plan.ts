@@ -2,6 +2,8 @@
 // needs. Pure. The reads are src/lib/field-plan.functions.ts; the screen is /field-plan, and the
 // field app uses dayLabel and forToday to put today's lists first.
 
+import { addDays, nairobiToday } from "@/lib/nairobi-date";
+
 export type Shift = "morning" | "afternoon" | "day";
 export const SHIFTS: { key: Shift; label: string }[] = [
   { key: "morning", label: "Morning" },
@@ -40,10 +42,7 @@ const DAY = 86_400_000;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const at = (day: string) => new Date(`${day}T00:00:00Z`);
 
-/** Today in Nairobi, yyyy-mm-dd. */
-export const nairobiToday = (now = new Date()) => iso(new Date(now.getTime() + 3 * 3_600_000));
-
-export const addDays = (day: string, n: number) => iso(new Date(at(day).getTime() + n * DAY));
+export { addDays, nairobiToday };
 
 /** The Monday on or before `day`. */
 export function mondayOf(day: string): string {

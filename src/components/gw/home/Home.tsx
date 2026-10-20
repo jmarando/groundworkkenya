@@ -7,7 +7,7 @@ import { AddPoll, EditRivals, useRemovePoll } from "@/components/gw/home/RaceEdi
 import { RaceSection } from "@/components/gw/home/RaceSection";
 import { StoryEditor } from "@/components/gw/home/StoryEditor";
 import { TodaySection } from "@/components/gw/home/TodaySection";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import type { Scenario } from "@/lib/demo/types";
 import { dayPlan, nairobiTime, nextStop, watchList } from "@/lib/diary";
 import { greetingName, nextStopItem, realToday, sectionModes, todayItems } from "@/lib/home";

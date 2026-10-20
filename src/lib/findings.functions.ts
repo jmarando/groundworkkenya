@@ -10,7 +10,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { wardKey } from "@/lib/atlas-app";
 import { loadAtlas } from "@/lib/atlas.functions";
 import { electionOf } from "@/lib/atlas-view";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { addDays } from "@/lib/diary";
 import { loadDiary } from "@/lib/diary.functions";
 import { defaultRace, homeAreaFor } from "@/lib/elections-view";

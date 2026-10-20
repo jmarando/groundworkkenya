@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { addDays, type DiaryEntry } from "@/lib/diary";
 import { loadDiary } from "@/lib/diary.functions";
 import { type HomeFacts, type RaceView, type RealSignals } from "@/lib/home";

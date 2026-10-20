@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { analyseSentiment, getSocial, saveSocialAccount } from "@/lib/social.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
+import { nf, stamp } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/social")({
   component: Social,
@@ -27,8 +28,6 @@ export const Route = createFileRoute("/_authenticated/social")({
     ],
   }),
 });
-
-const nf = new Intl.NumberFormat("en-KE");
 
 const LABEL: Record<string, { name: string; code: string; cls: string; note: string }> = {
   facebook: {
@@ -58,14 +57,6 @@ const LABEL: Record<string, { name: string; code: string; cls: string; note: str
 };
 
 const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", negative: "angry" };
-
-const stamp = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 function Social() {
   const fetchSocial = useServerFn(getSocial);

@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { AssignAgent } from "@/components/gw/AssignAgent";
 import { getAgents } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
+import { nf } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/agents")({
   component: Agents,
@@ -31,7 +32,6 @@ export const Route = createFileRoute("/_authenticated/agents")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
 const money = (n: number) => `KES ${nf.format(Math.round(n))}`;
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";

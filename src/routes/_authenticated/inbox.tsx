@@ -22,6 +22,8 @@ import {
   startConversation,
 } from "@/lib/social.functions";
 
+import { stamp } from "@/lib/format";
+
 export const Route = createFileRoute("/_authenticated/inbox")({
   component: Inbox,
   head: () => ({
@@ -41,14 +43,6 @@ export const Route = createFileRoute("/_authenticated/inbox")({
     ],
   }),
 });
-
-const stamp = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 const PLATFORM_BADGE: Record<string, { code: string; cls: string }> = {
   sms: { code: "SMS", cls: "ch--sms" },

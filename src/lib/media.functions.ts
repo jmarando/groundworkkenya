@@ -5,6 +5,8 @@
 
 import { createServerFn } from "@tanstack/react-start";
 
+import { nairobiToday } from "@/lib/nairobi-date";
+
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { checkBuy, type BuyRow } from "@/lib/media";
 
@@ -110,7 +112,7 @@ export const recordMediaResults = createServerFn({ method: "POST" })
         impressions: data.impressions,
         reach: data.reach,
         clicks: data.clicks,
-        results_on: new Date().toISOString().slice(0, 10),
+        results_on: nairobiToday(),
       })
       .eq("id", data.id);
     if (error) {

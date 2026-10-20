@@ -18,6 +18,7 @@ import {
   weightedShares,
 } from "@/lib/demo/insights";
 import type { OpsConfig, Scenario } from "@/lib/demo/types";
+import { nf } from "@/lib/format";
 
 /** Voters per polling stream, for counting streams (IEBC caps a stream at 700). */
 const VOTERS_PER_STREAM = 600;
@@ -89,7 +90,6 @@ export type Pace = {
 
 export type Verdict = { headline: string; detail: string };
 
-const nf = new Intl.NumberFormat("en-KE");
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
 /**

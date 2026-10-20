@@ -20,6 +20,7 @@ import { downloadCSV, stampName } from "@/lib/csv";
 import { filterMentions } from "@/lib/listening-filter";
 import { Overview, PostList } from "@/components/gw/listening/Overview";
 import { sourceName } from "@/lib/listening-read";
+import { nf, stamp } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/listening")({
   // ?issue=water: a link from Home opens the mentions about that issue.
@@ -48,17 +49,6 @@ export const Route = createFileRoute("/_authenticated/listening")({
     ],
   }),
 });
-
-const nf = new Intl.NumberFormat("en-KE");
-const stamp = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "never";
 
 const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", negative: "angry" };
 const TABS = [

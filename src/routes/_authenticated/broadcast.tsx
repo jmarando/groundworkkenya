@@ -11,6 +11,7 @@ import type { SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { parseBroadcastSearch, type BroadcastSearch } from "@/lib/voters-view";
+import { nf, shortDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/broadcast")({
   component: Broadcast,
@@ -41,9 +42,7 @@ export const Route = createFileRoute("/_authenticated/broadcast")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
-const stamp = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const stamp = shortDay;
 
 function Broadcast() {
   const fetchBroadcast = useServerFn(getBroadcast);

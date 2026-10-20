@@ -20,6 +20,7 @@ import {
   type Shift,
 } from "@/lib/field-plan";
 import { getFieldPlan, scheduleList } from "@/lib/field-plan.functions";
+import { nf } from "@/lib/format";
 
 const ABOUT =
   "Who knocks where over the next fortnight: walk lists by day and person, and what each ward still needs.";
@@ -38,7 +39,6 @@ export const Route = createFileRoute("/_authenticated/field-plan")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
 const SHIFT_LETTER: Record<Shift, string> = { morning: "AM", afternoon: "PM", day: "Day" };
 
 function Chip({

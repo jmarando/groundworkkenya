@@ -9,7 +9,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import {
   cleanTeamStory,
   hasNews,

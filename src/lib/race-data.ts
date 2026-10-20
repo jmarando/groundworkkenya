@@ -2,6 +2,7 @@
 // so every rule here can be checked without a browser or a database.
 
 import type { Tone } from "@/lib/demo/types";
+import { nf } from "@/lib/format";
 
 export type RaceRival = {
   id: string;
@@ -559,8 +560,6 @@ export function postFromRow(r: PostRow): RivalPost | null {
           },
   };
 }
-
-const nf = new Intl.NumberFormat("en-KE");
 
 /** "28 Sep": the day a post went up, in Nairobi (UTC+3 all year). */
 export function postDay(iso: string): string {

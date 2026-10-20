@@ -82,15 +82,8 @@ export function daysBetween(fromIso: string, toIso: string): number {
   return Math.round((d(toIso) - d(fromIso)) / 86_400_000);
 }
 
-/** Today's date in Nairobi as YYYY-MM-DD. */
-export function nairobiToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Africa/Nairobi",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
+/** Today's date in Nairobi as YYYY-MM-DD (kept here for the demo's own imports). */
+export { nairobiToday } from "@/lib/nairobi-date";
 
 /** A seeded pseudo-random stream (mulberry32): the same seed, the same numbers. */
 export function seeded(seed: number): () => number {

@@ -12,8 +12,7 @@ import {
   type Conversation,
   type Focus,
 } from "@/lib/listening-read";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 const MOOD: Record<string, { word: string; cls: string }> = {
   positive: { word: "warm", cls: "pill--ok" },

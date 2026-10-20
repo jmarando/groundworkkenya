@@ -5,8 +5,8 @@ import { toast } from "sonner";
 
 import { bookMediaBuy, getMediaBuys, recordMediaResults } from "@/lib/media.functions";
 import { byPlatform, costPerThousand, platformInfo, PLATFORMS, type BuyRow } from "@/lib/media";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 const today = () => new Date().toISOString().slice(0, 10);

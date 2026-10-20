@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { storyFromRow, type StoryView } from "@/lib/morning-story";
 import { loadDiary } from "@/lib/diary.functions";
 import { PRINCIPAL_ROLES, TEAM_ROLES, type MyRole } from "@/lib/access";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 
 export const getBriefingArchive = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -14,8 +14,8 @@ import type { Centre } from "@/lib/centres";
 import { toDoors } from "@/lib/walk-list-plan";
 import { DRAW_CAP, defaultName, leftOffText, skipText } from "@/lib/walk-lists";
 import { getListTeam, makeWalkList } from "@/lib/walk-lists.functions";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const housesText = (n: number) => `${nf.format(n)} ${n === 1 ? "house" : "houses"}`;
 
 export function PlanWalkList({

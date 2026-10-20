@@ -23,8 +23,7 @@ import {
   type SearchChanges,
   type WardInfo,
 } from "@/lib/voters-view";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 type Figure = { label: string; value: string; note: string; open?: () => void };
 

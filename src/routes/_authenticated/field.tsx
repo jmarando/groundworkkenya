@@ -9,6 +9,7 @@ import { WalkLists } from "@/components/gw/field/WalkLists";
 import { InstallApp } from "@/components/gw/offline/InstallApp";
 import { useFieldQueue } from "@/hooks/useFieldQueue";
 import { getVoters } from "@/lib/console.functions";
+import { nf } from "@/lib/format";
 
 const LIST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -38,8 +39,6 @@ export const Route = createFileRoute("/_authenticated/field")({
     ],
   }),
 });
-
-const nf = new Intl.NumberFormat("en-KE");
 
 function Field() {
   const fetchVoters = useServerFn(getVoters);

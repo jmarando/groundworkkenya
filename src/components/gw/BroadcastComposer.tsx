@@ -11,8 +11,8 @@ import {
 } from "@/lib/broadcast.functions";
 import { plainify, smsParts } from "@/lib/sms";
 import { ChannelTabs, WhatsAppComposer } from "@/components/gw/WhatsAppComposer";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const kes = new Intl.NumberFormat("en-KE", { maximumFractionDigits: 2 });
 
 export function BroadcastComposer({

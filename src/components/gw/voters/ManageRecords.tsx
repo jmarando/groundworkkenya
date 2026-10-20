@@ -2,8 +2,7 @@ import { useState } from "react";
 
 import { ImportPeople } from "@/components/gw/ImportPeople";
 import type { PeopleData } from "@/lib/console.functions";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 /** Importing, where records come in, possible duplicates and consent, in one place. */
 export function ManageRecords({

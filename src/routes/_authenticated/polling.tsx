@@ -12,6 +12,7 @@ import { useAccess } from "@/hooks/useAccess";
 import { getPolling } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { closePoll, getPollDetail, launchPoll } from "@/lib/polls.functions";
+import { nf } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/polling")({
   // ?ask= opens the builder with a question filled in (from the morning briefing).
@@ -40,7 +41,6 @@ export const Route = createFileRoute("/_authenticated/polling")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
 

@@ -4,7 +4,7 @@ import { Archive, CalendarDays, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getBriefingArchive } from "@/lib/briefing-archive.functions";
 import { dayName, KIND_NAMES } from "@/lib/diary";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { MorningNews, MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
 import { useAccess } from "@/hooks/useAccess";
 import { useState } from "react";

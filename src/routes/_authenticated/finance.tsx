@@ -9,6 +9,7 @@ import { approveExpense } from "@/lib/finance.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { RecordMoney } from "@/components/gw/finance/RecordMoney";
 import { useAccess } from "@/hooks/useAccess";
+import { nf } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/finance")({
   component: Finance,
@@ -30,7 +31,6 @@ export const Route = createFileRoute("/_authenticated/finance")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
 const money = (n: number) => nf.format(Math.round(n));
 const millions = (n: number) => `${(n / 1_000_000).toFixed(1)}M`;
 const day = (iso: string) =>

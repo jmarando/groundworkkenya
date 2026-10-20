@@ -2,8 +2,8 @@ import { ChoroplethMap } from "@/components/gw/demo/ChoroplethMap";
 import { toneVar } from "@/components/gw/demo/tone";
 import type { NightFrame } from "@/lib/demo/election-night";
 import type { Scenario } from "@/lib/demo/types";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1)}`;
 

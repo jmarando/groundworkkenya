@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { cleanPoll, RIVAL_TONES, type RaceRival } from "@/lib/race-data";
 import { removePoll, removeRival, savePoll, saveRival } from "@/lib/race.functions";
 

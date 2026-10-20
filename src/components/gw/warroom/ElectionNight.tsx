@@ -15,11 +15,10 @@ import {
 } from "@/components/gw/warroom/NightCards";
 import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
 import type { Scenario } from "@/lib/demo/types";
+import { nf } from "@/lib/format";
 
 /** Minutes of election night per second of playback. */
 const SPEEDS = [5, 15, 30] as const;
-
-const nf = new Intl.NumberFormat("en-KE");
 
 /**
  * Election night, simulated: results arrive station by station from 17:00

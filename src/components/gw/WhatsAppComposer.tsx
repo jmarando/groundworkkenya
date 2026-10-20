@@ -6,8 +6,7 @@ import { toast } from "sonner";
 import type { BroadcastAudience } from "@/lib/broadcast.functions";
 import { estimateWhatsApp, sendWhatsAppBroadcast } from "@/lib/wa-broadcast.functions";
 import { fillTemplate, WA_TEMPLATES_ALL } from "@/lib/wa-templates";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 export function ChannelTabs({
   value,

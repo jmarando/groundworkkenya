@@ -11,6 +11,7 @@ import {
   type RewardMethod,
 } from "@/lib/polls.engine";
 import { createPoll, estimateAudience, getAudienceOptions } from "@/lib/polls.functions";
+import { nf } from "@/lib/format";
 
 const CHANNELS: { id: string; label: string; note: string }[] = [
   { id: "sms", label: "SMS", note: "Any handset. Replies come back as 1–9." },
@@ -20,8 +21,6 @@ const CHANNELS: { id: string; label: string; note: string }[] = [
 ];
 
 type Option = { label: string; labelSw: string };
-
-const nf = new Intl.NumberFormat("en-KE");
 
 export function PollBuilder({
   onClose,

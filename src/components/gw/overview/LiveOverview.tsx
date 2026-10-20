@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { getOverview } from "@/lib/overview.functions";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 /** `embedded`: inside Home, which has its own header and Today list. */
 export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) {
