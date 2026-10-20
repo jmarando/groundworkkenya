@@ -131,6 +131,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_stipends_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_stipends_station_id_fkey"
             columns: ["station_id"]
             isOneToOne: false
@@ -3256,6 +3263,7 @@ export type Database = {
         Returns: Json
       }
       approve_expense: { Args: { _expense_id: string }; Returns: Json }
+      approve_stipends: { Args: { _ids: string[] }; Returns: number }
       assign_station_agent: {
         Args: { _name: string; _phone: string; _station_id: string }
         Returns: undefined
@@ -3270,6 +3278,15 @@ export type Database = {
           _source: string
         }
         Returns: string
+      }
+      begin_stipend_payment: {
+        Args: { _id: string }
+        Returns: {
+          agent_name: string
+          amount_kes: number
+          phone: string
+          request_id: string
+        }[]
       }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
       campaign_for_channel: {
@@ -3307,6 +3324,37 @@ export type Database = {
         }
         Returns: Json
       }
+      field_plan: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          centre_name: string
+          done: number
+          done_at: string
+          doors: number
+          due_on: string
+          given_to: string
+          given_to_name: string
+          id: string
+          name: string
+          shift: string
+          status: string
+          ward_id: string
+          ward_name: string
+        }[]
+      }
+      field_plan_wards: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          doors_knocked: number
+          doors_planned: number
+          name: string
+          slug: string
+          spoke: number
+          supporters: number
+          target_votes: number
+          ward_id: string
+        }[]
+      }
       file_stream_result: {
         Args: {
           _channel: string
@@ -3317,6 +3365,15 @@ export type Database = {
           _votes: number[]
         }
         Returns: Json
+      }
+      finish_stipend_payment: {
+        Args: {
+          _error: string
+          _ok: boolean
+          _receipt: string
+          _request: string
+        }
+        Returns: undefined
       }
       focus_campaign: { Args: { _campaign: string }; Returns: undefined }
       give_walk_list: { Args: { _id: string; _to: string }; Returns: undefined }
@@ -3389,10 +3446,12 @@ export type Database = {
           centre_name: string
           done: number
           doors: number
+          due_on: string
           first_sent_at: string
           given_at: string
           id: string
           name: string
+          shift: string
           ward_id: string
         }[]
       }
@@ -3402,6 +3461,7 @@ export type Database = {
           centre_id: string
           done: number
           doors: number
+          due_on: string
           first_sent_at: string
           given_at: string
           given_to: string
@@ -3409,6 +3469,7 @@ export type Database = {
           id: string
           name: string
           not_home: number
+          shift: string
           status: string
           ward_id: string
         }[]
@@ -3497,6 +3558,11 @@ export type Database = {
         }
         Returns: Json
       }
+      record_stipend_paid: {
+        Args: { _id: string; _receipt: string }
+        Returns: undefined
+      }
+      release_stipend_payment: { Args: { _id: string }; Returns: undefined }
       remove_member: { Args: { _user_id: string }; Returns: undefined }
       request_campaign_access: { Args: { _slug: string }; Returns: string }
       restore_site_version: { Args: { _version: string }; Returns: number }
@@ -3510,6 +3576,10 @@ export type Database = {
         }[]
       }
       save_site_draft: { Args: { _draft: Json; _rev: number }; Returns: number }
+      schedule_walk_list: {
+        Args: { _due_on: string; _id: string; _shift: string; _to?: string }
+        Returns: undefined
+      }
       set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
         Args: {
@@ -3527,6 +3597,19 @@ export type Database = {
           _station_id: string
         }
         Returns: Json
+      }
+      stipend_money_only: { Args: never; Returns: undefined }
+      stipend_paid: {
+        Args: { _by: string; _id: string; _receipt: string }
+        Returns: undefined
+      }
+      stipend_payment_unclear: {
+        Args: { _note: string; _request: string }
+        Returns: undefined
+      }
+      stipends_from_field: {
+        Args: { _from: string; _rate: number; _to: string }
+        Returns: number
       }
       street_walk: {
         Args: { _street_id: string }
