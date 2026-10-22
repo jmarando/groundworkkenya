@@ -90,7 +90,7 @@ function world(now: Date, extra: Record<string, Record<string, unknown>[]> = {})
         "r-babu",
       ),
       mention("c2", "https://www.tiktok.com/@sakaja/video/2", "Our own post", 10, "r-us"),
-      mention("c3", "https://mathira.test/tea", "Mathira tea prices", 30),
+      mention("c3", "https://mathira.test/tea", "Mathira tea prices", 50),
     ],
     race_rivals: [
       { id: "r-babu", campaign_id: "c2", name: "Babu Owino", is_us: false },
@@ -148,7 +148,7 @@ async function main() {
     eq(
       "the shared note names no campaign",
       [detail, /Sakaja|Mathira/.test(detail)],
-      ["Wrote 1 story. · 1 campaign had no news in the last day.", false],
+      ["Wrote 1 story. · 1 campaign had no news in the last two days.", false],
     );
 
     const again = await runMorningStory(sb as never, { now: at("07:05") });

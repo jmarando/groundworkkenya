@@ -137,7 +137,7 @@ export async function reviseAround(
   ]);
   const { data: c } = await sb
     .from("campaigns")
-    .select("id, name, candidate, seat")
+    .select("id, name, candidate, seat, map_area")
     .eq("id", String(campaignId ?? ""))
     .maybeSingle();
   if (!c) throw new Error("Could not find the campaign.");

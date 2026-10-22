@@ -1,4 +1,53 @@
-import { carriedLine, kicker, noStoryLine, type StoryView } from "@/lib/morning-story";
+import {
+  carriedLine,
+  kicker,
+  noStoryLine,
+  outletOf,
+  SCOPE_NAMES,
+  type StoryLink,
+  type StoryView,
+} from "@/lib/morning-story";
+
+const shortDate = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        timeZone: "Africa/Nairobi",
+      })
+    : null;
+
+/** Who published it, where it sits (the seat, the county, a rival, the nation) and when. */
+function LinkMeta({ link }: { link: StoryLink }) {
+  const when = shortDate(link.publishedAt);
+  return (
+    <span className="mb-link-meta">
+      {link.scope ? (
+        <span className={`mb-scope mb-scope--${link.scope}`}>
+          {link.scope === "rival" && link.about ? link.about : SCOPE_NAMES[link.scope]}
+        </span>
+      ) : null}
+      <span>{outletOf(link)}</span>
+      {when ? <span>{when}</span> : null}
+    </span>
+  );
+}
+
+/** A list of links, each with who published it and when. */
+function LinkList({ links }: { links: StoryLink[] }) {
+  return (
+    <ul className="mb-links">
+      {links.map((l) => (
+        <li key={l.url}>
+          <LinkMeta link={l} />
+          <a href={l.url} target="_blank" rel="noopener noreferrer">
+            {l.title}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /** This morning's story: its kicker, the story with its sources, and the morning's other news. */
 export function MorningStoryBlock({
@@ -92,12 +141,19 @@ export function MorningStoryDetails({ view }: { view: StoryView | null }) {
           ))}
         </dl>
       ) : null}
-      {st.rivals || st.line ? (
+      {st.rivals || st.rivalsLately.length || st.line ? (
         <div className="mb-story-cols">
           {st.rivals ? (
             <div>
               <h3>How rivals are playing it</h3>
               <p>{st.rivals}</p>
+              {st.rivalSources.length ? <LinkList links={st.rivalSources} /> : null}
+            </div>
+          ) : st.rivalsLately.length ? (
+            <div>
+              <h3>Rivals lately</h3>
+              <p className="mb-source">Not on this story, but out this week:</p>
+              <LinkList links={st.rivalsLately} />
             </div>
           ) : null}
           {st.line ? (
@@ -109,17 +165,10 @@ export function MorningStoryDetails({ view }: { view: StoryView | null }) {
         </div>
       ) : null}
       {st.sources.length ? (
-        <p className="mb-source">
-          Sources:{" "}
-          {st.sources.map((s, i) => (
-            <span key={s.url}>
-              {i ? " · " : ""}
-              <a href={s.url} target="_blank" rel="noopener noreferrer">
-                {s.source}
-              </a>
-            </span>
-          ))}
-        </p>
+        <div className="mb-sources">
+          <h3>Where this comes from</h3>
+          <LinkList links={st.sources} />
+        </div>
       ) : null}
     </div>
   );
@@ -135,7 +184,9 @@ export function MorningNews({ view }: { view: StoryView | null }) {
       <ul className="mb-news grid grid-cols-1 gap-x-8 md:grid-cols-2">
         {st.also.map((n) => (
           <li key={n.url} className="min-w-0">
-            <p className="mb-news-meta">{n.source}</p>
+            <p className="mb-news-meta">
+              <LinkMeta link={n} />
+            </p>
             <p className="mb-news-h break-words">
               <a href={n.url} target="_blank" rel="noopener noreferrer">
                 {n.title}

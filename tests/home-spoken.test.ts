@@ -40,6 +40,8 @@ const text = spokenHome({
       line: "Tankers to every ward this week.",
       figures: [],
       sources: [],
+      rivalSources: [],
+      rivalsLately: [],
       also: [],
       picks: [],
       from: 3,

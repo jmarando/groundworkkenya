@@ -6120,6 +6120,76 @@ figure {
   color: var(--muted-foreground);
   margin-top: 12px;
 }
+.mb-sources {
+  margin-top: 18px;
+}
+.mb-sources h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.mb-links {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.mb-links li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.mb-links li:first-child {
+  border-top: 0;
+}
+.mb-links a {
+  color: var(--gw-ink-2);
+  overflow-wrap: anywhere;
+}
+.mb-links a:hover {
+  text-decoration: underline;
+}
+.mb-link-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+.mb-link-meta > span + span::before {
+  content: "·";
+  margin-right: 8px;
+}
+.mb-link-meta > .mb-scope + span::before {
+  content: none;
+}
+.mb-scope {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: var(--muted);
+  color: var(--gw-ink-2);
+}
+.mb-scope--seat {
+  background: hsl(15 77% 48% / 0.12);
+  color: hsl(15 75% 34%);
+}
+.mb-scope--county {
+  background: hsl(152 45% 40% / 0.14);
+  color: hsl(152 55% 24%);
+}
+.mb-scope--rival {
+  background: hsl(262 45% 55% / 0.14);
+  color: hsl(262 45% 38%);
+}
 .mb-sub {
   margin-top: 28px;
   font-size: 15px;
@@ -8081,8 +8151,67 @@ figure {
 }
 .diary-actions {
   display: flex;
-  gap: 6px;
+  gap: 14px;
   margin-top: 6px;
+}
+/* Edit and Remove: quiet text, so the stops read first. */
+.diary-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.diary-link:hover,
+.diary-link:focus-visible {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+.diary-link.is-sure {
+  color: var(--destructive, hsl(0 70% 45%));
+}
+.diary-entry-kind {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.diary-entry-title {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+.diary-finds {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 6px 0 0 10px;
+  border-left: 2px solid var(--border);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+.diary-finds li + li {
+  margin-top: 3px;
+}
+.diary-day.is-empty {
+  padding-block: 14px;
+}
+.diary-day.is-empty .card-head {
+  margin-bottom: 4px;
+}
+.diary-seat {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.diary-seat span {
+  font-weight: 600;
+  color: var(--foreground);
+  margin-right: 6px;
 }
 .mb-time li.diary-editing {
   display: block;

@@ -2,7 +2,27 @@
 // found, or by the team. Pure: what the AI says is checked here before it is
 // kept, and the team's own story is cleaned the same way.
 
-export type StoryLink = { title: string; url: string; source: string; publishedAt: string | null };
+import { OFF_TOPIC } from "@/lib/top-of-mind";
+import { voiceOf } from "@/lib/voices";
+
+/** Where an item came from: the seat's own keywords, its county's, a rival's, or the national news. */
+export type Scope = "seat" | "county" | "rival" | "national";
+export const SCOPE_NAMES: Record<Scope, string> = {
+  seat: "The seat",
+  county: "County",
+  rival: "Rivals",
+  national: "National",
+};
+
+export type StoryLink = {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string | null;
+  scope?: Scope;
+  /** For a rival's item: whose. */
+  about?: string;
+};
 
 /** One of the morning's items, numbered from 1 as the AI sees it. */
 export type StoryItem = StoryLink & { n: number; text: string };
@@ -17,6 +37,10 @@ export type MorningStory = {
   line: string | null;
   figures: { value: string; label: string }[];
   sources: StoryLink[];
+  /** The items the rivals' line rests on. */
+  rivalSources: StoryLink[];
+  /** What rivals put out lately, shown when the story has no line on them. */
+  rivalsLately: StoryLink[];
   also: (StoryLink & { soWhat: string | null })[];
   /** The morning's items, to write another story from. */
   picks: StoryLink[];
@@ -31,6 +55,11 @@ export type MentionRow = {
   source: string | null;
   domain: string | null;
   published_at: string | null;
+  /** The kind of keyword that found it (listening_topics.kind), and its label. */
+  kind?: string | null;
+  label?: string | null;
+  issue?: string | null;
+  found_at?: string | null;
 };
 
 const isWeb = (u: unknown): u is string => typeof u === "string" && /^https?:\/\/\S+$/i.test(u);
@@ -45,27 +74,104 @@ const linkOf = (i: StoryItem): StoryLink => ({
   url: i.url,
   source: i.source,
   publishedAt: i.publishedAt,
+  ...(i.scope ? { scope: i.scope } : {}),
+  ...(i.about ? { about: i.about } : {}),
 });
 
-/** The morning's items: titled web links, each once, numbered from 1. */
+export const scopeOf = (kind: string | null | undefined): Scope =>
+  kind === "county" || kind === "national" || kind === "rival" ? kind : "seat";
+
+/** How many of each the morning reads at most, so county and rival news always get a place. */
+const SHARE: Record<Scope, number> = { seat: 18, county: 10, rival: 7, national: 5 };
+
+const isAdvert = (t: string) => /#ad\b|\b(sponsored|promoted)\b/i.test(t);
+const sameStory = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .slice(0, 60);
+
+/**
+ * The morning's items: titled web links, each once, no adverts or posts the sweep found to be
+ * about somewhere else, the seat's own first, then the county's, the rivals' and the national
+ * news, each to its share, then whatever fills the rest; numbered from 1.
+ */
 export function storyItems(rows: MentionRow[], max = 40): StoryItem[] {
   const seen = new Set<string>();
-  const out: StoryItem[] = [];
+  const pools: Record<Scope, StoryItem[]> = { seat: [], county: [], rival: [], national: [] };
   for (const r of rows) {
     const title = clip(r.title, 300);
-    if (!title || !isWeb(r.url) || seen.has(r.url)) continue;
+    if (!title || !isWeb(r.url) || seen.has(r.url) || seen.has(sameStory(title))) continue;
+    if (isAdvert(title) || r.issue === OFF_TOPIC || !/\p{L}/u.test(title)) continue;
     seen.add(r.url);
-    out.push({
-      n: out.length + 1,
+    seen.add(sameStory(title));
+    const scope = scopeOf(r.kind);
+    pools[scope].push({
+      n: 0,
       title,
       url: r.url,
       source: r.domain ?? r.source ?? "web",
       publishedAt: r.published_at,
+      scope,
+      ...(scope === "rival" && r.label ? { about: r.label } : {}),
       text: [title, clip(r.snippet, 600)].filter(Boolean).join(" "),
     });
-    if (out.length >= max) break;
   }
-  return out;
+  const order: Scope[] = ["seat", "county", "rival", "national"];
+  const first = order.flatMap((k) => pools[k].slice(0, SHARE[k]));
+  const rest = order.flatMap((k) => pools[k].slice(SHARE[k]));
+  return [...first, ...rest].slice(0, max).map((i, k) => ({ ...i, n: k + 1 }));
+}
+
+const PLATFORMS: Record<string, string> = {
+  "x.com": "x",
+  "twitter.com": "x",
+  "facebook.com": "facebook",
+  "instagram.com": "instagram",
+  "tiktok.com": "tiktok",
+  "youtube.com": "youtube",
+  "reddit.com": "reddit",
+};
+const PLATFORM_NAMES: Record<string, string> = {
+  x: "X",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+  reddit: "Reddit",
+};
+const OUTLETS: Record<string, string> = {
+  "the-star.co.ke": "The Star",
+  "nation.africa": "Nation",
+  "standardmedia.co.ke": "The Standard",
+  "citizen.digital": "Citizen Digital",
+  "tuko.co.ke": "Tuko",
+  "kenyans.co.ke": "Kenyans.co.ke",
+  "peopledaily.digital": "People Daily",
+  "capitalfm.co.ke": "Capital FM",
+  "kbc.co.ke": "KBC",
+  "kenyanews.go.ke": "Kenya News Agency",
+  "theeastafrican.co.ke": "The EastAfrican",
+  "businessdailyafrica.com": "Business Daily",
+  "kahawatungu.com": "Kahawa Tungu",
+  "mwakilishi.com": "Mwakilishi",
+  "kiambu.go.ke": "Kiambu County",
+};
+
+/** Who published a link, in words: "The Star", "@TheStarKenya on X", "Facebook". */
+export function outletOf(l: Pick<StoryLink, "url" | "source">): string {
+  let host = "";
+  try {
+    host = new URL(l.url).hostname.replace(/^(www|m|mobile|web)\./, "");
+  } catch {
+    return l.source;
+  }
+  const platform = PLATFORMS[host];
+  if (!platform) return OUTLETS[host] ?? host;
+  const v = voiceOf({ source: platform, url: l.url, author: null, domain: host });
+  const where = PLATFORM_NAMES[platform] ?? host;
+  return v && !/^\d+$/.test(v.name.replace(/^@/, "")) ? `${v.name} on ${where}` : where;
 }
 
 type Answer = {
@@ -77,6 +183,7 @@ type Answer = {
   line?: unknown;
   figures?: unknown;
   items?: unknown;
+  rivalItems?: unknown;
   also?: unknown;
 };
 type Obj = Record<string, unknown>;
@@ -120,19 +227,36 @@ export function checkStory(answer: unknown, items: StoryItem[]): MorningStory | 
     })
     .slice(0, 5);
 
+  const rivalSources = [...new Set(Array.isArray(a.rivalItems) ? a.rivalItems.map(Number) : [])]
+    .map((n) => byN.get(n))
+    .filter((i): i is StoryItem => Boolean(i))
+    .slice(0, 3)
+    .map(linkOf);
+  const rivals = clip(a.rivals, 400);
+
   return {
     kind: "written",
     headline,
     summary,
     why: clip(a.why, 400),
-    rivals: clip(a.rivals, 400),
+    // "Nothing from the rivals" is said by leaving the line out, not by printing it.
+    rivals: rivals && !NO_RIVALS.test(rivals) ? rivals : null,
     line: clip(a.line, 300),
     figures,
     sources: lead.slice(0, 5).map(linkOf),
+    rivalSources: rivals && !NO_RIVALS.test(rivals) ? rivalSources : [],
+    rivalsLately: [],
     also,
     picks: items.slice(0, 12).map(linkOf),
     from: items.length,
   };
+}
+
+const NO_RIVALS = /^(rivals? (haven.?t|have not|has not|hasn.?t)|none|no rival)/i;
+
+/** The rivals' latest: their own posts first, then items about them; three at most. */
+export function rivalsLately(own: StoryLink[], items: StoryItem[]): StoryLink[] {
+  return [...own, ...items.filter((i) => i.scope === "rival").map(linkOf)].slice(0, 3);
 }
 
 /** When no story can be written: the morning's top five links. */
@@ -146,7 +270,17 @@ export function headlinesStory(items: StoryItem[]): MorningStory {
     line: null,
     figures: [],
     sources: [],
-    also: items.slice(0, 5).map((i) => ({ ...linkOf(i), soWhat: null })),
+    rivalSources: [],
+    rivalsLately: [],
+    // The top two of the seat's own, then the county's and the rest, so the county is never missing.
+    also: [
+      ...items.filter((i) => i.scope !== "national").slice(0, 2),
+      ...items.filter((i) => i.scope === "county").slice(0, 2),
+      ...items,
+    ]
+      .filter((i, k, all) => all.findIndex((x) => x.n === i.n) === k)
+      .slice(0, 6)
+      .map((i) => ({ ...linkOf(i), soWhat: null })),
     picks: items.slice(0, 12).map(linkOf),
     from: items.length,
   };
@@ -195,6 +329,8 @@ export function cleanTeamStory(input: TeamStoryInput, prev: MorningStory | null)
           .slice(0, 5)
           .map((url) => ({ title: hostOf(url), url, source: hostOf(url), publishedAt: null }))
       : (prev?.sources ?? []),
+    rivalSources: prev?.rivalSources ?? [],
+    rivalsLately: prev?.rivalsLately ?? [],
     also: prev?.also ?? [],
     picks: prev?.picks ?? [],
     from: prev?.from ?? 0,
@@ -218,19 +354,23 @@ export type StoryView = {
   editedBy: string | null;
 };
 
+const SCOPES = new Set<string>(["seat", "county", "rival", "national"]);
 const links = (v: unknown): StoryLink[] =>
-  list(v).flatMap((l) =>
-    isWeb(l["url"])
-      ? [
-          {
-            title: clip(l["title"], 300) ?? l["url"],
-            url: l["url"],
-            source: clip(l["source"], 80) ?? "web",
-            publishedAt: typeof l["publishedAt"] === "string" ? l["publishedAt"] : null,
-          },
-        ]
-      : [],
-  );
+  list(v).flatMap((l) => {
+    if (!isWeb(l["url"])) return [];
+    const scope = typeof l["scope"] === "string" && SCOPES.has(l["scope"]) ? l["scope"] : null;
+    const about = clip(l["about"], 80);
+    return [
+      {
+        title: clip(l["title"], 300) ?? l["url"],
+        url: l["url"],
+        source: clip(l["source"], 80) ?? "web",
+        publishedAt: typeof l["publishedAt"] === "string" ? l["publishedAt"] : null,
+        ...(scope ? { scope: scope as Scope } : {}),
+        ...(about ? { about } : {}),
+      },
+    ];
+  });
 
 /** A stored story, read with care: a link off the web is left out, a malformed story is null. */
 export function storyFromRow(r: StoryRow, editorName: string | null): StoryView | null {
@@ -241,7 +381,10 @@ export function storyFromRow(r: StoryRow, editorName: string | null): StoryView 
     headline: clip(s["headline"], 160),
     summary: clip(s["summary"], 800),
     why: clip(s["why"], 400),
-    rivals: clip(s["rivals"], 400),
+    rivals: (() => {
+      const r = clip(s["rivals"], 400);
+      return r && !NO_RIVALS.test(r) ? r : null;
+    })(),
     line: clip(s["line"], 300),
     figures: list(s["figures"])
       .flatMap((f) => {
@@ -251,6 +394,8 @@ export function storyFromRow(r: StoryRow, editorName: string | null): StoryView 
       })
       .slice(0, 3),
     sources: links(s["sources"]).slice(0, 5),
+    rivalSources: links(s["rivalSources"]).slice(0, 3),
+    rivalsLately: links(s["rivalsLately"]).slice(0, 3),
     also: list(s["also"])
       .flatMap((x) => links([x]).map((l) => ({ ...l, soWhat: clip(x["soWhat"], 200) })))
       .slice(0, 5),
@@ -317,5 +462,5 @@ export function noStoryLine(loading: boolean, time: string): string {
   if (loading) return "Reading this morning's story…";
   return time < "06:00"
     ? "This morning's story is written at 6:00 from the news Listening finds."
-    : "No news about the race in the last day.";
+    : "No news about the race in the last two days.";
 }

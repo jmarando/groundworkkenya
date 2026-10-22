@@ -4,6 +4,8 @@
 //   npx tsx --tsconfig tsconfig.json tests/morning-story.test.ts
 
 import {
+  outletOf,
+  rivalsLately,
   carriedLine,
   checkStory,
   cleanTeamStory,
@@ -206,7 +208,7 @@ eq(
   [
     "Reading this morning's story…",
     "This morning's story is written at 6:00 from the news Listening finds.",
-    "No news about the race in the last day.",
+    "No news about the race in the last two days.",
   ],
 );
 
@@ -225,6 +227,91 @@ eq(
   );
   eq("today's says nothing", carriedLine({ ...v, day: "2026-10-19" }, "2026-10-19"), null);
 }
+
+{
+  const row = (url: string, title: string, kind: string | null, extra = {}) => ({
+    url,
+    title,
+    snippet: null,
+    source: "web",
+    domain: null,
+    published_at: null,
+    kind,
+    label: kind === "rival" ? "Charles Thiong'o" : null,
+    ...extra,
+  });
+  const national = Array.from({ length: 12 }, (_, k) =>
+    row(`https://n.test/${k}`, `National story number ${k}`, "national"),
+  );
+  const got = storyItems(
+    [
+      ...national,
+      row("https://s.test/1", "Githunguri dairy farmers paid late", "issue"),
+      row("https://c.test/1", "Kiambu assembly passes the budget", "county"),
+      row("https://r.test/1", "Thiong'o tours Komothai", "rival"),
+      row("https://x.com/citizentvkenya/status/1", "#AD", "county"),
+      row("https://a.test/1", "Sponsored: plots in Ruiru", "seat"),
+      row("https://o.test/1", "Mombasa girl relocating to Kisumu", "issue", { issue: "off-topic" }),
+      row("https://s.test/2", "Githunguri dairy farmers paid late!", "issue"),
+    ],
+    10,
+  );
+  eq(
+    "the seat first, then the county and the rivals, national to its share; no adverts or repeats",
+    got.map((i) => [i.n, i.scope, i.title]),
+    [
+      [1, "seat", "Githunguri dairy farmers paid late"],
+      [2, "county", "Kiambu assembly passes the budget"],
+      [3, "rival", "Thiong'o tours Komothai"],
+      [4, "national", "National story number 0"],
+      [5, "national", "National story number 1"],
+      [6, "national", "National story number 2"],
+      [7, "national", "National story number 3"],
+      [8, "national", "National story number 4"],
+      [9, "national", "National story number 5"],
+      [10, "national", "National story number 6"],
+    ],
+  );
+  eq("a rival's item says whose", got[2]?.about, "Charles Thiong'o");
+
+  const answer = {
+    headline: "Dairy payments late",
+    summary: "Farmers say payments are late.",
+    items: [1],
+    rivals: "Rivals haven't spoken on it.",
+    rivalItems: [3],
+  };
+  const st = checkStory(answer, got)!;
+  eq("no line on the rivals is left out, not printed", [st.rivals, st.rivalSources], [null, []]);
+  const st2 = checkStory(
+    { ...answer, rivals: "Thiong'o toured Komothai on dairy.", rivalItems: [3, 99] },
+    got,
+  )!;
+  eq(
+    "a rivals' line keeps the items it rests on",
+    st2.rivalSources.map((l) => l.url),
+    ["https://r.test/1"],
+  );
+  eq(
+    "rivals lately: their own posts, then items about them",
+    rivalsLately(
+      [{ title: "Own", url: "https://x.com/thiongo/status/9", source: "x", publishedAt: null }],
+      got,
+    ).map((l) => l.url),
+    ["https://x.com/thiongo/status/9", "https://r.test/1"],
+  );
+}
+eq(
+  "outlets in words",
+  [
+    "https://www.the-star.co.ke/news/x",
+    "https://x.com/TheStarKenya/status/1",
+    "https://www.facebook.com/100044345233644/posts/1",
+    "https://www.tiktok.com/@wamuchomba/video/1",
+    "https://example.org/a",
+  ].map((url) => outletOf({ url, source: "web" })),
+  ["The Star", "@TheStarKenya on X", "Facebook", "@wamuchomba on TikTok", "example.org"],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
