@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
+import { OFF_TOPIC } from "@/lib/top-of-mind";
 
 /** What a keyword follows: you, a rival, an issue, or news beyond the seat. */
 const TOPIC_KINDS = ["campaign", "rival", "issue", "county", "national"] as const;
@@ -129,7 +130,13 @@ export const getListening = createServerFn({ method: "GET" })
       { data: rivals },
     ] = await Promise.all([
       sb.from("listening_topics").select("*").order("label"),
-      sb.from("listening_mentions").select("*").order("found_at", { ascending: false }).limit(600),
+      // Posts the sweep found to be about somewhere or something else are left out.
+      sb
+        .from("listening_mentions")
+        .select("*")
+        .or(`issue.is.null,issue.neq.${OFF_TOPIC}`)
+        .order("found_at", { ascending: false })
+        .limit(600),
       sb.from("listening_alerts").select("*").order("created_at", { ascending: false }),
       sb
         .from("listening_alert_events")

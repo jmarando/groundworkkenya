@@ -12,6 +12,7 @@ import { nairobiToday } from "@/lib/nairobi-date";
 import { requireOffice } from "@/lib/require-role";
 import { gaps, phasesFor, readRoadmap, type Gap, type NewsImpact } from "@/lib/roadmap";
 import { loadFigures, loadImpacts } from "@/lib/roadmap.functions";
+import { OFF_TOPIC } from "@/lib/top-of-mind";
 import { SPREAD_DEFAULT } from "@/lib/voices";
 
 type Client = {
@@ -113,6 +114,7 @@ export const getHomeStrategy = createServerFn({ method: "GET" })
         .select("id, title, url, source, reach, sentiment, rival_id, published_at, found_at")
         .gte("reach", threshold)
         .is("rival_id", null)
+        .or(`issue.is.null,issue.neq.${OFF_TOPIC}`)
         .gte("found_at", since)
         .order("reach", { ascending: false })
         .limit(3) as Promise<{

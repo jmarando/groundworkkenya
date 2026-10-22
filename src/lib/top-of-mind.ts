@@ -16,7 +16,10 @@ export const SOURCE_NAMES: Record<MindSource, string> = {
 /** A source counts in a week with at least this many items (searches: any interest). */
 export const MIN_ITEMS = 5;
 
-const NOT_ISSUES = new Set(["general", "campaign"]);
+/** The issue the sweep gives a post that isn't about the seat at all (an advert, another county's news). */
+export const OFF_TOPIC = "off-topic";
+
+const NOT_ISSUES = new Set(["general", "campaign", OFF_TOPIC]);
 const SAME: Record<string, string> = {
   rubbish: "garbage",
   trash: "garbage",
@@ -49,6 +52,21 @@ export function issueKey(raw: string | null | undefined): string | null {
     .replace(/\s+/g, " ");
   if (!k || NOT_ISSUES.has(k)) return null;
   return SAME[k] ?? k;
+}
+
+/** Keyword kinds about the seat itself; county and national keywords read the wider news, not the seat. */
+const SEAT_KINDS = new Set(["campaign", "issue", "rival"]);
+
+/**
+ * The swept posts that speak for the seat: found by its own keywords (not the county or national
+ * ones), with a title, and not an advert.
+ */
+export function seatNews<T extends { title: string | null; kind?: string | null }>(rows: T[]): T[] {
+  return rows.filter((r) => {
+    if (r.kind && !SEAT_KINDS.has(r.kind)) return false;
+    if (!/\p{L}/u.test(r.title ?? "") || ("issue" in r && r.issue === OFF_TOPIC)) return false;
+    return !/#ad\b|\b(sponsored|promoted)\b/i.test(r.title ?? "");
+  });
 }
 
 export const issueLabel = (key: string): string => key.charAt(0).toUpperCase() + key.slice(1);

@@ -9,6 +9,7 @@
 
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
 import { takeCredits } from "./social-credits";
+import { OFF_TOPIC } from "./top-of-mind";
 import {
   ScrapeCreatorsCreditError,
   scConfigured,
@@ -168,13 +169,19 @@ const MOOD_SCHEMA = {
   },
 };
 
-async function readMoods(items: { id: string; text: string }[]): Promise<Verdict[]> {
+async function readMoods(
+  items: { id: string; text: string; campaign?: string; keyword?: string }[],
+): Promise<Verdict[]> {
   const prompt = [
-    "You monitor Kenyan news, blogs and social posts for a county political campaign.",
+    "You monitor Kenyan news, blogs and social posts for political campaigns.",
+    "Each item names the campaign (candidate and seat) and the keyword that found it.",
     "Text may mix English, Kiswahili and Sheng.",
-    "For each item return the mood towards the campaign (positive, neutral or negative),",
+    "For each item return the mood towards that campaign (positive, neutral or negative),",
     "a short lowercase issue label (roads, water, garbage, jobs, bursaries, security, health, housing,",
     "corruption, transport, land, campaign, general), and a score from -1 (furious) to 1 (delighted).",
+    `Use the issue "${OFF_TOPIC}" when the item is an advert, a job listing or promotion, or is not`,
+    "about the campaign's seat, its candidate, its rivals or the keyword's subject (for example a",
+    "post about another county or constituency that a search happened to return).",
     "Keep the given id for each entry.",
     "",
     JSON.stringify(items),
@@ -464,13 +471,33 @@ export async function runListeningScan(
     // read the mood on anything not yet rated
     const { data: pending } = await sb
       .from("listening_mentions")
-      .select("id, title, snippet")
+      .select("id, title, snippet, campaign_id, topic_id")
       .is("sentiment", null)
       .order("found_at", { ascending: false })
       .limit(classifyLimit);
 
+    // Each post is read against its own campaign and keyword, so a stray result can be set aside.
+    const ids = (k: "campaign_id" | "topic_id") => [
+      ...new Set((pending ?? []).map((m: any) => m[k]).filter(Boolean)),
+    ];
+    const [{ data: camps }, { data: kws }] = await Promise.all([
+      ids("campaign_id").length
+        ? sb.from("campaigns").select("id, candidate, seat").in("id", ids("campaign_id"))
+        : Promise.resolve({ data: [] }),
+      ids("topic_id").length
+        ? sb.from("listening_topics").select("id, label, query").in("id", ids("topic_id"))
+        : Promise.resolve({ data: [] }),
+    ]);
+    const campOf = new Map(
+      (camps ?? []).map((c: any) => [c.id, [c.candidate, c.seat].filter(Boolean).join(", ")]),
+    );
+    const kwOf = new Map(
+      (kws ?? []).map((t: any) => [t.id, t.query ? `${t.label} (${t.query})` : t.label]),
+    );
     const batch = (pending ?? []).map((m: any) => ({
       id: m.id as string,
+      ...(campOf.get(m.campaign_id) ? { campaign: campOf.get(m.campaign_id) as string } : {}),
+      ...(kwOf.get(m.topic_id) ? { keyword: kwOf.get(m.topic_id) as string } : {}),
       text: `${m.title ?? ""} — ${m.snippet ?? ""}`.slice(0, 600),
     }));
 
@@ -568,6 +595,7 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
         "id, topic_id, title, snippet, url, sentiment, issue, found_at, reach, author, source",
       )
       .eq("campaign_id", campaignId)
+      .or(`issue.is.null,issue.neq.${OFF_TOPIC}`)
       .gte("found_at", since)
       .order("found_at", { ascending: false })
       .limit(400);
