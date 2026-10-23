@@ -98,6 +98,43 @@ eq("Winnie Odinga's announcement", byId("winnie-senate")?.date, "2026-10-15");
 eq("Babu Owino's statement", byId("babu-governor")?.date, "2026-09-15");
 eq("ODM's July statement", byId("odm-ruto-2026")?.date, "2026-07-12");
 eq(
+  "the three polls are there with the figures their sources print",
+  [
+    [
+      byId("poll-darubini")?.date,
+      ["48%", "28%", "17%"].every((x) => byId("poll-darubini")?.text.includes(x)),
+    ],
+    [
+      byId("poll-cap")?.date,
+      ["36%", "32%", "11%", "10%", "7%", "4%"].every((x) => byId("poll-cap")?.text.includes(x)),
+    ],
+    [
+      byId("poll-mizani")?.date,
+      ["28.4%", "27.2%", "17.0%", "15.0%", "8.1%"].every((x) =>
+        byId("poll-mizani")?.text.includes(x),
+      ),
+    ],
+  ],
+  [
+    ["2026-05-22", true],
+    ["2026-07-25", true],
+    ["2026-09-10", true],
+  ],
+);
+eq(
+  "each poll note says the polls disagree widely",
+  ["poll-darubini", "poll-cap", "poll-mizani"].every((id) =>
+    /disagree widely/.test(byId(id)?.caveat ?? ""),
+  ),
+  true,
+);
+eq("the old single-poll note is gone", byId("polls-nairobi"), undefined);
+eq(
+  "Babu Owino's own party",
+  [byId("babu-party")?.date, byId("babu-party")?.place],
+  ["2026-09-15", "Nairobi"],
+);
+eq(
   "the registration figures sit beside the notes about them",
   byId("registration-county")?.text.includes("276,886") &&
     byId("registration-total")?.text.includes("2,612,725"),
