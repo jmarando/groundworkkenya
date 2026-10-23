@@ -54,16 +54,27 @@ export function DiaryPlan({
         <section className="mb-upcoming" aria-labelledby="mb-upcoming-h">
           <h2 id="mb-upcoming-h">Coming up</h2>
           <ol className="mb-time">
-            {[...upcoming].sort((a, b) => a.day.localeCompare(b.day) || (a.startsAt ?? "").localeCompare(b.startsAt ?? "")).map((entry) => (
-              <li key={entry.id}>
-                <div className="mb-upcoming-date"><span>{dayName(entry.day)}</span><span className="mb-time-at">{timeName(entry)}</span></div>
-                <div className="min-w-0">
-                  <p className="mb-time-place">{entry.title}</p>
-                  <p className="mb-kind">{KIND_NAMES[entry.kind]}{entry.wardName ? ` · ${entry.wardName}` : ""}</p>
-                  {entry.note && <p className="mb-time-why">{entry.note}</p>}
-                </div>
-              </li>
-            ))}
+            {[...upcoming]
+              .sort(
+                (a, b) =>
+                  a.day.localeCompare(b.day) || (a.startsAt ?? "").localeCompare(b.startsAt ?? ""),
+              )
+              .map((entry) => (
+                <li key={entry.id}>
+                  <div className="mb-upcoming-date">
+                    <span>{dayName(entry.day)}</span>
+                    <span className="mb-time-at">{timeName(entry)}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="mb-time-place">{entry.title}</p>
+                    <p className="mb-kind">
+                      {KIND_NAMES[entry.kind]}
+                      {entry.wardName ? ` · ${entry.wardName}` : ""}
+                    </p>
+                    {entry.note && <p className="mb-time-why">{entry.note}</p>}
+                  </div>
+                </li>
+              ))}
           </ol>
         </section>
       )}

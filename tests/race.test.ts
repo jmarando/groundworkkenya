@@ -38,6 +38,7 @@ const rival = {
   tone: "a" as const,
   sort: 1,
   facebook: null,
+  searchAs: null,
   x: "HEBabuOwino",
   tiktok: null,
 };

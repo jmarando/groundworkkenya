@@ -124,7 +124,7 @@ async function loadOpenPoll(code: string) {
   if (!/^[A-Z0-9]{4,12}$/i.test(code)) return { state: "missing" as const };
   const { data } = await supabaseAdmin
     .from("polls")
-    .select(`${POLL_COLUMNS}, status, channels, closes_at`)
+    .select(`${POLL_COLUMNS}, status, channels, closes_at, campaign_id`)
     .eq("code", code.toUpperCase())
     .maybeSingle();
 
@@ -132,7 +132,7 @@ async function loadOpenPoll(code: string) {
   const closed =
     data.status !== "live" || (data.closes_at !== null && Date.parse(data.closes_at) < Date.now());
   if (closed) return { state: "closed" as const };
-  return { state: "open" as const, poll: rowToEnginePoll(data) };
+  return { state: "open" as const, poll: rowToEnginePoll(data), campaignId: data.campaign_id };
 }
 
 const missing = () => notice("Kura haipatikani", "That poll link is not valid.", 404);
@@ -196,15 +196,25 @@ export const Route = createFileRoute("/p/$code")({
           );
         }
 
-        const { recordResponse, requestSmsConsent, upsertPersonByPhone } =
+        const { recordResponse, requestSmsConsent, textSignature, upsertPersonByPhone } =
           await import("@/lib/inbound.server");
+        const { consentRequestText } = await import("@/lib/polls.engine");
         const { settleIfDryRun } = await import("@/lib/outbox.server");
 
-        const person = await upsertPersonByPhone(supabaseAdmin, phone, "web_poll");
+        // The answer belongs to the poll's own campaign, not to whoever owns the shared SMS line.
+        const person = await upsertPersonByPhone(
+          supabaseAdmin,
+          phone,
+          "web_poll",
+          found.campaignId,
+        );
         if (!person) return form(poll, "Something went wrong. Please try again.");
 
         const outcome = await recordResponse(supabaseAdmin, poll, person, "web", answer);
-        if (fields.get("optin") !== null) await requestSmsConsent(supabaseAdmin, person);
+        if (fields.get("optin") !== null) {
+          const signature = await textSignature(supabaseAdmin, found.campaignId);
+          await requestSmsConsent(supabaseAdmin, person, consentRequestText(signature));
+        }
         await settleIfDryRun(supabaseAdmin);
 
         if (outcome.alreadyAnswered) {

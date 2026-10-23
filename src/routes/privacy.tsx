@@ -88,8 +88,8 @@ function PrivacyPage() {
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight">Privacy policy</h1>
         <p className="mt-4 text-sm leading-relaxed text-[#F5F5F0]/70">
-          This policy explains what information Groundwork and the campaigns that use
-          it collect, and what we do with it.
+          This policy explains what information Groundwork and the campaigns that use it collect,
+          and what we do with it.
         </p>
         <div className="mt-12 space-y-10">
           {sections.map((s) => (

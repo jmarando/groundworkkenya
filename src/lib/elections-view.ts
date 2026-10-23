@@ -42,9 +42,9 @@ export function nextElectionsSearch(
 
 /** The race a campaign looks at first: its own. */
 export const defaultRace = (level: string | null | undefined): Race =>
-  level === "mp" ? "mp" : level === "president" ? "president" : "governor";
+  level === "mp" || level === "mca" || level === "president" ? level : "governor";
 
-/** The campaign's home area: what it set, else its seat ("MP · Mathira", "Governor · Nairobi"), else Kenya. */
+/** The campaign's home area: what it set, else its seat ("MP · Mathira", "MCA · Roysambu", "Governor · Nairobi"), else Kenya. */
 export function homeAreaFor(
   campaign: { level: string; seat: string } | null,
   set: string | null,
@@ -53,7 +53,8 @@ export function homeAreaFor(
   if (set && areas.some((a) => a.key === set)) return set;
   if (!campaign || campaign.level === "president") return "kenya";
   const place = slugify(campaign.seat.split("·").pop() ?? "");
-  const level = campaign.level === "mp" ? "constituency" : "county";
+  const level =
+    campaign.level === "mp" ? "constituency" : campaign.level === "mca" ? "ward" : "county";
   return (
     areas.find(
       (a) => a.level === level && (slugify(a.name) === place || a.key.split("/").pop() === place),

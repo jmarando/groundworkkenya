@@ -3,7 +3,7 @@
 // security keeps each campaign to its own, or by the server for one campaign.
 
 import { searchFromRow, type SearchRead } from "@/lib/search-interest";
-import type { MindInputs } from "@/lib/top-of-mind";
+import { seatNews, type MindInputs } from "@/lib/top-of-mind";
 
 type Client = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the Supabase builder, loosely
@@ -18,7 +18,7 @@ const ownCampaign =
       ? (q as unknown as { eq: (c: string, v: string) => T }).eq("campaign_id", campaignId)
       : q;
 
-/** What was raised since `since`: in the news (rivals' own posts aside), in messages, at the door. */
+/** What was raised since `since`: in the seat's news (rivals' own posts and wider news aside), in messages, at the door. */
 export async function loadMindInputs(
   sb: Client,
   campaignId: string | null,
@@ -29,7 +29,7 @@ export async function loadMindInputs(
     own(
       sb
         .from("listening_mentions")
-        .select("issue, title, url")
+        .select("issue, title, url, listening_topics(kind)")
         .is("rival_id", null)
         .gte("found_at", since),
     )
@@ -47,7 +47,13 @@ export async function loadMindInputs(
     ).limit(5000),
   ]);
   return {
-    news: (news.data ?? []) as MindInputs["news"],
+    news: seatNews(
+      (
+        (news.data ?? []) as (MindInputs["news"][number] & {
+          listening_topics: { kind: string | null } | null;
+        })[]
+      ).map(({ listening_topics, ...r }) => ({ ...r, kind: listening_topics?.kind ?? null })),
+    ).map(({ issue, title, url }) => ({ issue, title, url })),
     messages: ((messages.data ?? []) as { issue: string | null }[]).map((r) => r.issue),
     door: ((door.data ?? []) as { detail: string | null }[]).map((r) => r.detail),
   };

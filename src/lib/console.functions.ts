@@ -1,17 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
-import { myRoles } from "@/lib/access";
+import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { reportedTurnout } from "@/lib/atlas-app";
 import { doorsByWard } from "@/lib/canvass";
 import { pageAll } from "@/lib/page-all";
+import { requireOffice, requireRole } from "@/lib/require-role";
+
+/** Every row of a query, past the API's 1,000-row page, in the `{ data }` shape a single read has. */
+const every = <T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null }>) =>
+  pageAll(build).then((data) => ({ data }));
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const STATUTORY_LIMIT = 433_800_000;
+import { spendingLimit } from "@/lib/spending-limit";
 
 /* ------------------------------------------------------------------ finance */
 
 export type FinanceData = {
-  statutoryLimit: number;
+  /** The seat's gazetted limit; null when it isn't on file. */
+  statutoryLimit: number | null;
+  statutoryLimitSource: string | null;
   spendKes: number;
   contributionsKes: number;
   contributors: number;
@@ -26,7 +32,9 @@ export type FinanceData = {
     category: string;
   }[];
   byCategory: { name: string; amount: number }[];
-  ledger: {
+  ledger: FinanceData["expenses"];
+  /** Every expense, newest first (the ledger shows the latest twelve). */
+  expenses: {
     id: string;
     date: string;
     category: string;
@@ -52,20 +60,35 @@ export const getFinance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<FinanceData> => {
     const sb = context.supabase;
-    const { data: roles } = await myRoles(sb);
-    const principal = (roles ?? []).some((r) => r.role === "admin" || r.role === "manager");
-    if (!principal) throw new Error("Finance is restricted to the candidate and campaign manager.");
-    const [{ data: expenses }, { data: contributions }] = await Promise.all([
-      sb.from("expenses").select("*").order("incurred_at", { ascending: false }),
-      sb.from("contributions").select("*").order("received_at", { ascending: false }),
+    await requireRole(
+      sb,
+      PRINCIPAL_ROLES,
+      "Finance is restricted to the candidate and campaign manager.",
+    );
+    const [{ data: expenses }, { data: contributions }, limit] = await Promise.all([
+      every((a, b) =>
+        sb
+          .from("expenses")
+          .select("*")
+          .order("incurred_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
+      every((a, b) =>
+        sb
+          .from("contributions")
+          .select("*")
+          .order("received_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
+      spendingLimit(sb as never),
     ]);
 
     const ex = expenses ?? [];
     const co = contributions ?? [];
     const spendKes = ex.reduce((s, e) => s + Number(e.amount_kes ?? 0), 0);
-    const documented = ex.length
-      ? (ex.filter((e) => !!e.reference).length / ex.length) * 100
-      : 100;
+    const documented = ex.length ? (ex.filter((e) => !!e.reference).length / ex.length) * 100 : 100;
 
     const catMap = new Map<string, number>();
     for (const e of ex) {
@@ -73,7 +96,8 @@ export const getFinance = createServerFn({ method: "GET" })
     }
 
     return {
-      statutoryLimit: STATUTORY_LIMIT,
+      statutoryLimit: limit?.kes ?? null,
+      statutoryLimitSource: limit?.source ?? null,
       spendKes,
       contributionsKes: co.reduce((s, c) => s + Number(c.amount_kes ?? 0), 0),
       contributors: new Set(co.map((c) => c.donor_name)).size,
@@ -94,6 +118,16 @@ export const getFinance = createServerFn({ method: "GET" })
       byCategory: [...catMap.entries()]
         .map(([name, amount]) => ({ name, amount }))
         .sort((a, b) => b.amount - a.amount),
+      expenses: ex.map((e) => ({
+        id: e.id,
+        date: e.incurred_at as string,
+        category: e.category,
+        description: e.description,
+        vendor: e.vendor,
+        reference: e.reference,
+        amount: Number(e.amount_kes ?? 0),
+        status: e.status,
+      })),
       ledger: ex.slice(0, 12).map((e) => ({
         id: e.id,
         date: e.incurred_at as string,
@@ -155,6 +189,7 @@ export type PeopleData = {
 export const getPeople = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<PeopleData> => {
+    await requireOffice(context.supabase, "The voter file is for the campaign office.");
     const sb = context.supabase;
     const [people, { data: wards }, { data: segments }] = await Promise.all([
       pageAll((from, to) =>
@@ -396,7 +431,15 @@ export type InboxData = {
     tags: string[];
     unread: boolean;
     lastMessageAt: string;
-    thread: { id: string; direction: string; body: string; at: string; status: string }[];
+    thread: {
+      id: string;
+      direction: string;
+      body: string;
+      at: string;
+      status: string;
+      channel: string;
+      error: string | null;
+    }[];
   }[];
   counts: { all: number; unread: number; open: number; byTag: { tag: string; n: number }[] };
 };
@@ -404,9 +447,17 @@ export type InboxData = {
 export const getInbox = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InboxData> => {
+    await requireOffice(context.supabase, "The inbox is for the campaign office.");
     const sb = context.supabase;
     const [{ data: convos }, people, { data: wards }, messages] = await Promise.all([
-      sb.from("conversations").select("*").order("last_message_at", { ascending: false }),
+      every((a, b) =>
+        sb
+          .from("conversations")
+          .select("*")
+          .order("last_message_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
       pageAll((from, to) =>
         sb.from("people").select("id, full_name, phone, ward_id").range(from, to),
       ),
@@ -414,7 +465,9 @@ export const getInbox = createServerFn({ method: "GET" })
       pageAll((from, to) =>
         sb
           .from("messages")
-          .select("id, person_id, conversation_id, body, direction, status, created_at, sent_at")
+          .select(
+            "id, person_id, conversation_id, body, direction, status, created_at, sent_at, channel, error",
+          )
           .order("created_at", { ascending: true })
           .range(from, to),
       ),
@@ -432,6 +485,8 @@ export const getInbox = createServerFn({ method: "GET" })
         body: m.body,
         at: (m.sent_at as string) ?? (m.created_at as string),
         status: m.status,
+        channel: m.channel,
+        error: (m.error as string | null) ?? null,
       };
       if (m.conversation_id) {
         const list = byConversation.get(m.conversation_id) ?? [];
@@ -464,9 +519,7 @@ export const getInbox = createServerFn({ method: "GET" })
         tags: (c.tags as string[]) ?? [],
         unread: c.unread,
         lastMessageAt: c.last_message_at as string,
-        thread:
-          byConversation.get(c.id) ??
-          (c.person_id ? (byPerson.get(c.person_id) ?? []) : []),
+        thread: byConversation.get(c.id) ?? (c.person_id ? (byPerson.get(c.person_id) ?? []) : []),
       };
     });
 
@@ -476,9 +529,7 @@ export const getInbox = createServerFn({ method: "GET" })
         all: conversations.length,
         unread: conversations.filter((c) => c.unread).length,
         open: conversations.filter((c) => c.status === "open").length,
-        byTag: [...tagMap.entries()]
-          .map(([tag, n]) => ({ tag, n }))
-          .sort((a, b) => b.n - a.n),
+        byTag: [...tagMap.entries()].map(([tag, n]) => ({ tag, n })).sort((a, b) => b.n - a.n),
       },
     };
   });
@@ -514,6 +565,8 @@ export type BroadcastData = {
     whatsapp: boolean;
     call: boolean;
     optedOut: boolean;
+    /** A sample contact: shown, never messaged or called. */
+    sample: boolean;
     lastTouch: string | null;
   }[];
   campaigns: {
@@ -533,13 +586,14 @@ export type BroadcastData = {
 export const getBroadcast = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BroadcastData> => {
+    await requireOffice(context.supabase, "Broadcasts are for the campaign office.");
     const sb = context.supabase;
     const [people, { data: wards }, { data: segmentRows }, messages] = await Promise.all([
       pageAll((from, to) =>
         sb
           .from("people")
           .select(
-            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at",
+            "id, full_name, phone, ward_id, segment, language, consent_sms, consent_whatsapp, consent_call, opted_out, support_score, last_contacted_at, tags",
           )
           .range(from, to),
       ),
@@ -639,6 +693,7 @@ export const getBroadcast = createServerFn({ method: "GET" })
           whatsapp: x.consent_whatsapp,
           call: x.consent_call,
           optedOut: x.opted_out,
+          sample: (x.tags ?? []).includes("sample"),
           lastTouch: (x.last_contacted_at as string | null) ?? null,
         };
       }),
@@ -839,12 +894,21 @@ export const getWarRoom = createServerFn({ method: "GET" })
       { data: filings },
       { data: photos },
       { data: ballot },
-      { data: roles },
+      { data: myRole },
       { data: campaignId },
     ] = await Promise.all([
-      sb.from("polling_stations").select("*").order("code"),
+      every((a, b) =>
+        sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
+      ),
       sb.from("wards").select("id, name, constituency"),
-      sb.from("incidents").select("*").order("occurred_at", { ascending: false }),
+      every((a, b) =>
+        sb
+          .from("incidents")
+          .select("*")
+          .order("occurred_at", { ascending: false })
+          .order("id")
+          .range(a, b),
+      ),
       sb
         .from("stream_results")
         .select("id, station_id, stream, valid_votes, rejected, corrected, over_register, filed_at")
@@ -852,7 +916,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         .order("filed_at", { ascending: false }),
       sb.from("form_photos").select("station_id, stream"),
       sb.from("ballot_candidates").select("id, position, name, party, ours").order("position"),
-      myRoles(sb),
+      sb.rpc("my_campaign_role"),
       sb.rpc("my_campaign"),
     ]);
     const { data: campaign } = campaignId
@@ -1078,7 +1142,7 @@ export const getWarRoom = createServerFn({ method: "GET" })
         seat: campaign?.seat ?? "",
         form: resultForm(campaign?.level),
       },
-      canEditBallot: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
+      canEditBallot: PRINCIPAL_ROLES.includes(myRole as MyRole),
       unstaffedList: st
         .filter((s) => s.status !== "confirmed")
         .sort((a, b) => (b.registered_voters ?? 0) - (a.registered_voters ?? 0))
@@ -1160,7 +1224,9 @@ export const getCanvassing = createServerFn({ method: "GET" })
       }>((from, to) =>
         sb
           .from("people")
-          .select("id, full_name, phone, ward_id, segment, support_score, opted_out, last_contacted_at")
+          .select(
+            "id, full_name, phone, ward_id, segment, support_score, opted_out, last_contacted_at",
+          )
           .range(from, to),
       ),
       pageAll<{
@@ -1299,6 +1365,8 @@ export const getCanvassing = createServerFn({ method: "GET" })
 export type AgentsData = {
   /** Admins and managers put agents on stations. */
   canAssign: boolean;
+  /** The candidate and managers make, approve and pay stipends. */
+  canPay: boolean;
   stations: { total: number; confirmed: number; unstaffed: number; registered: number };
   money: { pending: number; approved: number; paid: number; total: number };
   counts: { agents: number; coordinators: number; lines: number };
@@ -1323,6 +1391,11 @@ export type AgentsData = {
     status: string;
     reference: string | null;
     paidAt: string | null;
+    /** The day worked and the doors knocked, for stipends made from the field plan. */
+    workDate: string | null;
+    doors: number | null;
+    /** Why the last M-Pesa payout didn't go, or what to check. */
+    paymentError: string | null;
   }[];
   gaps: { code: string; name: string; ward: string | null; registered: number }[];
   board: {
@@ -1346,12 +1419,22 @@ export const getAgents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AgentsData> => {
     const sb = context.supabase;
-    const [{ data: stipends }, { data: stations }, { data: wards }, { data: roles }] =
+    const [{ data: stipends }, { data: stations }, { data: wards }, { data: role }] =
       await Promise.all([
-        sb.from("agent_stipends").select("*").order("created_at", { ascending: false }),
-        sb.from("polling_stations").select("*").order("code"),
+        every((a, b) =>
+          sb
+            .from("agent_stipends")
+            .select("*")
+            .order("work_date", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
+            .order("id")
+            .range(a, b),
+        ),
+        every((a, b) =>
+          sb.from("polling_stations").select("*").order("code").order("id").range(a, b),
+        ),
         sb.from("wards").select("id, name, constituency").order("name"),
-        myRoles(sb),
+        sb.rpc("my_campaign_role"),
       ]);
 
     const sp = stipends ?? [];
@@ -1377,7 +1460,8 @@ export const getAgents = createServerFn({ method: "GET" })
     });
 
     return {
-      canAssign: (roles ?? []).some((r) => r.role === "admin" || r.role === "manager"),
+      canAssign: PRINCIPAL_ROLES.includes(role as MyRole),
+      canPay: ["super", "candidate", "manager"].includes(String(role ?? "")),
       stations: {
         total: st.length,
         confirmed: st.filter((s) => s.status === "confirmed").length,
@@ -1409,6 +1493,9 @@ export const getAgents = createServerFn({ method: "GET" })
         status: s.status,
         reference: s.reference,
         paidAt: s.paid_at as string | null,
+        workDate: (s as { work_date?: string | null }).work_date ?? null,
+        doors: (s as { doors?: number | null }).doors ?? null,
+        paymentError: (s as { payment_error?: string | null }).payment_error ?? null,
       })),
       gaps: st
         .filter((s) => s.status !== "confirmed")
@@ -1487,7 +1574,14 @@ export type BriefingData = {
     staffed: number;
     topIssue: string | null;
   }[];
-  issues: { label: string; total: number; inbox: number; web: number; angry: number; topWard: string | null }[];
+  issues: {
+    label: string;
+    total: number;
+    inbox: number;
+    web: number;
+    angry: number;
+    topWard: string | null;
+  }[];
   segments: { label: string; people: number; strong: number; reachable: number }[];
   languages: { label: string; people: number }[];
   consent: { sms: number; whatsapp: number; call: number; optedOut: number };
@@ -1500,23 +1594,36 @@ const ISSUE_LABEL = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).replac
 export const getBriefing = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<BriefingData> => {
+    await requireOffice(context.supabase, "The briefing is for the campaign office.");
     const sb = context.supabase;
-    const [{ data: wards }, people, { data: stations }, { data: convos }, { data: mentions }, { data: incidents }] =
-      await Promise.all([
-        sb.from("wards").select("*").order("constituency"),
-        pageAll((from, to) =>
-          sb
-            .from("people")
-            .select(
-              "id, ward_id, segment, language, support_score, last_contacted_at, opted_out, consent_sms, consent_whatsapp, consent_call",
-            )
-            .range(from, to),
-        ),
-        sb.from("polling_stations").select("id, ward_id, status"),
-        sb.from("conversations").select("id, issue, sentiment, person_id"),
-        sb.from("listening_mentions").select("id, issue, sentiment, ward"),
-        sb.from("incidents").select("id, status, ward_id"),
-      ]);
+    const [
+      { data: wards },
+      people,
+      { data: stations },
+      { data: convos },
+      { data: mentions },
+      { data: incidents },
+    ] = await Promise.all([
+      sb.from("wards").select("*").order("constituency"),
+      pageAll((from, to) =>
+        sb
+          .from("people")
+          .select(
+            "id, ward_id, segment, language, support_score, last_contacted_at, opted_out, consent_sms, consent_whatsapp, consent_call",
+          )
+          .range(from, to),
+      ),
+      every((a, b) =>
+        sb.from("polling_stations").select("id, ward_id, status").order("id").range(a, b),
+      ),
+      every((a, b) =>
+        sb.from("conversations").select("id, issue, sentiment, person_id").order("id").range(a, b),
+      ),
+      every((a, b) =>
+        sb.from("listening_mentions").select("id, issue, sentiment, ward").order("id").range(a, b),
+      ),
+      every((a, b) => sb.from("incidents").select("id, status, ward_id").order("id").range(a, b)),
+    ]);
 
     const w = wards ?? [];
     const st = stations ?? [];
@@ -1555,19 +1662,34 @@ export const getBriefing = createServerFn({ method: "GET" })
     }
 
     // issues raised, from the inbox and from the web
-    const issueTotals = new Map<string, { inbox: number; web: number; angry: number; wards: Map<string, number> }>();
-    const bump = (raw: string | null, kind: "inbox" | "web", angry: boolean, ward: string | null) => {
+    const issueTotals = new Map<
+      string,
+      { inbox: number; web: number; angry: number; wards: Map<string, number> }
+    >();
+    const bump = (
+      raw: string | null,
+      kind: "inbox" | "web",
+      angry: boolean,
+      ward: string | null,
+    ) => {
       if (!raw) return;
       const key = raw.toLowerCase().trim();
       if (!key) return;
-      const cur = issueTotals.get(key) ?? { inbox: 0, web: 0, angry: 0, wards: new Map<string, number>() };
+      const cur = issueTotals.get(key) ?? {
+        inbox: 0,
+        web: 0,
+        angry: 0,
+        wards: new Map<string, number>(),
+      };
       cur[kind] += 1;
       if (angry) cur.angry += 1;
       if (ward) cur.wards.set(ward, (cur.wards.get(ward) ?? 0) + 1);
       issueTotals.set(key, cur);
     };
-    for (const c of cv) bump(c.issue, "inbox", c.sentiment === "angry" || c.sentiment === "negative", null);
-    for (const m of mn) bump(m.issue, "web", m.sentiment === "angry" || m.sentiment === "negative", m.ward ?? null);
+    for (const c of cv)
+      bump(c.issue, "inbox", c.sentiment === "angry" || c.sentiment === "negative", null);
+    for (const m of mn)
+      bump(m.issue, "web", m.sentiment === "angry" || m.sentiment === "negative", m.ward ?? null);
 
     const wardRows = w.map((x) => {
       const a = byWard.get(x.id) ?? blank();
@@ -1627,7 +1749,7 @@ export const getBriefing = createServerFn({ method: "GET" })
       c.contacted += row.contacted;
       c.strong += row.strong;
       c.persuadable += row.persuadable;
-      c.cold += (byWard.get(row.id)?.cold ?? 0);
+      c.cold += byWard.get(row.id)?.cold ?? 0;
       c.stations += row.stations;
       c.staffed += row.staffed;
       c.incidents += inc.filter((i) => i.ward_id === row.id && i.status !== "resolved").length;
@@ -1670,7 +1792,11 @@ export const getBriefing = createServerFn({ method: "GET" })
       .map(([label, v]) => {
         let topWard: string | null = null;
         let best = 0;
-        for (const [ward, n] of v.wards) if (n > best) ((best = n), (topWard = ward));
+        for (const [ward, n] of v.wards)
+          if (n > best) {
+            best = n;
+            topWard = ward;
+          }
         return {
           label: ISSUE_LABEL(label),
           total: v.inbox + v.web,
@@ -1685,7 +1811,9 @@ export const getBriefing = createServerFn({ method: "GET" })
     const sortedWards = [...wardRows].sort((a, b) => b.gap - a.gap);
     const thinnest = [...wardRows]
       .filter((x) => x.people > 0)
-      .sort((a, b) => a.people / Math.max(1, a.registered) - b.people / Math.max(1, b.registered))[0];
+      .sort(
+        (a, b) => a.people / Math.max(1, a.registered) - b.people / Math.max(1, b.registered),
+      )[0];
 
     const headlines: string[] = [];
     const shortfall = Math.max(0, totals.target - totals.supporters);
@@ -1726,12 +1854,19 @@ export const getBriefing = createServerFn({ method: "GET" })
         optedOut: people.filter((p) => p.opted_out).length,
       },
       support: [
-        { label: "Strong · 70+", people: people.filter((p) => (p.support_score ?? 0) >= 70).length },
+        {
+          label: "Strong · 70+",
+          people: people.filter((p) => (p.support_score ?? 0) >= 70).length,
+        },
         {
           label: "Persuadable · 40-69",
-          people: people.filter((p) => (p.support_score ?? 0) >= 40 && (p.support_score ?? 0) < 70).length,
+          people: people.filter((p) => (p.support_score ?? 0) >= 40 && (p.support_score ?? 0) < 70)
+            .length,
         },
-        { label: "Cold · under 40", people: people.filter((p) => (p.support_score ?? 0) < 40).length },
+        {
+          label: "Cold · under 40",
+          people: people.filter((p) => (p.support_score ?? 0) < 40).length,
+        },
       ],
       headlines,
     };

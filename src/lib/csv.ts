@@ -1,9 +1,17 @@
 /** Small helpers to turn console tables into a CSV file the user can download. */
 
-const cell = (v: unknown): string => {
+/**
+ * Text a spreadsheet would run as a formula (=, +, -, @, or a tab or return first) gets a leading
+ * apostrophe, so a scraped headline like =HYPERLINK(...) opens as text. Plain numbers, phone
+ * numbers included, are left as they are.
+ */
+const defused = (s: string): string =>
+  /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d[\d\s.,]*$/.test(s) ? `'${s}` : s;
+
+export const cell = (v: unknown): string => {
   if (v === null || v === undefined) return "";
-  const s = String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  const s = typeof v === "string" ? defused(v) : String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
 export function toCSV(headers: string[], rows: unknown[][]): string {

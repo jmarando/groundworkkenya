@@ -1,8 +1,8 @@
 // ScrapeCreators credits are shared by every campaign, because the key is.
 // Each request comes out of a daily budget: "rivals" for the daily rival sweep,
 // "keywords" for the hourly keyword search. "trends" counts SerpApi's Google
-// Trends searches: 8 a day keeps a month under the free plan's 250. The
-// database keeps the count.
+// Trends searches: 8 a day keeps a month under the free plan's 250. "x" counts
+// TwitterAPI.io searches (about 20 posts each). The database keeps the count.
 
 type Rpc = {
   rpc: (
@@ -11,19 +11,21 @@ type Rpc = {
   ) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
-export type Budget = "rivals" | "keywords" | "trends";
+export type Budget = "rivals" | "keywords" | "trends" | "x";
 export const DEFAULT_DAILY_CREDITS = 60;
 
 const ENV: Record<Budget, string> = {
   rivals: "SCRAPECREATORS_DAILY_CREDITS",
   keywords: "SCRAPECREATORS_KEYWORD_DAILY_CREDITS",
   trends: "SERPAPI_DAILY_SEARCHES",
+  x: "X_DAILY_SEARCHES",
 };
 
 const DEFAULTS: Record<Budget, number> = {
   rivals: DEFAULT_DAILY_CREDITS,
   keywords: DEFAULT_DAILY_CREDITS,
   trends: 8,
+  x: 300,
 };
 
 /** The day's limit for a budget, from its environment variable, else its default. */

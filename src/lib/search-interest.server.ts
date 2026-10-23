@@ -5,7 +5,7 @@
 // when Nairobi's answer is missing or thin. Every search comes out of the day's
 // "trends" budget. The shared job row says what happened in counts only.
 
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { ISSUE_SEARCH, isThin, parseTrends, searchName, type Geo } from "@/lib/search-interest";
 import { loadMindInputs } from "@/lib/search-interest.functions";
 import { serpConfigured, trendsAnswer } from "@/lib/serpapi.server";

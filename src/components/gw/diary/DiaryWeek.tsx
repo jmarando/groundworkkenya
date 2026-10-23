@@ -85,25 +85,36 @@ export function DiaryWeek({
   /** From a finding's "Plan a visit": today's form opens with this ward chosen. */
   addWard?: string | undefined;
 }) {
-  const briefs = useBriefs(week);
+  const all = useBriefs(week);
   const finds = useStopFindings(week);
+  // A seat-wide race (an MP's, a governor's) gives every stop the same line: say it once.
+  const lines = Object.values(all);
+  const shared = lines.length > 1 && lines.every((l) => l === lines[0]) ? lines[0]! : null;
+  const briefs = shared ? {} : all;
   return (
-    <div className="diary-days">
-      {week.days.map((day) => (
-        <DiaryDay
-          // A new "Plan a visit" opens today's form afresh, even with the diary already open.
-          key={day === week.today && addWard ? `${day}:${addWard}` : day}
-          day={day}
-          isToday={day === week.today}
-          entries={week.entries.filter((e) => e.day === day)}
-          wards={week.wards}
-          briefs={briefs}
-          finds={finds}
-          canEdit={canEdit}
-          startWard={canEdit && day === week.today ? addWard : undefined}
-        />
-      ))}
-    </div>
+    <>
+      {shared ? (
+        <p className="diary-seat" title="The last election here, from the atlas">
+          <span>The seat last time</span> {shared}
+        </p>
+      ) : null}
+      <div className="diary-days">
+        {week.days.map((day) => (
+          <DiaryDay
+            // A new "Plan a visit" opens today's form afresh, even with the diary already open.
+            key={day === week.today && addWard ? `${day}:${addWard}` : day}
+            day={day}
+            isToday={day === week.today}
+            entries={week.entries.filter((e) => e.day === day)}
+            wards={week.wards}
+            briefs={briefs}
+            finds={finds}
+            canEdit={canEdit}
+            startWard={canEdit && day === week.today ? addWard : undefined}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -132,7 +143,7 @@ function DiaryDay({
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <section
-      className={`card diary-day${isToday ? " is-today" : ""}`}
+      className={`card diary-day${isToday ? " is-today" : ""}${entries.length || adding ? "" : " is-empty"}`}
       aria-labelledby={`dd-${day}`}
     >
       <div className="card-head">
@@ -154,34 +165,30 @@ function DiaryDay({
                 <EntryForm day={day} entry={e} wards={wards} onDone={() => setEditing(null)} />
               </li>
             ) : (
-              <li key={e.id}>
+              <li key={e.id} className="diary-entry">
                 <span className="mb-time-at">{timeName(e)}</span>
                 <div>
-                  <p className="mb-time-place">
-                    {e.title}{" "}
-                    <span className="mb-kind">
-                      {KIND_NAMES[e.kind]}
-                      {e.wardName ? ` · ${e.wardName}` : ""}
-                    </span>
+                  <p className="diary-entry-kind">
+                    {KIND_NAMES[e.kind]}
+                    {e.wardName ? ` · ${e.wardName}` : ""}
                   </p>
+                  <p className="diary-entry-title">{e.title}</p>
+                  {e.note ? <p className="mb-time-why">{e.note}</p> : null}
                   {briefs[e.id] ? (
                     <p className="diary-brief" title="The last election here, from the atlas">
                       {briefs[e.id]}
                     </p>
                   ) : null}
-                  {finds[e.id]?.map((line) => (
-                    <p key={line} className="diary-find">
-                      {line}
-                    </p>
-                  ))}
-                  {e.note ? <p className="mb-time-why">{e.note}</p> : null}
+                  {finds[e.id]?.length ? (
+                    <ul className="diary-finds" aria-label="What the records say here">
+                      {finds[e.id]!.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {canEdit ? (
                     <div className="diary-actions">
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--sm"
-                        onClick={() => setEditing(e.id)}
-                      >
+                      <button type="button" className="diary-link" onClick={() => setEditing(e.id)}>
                         Edit
                       </button>
                       <RemoveEntry entry={e} />
@@ -223,7 +230,7 @@ function RemoveEntry({ entry }: { entry: DiaryEntry }) {
   return (
     <button
       type="button"
-      className={`btn btn--ghost btn--sm home-remove${sure ? " is-sure" : ""}`}
+      className={`diary-link home-remove${sure ? " is-sure" : ""}`}
       onClick={() => (sure ? removing.mutate() : setSure(true))}
       onBlur={() => setSure(false)}
       disabled={removing.isPending}

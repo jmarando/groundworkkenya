@@ -22,8 +22,7 @@ import {
   type Tally,
 } from "@/lib/polls.engine";
 
-const CAMPAIGN = process.env["CAMPAIGN_NAME"] ?? "Groundwork";
-const ORIGIN = process.env["PUBLIC_ORIGIN"] ?? "https://groundworkkenya.lovable.app";
+const ORIGIN = process.env["PUBLIC_ORIGIN"] ?? "https://groundwork.ke";
 
 /* ----------------------------------------------------------------- create */
 
@@ -118,19 +117,21 @@ export const launchPoll = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }): Promise<LaunchSummary> => {
-    const { rowToEnginePoll, POLL_COLUMNS } = await import("@/lib/inbound.server");
+    const { rowToEnginePoll, POLL_COLUMNS, textSignature } = await import("@/lib/inbound.server");
     const { channelsAreLive, settleIfDryRun } = await import("@/lib/outbox.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: poll } = await context.supabase
       .from("polls")
-      .select(`${POLL_COLUMNS}, channels`)
+      .select(`${POLL_COLUMNS}, channels, campaign_id`)
       .eq("id", data.id)
       .maybeSingle();
     if (!poll) throw new Error("That poll no longer exists.");
 
-    // One body for everyone: the provider sends it to a hundred numbers a call.
-    const body = smsInvite(rowToEnginePoll(poll), CAMPAIGN);
+    // One body for everyone: the provider sends it to a hundred numbers a call, signed by the
+    // poll's own campaign.
+    const signature = await textSignature(supabaseAdmin as never, poll.campaign_id);
+    const body = smsInvite(rowToEnginePoll(poll), signature);
 
     // launch_poll claims the draft before it queues anything, so a second
     // press — here or by someone else — is refused rather than doubling up.
@@ -194,7 +195,7 @@ export const getPollDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }): Promise<PollDetail> => {
-    const { rowToEnginePoll, POLL_COLUMNS } = await import("@/lib/inbound.server");
+    const { rowToEnginePoll, POLL_COLUMNS, textSignature } = await import("@/lib/inbound.server");
     const sb = context.supabase;
 
     const [{ data: poll }, { data: tallies }, { data: open }] = await Promise.all([

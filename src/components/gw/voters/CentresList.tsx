@@ -2,8 +2,7 @@
 // houses knocked in their area, then those not on it yet, each with a way to put it there.
 
 import type { Centre, CentreDoors } from "@/lib/centres";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 export function CentresList({
   placed,

@@ -10,8 +10,8 @@ import {
   type SupportFilter,
   type VotersSearch,
 } from "@/lib/voters-view";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const when = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "never";
 const PAGE = 12;

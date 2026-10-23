@@ -1,8 +1,9 @@
-// "Your walk lists": the lists out with this person, each with its centre, how far along it is
-// (visits waiting on the phone count) and when it was given. Opening one is a tap.
+// "Your walk lists": the lists out with this person, today's first, each with its day, centre,
+// how far along it is (visits waiting on the phone count) and when it was given. Opening one is a tap.
 
 import { useMyWalkLists } from "@/hooks/useMyWalkLists";
 import type { Queued } from "@/lib/field";
+import { dayLabel, forToday, nairobiToday } from "@/lib/field-plan";
 import { givenText } from "@/lib/walk-list-run";
 import { progressText, queuedDoors } from "@/lib/walk-lists";
 
@@ -30,17 +31,26 @@ export function WalkLists({
   if (lists.length === 0)
     return <p className="f-note">No lists given to you yet. Today's ward list is below.</p>;
 
+  const today = nairobiToday();
   return (
     <ul className="wl-lists">
-      {lists.map((l) => {
+      {forToday(lists, today).map((l) => {
         const done = Math.min(l.doors, l.done + queuedDoors(queue, l.id).size);
+        const when = dayLabel(l.dueOn, l.shift, today);
         return (
           <li key={l.id}>
-            <button type="button" className="wl-row" onClick={() => onOpen(l.id)}>
+            <button
+              type="button"
+              className="wl-row"
+              data-today={l.dueOn === today}
+              onClick={() => onOpen(l.id)}
+            >
               <b>{l.name}</b>
               <span className="wl-count">{progressText(done, l.doors)}</span>
               <small>
-                {[l.centreName, givenText(l.givenAt)].filter(Boolean).join(" · ") || "Walk list"}
+                {[when, l.centreName, when ? null : givenText(l.givenAt)]
+                  .filter(Boolean)
+                  .join(" · ") || "Walk list"}
               </small>
               <span
                 className="wl-bar"

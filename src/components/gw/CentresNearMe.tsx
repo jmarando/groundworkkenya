@@ -18,8 +18,7 @@ import { wardAt, wardShapes } from "@/lib/geo";
 import { getJson } from "@/lib/geo-files";
 import { getMapConfig } from "@/lib/map.functions";
 import { mapAreaFor } from "@/lib/map-areas";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 export function CentresNearMe({ wards }: { wards: { id: string; slug: string; name: string }[] }) {
   const online = useOnline();

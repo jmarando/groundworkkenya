@@ -21,7 +21,10 @@ export const Route = createFileRoute("/_authenticated/team")({
     meta: [
       { title: "Team · Groundwork" },
       { property: "og:title", content: "Team · Groundwork" },
-      { property: "og:description", content: "Who is on the campaign, what they can reach, and who is waiting to be let in." },
+      {
+        property: "og:description",
+        content: "Who is on the campaign, what they can reach, and who is waiting to be let in.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       {
@@ -73,8 +76,7 @@ function Team() {
   };
 
   const sendInvite = useMutation({
-    mutationFn: () =>
-      invite({ data: { campaignId: data!.campaignId!, email, role: inviteRole } }),
+    mutationFn: () => invite({ data: { campaignId: data!.campaignId!, email, role: inviteRole } }),
     onSuccess: async (r) => {
       toast.success(
         r.result === "added"
@@ -169,6 +171,18 @@ function Team() {
           <button className="btn btn--primary" type="submit" disabled={sendInvite.isPending}>
             {sendInvite.isPending ? "Inviting…" : "Invite"}
           </button>
+          {sendInvite.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              Not sent: {sendInvite.error.message}
+            </p>
+          )}
+          {sendInvite.isSuccess && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {sendInvite.data.result === "added"
+                ? "✓ They already had an account and are now on the team."
+                : "✓ Invite sent. They'll get an email to set their password."}
+            </p>
+          )}
         </form>
         {data.invites.length > 0 ? (
           <ul className="team-list">
@@ -177,8 +191,8 @@ function Team() {
                 <div className="team-who">
                   <span className="mono">{i.email}</span>
                   <small>
-                    Invited as {ROLE_COPY[i.role].name} · {day(i.createdAt)} · hasn't set a
-                    password yet
+                    Invited as {ROLE_COPY[i.role].name} · {day(i.createdAt)} · hasn't set a password
+                    yet
                   </small>
                 </div>
                 <button
@@ -277,7 +291,8 @@ function Team() {
         </ul>
         <p className="f-note">
           Finance is for the candidate and campaign manager only. The database enforces this, so
-          it's not just a hidden menu item. Launching polls, which sends SMS, is limited the same way.
+          it's not just a hidden menu item. Launching polls, which sends SMS, is limited the same
+          way.
         </p>
       </div>
     </section>

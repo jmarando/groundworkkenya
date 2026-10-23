@@ -4,7 +4,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { forCampaign, getScenario, scenarioKey, SCENARIOS } from "@/lib/demo";
+import { forCampaign, getScenario, scenarioFor, scenarioKey, SCENARIOS } from "@/lib/demo";
 import { buildNight, clockOf, frameAt, minuteOf, NIGHT_END } from "@/lib/demo/election-night";
 import {
   countAtLeast,
@@ -42,9 +42,16 @@ function slugsOf(file: string): Set<string> {
 
 // ---- scenarios
 eq(
-  "three scenarios, one per office",
+  "one scenario per office, and Githunguri's and Athwana's own",
   SCENARIOS.map((s) => `${s.key}:${s.office}`),
-  ["kalonzo:president", "sakaja:governor", "mathira:mp"],
+  [
+    "kalonzo:president",
+    "sakaja:governor",
+    "mathira:mp",
+    "roysambu:mca",
+    "githunguri:mp",
+    "athwana:mca",
+  ],
 );
 eq(
   "an unknown candidate falls back to the workspace's own race",
@@ -54,20 +61,22 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6],
+  [47, 85, 6, 5, 5, 14],
 );
 
 for (const s of SCENARIOS) {
   const geo = slugsOf(s.geo.file);
-  const mine = new Set(s.areas.map((a) => a.slug));
+  const mine = new Set(s.areas.filter((a) => !a.offMap).map((a) => a.slug));
   eq(
-    `${s.key}: every area is on the map`,
+    `${s.key}: every area is on the map, unless it says it isn't`,
     [...mine].filter((x) => !geo.has(x)),
     [],
   );
+  // With no area on the map (no centre placed yet), the map is the seat's outline alone.
+  const outlineOnly = s.areas.every((a) => a.offMap) && geo.size === 1;
   eq(
-    `${s.key}: every map shape has an area`,
-    [...geo].filter((x) => !mine.has(x)),
+    `${s.key}: every map shape has an area, or the map is the seat's outline`,
+    outlineOnly ? [] : [...geo].filter((x) => !mine.has(x)),
     [],
   );
   ok(
@@ -117,7 +126,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false],
+  [true, true, false, true, true, true],
 );
 
 // ---- insights
@@ -312,6 +321,24 @@ for (const s of SCENARIOS) {
     forCampaign(sakaja, { candidate: "A Senator", level: "senator" }) === sakaja,
   );
   ok("no campaign, no change", forCampaign(mathira, null) === mathira);
+  eq(
+    "a campaign's own demo where it has one, else its office's",
+    [
+      scenarioFor({ slug: "githunguri", level: "mp" }),
+      scenarioFor({ slug: "roysambu", level: "mca" }),
+      scenarioFor({ slug: "athwana", level: "mca" }),
+      scenarioFor({ slug: "mathira", level: "mp" }),
+      scenarioFor({ slug: "githunguri", level: "governor" }),
+      scenarioFor(null),
+    ],
+    ["githunguri", "roysambu", "athwana", "mathira", "sakaja", "sakaja"],
+  );
+  eq(
+    "Githunguri's demo carries its candidate",
+    forCampaign(getScenario("githunguri"), { candidate: "Gathoni Wamuchomba", level: "mp" })
+      .candidate.name,
+    "Gathoni Wamuchomba",
+  );
 }
 
 // ---- the war room shows its own race

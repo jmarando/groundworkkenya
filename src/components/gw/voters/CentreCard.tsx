@@ -10,8 +10,7 @@ import { toast } from "sonner";
 import { placementNote, suggestionNote, type Centre, type CentreDoors } from "@/lib/centres";
 import { takeCentreSuggestion } from "@/lib/centres.functions";
 import { share } from "@/lib/voters-view";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 export function CentreCard({
   centre,

@@ -1,0 +1,4 @@
+key,level,name,parent,iebc_code
+meru,county,Meru,kenya,012
+meru/tigania-west,constituency,Tigania West,meru,
+meru/tigania-west/athwana,ward,Athwana,meru/tigania-west,

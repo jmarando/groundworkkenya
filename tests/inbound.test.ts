@@ -93,6 +93,9 @@ async function main() {
     );
     eq("and nothing queued to pay", rewardsQueued(db), 0);
   }
+  // Rewards are paid only through a connected airtime provider.
+  process.env["AT_USERNAME"] = "groundwork-test";
+  process.env["AT_API_KEY"] = "test-key";
   {
     const db = fakeDb({ firstAnswer: true, invited: true });
     const r = await recordResponse(db as never, poll, person, "web", answer);
@@ -106,6 +109,15 @@ async function main() {
     const db = fakeDb({ firstAnswer: true, invited: false });
     const r = await recordResponse(db as never, poll, person, channel, answer);
     eq(`an answer by ${channel} is paid`, [r.rewarded, rewardsQueued(db)], [true, 1]);
+  }
+  {
+    // With no airtime provider nothing is promised or queued.
+    const saved = process.env["AT_API_KEY"];
+    delete process.env["AT_API_KEY"];
+    const db = fakeDb({ firstAnswer: true, invited: false });
+    const r = await recordResponse(db as never, poll, person, "sms", answer);
+    eq("no airtime provider: not paid", [r.rewarded, rewardsQueued(db)], [false, 0]);
+    process.env["AT_API_KEY"] = saved;
   }
   {
     const db = fakeDb({ firstAnswer: false, invited: true });

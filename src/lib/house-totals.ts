@@ -2,14 +2,20 @@
 // (public/tiles/houses-<id>.json, written by scripts/geo/house-tiles.ts).
 // Imported, so server code reads them without a request; they are small.
 
+import athwana from "../../public/tiles/houses-athwana.json";
+import githunguri from "../../public/tiles/houses-githunguri.json";
 import mathira from "../../public/tiles/houses-mathira.json";
 import nairobi from "../../public/tiles/houses-nairobi.json";
+import roysambu from "../../public/tiles/houses-roysambu.json";
 import type { HouseCounts } from "@/lib/map-areas";
 
 /** By the atlas key a campaign holds in campaigns.map_area; one per entry in MAP_AREAS. */
 export const HOUSE_TOTALS: Record<string, HouseCounts> = {
   nairobi: nairobi as HouseCounts,
   "nyeri/mathira": mathira as HouseCounts,
+  "nairobi/roysambu/roysambu": roysambu as HouseCounts,
+  "kiambu/githunguri": githunguri as HouseCounts,
+  "meru/tigania-west/athwana": athwana as HouseCounts,
 };
 
 /** Houses per ward slug in a map area; null for none, or an area with no house file. */

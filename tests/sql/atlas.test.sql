@@ -35,7 +35,7 @@ set local role authenticated;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000f6';
 do $$ begin
   assert (select count(*) from public.atlas_areas where key = 'nairobi') = 1, 'a Mathira agent reads Nairobi';
-  assert (select count(*) from public.atlas_elections) = 9, 'and the nine elections';
+  assert (select count(*) from public.atlas_elections) = 12, 'and the twelve elections (four races, three years)';
   assert pg_temp.state_of($q$insert into public.atlas_areas (key, level, name, parent) values ('nyeri', 'county', 'Nyeri', 'kenya')$q$) = '42501', 'a team member can''t add an area';
   assert pg_temp.state_of($q$update public.atlas_elections set note = 'x'$q$) = '42501', 'or change an election';
 end $$;

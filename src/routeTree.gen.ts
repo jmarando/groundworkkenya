@@ -23,6 +23,7 @@ import { Route as AuthenticatedCanvassingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDiaryRouteImport } from './routes/_authenticated/diary'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedFieldRouteImport } from './routes/_authenticated/field'
+import { Route as AuthenticatedFieldPlanRouteImport } from './routes/_authenticated/field-plan'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedFoundationsRouteImport } from './routes/_authenticated/foundations'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
@@ -30,7 +31,9 @@ import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedListeningRouteImport } from './routes/_authenticated/listening'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
+import { Route as AuthenticatedPlanRouteImport } from './routes/_authenticated/plan'
 import { Route as AuthenticatedPollingRouteImport } from './routes/_authenticated/polling'
+import { Route as AuthenticatedRoadmapRouteImport } from './routes/_authenticated/roadmap'
 import { Route as AuthenticatedSocialRouteImport } from './routes/_authenticated/social'
 import { Route as AuthenticatedStrategyRouteImport } from './routes/_authenticated/strategy'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
@@ -43,13 +46,18 @@ import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
 import { Route as ApiPublicUssdRouteImport } from './routes/api/public/ussd'
 import { Route as SSlugPrivacyRouteImport } from './routes/s.$slug_.privacy'
+import { Route as ApiPublicCalendarTokenRouteImport } from './routes/api/public/calendar/$token'
 import { Route as ApiPublicEmailInboundRouteImport } from './routes/api/public/email/inbound'
 import { Route as ApiPublicListeningScanRouteImport } from './routes/api/public/listening/scan'
+import { Route as ApiPublicMpesaB2cResultRouteImport } from './routes/api/public/mpesa/b2c-result'
+import { Route as ApiPublicMpesaB2cTimeoutRouteImport } from './routes/api/public/mpesa/b2c-timeout'
 import { Route as ApiPublicOutboxDrainRouteImport } from './routes/api/public/outbox/drain'
 import { Route as ApiPublicSmsDeliveryRouteImport } from './routes/api/public/sms/delivery'
 import { Route as ApiPublicSmsInboundRouteImport } from './routes/api/public/sms/inbound'
 import { Route as ApiPublicSocialMetaRouteImport } from './routes/api/public/social/meta'
 import { Route as ApiPublicSocialXRouteImport } from './routes/api/public/social/x'
+import { Route as ApiPublicTwilioAutocallRouteImport } from './routes/api/public/twilio/autocall'
+import { Route as ApiPublicTwilioCallStatusRouteImport } from './routes/api/public/twilio/call-status'
 import { Route as ApiPublicTwilioSmsRouteImport } from './routes/api/public/twilio/sms'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api/public/twilio/status'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio/voice'
@@ -128,6 +136,11 @@ const AuthenticatedFieldRoute = AuthenticatedFieldRouteImport.update({
   path: '/field',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFieldPlanRoute = AuthenticatedFieldPlanRouteImport.update({
+  id: '/field-plan',
+  path: '/field-plan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -164,9 +177,19 @@ const AuthenticatedPeopleRoute = AuthenticatedPeopleRouteImport.update({
   path: '/people',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPlanRoute = AuthenticatedPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPollingRoute = AuthenticatedPollingRouteImport.update({
   id: '/polling',
   path: '/polling',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRoadmapRoute = AuthenticatedRoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSocialRoute = AuthenticatedSocialRouteImport.update({
@@ -229,6 +252,11 @@ const SSlugPrivacyRoute = SSlugPrivacyRouteImport.update({
   path: '/s/$slug/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCalendarTokenRoute = ApiPublicCalendarTokenRouteImport.update({
+  id: '/api/public/calendar/$token',
+  path: '/api/public/calendar/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicEmailInboundRoute = ApiPublicEmailInboundRouteImport.update({
   id: '/api/public/email/inbound',
   path: '/api/public/email/inbound',
@@ -239,6 +267,17 @@ const ApiPublicListeningScanRoute = ApiPublicListeningScanRouteImport.update({
   path: '/api/public/listening/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMpesaB2cResultRoute = ApiPublicMpesaB2cResultRouteImport.update({
+  id: '/api/public/mpesa/b2c-result',
+  path: '/api/public/mpesa/b2c-result',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicMpesaB2cTimeoutRoute =
+  ApiPublicMpesaB2cTimeoutRouteImport.update({
+    id: '/api/public/mpesa/b2c-timeout',
+    path: '/api/public/mpesa/b2c-timeout',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOutboxDrainRoute = ApiPublicOutboxDrainRouteImport.update({
   id: '/api/public/outbox/drain',
   path: '/api/public/outbox/drain',
@@ -264,6 +303,17 @@ const ApiPublicSocialXRoute = ApiPublicSocialXRouteImport.update({
   path: '/api/public/social/x',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioAutocallRoute = ApiPublicTwilioAutocallRouteImport.update({
+  id: '/api/public/twilio/autocall',
+  path: '/api/public/twilio/autocall',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioCallStatusRoute =
+  ApiPublicTwilioCallStatusRouteImport.update({
+    id: '/api/public/twilio/call-status',
+    path: '/api/public/twilio/call-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioSmsRoute = ApiPublicTwilioSmsRouteImport.update({
   id: '/api/public/twilio/sms',
   path: '/api/public/twilio/sms',
@@ -322,6 +372,7 @@ export interface FileRoutesByFullPath {
   '/diary': typeof AuthenticatedDiaryRoute
   '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
+  '/field-plan': typeof AuthenticatedFieldPlanRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -329,7 +380,9 @@ export interface FileRoutesByFullPath {
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/roadmap': typeof AuthenticatedRoadmapRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -342,13 +395,18 @@ export interface FileRoutesByFullPath {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -372,6 +430,7 @@ export interface FileRoutesByTo {
   '/diary': typeof AuthenticatedDiaryRoute
   '/elections': typeof AuthenticatedElectionsRoute
   '/field': typeof AuthenticatedFieldRoute
+  '/field-plan': typeof AuthenticatedFieldPlanRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/foundations': typeof AuthenticatedFoundationsRoute
   '/home': typeof AuthenticatedHomeRoute
@@ -379,7 +438,9 @@ export interface FileRoutesByTo {
   '/listening': typeof AuthenticatedListeningRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/people': typeof AuthenticatedPeopleRoute
+  '/plan': typeof AuthenticatedPlanRoute
   '/polling': typeof AuthenticatedPollingRoute
+  '/roadmap': typeof AuthenticatedRoadmapRoute
   '/social': typeof AuthenticatedSocialRoute
   '/strategy': typeof AuthenticatedStrategyRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -392,13 +453,18 @@ export interface FileRoutesByTo {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -424,6 +490,7 @@ export interface FileRoutesById {
   '/_authenticated/diary': typeof AuthenticatedDiaryRoute
   '/_authenticated/elections': typeof AuthenticatedElectionsRoute
   '/_authenticated/field': typeof AuthenticatedFieldRoute
+  '/_authenticated/field-plan': typeof AuthenticatedFieldPlanRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/foundations': typeof AuthenticatedFoundationsRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
@@ -431,7 +498,9 @@ export interface FileRoutesById {
   '/_authenticated/listening': typeof AuthenticatedListeningRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
+  '/_authenticated/plan': typeof AuthenticatedPlanRoute
   '/_authenticated/polling': typeof AuthenticatedPollingRoute
+  '/_authenticated/roadmap': typeof AuthenticatedRoadmapRoute
   '/_authenticated/social': typeof AuthenticatedSocialRoute
   '/_authenticated/strategy': typeof AuthenticatedStrategyRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
@@ -444,13 +513,18 @@ export interface FileRoutesById {
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug_/privacy': typeof SSlugPrivacyRoute
+  '/api/public/calendar/$token': typeof ApiPublicCalendarTokenRoute
   '/api/public/email/inbound': typeof ApiPublicEmailInboundRoute
   '/api/public/listening/scan': typeof ApiPublicListeningScanRoute
+  '/api/public/mpesa/b2c-result': typeof ApiPublicMpesaB2cResultRoute
+  '/api/public/mpesa/b2c-timeout': typeof ApiPublicMpesaB2cTimeoutRoute
   '/api/public/outbox/drain': typeof ApiPublicOutboxDrainRoute
   '/api/public/sms/delivery': typeof ApiPublicSmsDeliveryRoute
   '/api/public/sms/inbound': typeof ApiPublicSmsInboundRoute
   '/api/public/social/meta': typeof ApiPublicSocialMetaRoute
   '/api/public/social/x': typeof ApiPublicSocialXRoute
+  '/api/public/twilio/autocall': typeof ApiPublicTwilioAutocallRoute
+  '/api/public/twilio/call-status': typeof ApiPublicTwilioCallStatusRoute
   '/api/public/twilio/sms': typeof ApiPublicTwilioSmsRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -476,6 +550,7 @@ export interface FileRouteTypes {
     | '/diary'
     | '/elections'
     | '/field'
+    | '/field-plan'
     | '/finance'
     | '/foundations'
     | '/home'
@@ -483,7 +558,9 @@ export interface FileRouteTypes {
     | '/listening'
     | '/overview'
     | '/people'
+    | '/plan'
     | '/polling'
+    | '/roadmap'
     | '/social'
     | '/strategy'
     | '/team'
@@ -496,13 +573,18 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug/privacy'
+    | '/api/public/calendar/$token'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -526,6 +608,7 @@ export interface FileRouteTypes {
     | '/diary'
     | '/elections'
     | '/field'
+    | '/field-plan'
     | '/finance'
     | '/foundations'
     | '/home'
@@ -533,7 +616,9 @@ export interface FileRouteTypes {
     | '/listening'
     | '/overview'
     | '/people'
+    | '/plan'
     | '/polling'
+    | '/roadmap'
     | '/social'
     | '/strategy'
     | '/team'
@@ -546,13 +631,18 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug/privacy'
+    | '/api/public/calendar/$token'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -577,6 +667,7 @@ export interface FileRouteTypes {
     | '/_authenticated/diary'
     | '/_authenticated/elections'
     | '/_authenticated/field'
+    | '/_authenticated/field-plan'
     | '/_authenticated/finance'
     | '/_authenticated/foundations'
     | '/_authenticated/home'
@@ -584,7 +675,9 @@ export interface FileRouteTypes {
     | '/_authenticated/listening'
     | '/_authenticated/overview'
     | '/_authenticated/people'
+    | '/_authenticated/plan'
     | '/_authenticated/polling'
+    | '/_authenticated/roadmap'
     | '/_authenticated/social'
     | '/_authenticated/strategy'
     | '/_authenticated/team'
@@ -597,13 +690,18 @@ export interface FileRouteTypes {
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug_/privacy'
+    | '/api/public/calendar/$token'
     | '/api/public/email/inbound'
     | '/api/public/listening/scan'
+    | '/api/public/mpesa/b2c-result'
+    | '/api/public/mpesa/b2c-timeout'
     | '/api/public/outbox/drain'
     | '/api/public/sms/delivery'
     | '/api/public/sms/inbound'
     | '/api/public/social/meta'
     | '/api/public/social/x'
+    | '/api/public/twilio/autocall'
+    | '/api/public/twilio/call-status'
     | '/api/public/twilio/sms'
     | '/api/public/twilio/status'
     | '/api/public/twilio/voice'
@@ -626,13 +724,18 @@ export interface RootRouteChildren {
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
   SSlugPrivacyRoute: typeof SSlugPrivacyRoute
+  ApiPublicCalendarTokenRoute: typeof ApiPublicCalendarTokenRoute
   ApiPublicEmailInboundRoute: typeof ApiPublicEmailInboundRoute
   ApiPublicListeningScanRoute: typeof ApiPublicListeningScanRoute
+  ApiPublicMpesaB2cResultRoute: typeof ApiPublicMpesaB2cResultRoute
+  ApiPublicMpesaB2cTimeoutRoute: typeof ApiPublicMpesaB2cTimeoutRoute
   ApiPublicOutboxDrainRoute: typeof ApiPublicOutboxDrainRoute
   ApiPublicSmsDeliveryRoute: typeof ApiPublicSmsDeliveryRoute
   ApiPublicSmsInboundRoute: typeof ApiPublicSmsInboundRoute
   ApiPublicSocialMetaRoute: typeof ApiPublicSocialMetaRoute
   ApiPublicSocialXRoute: typeof ApiPublicSocialXRoute
+  ApiPublicTwilioAutocallRoute: typeof ApiPublicTwilioAutocallRoute
+  ApiPublicTwilioCallStatusRoute: typeof ApiPublicTwilioCallStatusRoute
   ApiPublicTwilioSmsRoute: typeof ApiPublicTwilioSmsRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -743,6 +846,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFieldRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/field-plan': {
+      id: '/_authenticated/field-plan'
+      path: '/field-plan'
+      fullPath: '/field-plan'
+      preLoaderRoute: typeof AuthenticatedFieldPlanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/finance': {
       id: '/_authenticated/finance'
       path: '/finance'
@@ -792,11 +902,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPeopleRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/plan': {
+      id: '/_authenticated/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AuthenticatedPlanRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/polling': {
       id: '/_authenticated/polling'
       path: '/polling'
       fullPath: '/polling'
       preLoaderRoute: typeof AuthenticatedPollingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/roadmap': {
+      id: '/_authenticated/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof AuthenticatedRoadmapRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/social': {
@@ -883,6 +1007,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SSlugPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/calendar/$token': {
+      id: '/api/public/calendar/$token'
+      path: '/api/public/calendar/$token'
+      fullPath: '/api/public/calendar/$token'
+      preLoaderRoute: typeof ApiPublicCalendarTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/inbound': {
       id: '/api/public/email/inbound'
       path: '/api/public/email/inbound'
@@ -895,6 +1026,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/listening/scan'
       fullPath: '/api/public/listening/scan'
       preLoaderRoute: typeof ApiPublicListeningScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mpesa/b2c-result': {
+      id: '/api/public/mpesa/b2c-result'
+      path: '/api/public/mpesa/b2c-result'
+      fullPath: '/api/public/mpesa/b2c-result'
+      preLoaderRoute: typeof ApiPublicMpesaB2cResultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/mpesa/b2c-timeout': {
+      id: '/api/public/mpesa/b2c-timeout'
+      path: '/api/public/mpesa/b2c-timeout'
+      fullPath: '/api/public/mpesa/b2c-timeout'
+      preLoaderRoute: typeof ApiPublicMpesaB2cTimeoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/outbox/drain': {
@@ -930,6 +1075,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/social/x'
       fullPath: '/api/public/social/x'
       preLoaderRoute: typeof ApiPublicSocialXRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/autocall': {
+      id: '/api/public/twilio/autocall'
+      path: '/api/public/twilio/autocall'
+      fullPath: '/api/public/twilio/autocall'
+      preLoaderRoute: typeof ApiPublicTwilioAutocallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/call-status': {
+      id: '/api/public/twilio/call-status'
+      path: '/api/public/twilio/call-status'
+      fullPath: '/api/public/twilio/call-status'
+      preLoaderRoute: typeof ApiPublicTwilioCallStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/twilio/sms': {
@@ -1001,6 +1160,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDiaryRoute: typeof AuthenticatedDiaryRoute
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRoute
   AuthenticatedFieldRoute: typeof AuthenticatedFieldRoute
+  AuthenticatedFieldPlanRoute: typeof AuthenticatedFieldPlanRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedFoundationsRoute: typeof AuthenticatedFoundationsRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
@@ -1008,7 +1168,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedListeningRoute: typeof AuthenticatedListeningRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
+  AuthenticatedPlanRoute: typeof AuthenticatedPlanRoute
   AuthenticatedPollingRoute: typeof AuthenticatedPollingRoute
+  AuthenticatedRoadmapRoute: typeof AuthenticatedRoadmapRoute
   AuthenticatedSocialRoute: typeof AuthenticatedSocialRoute
   AuthenticatedStrategyRoute: typeof AuthenticatedStrategyRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
@@ -1027,6 +1189,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDiaryRoute: AuthenticatedDiaryRoute,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRoute,
   AuthenticatedFieldRoute: AuthenticatedFieldRoute,
+  AuthenticatedFieldPlanRoute: AuthenticatedFieldPlanRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedFoundationsRoute: AuthenticatedFoundationsRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
@@ -1034,7 +1197,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedListeningRoute: AuthenticatedListeningRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
+  AuthenticatedPlanRoute: AuthenticatedPlanRoute,
   AuthenticatedPollingRoute: AuthenticatedPollingRoute,
+  AuthenticatedRoadmapRoute: AuthenticatedRoadmapRoute,
   AuthenticatedSocialRoute: AuthenticatedSocialRoute,
   AuthenticatedStrategyRoute: AuthenticatedStrategyRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
@@ -1058,13 +1223,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
   SSlugPrivacyRoute: SSlugPrivacyRoute,
+  ApiPublicCalendarTokenRoute: ApiPublicCalendarTokenRoute,
   ApiPublicEmailInboundRoute: ApiPublicEmailInboundRoute,
   ApiPublicListeningScanRoute: ApiPublicListeningScanRoute,
+  ApiPublicMpesaB2cResultRoute: ApiPublicMpesaB2cResultRoute,
+  ApiPublicMpesaB2cTimeoutRoute: ApiPublicMpesaB2cTimeoutRoute,
   ApiPublicOutboxDrainRoute: ApiPublicOutboxDrainRoute,
   ApiPublicSmsDeliveryRoute: ApiPublicSmsDeliveryRoute,
   ApiPublicSmsInboundRoute: ApiPublicSmsInboundRoute,
   ApiPublicSocialMetaRoute: ApiPublicSocialMetaRoute,
   ApiPublicSocialXRoute: ApiPublicSocialXRoute,
+  ApiPublicTwilioAutocallRoute: ApiPublicTwilioAutocallRoute,
+  ApiPublicTwilioCallStatusRoute: ApiPublicTwilioCallStatusRoute,
   ApiPublicTwilioSmsRoute: ApiPublicTwilioSmsRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,

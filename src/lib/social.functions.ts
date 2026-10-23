@@ -3,7 +3,13 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { firstName, fillTemplate, validateWaTemplate, type WaTemplateInput } from "@/lib/wa-templates";
+import { requireOffice } from "@/lib/require-role";
+import {
+  firstName,
+  fillTemplate,
+  validateWaTemplate,
+  type WaTemplateInput,
+} from "@/lib/wa-templates";
 
 export const PLATFORMS = [
   { key: "facebook", label: "Facebook Page", code: "FB" },
@@ -94,7 +100,13 @@ export const getSocial = createServerFn({ method: "GET" })
     const convoById = new Map((convos ?? []).map((c) => [c.id, c]));
 
     const bucket = (s: string | null) =>
-      s === "positive" ? "positive" : s === "negative" ? "negative" : s === "neutral" ? "neutral" : null;
+      s === "positive"
+        ? "positive"
+        : s === "negative"
+          ? "negative"
+          : s === "neutral"
+            ? "neutral"
+            : null;
 
     const byPlatform = socialPlatforms.map((platform) => {
       const list = inbound.filter((m) => m.platform === platform);
@@ -203,154 +215,169 @@ export const getSocial = createServerFn({ method: "GET" })
 
 /* ------------------------------------------------------- sentiment analysis */
 
-type Verdict = { id: string; sentiment: "positive" | "neutral" | "negative"; issue: string; score: number };
+type Verdict = {
+  id: string;
+  sentiment: "positive" | "neutral" | "negative";
+  issue: string;
+  score: number;
+};
 
 export const analyseSentiment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { limit?: number } | undefined) => ({
     limit: Math.min(Math.max(input?.limit ?? 40, 1), 80),
   }))
-  .handler(async ({ data, context }): Promise<{ analysed: number; remaining: number; error?: string }> => {
-    const sb = context.supabase;
-    const { data: pending } = await sb
-      .from("messages")
-      .select("id, body, platform")
-      .eq("direction", "in")
-      .is("sentiment", null)
-      .order("created_at", { ascending: false })
-      .limit(data.limit);
+  .handler(
+    async ({ data, context }): Promise<{ analysed: number; remaining: number; error?: string }> => {
+      const sb = context.supabase;
+      const { data: pending } = await sb
+        .from("messages")
+        .select("id, body, platform")
+        .eq("direction", "in")
+        .is("sentiment", null)
+        .order("created_at", { ascending: false })
+        .limit(data.limit);
 
-    const rows = pending ?? [];
-    if (rows.length === 0) return { analysed: 0, remaining: 0 };
+      const rows = pending ?? [];
+      if (rows.length === 0) return { analysed: 0, remaining: 0 };
 
-    const key = process.env["LOVABLE_API_KEY"];
-    if (!key) return { analysed: 0, remaining: rows.length, error: "AI is not configured." };
+      const key = process.env["LOVABLE_API_KEY"];
+      if (!key) return { analysed: 0, remaining: rows.length, error: "AI is not configured." };
 
-    const prompt = [
-      "You read messages sent to a Kenyan political campaign. They mix English, Kiswahili and Sheng.",
-      "For each message return the mood (positive, neutral or negative towards the campaign),",
-      "a short lowercase issue label (for example: roads, water, jobs, bursaries, security, rubbish collection,",
-      "health centre, street lighting, rally, volunteering, general), and a score from -1 (furious) to 1 (delighted).",
-      "Return one entry per message, keeping the given id.",
-      "",
-      JSON.stringify(rows.map((r) => ({ id: r.id, text: r.body.slice(0, 600) }))),
-    ].join("\n");
+      const prompt = [
+        "You read messages sent to a Kenyan political campaign. They mix English, Kiswahili and Sheng.",
+        "For each message return the mood (positive, neutral or negative towards the campaign),",
+        "a short lowercase issue label (for example: roads, water, jobs, bursaries, security, rubbish collection,",
+        "health centre, street lighting, rally, volunteering, general), and a score from -1 (furious) to 1 (delighted).",
+        "Return one entry per message, keeping the given id.",
+        "",
+        JSON.stringify(rows.map((r) => ({ id: r.id, text: r.body.slice(0, 600) }))),
+      ].join("\n");
 
-    let verdicts: Verdict[] = [];
-    try {
-      const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Lovable-API-Key": key,
-          "X-Lovable-AIG-SDK": "fetch",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-6-astra",
-          input: prompt,
-          stream: true,
-          reasoning: { effort: "low", summary: "auto" },
-          include: ["reasoning.encrypted_content"],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "sentiment_batch",
-              strict: true,
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                required: ["results"],
-                properties: {
-                  results: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      additionalProperties: false,
-                      required: ["id", "sentiment", "issue", "score"],
-                      properties: {
-                        id: { type: "string" },
-                        sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
-                        issue: { type: "string" },
-                        score: { type: "number" },
+      let verdicts: Verdict[] = [];
+      try {
+        const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+          signal: AbortSignal.timeout(60_000),
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Lovable-API-Key": key,
+            "X-Lovable-AIG-SDK": "fetch",
+          },
+          body: JSON.stringify({
+            model: "openai/gpt-6-astra",
+            input: prompt,
+            stream: true,
+            reasoning: { effort: "low", summary: "auto" },
+            include: ["reasoning.encrypted_content"],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "sentiment_batch",
+                strict: true,
+                schema: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["results"],
+                  properties: {
+                    results: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["id", "sentiment", "issue", "score"],
+                        properties: {
+                          id: { type: "string" },
+                          sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+                          issue: { type: "string" },
+                          score: { type: "number" },
+                        },
                       },
                     },
                   },
                 },
               },
             },
-          },
-        }),
-      });
+          }),
+        });
 
-      if (!res.ok || !res.body) {
-        const body = await res.text();
-        return { analysed: 0, remaining: rows.length, error: `AI request failed (${res.status}): ${body.slice(0, 200)}` };
-      }
+        if (!res.ok || !res.body) {
+          const body = await res.text();
+          return {
+            analysed: 0,
+            remaining: rows.length,
+            error: `AI request failed (${res.status}): ${body.slice(0, 200)}`,
+          };
+        }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let text = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() ?? "";
-        for (const part of parts) {
-          const line = part.split("\n").find((l) => l.startsWith("data:"));
-          if (!line) continue;
-          const payload = line.slice(5).trim();
-          if (!payload || payload === "[DONE]") continue;
-          try {
-            const evt = JSON.parse(payload) as { type?: string; delta?: string };
-            if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") {
-              text += evt.delta;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let text = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+          for (const part of parts) {
+            const line = part.split("\n").find((l) => l.startsWith("data:"));
+            if (!line) continue;
+            const payload = line.slice(5).trim();
+            if (!payload || payload === "[DONE]") continue;
+            try {
+              const evt = JSON.parse(payload) as { type?: string; delta?: string };
+              if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") {
+                text += evt.delta;
+              }
+            } catch {
+              /* skip malformed frame */
             }
-          } catch {
-            /* skip malformed frame */
           }
         }
+
+        const parsed = JSON.parse(text) as { results?: Verdict[] };
+        verdicts = parsed.results ?? [];
+      } catch (err) {
+        return {
+          analysed: 0,
+          remaining: rows.length,
+          error: err instanceof Error ? err.message : "Analysis failed.",
+        };
       }
 
-      const parsed = JSON.parse(text) as { results?: Verdict[] };
-      verdicts = parsed.results ?? [];
-    } catch (err) {
-      return {
-        analysed: 0,
-        remaining: rows.length,
-        error: err instanceof Error ? err.message : "Analysis failed.",
-      };
-    }
+      const known = new Set(rows.map((r) => r.id));
+      let analysed = 0;
+      for (const v of verdicts) {
+        if (!known.has(v.id)) continue;
+        const score = Math.max(-1, Math.min(1, Number(v.score) || 0));
+        const issue = (v.issue || "general").toLowerCase().slice(0, 40);
+        const { error } = await sb
+          .from("messages")
+          .update({ sentiment: v.sentiment, sentiment_score: score, issue })
+          .eq("id", v.id);
+        if (!error) analysed += 1;
+      }
 
-    const known = new Set(rows.map((r) => r.id));
-    let analysed = 0;
-    for (const v of verdicts) {
-      if (!known.has(v.id)) continue;
-      const score = Math.max(-1, Math.min(1, Number(v.score) || 0));
-      const issue = (v.issue || "general").toLowerCase().slice(0, 40);
-      const { error } = await sb
+      // roll the verdict up onto the conversation so the inbox shows it
+      const { data: updated } = await sb
         .from("messages")
-        .update({ sentiment: v.sentiment, sentiment_score: score, issue })
-        .eq("id", v.id);
-      if (!error) analysed += 1;
-    }
+        .select("conversation_id, sentiment, sentiment_score, issue")
+        .in(
+          "id",
+          verdicts.map((v) => v.id),
+        );
+      for (const m of updated ?? []) {
+        if (!m.conversation_id) continue;
+        await sb
+          .from("conversations")
+          .update({ sentiment: m.sentiment, sentiment_score: m.sentiment_score, issue: m.issue })
+          .eq("id", m.conversation_id);
+      }
 
-    // roll the verdict up onto the conversation so the inbox shows it
-    const { data: updated } = await sb
-      .from("messages")
-      .select("conversation_id, sentiment, sentiment_score, issue")
-      .in("id", verdicts.map((v) => v.id));
-    for (const m of updated ?? []) {
-      if (!m.conversation_id) continue;
-      await sb
-        .from("conversations")
-        .update({ sentiment: m.sentiment, sentiment_score: m.sentiment_score, issue: m.issue })
-        .eq("id", m.conversation_id);
-    }
-
-    return { analysed, remaining: Math.max(rows.length - analysed, 0) };
-  });
+      return { analysed, remaining: Math.max(rows.length - analysed, 0) };
+    },
+  );
 
 /* ------------------------------------------------------------------- replies */
 
@@ -364,10 +391,11 @@ export const replyToConversation = createServerFn({ method: "POST" })
     return { conversationId: input.conversationId, body };
   })
   .handler(async ({ data, context }): Promise<{ status: string; note: string }> => {
+    await requireOffice(context.supabase, "Messages to voters are sent by the campaign office.");
     const sb = context.supabase;
     const { data: convo, error } = await sb
       .from("conversations")
-      .select("id, person_id, platform, channel, subject")
+      .select("id, person_id, platform, channel, subject, external_thread_id")
       .eq("id", data.conversationId)
       .maybeSingle();
     if (error || !convo) throw new Error("That conversation is no longer available.");
@@ -385,12 +413,37 @@ export const replyToConversation = createServerFn({ method: "POST" })
 
     const { data: account } = await sb
       .from("social_accounts")
-      .select("live")
+      .select("id, live")
       .eq("platform", convo.platform)
       .maybeSingle();
 
     const live = account?.live === true;
-    const status = live ? "queued" : "staged";
+    let status = live ? "queued" : "staged";
+    let sent: { ref: string | null; error: string | null } = { ref: null, error: null };
+
+    // Facebook and Instagram go out at once through Meta, with the Page token Groundwork set.
+    if (live && account && (convo.platform === "facebook" || convo.platform === "instagram")) {
+      const { metaReplyRequest } = await import("@/lib/meta-send");
+      const req = metaReplyRequest(
+        convo.platform,
+        /^(comment|mention)/i.test(convo.subject ?? "") ? "comment" : "dm",
+        convo.external_thread_id,
+        data.body,
+      );
+      if ("error" in req) throw new Error(req.error);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: key } = await supabaseAdmin
+        .from("social_account_tokens")
+        .select("page_token")
+        .eq("account_id", account.id)
+        .maybeSingle();
+      if (!key)
+        throw new Error("This Page isn't connected for replies yet. Ask Groundwork to connect it.");
+      const { sendMetaReply } = await import("@/lib/meta-send.server");
+      const answer = await sendMetaReply(key.page_token, req);
+      status = answer.ok ? "sent" : "failed";
+      sent = answer.ok ? { ref: answer.id, error: null } : { ref: null, error: answer.error };
+    }
 
     const { error: insertError } = await sb.from("messages").insert({
       person_id: convo.person_id,
@@ -401,8 +454,12 @@ export const replyToConversation = createServerFn({ method: "POST" })
       direction: "out",
       body: data.body,
       status,
+      provider_ref: sent.ref,
+      error: sent.error,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
     });
     if (insertError) throw new Error("The reply could not be saved.");
+    if (status === "failed") throw new Error(sent.error ?? "Meta did not take the reply.");
 
     await sb
       .from("conversations")
@@ -411,9 +468,12 @@ export const replyToConversation = createServerFn({ method: "POST" })
 
     return {
       status,
-      note: live
-        ? "Reply queued for sending."
-        : "Reply saved. It goes out once this account is switched live.",
+      note:
+        status === "sent"
+          ? "Reply sent."
+          : live
+            ? "Reply queued for sending."
+            : "Reply saved. It goes out once this account is switched live.",
     };
   });
 
@@ -431,7 +491,9 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
     const q = data.q.replace(/[%_,]/g, " ");
     const { data: rows, error } = await context.supabase
       .from("people")
-      .select("id, full_name, phone, email, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)")
+      .select(
+        "id, full_name, phone, email, ward_id, opted_out, consent_sms, consent_whatsapp, wards(name)",
+      )
       .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
       .order("full_name")
       .limit(12);
@@ -457,18 +519,28 @@ export const searchPeopleForMessage = createServerFn({ method: "POST" })
  */
 export const startConversation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { personId: string; channel: "sms" | "whatsapp" | "email"; body: string; subject?: string; whatsapp?: WaTemplateInput }) => {
-    const body = (input.body ?? "").trim();
-    if (!input.personId) throw new Error("Pick a person first.");
-    if (!["sms", "whatsapp", "email"].includes(input.channel))
-      throw new Error("Pick SMS, WhatsApp or email.");
-    const whatsapp = input.channel === "whatsapp" && input.whatsapp ? validateWaTemplate(input.whatsapp) : null;
-    if (!body && !whatsapp) throw new Error("Write something before sending.");
-    if (body.length > 2000) throw new Error("That message is too long.");
-    const subject = (input.subject ?? "").trim().slice(0, 150) || null;
-    return { personId: input.personId, channel: input.channel, body, subject, whatsapp };
-  })
+  .inputValidator(
+    (input: {
+      personId: string;
+      channel: "sms" | "whatsapp" | "email";
+      body: string;
+      subject?: string;
+      whatsapp?: WaTemplateInput;
+    }) => {
+      const body = (input.body ?? "").trim();
+      if (!input.personId) throw new Error("Pick a person first.");
+      if (!["sms", "whatsapp", "email"].includes(input.channel))
+        throw new Error("Pick SMS, WhatsApp or email.");
+      const whatsapp =
+        input.channel === "whatsapp" && input.whatsapp ? validateWaTemplate(input.whatsapp) : null;
+      if (!body && !whatsapp) throw new Error("Write something before sending.");
+      if (body.length > 2000) throw new Error("That message is too long.");
+      const subject = (input.subject ?? "").trim().slice(0, 150) || null;
+      return { personId: input.personId, channel: input.channel, body, subject, whatsapp };
+    },
+  )
   .handler(async ({ data, context }): Promise<{ conversationId: string; note: string }> => {
+    await requireOffice(context.supabase, "Messages to voters are sent by the campaign office.");
     const sb = context.supabase;
     const { data: person, error: pError } = await sb
       .from("people")
@@ -484,9 +556,18 @@ export const startConversation = createServerFn({ method: "POST" })
     let params: string[] = [];
     if (data.whatsapp) {
       if (person.opted_out) throw new Error("They replied STOP. Nothing was sent.");
-      const { data: campaign, error } = await sb.from("campaigns").select("name, candidate, owns_channels").eq("id", person.campaign_id).single();
-      if (error || !campaign?.owns_channels) throw new Error("This campaign does not yet have its own WhatsApp sending connection.");
-      params = [firstName(person.full_name), campaign.candidate || campaign.name, ...data.whatsapp.fields];
+      const { data: campaign, error } = await sb
+        .from("campaigns")
+        .select("name, candidate, owns_channels")
+        .eq("id", person.campaign_id)
+        .single();
+      if (error || !campaign?.owns_channels)
+        throw new Error("This campaign does not yet have its own WhatsApp sending connection.");
+      params = [
+        firstName(person.full_name),
+        campaign.candidate || campaign.name,
+        ...data.whatsapp.fields,
+      ];
       body = fillTemplate(data.whatsapp.t.text, params);
     }
 
@@ -536,7 +617,19 @@ export const startConversation = createServerFn({ method: "POST" })
       r =
         data.channel === "sms"
           ? await replyBySms(sb, convo, data.body)
-          : await replyByWhatsApp(sb, convo, body, data.whatsapp ? { name: data.whatsapp.t.name, language: data.whatsapp.t.language, params, imageUrl: data.whatsapp.imageUrl } : undefined);
+          : await replyByWhatsApp(
+              sb,
+              convo,
+              body,
+              data.whatsapp
+                ? {
+                    name: data.whatsapp.t.name,
+                    language: data.whatsapp.t.language,
+                    params,
+                    imageUrl: data.whatsapp.imageUrl,
+                  }
+                : undefined,
+            );
     }
     return { conversationId, note: r.note };
   });
@@ -571,7 +664,10 @@ export const saveSocialAccount = createServerFn({ method: "POST" })
       patch.live = data.live;
       patch.status = data.live ? "live" : "pending";
     }
-    const { error } = await context.supabase.from("social_accounts").update(patch).eq("id", data.id);
+    const { error } = await context.supabase
+      .from("social_accounts")
+      .update(patch)
+      .eq("id", data.id);
     if (error) throw new Error("Only an admin or manager can change connected accounts.");
     return { ok: true };
   });
@@ -679,9 +775,16 @@ async function replyByWhatsApp(
     .single();
   if (error || !inserted) throw new Error("The reply could not be saved.");
 
-  const { sendWhatsAppText, sendWhatsAppTemplate, recoverPending } = await import("@/lib/whatsapp.server");
+  const { sendWhatsAppText, sendWhatsAppTemplate, recoverPending } =
+    await import("@/lib/whatsapp.server");
   const r = template
-    ? await sendWhatsAppTemplate(person.phone, template.name, template.language, template.params, template.imageUrl)
+    ? await sendWhatsAppTemplate(
+        person.phone,
+        template.name,
+        template.language,
+        template.params,
+        template.imageUrl,
+      )
     : await sendWhatsAppText(person.phone, body);
   const { error: saveError } = await sb
     .from("messages")
@@ -691,7 +794,8 @@ async function replyByWhatsApp(
         : { status: r.error.includes("Outcome unknown") ? "sending" : "failed", error: r.error },
     )
     .eq("id", inserted.id);
-  if (saveError) throw new Error("Message outcome could not be saved. Check Inbox before trying again.");
+  if (saveError)
+    throw new Error("Message outcome could not be saved. Check Inbox before trying again.");
   const { error: threadError } = await sb
     .from("conversations")
     .update({ unread: false, last_message_at: new Date().toISOString(), snippet: body })
@@ -707,6 +811,32 @@ async function replyByWhatsApp(
 }
 
 async function senderName(sb: SupabaseClient<Database>, userId: string): Promise<string | null> {
-  const { data } = await sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle();
+  const { data } = await sb
+    .from("profiles")
+    .select("full_name")
+    .eq("user_id", userId)
+    .maybeSingle();
   return data?.full_name?.split(" ")[0] ?? null;
 }
+
+/** A person's conversations marked read, or done (closed), or open again. The office only. */
+export const markConversations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { ids: string[]; unread?: boolean; status?: "open" | "closed" }) => {
+    const ids = (input?.ids ?? []).filter((x) => /^[0-9a-f-]{36}$/.test(String(x))).slice(0, 20);
+    if (!ids.length) throw new Error("Which conversation?");
+    const patch: { unread?: boolean; status?: string } = {};
+    if (typeof input.unread === "boolean") patch.unread = input.unread;
+    if (input.status === "open" || input.status === "closed") patch.status = input.status;
+    return { ids, patch };
+  })
+  .handler(async ({ data, context }) => {
+    const { requireOffice } = await import("@/lib/require-role");
+    await requireOffice(context.supabase);
+    const { error } = await context.supabase
+      .from("conversations")
+      .update(data.patch)
+      .in("id", data.ids);
+    if (error) throw new Error("Could not update the conversation.");
+    return { ok: true };
+  });

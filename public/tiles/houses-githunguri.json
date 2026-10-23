@@ -1,0 +1,14 @@
+{
+  "area": "kiambu/githunguri",
+  "source": "Google Open Buildings v3 (CC BY 4.0)",
+  "minConfidence": 0.65,
+  "built": "2026-10-19",
+  "total": 142774,
+  "wards": {
+    "githiga": 32556,
+    "githunguri": 34710,
+    "ikinu": 22528,
+    "komothai": 30337,
+    "ngewa": 22643
+  }
+}

@@ -1,0 +1,8 @@
+key,level,name,parent,iebc_code
+kiambu,county,Kiambu,kenya,022
+kiambu/githunguri,constituency,Githunguri,kiambu,
+kiambu/githunguri/githiga,ward,Githiga,kiambu/githunguri,
+kiambu/githunguri/githunguri,ward,Githunguri,kiambu/githunguri,
+kiambu/githunguri/ikinu,ward,Ikinu,kiambu/githunguri,
+kiambu/githunguri/komothai,ward,Komothai,kiambu/githunguri,
+kiambu/githunguri/ngewa,ward,Ngewa,kiambu/githunguri,

@@ -6,12 +6,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import { addDays, type DiaryEntry } from "@/lib/diary";
 import { loadDiary } from "@/lib/diary.functions";
 import { type HomeFacts, type RaceView, type RealSignals } from "@/lib/home";
 import type { StoryView } from "@/lib/morning-story";
-import { loadStory } from "@/lib/morning-story.functions";
+import { loadHomeStory } from "@/lib/morning-story.functions";
 import { postFromRow, postSpike, rivalMove, type PostRow, type RivalPost } from "@/lib/race-data";
 import { loadPolls, loadRivals } from "@/lib/race.functions";
 import { issueAverages, searchSpike, type SearchRead } from "@/lib/search-interest";
@@ -29,7 +29,7 @@ export type HomeData = {
   race: RaceView;
   /** The diary from today through the next two days. */
   diary: DiaryEntry[];
-  /** This morning's story: written at 06:00 from the news, or by the team. */
+  /** This morning's story: written at 06:00 from the news, or by the team; an earlier day's until it is. */
   story: StoryView | null;
   /** The week's top issues across news and social, messages, the door and searches. */
   mind: TopOfMind;
@@ -84,7 +84,7 @@ export async function loadHome(
     loadRivals(sb).catch(() => []),
     loadPolls(sb).catch(() => []),
     loadDiary(sb, todayIso, addDays(todayIso, 2)).catch(() => []),
-    loadStory(sb, todayIso).catch(() => null),
+    loadHomeStory(sb, todayIso).catch(() => null),
     loadSearch(sb as never, "candidates").catch(() => null),
     loadSearch(sb as never, "issues").catch(() => null),
   ]);

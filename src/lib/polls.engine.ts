@@ -91,7 +91,9 @@ export function validateDraft(d: PollDraft): string | null {
     if (d.rewardAmount > REWARD_MAX_KES) {
       return `Rewards are capped at KES ${REWARD_MAX_KES} per person.`;
     }
-    if (d.rewardMethod === "mpesa" && d.rewardAmount < 10) return "M-Pesa payouts start at KES 10.";
+    if (d.rewardMethod === "mpesa") return "Thank-you rewards are sent as airtime.";
+    if (!Number.isInteger(d.rewardAmount) || d.rewardAmount < 5)
+      return "Airtime is sent in whole shillings, from KES 5.";
   }
   return null;
 }

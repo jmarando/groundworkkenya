@@ -11,7 +11,13 @@ export function decodePCM(pending: Uint8Array, incoming: Uint8Array) {
   return { samples, pending: bytes.slice(usable) };
 }
 
-export async function streamSpeech(endpoint: string, text: string, token: string, signal?: AbortSignal, onPlaying?: () => void): Promise<void> {
+export async function streamSpeech(
+  endpoint: string,
+  text: string,
+  token: string,
+  signal?: AbortSignal,
+  onPlaying?: () => void,
+): Promise<void> {
   signal?.throwIfAborted();
   const context = new AudioContext({ sampleRate: 24000 });
   const sources = new Set<AudioBufferSourceNode>();
@@ -40,13 +46,16 @@ export async function streamSpeech(endpoint: string, text: string, token: string
       try {
         const error = JSON.parse(raw);
         message = error.message ?? error.error?.message ?? raw;
-      } catch { /* plain-text error */ }
+      } catch {
+        /* plain-text error */
+      }
       throw new Error(message || `Speech unavailable (${response.status}).`);
     }
     const parser = createParser({
       onEvent(event) {
         const payload = JSON.parse(event.data) as { type: string; audio?: string; error?: unknown };
-        if (payload.type === "error" || payload.error) throw new Error(`Speech failed: ${event.data}`);
+        if (payload.type === "error" || payload.error)
+          throw new Error(`Speech failed: ${event.data}`);
         if (payload.type === "speech.audio.done") {
           completed = true;
           return;

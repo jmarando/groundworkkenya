@@ -14,9 +14,14 @@ const ADJUDICATE = 0.025;
 /**
  * Minutes before a station's form usually reaches us, before travel and
  * network delays. Ballots are counted in order at each station (President,
- * then MP, and Governor fifth), so later races report later.
+ * then MP, Governor fifth and MCA last), so later races report later.
  */
-const COUNT_DELAY: Record<Scenario["office"], number> = { president: 120, mp: 170, governor: 230 };
+const COUNT_DELAY: Record<Scenario["office"], number> = {
+  president: 120,
+  mp: 170,
+  governor: 230,
+  mca: 260,
+};
 
 const SITES = [
   "Primary School",

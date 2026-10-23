@@ -11,8 +11,8 @@ import { band, BAND_COLOUR, blockNote, OUTCOME_COLOUR, OUTCOME_LABEL } from "@/l
 import { getHouse } from "@/lib/houses.functions";
 import type { MapArea } from "@/lib/map-areas";
 import { maskPhone } from "@/lib/phone";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 

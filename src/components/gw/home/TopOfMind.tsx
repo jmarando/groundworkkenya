@@ -28,7 +28,7 @@ export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
                 {MIND_SOURCES.map((s) => {
                   const share = l.shares[s];
                   return (
-                   <div key={s} data-source={s}>
+                    <div key={s} data-source={s}>
                       <dt>{SOURCE_NAMES[s]}</dt>
                       <dd>
                         {share === null ? (
@@ -57,7 +57,22 @@ export function TopOfMindCard({ mind }: { mind: TopOfMind }) {
                   )}
                 </p>
               ))}
-              {l.examples.length > 1 && <details className="mind-more"><summary>More sources</summary>{l.examples.slice(1).map(e => <p key={e.text} className="home-issue-line">{isWeb(e.url) ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.text}</a> : e.text}</p>)}</details>}
+              {l.examples.length > 1 && (
+                <details className="mind-more">
+                  <summary>More sources</summary>
+                  {l.examples.slice(1).map((e) => (
+                    <p key={e.text} className="home-issue-line">
+                      {isWeb(e.url) ? (
+                        <a href={e.url} target="_blank" rel="noopener noreferrer">
+                          {e.text}
+                        </a>
+                      ) : (
+                        e.text
+                      )}
+                    </p>
+                  ))}
+                </details>
+              )}
             </li>
           ))}
         </ol>

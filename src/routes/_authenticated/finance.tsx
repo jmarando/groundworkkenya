@@ -6,7 +6,10 @@ import { toast } from "sonner";
 
 import { getFinance } from "@/lib/console.functions";
 import { approveExpense } from "@/lib/finance.functions";
+import { downloadCSV, stampName } from "@/lib/csv";
+import { RecordMoney } from "@/components/gw/finance/RecordMoney";
 import { useAccess } from "@/hooks/useAccess";
+import { nf } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/finance")({
   component: Finance,
@@ -28,7 +31,6 @@ export const Route = createFileRoute("/_authenticated/finance")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
 const money = (n: number) => nf.format(Math.round(n));
 const millions = (n: number) => `${(n / 1_000_000).toFixed(1)}M`;
 const day = (iso: string) =>
@@ -90,7 +92,7 @@ function Finance() {
     );
   }
 
-  const pct = (data.spendKes / data.statutoryLimit) * 100;
+  const pct = data.statutoryLimit ? (data.spendKes / data.statutoryLimit) * 100 : 0;
   const maxCat = Math.max(...data.byCategory.map((c) => c.amount), 1);
 
   return (
@@ -109,8 +111,54 @@ function Finance() {
           <span className="syncline">
             <span className="dot-live" aria-hidden="true" /> Reconciled against live data
           </span>
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            id="disclosure"
+            onClick={() =>
+              downloadCSV(
+                stampName("disclosure"),
+                [
+                  "kind",
+                  "date",
+                  "name",
+                  "type or category",
+                  "method",
+                  "reference",
+                  "amount_kes",
+                  "status",
+                ],
+                [
+                  ...data.contributions.map((c) => [
+                    "contribution",
+                    c.date.slice(0, 10),
+                    c.donor,
+                    c.type,
+                    c.method,
+                    c.reference ?? "",
+                    c.amount,
+                    c.disclosed ? "disclosed" : "received",
+                  ]),
+                  ...data.expenses.map((e) => [
+                    "expense",
+                    e.date.slice(0, 10),
+                    e.vendor ? `${e.description} (${e.vendor})` : e.description,
+                    e.category,
+                    "",
+                    e.reference ?? "",
+                    e.amount,
+                    e.status,
+                  ]),
+                ],
+              )
+            }
+          >
+            Download for disclosure
+          </button>
         </div>
       </div>
+
+      <RecordMoney />
 
       <div className="card limit-strip fx2">
         <div className="card-head" style={{ marginBottom: 6 }}>
@@ -120,7 +168,9 @@ function Finance() {
         <div className="limit-top">
           <span className="limit-big stat">KES {money(data.spendKes)}</span>
           <span className="limit-of">
-            of KES {money(data.statutoryLimit)} · {pct.toFixed(1)}%
+            {data.statutoryLimit
+              ? `of KES ${money(data.statutoryLimit)} · ${pct.toFixed(1)}%`
+              : "The seat's gazetted limit isn't on file yet (Kenya Gazette Notice 12251, 7 August 2026)."}
           </span>
         </div>
         <div
@@ -138,6 +188,11 @@ function Finance() {
           <span style={{ left: "75%" }}>75</span>
           <span style={{ left: "90%" }}>90</span>
         </div>
+        {data.statutoryLimitSource ? (
+          <p className="meta" style={{ marginTop: 18 }}>
+            Limit: {data.statutoryLimitSource}
+          </p>
+        ) : null}
       </div>
 
       <div className="g3 fx3">
@@ -206,7 +261,10 @@ function Finance() {
               </div>
             ))}
           </div>
-          <p className="f-note">Every broadcast send posts here as comms, with its receipt.</p>
+          <p className="f-note">
+            Each day&apos;s SMS charges, as the provider reports them, post here the next morning as
+            one pending comms expense.
+          </p>
         </div>
       </div>
 

@@ -44,12 +44,19 @@ export type Database = {
         Row: {
           agent_name: string
           amount_kes: number
+          approved_at: string | null
+          approved_by: string | null
           campaign_id: string
           created_at: string
           days: number
+          doors: number | null
+          expense_id: string | null
           id: string
           method: string
+          mpesa_request: string | null
           paid_at: string | null
+          paid_by: string | null
+          payment_error: string | null
           phone: string | null
           rate_kes: number
           reference: string | null
@@ -57,17 +64,26 @@ export type Database = {
           station_id: string | null
           status: string
           updated_at: string
+          user_id: string | null
           ward_id: string | null
+          work_date: string | null
         }
         Insert: {
           agent_name: string
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           campaign_id?: string
           created_at?: string
           days?: number
+          doors?: number | null
+          expense_id?: string | null
           id?: string
           method?: string
+          mpesa_request?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_error?: string | null
           phone?: string | null
           rate_kes?: number
           reference?: string | null
@@ -75,17 +91,26 @@ export type Database = {
           station_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           ward_id?: string | null
+          work_date?: string | null
         }
         Update: {
           agent_name?: string
           amount_kes?: number
+          approved_at?: string | null
+          approved_by?: string | null
           campaign_id?: string
           created_at?: string
           days?: number
+          doors?: number | null
+          expense_id?: string | null
           id?: string
           method?: string
+          mpesa_request?: string | null
           paid_at?: string | null
+          paid_by?: string | null
+          payment_error?: string | null
           phone?: string | null
           rate_kes?: number
           reference?: string | null
@@ -93,7 +118,9 @@ export type Database = {
           station_id?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           ward_id?: string | null
+          work_date?: string | null
         }
         Relationships: [
           {
@@ -101,6 +128,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_stipends_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
           {
@@ -709,6 +743,85 @@ export type Database = {
           },
         ]
       }
+      calendar_feeds: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          token?: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_feeds_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_briefs: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          ends_on: string
+          headline: string
+          id: string
+          moves: Json
+          starts_on: string
+          the_read: Json
+          watch: Json
+          written_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on: string
+          headline: string
+          id?: string
+          moves?: Json
+          starts_on: string
+          the_read?: Json
+          watch?: Json
+          written_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          ends_on?: string
+          headline?: string
+          id?: string
+          moves?: Json
+          starts_on?: string
+          the_read?: Json
+          watch?: Json
+          written_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_briefs_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_channels: {
         Row: {
           campaign_id: string
@@ -823,6 +936,50 @@ export type Database = {
           },
         ]
       }
+      campaign_roadmaps: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          gaps: Json
+          headline: string
+          id: string
+          phases: Json
+          summary: string
+          written_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          gaps?: Json
+          headline: string
+          id?: string
+          phases?: Json
+          summary?: string
+          written_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          gaps?: Json
+          headline?: string
+          id?: string
+          phases?: Json
+          summary?: string
+          written_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_roadmaps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_sites: {
         Row: {
           campaign_id: string
@@ -870,6 +1027,44 @@ export type Database = {
           },
         ]
       }
+      campaign_voices: {
+        Row: {
+          campaign_id: string
+          consent_note: string
+          consented_by: string | null
+          created_at: string
+          name: string
+          provider: string
+          voice_id: string
+        }
+        Insert: {
+          campaign_id?: string
+          consent_note: string
+          consented_by?: string | null
+          created_at?: string
+          name: string
+          provider?: string
+          voice_id: string
+        }
+        Update: {
+          campaign_id?: string
+          consent_note?: string
+          consented_by?: string | null
+          created_at?: string
+          name?: string
+          provider?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_voices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaigns: {
         Row: {
           candidate: string | null
@@ -882,6 +1077,8 @@ export type Database = {
           owns_channels: boolean
           seat: string
           slug: string
+          spending_limit_kes: number | null
+          spending_limit_source: string | null
           updated_at: string
         }
         Insert: {
@@ -895,6 +1092,8 @@ export type Database = {
           owns_channels?: boolean
           seat: string
           slug: string
+          spending_limit_kes?: number | null
+          spending_limit_source?: string | null
           updated_at?: string
         }
         Update: {
@@ -908,6 +1107,8 @@ export type Database = {
           owns_channels?: boolean
           seat?: string
           slug?: string
+          spending_limit_kes?: number | null
+          spending_limit_source?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1301,6 +1502,7 @@ export type Database = {
           person_id: string | null
           support: number | null
           visited_at: string
+          walk_list_id: string | null
           ward_id: string | null
         }
         Insert: {
@@ -1318,6 +1520,7 @@ export type Database = {
           person_id?: string | null
           support?: number | null
           visited_at: string
+          walk_list_id?: string | null
           ward_id?: string | null
         }
         Update: {
@@ -1335,6 +1538,7 @@ export type Database = {
           person_id?: string | null
           support?: number | null
           visited_at?: string
+          walk_list_id?: string | null
           ward_id?: string | null
         }
         Relationships: [
@@ -1350,6 +1554,13 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: false
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_visits_walk_list_id_fkey"
+            columns: ["walk_list_id"]
+            isOneToOne: false
+            referencedRelation: "walk_lists"
             referencedColumns: ["id"]
           },
           {
@@ -1501,6 +1712,7 @@ export type Database = {
           keywords: string[]
           last_fired_at: string | null
           min_matches: number
+          min_reach: number | null
           name: string
           sentiments: string[]
           topic_id: string | null
@@ -1517,6 +1729,7 @@ export type Database = {
           keywords?: string[]
           last_fired_at?: string | null
           min_matches?: number
+          min_reach?: number | null
           name: string
           sentiments?: string[]
           topic_id?: string | null
@@ -1533,6 +1746,7 @@ export type Database = {
           keywords?: string[]
           last_fired_at?: string | null
           min_matches?: number
+          min_reach?: number | null
           name?: string
           sentiments?: string[]
           topic_id?: string | null
@@ -1603,6 +1817,7 @@ export type Database = {
           rival_id: string | null
           sentiment: string | null
           sentiment_score: number | null
+          shares: number | null
           snippet: string | null
           source: string
           status: string
@@ -1628,6 +1843,7 @@ export type Database = {
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
+          shares?: number | null
           snippet?: string | null
           source?: string
           status?: string
@@ -1653,6 +1869,7 @@ export type Database = {
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
+          shares?: number | null
           snippet?: string | null
           source?: string
           status?: string
@@ -1699,6 +1916,7 @@ export type Database = {
           last_scanned_at: string | null
           query: string
           updated_at: string
+          x_scanned_at: string | null
         }
         Insert: {
           active?: boolean
@@ -1713,6 +1931,7 @@ export type Database = {
           last_scanned_at?: string | null
           query: string
           updated_at?: string
+          x_scanned_at?: string | null
         }
         Update: {
           active?: boolean
@@ -1727,6 +1946,7 @@ export type Database = {
           last_scanned_at?: string | null
           query?: string
           updated_at?: string
+          x_scanned_at?: string | null
         }
         Relationships: [
           {
@@ -1734,6 +1954,91 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_buys: {
+        Row: {
+          amount_kes: number
+          booked_by: string | null
+          campaign_id: string
+          clicks: number | null
+          created_at: string
+          ends_on: string
+          expense_id: string | null
+          external_id: string | null
+          id: string
+          impressions: number | null
+          name: string
+          paid_for_by: string
+          platform: string
+          reach: number | null
+          results_on: string | null
+          starts_on: string
+          updated_at: string
+          ward_id: string | null
+        }
+        Insert: {
+          amount_kes: number
+          booked_by?: string | null
+          campaign_id?: string
+          clicks?: number | null
+          created_at?: string
+          ends_on: string
+          expense_id?: string | null
+          external_id?: string | null
+          id?: string
+          impressions?: number | null
+          name: string
+          paid_for_by: string
+          platform: string
+          reach?: number | null
+          results_on?: string | null
+          starts_on: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Update: {
+          amount_kes?: number
+          booked_by?: string | null
+          campaign_id?: string
+          clicks?: number | null
+          created_at?: string
+          ends_on?: string
+          expense_id?: string | null
+          external_id?: string | null
+          id?: string
+          impressions?: number | null
+          name?: string
+          paid_for_by?: string
+          platform?: string
+          reach?: number | null
+          results_on?: string | null
+          starts_on?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_buys_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_buys_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_buys_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
             referencedColumns: ["id"]
           },
         ]
@@ -1758,6 +2063,7 @@ export type Database = {
           id: string
           issue: string | null
           kind: string
+          on_ledger: boolean
           outbox_kind: string
           permalink: string | null
           person_id: string | null
@@ -1790,6 +2096,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          on_ledger?: boolean
           outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
@@ -1822,6 +2129,7 @@ export type Database = {
           id?: string
           issue?: string | null
           kind?: string
+          on_ledger?: boolean
           outbox_kind?: string
           permalink?: string | null
           person_id?: string | null
@@ -1913,6 +2221,72 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_impacts: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          mention_id: string | null
+          moves: Json
+          published_on: string | null
+          reading: string
+          scope: string
+          sources: Json
+          stance: string
+          title: string
+          url: string | null
+          written_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mention_id?: string | null
+          moves?: Json
+          published_on?: string | null
+          reading: string
+          scope: string
+          sources?: Json
+          stance: string
+          title: string
+          url?: string | null
+          written_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mention_id?: string | null
+          moves?: Json
+          published_on?: string | null
+          reading?: string
+          scope?: string
+          sources?: Json
+          stance?: string
+          title?: string
+          url?: string | null
+          written_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_impacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "news_impacts_mention_id_fkey"
+            columns: ["mention_id"]
+            isOneToOne: false
+            referencedRelation: "listening_mentions"
             referencedColumns: ["id"]
           },
         ]
@@ -2601,6 +2975,87 @@ export type Database = {
           },
         ]
       }
+      rapid_responses: {
+        Row: {
+          angle: string
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          creator_brief: string
+          donts: Json
+          dos: Json
+          id: string
+          mention_id: string | null
+          platform: string | null
+          post_url: string | null
+          pulse_detail: string | null
+          pulse_status: string | null
+          react: boolean
+          reply: string
+          respond_by: string | null
+          status: string
+          updated_at: string
+          what_happened: string
+        }
+        Insert: {
+          angle?: string
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          creator_brief?: string
+          donts?: Json
+          dos?: Json
+          id?: string
+          mention_id?: string | null
+          platform?: string | null
+          post_url?: string | null
+          pulse_detail?: string | null
+          pulse_status?: string | null
+          react?: boolean
+          reply?: string
+          respond_by?: string | null
+          status?: string
+          updated_at?: string
+          what_happened: string
+        }
+        Update: {
+          angle?: string
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          creator_brief?: string
+          donts?: Json
+          dos?: Json
+          id?: string
+          mention_id?: string | null
+          platform?: string | null
+          post_url?: string | null
+          pulse_detail?: string | null
+          pulse_status?: string | null
+          react?: boolean
+          reply?: string
+          respond_by?: string | null
+          status?: string
+          updated_at?: string
+          what_happened?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rapid_responses_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rapid_responses_mention_id_fkey"
+            columns: ["mention_id"]
+            isOneToOne: false
+            referencedRelation: "listening_mentions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           hits: number
@@ -2618,6 +3073,79 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      roadmap_items: {
+        Row: {
+          campaign_id: string
+          key: string
+          owner: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          key: string
+          owner?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          key?: string
+          owner?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_notes: {
+        Row: {
+          author: string
+          author_name: string | null
+          body: string
+          campaign_id: string
+          created_at: string
+          id: string
+          workstream: string
+        }
+        Insert: {
+          author?: string
+          author_name?: string | null
+          body: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          workstream?: string
+        }
+        Update: {
+          author?: string
+          author_name?: string | null
+          body?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          workstream?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_notes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       search_interest: {
         Row: {
@@ -2720,6 +3248,45 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "site_versions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_account_tokens: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          page_token: string
+          set_at: string
+          set_by: string | null
+        }
+        Insert: {
+          account_id: string
+          campaign_id?: string
+          page_token: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          page_token?: string
+          set_at?: string
+          set_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_account_tokens_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_account_tokens_campaign_id_fkey"
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
@@ -2882,6 +3449,282 @@ export type Database = {
         }
         Relationships: []
       }
+      voice_blasts: {
+        Row: {
+          audio_url: string | null
+          campaign_id: string
+          created_at: string
+          created_by: string | null
+          disclose: boolean
+          id: string
+          language: string
+          script: string
+          source: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audio_url?: string | null
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          disclose?: boolean
+          id?: string
+          language?: string
+          script?: string
+          source: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string | null
+          campaign_id?: string
+          created_at?: string
+          created_by?: string | null
+          disclose?: boolean
+          id?: string
+          language?: string
+          script?: string
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_blasts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_calls: {
+        Row: {
+          answered_by: string | null
+          blast_id: string | null
+          campaign_id: string
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          digits: string | null
+          duration: number | null
+          error: string | null
+          id: string
+          kind: string
+          person_id: string | null
+          sid: string | null
+          staff_phone: string | null
+          status: string
+          to_phone: string
+          updated_at: string
+          voter_status: string | null
+        }
+        Insert: {
+          answered_by?: string | null
+          blast_id?: string | null
+          campaign_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          digits?: string | null
+          duration?: number | null
+          error?: string | null
+          id?: string
+          kind: string
+          person_id?: string | null
+          sid?: string | null
+          staff_phone?: string | null
+          status?: string
+          to_phone: string
+          updated_at?: string
+          voter_status?: string | null
+        }
+        Update: {
+          answered_by?: string | null
+          blast_id?: string | null
+          campaign_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          digits?: string | null
+          duration?: number | null
+          error?: string | null
+          id?: string
+          kind?: string
+          person_id?: string | null
+          sid?: string | null
+          staff_phone?: string | null
+          status?: string
+          to_phone?: string
+          updated_at?: string
+          voter_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_calls_blast_id_fkey"
+            columns: ["blast_id"]
+            isOneToOne: false
+            referencedRelation: "voice_blasts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_calls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_calls_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      walk_list_doors: {
+        Row: {
+          campaign_id: string
+          lat: number
+          lng: number
+          outline: Json | null
+          pc: string
+          position: number
+          walk_list_id: string
+          ward_id: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          lat: number
+          lng: number
+          outline?: Json | null
+          pc: string
+          position: number
+          walk_list_id: string
+          ward_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          lat?: number
+          lng?: number
+          outline?: Json | null
+          pc?: string
+          position?: number
+          walk_list_id?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walk_list_doors_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_list_doors_walk_list_id_fkey"
+            columns: ["walk_list_id"]
+            isOneToOne: false
+            referencedRelation: "walk_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_list_doors_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      walk_lists: {
+        Row: {
+          campaign_id: string
+          centre_id: string | null
+          closed_by: string | null
+          created_at: string
+          done_at: string | null
+          due_on: string | null
+          first_sent_at: string | null
+          given_at: string | null
+          given_to: string | null
+          id: string
+          made_by: string | null
+          name: string
+          shift: string | null
+          status: string
+          ward_id: string | null
+        }
+        Insert: {
+          campaign_id?: string
+          centre_id?: string | null
+          closed_by?: string | null
+          created_at?: string
+          done_at?: string | null
+          due_on?: string | null
+          first_sent_at?: string | null
+          given_at?: string | null
+          given_to?: string | null
+          id?: string
+          made_by?: string | null
+          name: string
+          shift?: string | null
+          status?: string
+          ward_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          centre_id?: string | null
+          closed_by?: string | null
+          created_at?: string
+          done_at?: string | null
+          due_on?: string | null
+          first_sent_at?: string | null
+          given_at?: string | null
+          given_to?: string | null
+          id?: string
+          made_by?: string | null
+          name?: string
+          shift?: string | null
+          status?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "walk_lists_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_lists_centre_id_fkey"
+            columns: ["centre_id"]
+            isOneToOne: false
+            referencedRelation: "polling_stations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "walk_lists_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wards: {
         Row: {
           campaign_id: string
@@ -2996,7 +3839,12 @@ export type Database = {
         }
         Returns: Json
       }
+      agent_sees_person: {
+        Args: { _building: string; _person: string }
+        Returns: boolean
+      }
       approve_expense: { Args: { _expense_id: string }; Returns: Json }
+      approve_stipends: { Args: { _ids: string[] }; Returns: number }
       assign_station_agent: {
         Args: { _name: string; _phone: string; _station_id: string }
         Returns: undefined
@@ -3012,7 +3860,30 @@ export type Database = {
         }
         Returns: string
       }
+      begin_stipend_payment: {
+        Args: { _id: string }
+        Returns: {
+          agent_name: string
+          amount_kes: number
+          phone: string
+          request_id: string
+        }[]
+      }
       broadcast_estimate: { Args: { _audience: Json }; Returns: Json }
+      calendar_feed_entries: {
+        Args: { _token: string }
+        Returns: {
+          campaign: string
+          day: string
+          id: string
+          kind: string
+          note: string
+          starts_at: string
+          title: string
+          updated_at: string
+          ward_name: string
+        }[]
+      }
       campaign_for_channel: {
         Args: { _identifier: string; _kind: string }
         Returns: string
@@ -3026,6 +3897,12 @@ export type Database = {
         Args: { _key: string; _now: string }
         Returns: boolean
       }
+      close_walk_list: { Args: { _id: string }; Returns: undefined }
+      comms_to_ledger: { Args: never; Returns: number }
+      conversation_for: {
+        Args: { _campaign: string; _channel: string; _person: string }
+        Returns: string
+      }
       create_campaign: {
         Args: {
           _candidate: string
@@ -3036,6 +3913,47 @@ export type Database = {
           _slug: string
         }
         Returns: string
+      }
+      create_walk_list: {
+        Args: {
+          _centre_id: string
+          _doors: Json
+          _give_to?: string
+          _name: string
+          _ward_id: string
+        }
+        Returns: Json
+      }
+      field_plan: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          centre_name: string
+          done: number
+          done_at: string
+          doors: number
+          due_on: string
+          given_to: string
+          given_to_name: string
+          id: string
+          name: string
+          shift: string
+          status: string
+          ward_id: string
+          ward_name: string
+        }[]
+      }
+      field_plan_wards: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          doors_knocked: number
+          doors_planned: number
+          name: string
+          slug: string
+          spoke: number
+          supporters: number
+          target_votes: number
+          ward_id: string
+        }[]
       }
       file_stream_result: {
         Args: {
@@ -3048,7 +3966,21 @@ export type Database = {
         }
         Returns: Json
       }
+      finish_stipend_payment: {
+        Args: {
+          _error: string
+          _ok: boolean
+          _receipt: string
+          _request: string
+        }
+        Returns: undefined
+      }
       focus_campaign: { Args: { _campaign: string }; Returns: undefined }
+      give_walk_list: { Args: { _id: string; _to: string }; Returns: undefined }
+      grant_on_confirmed: {
+        Args: { _email: string; _user: string }
+        Returns: undefined
+      }
       groundwork_schema_version: { Args: never; Returns: number }
       has_role: {
         Args: {
@@ -3109,8 +4041,44 @@ export type Database = {
         Args: { _poll_id: string; _sms_body: string }
         Returns: Json
       }
+      my_calendar_feed: { Args: { _reset?: boolean }; Returns: string }
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
+      my_walk_lists: {
+        Args: never
+        Returns: {
+          centre_id: string
+          centre_name: string
+          done: number
+          doors: number
+          due_on: string
+          first_sent_at: string
+          given_at: string
+          id: string
+          name: string
+          shift: string
+          ward_id: string
+        }[]
+      }
+      open_walk_lists: {
+        Args: { _ward_id: string }
+        Returns: {
+          centre_id: string
+          done: number
+          doors: number
+          due_on: string
+          first_sent_at: string
+          given_at: string
+          given_to: string
+          given_to_name: string
+          id: string
+          name: string
+          not_home: number
+          shift: string
+          status: string
+          ward_id: string
+        }[]
+      }
       outbox_block_reason: {
         Args: {
           _channel: string
@@ -3146,6 +4114,13 @@ export type Database = {
           ward_id: string
         }[]
       }
+      person_by_phone: {
+        Args: { _phone: string }
+        Returns: {
+          id: string
+          opted_out: boolean
+        }[]
+      }
       place_station: {
         Args: { _lat: number; _lng: number; _station_id: string }
         Returns: undefined
@@ -3155,6 +4130,7 @@ export type Database = {
         Args: { _daily_cap?: number; _limit?: number; _live?: boolean }
         Returns: Json
       }
+      prune_old_records: { Args: never; Returns: Json }
       publish_site: { Args: never; Returns: string }
       queue_broadcast: {
         Args: { _audience: Json; _body: string; _client_key: string }
@@ -3166,11 +4142,13 @@ export type Database = {
         Args: { _key: string; _limit: number; _window_seconds: number }
         Returns: boolean
       }
+      record_creator_payouts: { Args: { _rows: Json }; Returns: number }
       record_door: {
         Args: {
           _client_id: string
           _consent: Json
           _consent_source: string
+          _door_pc?: string
           _issue: string
           _new: Json
           _outcome: string
@@ -3178,6 +4156,7 @@ export type Database = {
           _place?: Json
           _support: number
           _visited_at: string
+          _walk_list_id?: string
         }
         Returns: Json
       }
@@ -3192,6 +4171,11 @@ export type Database = {
         }
         Returns: Json
       }
+      record_stipend_paid: {
+        Args: { _id: string; _receipt: string }
+        Returns: undefined
+      }
+      release_stipend_payment: { Args: { _id: string }; Returns: undefined }
       remove_member: { Args: { _user_id: string }; Returns: undefined }
       request_campaign_access: { Args: { _slug: string }; Returns: string }
       restore_site_version: { Args: { _version: string }; Returns: number }
@@ -3205,12 +4189,20 @@ export type Database = {
         }[]
       }
       save_site_draft: { Args: { _draft: Json; _rev: number }; Returns: number }
+      schedule_walk_list: {
+        Args: { _due_on: string; _id: string; _shift: string; _to?: string }
+        Returns: undefined
+      }
       set_ballot: { Args: { _candidates: Json }; Returns: number }
       set_member_role: {
         Args: {
           _role: Database["public"]["Enums"]["campaign_role"]
           _user_id: string
         }
+        Returns: undefined
+      }
+      set_social_token: {
+        Args: { _account: string; _token: string }
         Returns: undefined
       }
       site_editor: { Args: never; Returns: string }
@@ -3223,19 +4215,18 @@ export type Database = {
         }
         Returns: Json
       }
-      street_walk: {
-        Args: { _street_id: string }
-        Returns: {
-          door_no: number
-          full_name: string
-          id: string
-          last_contacted_at: string
-          last_outcome: string
-          last_visit_at: string
-          phone_masked: string
-          segment: string
-          support_score: number
-        }[]
+      stipend_money_only: { Args: never; Returns: undefined }
+      stipend_paid: {
+        Args: { _by: string; _id: string; _receipt: string }
+        Returns: undefined
+      }
+      stipend_payment_unclear: {
+        Args: { _note: string; _request: string }
+        Returns: undefined
+      }
+      stipends_from_field: {
+        Args: { _from: string; _rate: number; _to: string }
+        Returns: number
       }
       take_social_credits: {
         Args: { _budget: string; _cap: number; _n: number }
@@ -3257,6 +4248,54 @@ export type Database = {
           phone_masked: string
           segment: string
           support_score: number
+        }[]
+      }
+      walk_list_counts: {
+        Args: { _ids: string[] }
+        Returns: {
+          done: number
+          doors: number
+          list_id: string
+          not_home: number
+        }[]
+      }
+      walk_list_door_ward: {
+        Args: { _list_id: string; _pc: string }
+        Returns: {
+          door_ward: string
+        }[]
+      }
+      walk_list_doors: {
+        Args: { _list_id: string }
+        Returns: {
+          last_at: string
+          last_outcome: string
+          lat: number
+          lng: number
+          outline: Json
+          pc: string
+          position: number
+          ward_id: string
+        }[]
+      }
+      walk_list_planning: {
+        Args: { _ward_id: string }
+        Returns: {
+          not_home_at: string
+          on_list: string
+          pc: string
+          spoke_or_refused_at: string
+        }[]
+      }
+      walk_list_settle: { Args: { _pc: string }; Returns: undefined }
+      walk_list_staff_only: { Args: never; Returns: undefined }
+      walk_list_team: {
+        Args: never
+        Returns: {
+          doors_open: number
+          full_name: string
+          role: string
+          user_id: string
         }[]
       }
       ward_houses: {

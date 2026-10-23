@@ -18,6 +18,7 @@ export const Route = createFileRoute("/api/public/twilio/voicemail")({
 
         // The recording callback doesn't say who called; ask Twilio for the call.
         const res = await fetch(`https://connector-gateway.lovable.dev/twilio/Calls/${encodeURIComponent(callSid)}.json`, {
+          signal: AbortSignal.timeout(15_000),
           headers: {
             Authorization: `Bearer ${process.env["LOVABLE_API_KEY"]}`,
             "X-Connection-Api-Key": process.env["TWILIO_API_KEY"] ?? "",

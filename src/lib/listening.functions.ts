@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
+import { OFF_TOPIC } from "@/lib/top-of-mind";
+
+/** What a keyword follows: you, a rival, an issue, or news beyond the seat. */
+const TOPIC_KINDS = ["campaign", "rival", "issue", "county", "national"] as const;
 
 export type Mention = {
   id: string;
@@ -18,6 +22,18 @@ export type Mention = {
   sentimentScore: number | null;
   issue: string | null;
   status: string;
+  /** The keyword's kind (campaign, rival, issue); null for a candidate's own post. */
+  topicKind: string | null;
+  rivalId: string | null;
+  /** The candidate whose own account the post came from. */
+  rival: string | null;
+  rivalIsUs: boolean;
+  author: string | null;
+  reach: number | null;
+  shares: number | null;
+  commentsRead: number | null;
+  commentsPositive: number | null;
+  commentsNegative: number | null;
 };
 
 export type ListeningAlert = {
@@ -29,6 +45,8 @@ export type ListeningAlert = {
   channel: string;
   destination: string;
   minMatches: number;
+  /** Fires only for posts seen at least this many times. */
+  minReach: number | null;
   frequency: string;
   active: boolean;
   lastFiredAt: string | null;
@@ -77,11 +95,18 @@ export type ListeningData = {
   byIssue: { issue: string; n: number; negative: number; prev: number }[];
   byDomain: { domain: string; n: number; negative: number }[];
   ownedIssues: { issue: string; n: number }[];
-  job: { status: string; lastRunAt: string | null; pausedReason: string | null; detail: string | null } | null;
+  job: {
+    status: string;
+    lastRunAt: string | null;
+    pausedReason: string | null;
+    detail: string | null;
+  } | null;
   /** The daily read of candidates' own posts; one for every campaign, so it names no one. */
   rivalJob: { lastRunAt: string | null; detail: string | null } | null;
   /** This campaign's candidates' own posts from the last 30 days. */
   rivalPosts: number;
+  /** The candidate and managers draft reactions to posts. */
+  canReact: boolean;
 };
 
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -90,6 +115,7 @@ export const getListening = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ListeningData> => {
     const sb = context.supabase;
+    const { data: role } = await sb.rpc("my_campaign_role");
 
     const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
     const [
@@ -101,9 +127,16 @@ export const getListening = createServerFn({ method: "GET" })
       { data: convos },
       { data: rivalJob },
       { count: rivalPosts },
+      { data: rivals },
     ] = await Promise.all([
       sb.from("listening_topics").select("*").order("label"),
-      sb.from("listening_mentions").select("*").order("found_at", { ascending: false }).limit(600),
+      // Posts the sweep found to be about somewhere or something else are left out.
+      sb
+        .from("listening_mentions")
+        .select("*")
+        .or(`issue.is.null,issue.neq.${OFF_TOPIC}`)
+        .order("found_at", { ascending: false })
+        .limit(600),
       sb.from("listening_alerts").select("*").order("created_at", { ascending: false }),
       sb
         .from("listening_alert_events")
@@ -122,9 +155,11 @@ export const getListening = createServerFn({ method: "GET" })
         .select("id", { count: "exact", head: true })
         .not("rival_id", "is", null)
         .gte("published_at", since30),
+      sb.from("race_rivals").select("id, name, is_us"),
     ]);
+    const rivalById = new Map((rivals ?? []).map((r) => [r.id, r]));
 
-    const topicById = new Map((topics ?? []).map((t: any) => [t.id, t]));
+    const topicById = new Map((topics ?? []).map((t) => [t.id, t]));
     const rows = mentions ?? [];
     const now = Date.now();
     const H24 = 86_400_000;
@@ -137,7 +172,7 @@ export const getListening = createServerFn({ method: "GET" })
     const issueMap = new Map<string, { n: number; negative: number; prev: number }>();
     const domainMap = new Map<string, { n: number; negative: number }>();
 
-    for (const m of rows as any[]) {
+    for (const m of rows) {
       const found = new Date(m.found_at).getTime();
       const recent = now - found <= H24;
       const b = bucket(m.sentiment);
@@ -167,13 +202,13 @@ export const getListening = createServerFn({ method: "GET" })
     }
 
     const ownedMap = new Map<string, number>();
-    for (const c of (convos ?? []) as any[]) {
+    for (const c of convos ?? []) {
       if (!c.issue) continue;
       ownedMap.set(c.issue, (ownedMap.get(c.issue) ?? 0) + 1);
     }
 
     const perTopic = new Map<string, { n: number; negative: number }>();
-    for (const m of rows as any[]) {
+    for (const m of rows) {
       if (!m.topic_id) continue;
       const cur = perTopic.get(m.topic_id) ?? { n: 0, negative: 0 };
       cur.n += 1;
@@ -182,7 +217,7 @@ export const getListening = createServerFn({ method: "GET" })
     }
 
     return {
-      topics: (topics ?? []).map((t: any) => ({
+      topics: (topics ?? []).map((t) => ({
         id: t.id,
         label: t.label,
         query: t.query,
@@ -195,7 +230,7 @@ export const getListening = createServerFn({ method: "GET" })
         mentions: perTopic.get(t.id)?.n ?? 0,
         negative: perTopic.get(t.id)?.negative ?? 0,
       })),
-      mentions: (rows as any[]).map((m) => ({
+      mentions: rows.map((m) => ({
         id: m.id,
         topicId: m.topic_id,
         topic: m.topic_id ? (topicById.get(m.topic_id)?.label ?? null) : null,
@@ -210,8 +245,18 @@ export const getListening = createServerFn({ method: "GET" })
         sentimentScore: m.sentiment_score === null ? null : Number(m.sentiment_score),
         issue: m.issue,
         status: m.status,
+        topicKind: m.topic_id ? (topicById.get(m.topic_id)?.kind ?? null) : null,
+        rivalId: m.rival_id ?? null,
+        rival: m.rival_id ? (rivalById.get(m.rival_id)?.name ?? null) : null,
+        rivalIsUs: m.rival_id ? Boolean(rivalById.get(m.rival_id)?.is_us) : false,
+        author: m.author ?? null,
+        reach: m.reach === null || m.reach === undefined ? null : Number(m.reach),
+        shares: m.shares === null || m.shares === undefined ? null : Number(m.shares),
+        commentsRead: m.comments_read ?? null,
+        commentsPositive: m.comments_positive ?? null,
+        commentsNegative: m.comments_negative ?? null,
       })),
-      alerts: (alerts ?? []).map((a: any) => ({
+      alerts: (alerts ?? []).map((a) => ({
         id: a.id,
         name: a.name,
         topicId: a.topic_id,
@@ -220,19 +265,20 @@ export const getListening = createServerFn({ method: "GET" })
         channel: a.channel,
         destination: a.destination,
         minMatches: a.min_matches,
+        minReach: a.min_reach ?? null,
         frequency: a.frequency,
         active: a.active,
         lastFiredAt: a.last_fired_at,
       })),
       events: (() => {
         // one alert fires across several mentions at once — show it as a single line
-        const seen = new Map<string, any>();
-        for (const e of (events ?? []) as any[]) {
+        const seen = new Map<string, ListeningData["events"][number]>();
+        for (const e of events ?? []) {
           const key = `${e.alert_id}:${e.subject}:${String(e.created_at).slice(0, 16)}`;
           if (seen.has(key)) continue;
           seen.set(key, {
             id: e.id,
-            alert: (alerts ?? []).find((a: any) => a.id === e.alert_id)?.name ?? null,
+            alert: (alerts ?? []).find((a) => a.id === e.alert_id)?.name ?? null,
             channel: e.channel,
             destination: e.destination,
             subject: e.subject,
@@ -245,16 +291,16 @@ export const getListening = createServerFn({ method: "GET" })
       })(),
       totals: {
         mentions: rows.length,
-        last24h: (rows as any[]).filter((m) => now - new Date(m.found_at).getTime() <= H24).length,
-        prev24h: (rows as any[]).filter((m) => {
+        last24h: rows.filter((m) => now - new Date(m.found_at).getTime() <= H24).length,
+        prev24h: rows.filter((m) => {
           const age = now - new Date(m.found_at).getTime();
           return age > H24 && age <= H24 * 2;
         }).length,
-        positive: (rows as any[]).filter((m) => m.sentiment === "positive").length,
-        neutral: (rows as any[]).filter((m) => m.sentiment === "neutral").length,
-        negative: (rows as any[]).filter((m) => m.sentiment === "negative").length,
-        unrated: (rows as any[]).filter((m) => !m.sentiment).length,
-        needsReview: (rows as any[]).filter((m) => m.status === "new" && m.sentiment === "negative").length,
+        positive: rows.filter((m) => m.sentiment === "positive").length,
+        neutral: rows.filter((m) => m.sentiment === "neutral").length,
+        negative: rows.filter((m) => m.sentiment === "negative").length,
+        unrated: rows.filter((m) => !m.sentiment).length,
+        needsReview: rows.filter((m) => m.status === "new" && m.sentiment === "negative").length,
         inboundIssues: ownedMap.size,
       },
       byDay: [...dayMap.entries()]
@@ -285,6 +331,7 @@ export const getListening = createServerFn({ method: "GET" })
           }
         : null,
       rivalJob: rivalJob ? { lastRunAt: rivalJob.last_run_at, detail: rivalJob.detail } : null,
+      canReact: PRINCIPAL_ROLES.includes(role as MyRole),
       rivalPosts: rivalPosts ?? 0,
     };
   });
@@ -299,6 +346,10 @@ export const sweepListening = createServerFn({ method: "POST" })
     // ScrapeCreators credits are counted by the server alone, and only the
     // candidate's or manager's sweep may spend them.
     const { data: role } = await context.supabase.rpc("my_campaign_role");
+    // A forced sweep skips the provider pause and the one-at-a-time lease, so it is the
+    // candidate's or a manager's call alone; field agents don't sweep at all.
+    if (role === "agent" || (data.force && !PRINCIPAL_ROLES.includes(role as MyRole)))
+      throw new Error("Only the candidate or a manager can force a sweep.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return runListeningScan(context.supabase as never, {
       topicLimit: 6,
@@ -339,6 +390,7 @@ export const saveTopic = createServerFn({ method: "POST" })
         label: label.slice(0, 80),
         query: query.slice(0, 200),
         alertFeedUrl: cleanAlertFeed(input.alertFeedUrl),
+        kind: TOPIC_KINDS.find((k) => k === input.kind) ?? "issue",
       };
     },
   )
@@ -349,7 +401,7 @@ export const saveTopic = createServerFn({ method: "POST" })
       keywords: words(data.keywords),
       exclude_terms: words(data.excludeTerms),
       alert_feed_url: data.alertFeedUrl,
-      kind: data.kind ?? "issue",
+      kind: data.kind,
       active: data.active ?? true,
     };
     const sb = context.supabase;
@@ -395,18 +447,27 @@ export const saveAlert = createServerFn({ method: "POST" })
       channel: string;
       destination: string;
       minMatches?: number;
+      minReach?: number | null;
       frequency?: string;
       active?: boolean;
     }) => {
       const name = (input.name ?? "").trim();
-      const destination = (input.destination ?? "").trim();
+      if (!["email", "whatsapp", "app"].includes(input.channel))
+        throw new Error("Choose how to be told.");
+      const destination = input.channel === "app" ? "Groundwork" : (input.destination ?? "").trim();
       if (!name) throw new Error("Name the alert.");
       if (!destination) throw new Error("Add an email address or phone number.");
       if (input.channel === "email" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(destination))
         throw new Error("That does not look like an email address.");
       if (input.channel === "whatsapp" && !/^\+?\d{9,15}$/.test(destination.replace(/\s/g, "")))
         throw new Error("Use a phone number like +254712345678.");
-      return { ...input, name: name.slice(0, 80), destination };
+      const reach = Math.round(Number(input.minReach));
+      return {
+        ...input,
+        name: name.slice(0, 80),
+        destination,
+        minReach: Number.isFinite(reach) && reach > 0 ? reach : null,
+      };
     },
   )
   .handler(async ({ data, context }) => {
@@ -418,6 +479,7 @@ export const saveAlert = createServerFn({ method: "POST" })
       channel: data.channel,
       destination: data.destination,
       min_matches: Math.min(Math.max(data.minMatches ?? 1, 1), 20),
+      min_reach: data.minReach,
       frequency: data.frequency ?? "instant",
       active: data.active ?? true,
     };
@@ -455,7 +517,11 @@ export const testAlert = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const { data: alert } = await sb.from("listening_alerts").select("*").eq("id", data.id).maybeSingle();
+    const { data: alert } = await sb
+      .from("listening_alerts")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
     if (!alert) throw new Error("That alert no longer exists.");
     const { error } = await sb.from("listening_alert_events").insert({
       alert_id: alert.id,
@@ -477,16 +543,20 @@ export const testAlert = createServerFn({ method: "POST" })
 
 export const setMentionStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: string }) => {
+  .inputValidator((input: { id?: string; ids?: string[]; status: string }) => {
     if (!["new", "reviewed", "actioned", "ignored"].includes(input.status))
       throw new Error("Unknown status.");
-    return input;
+    const ids = [...(input.ids ?? []), ...(input.id ? [input.id] : [])].filter(
+      (x) => typeof x === "string" && x.length > 0,
+    );
+    if (ids.length === 0 || ids.length > 200) throw new Error("Pick between 1 and 200 posts.");
+    return { ids, status: input.status };
   })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("listening_mentions")
       .update({ status: data.status })
-      .eq("id", data.id);
+      .in("id", data.ids);
     if (error) throw new Error("Only an admin or manager can update a mention.");
     return { ok: true };
   });

@@ -8,7 +8,7 @@ import { distanceOutsideM } from "@/lib/geo";
 import { readFileSync } from "node:fs";
 
 import { checkRegistered } from "@/lib/stations/register";
-import { stationsMigration } from "@/lib/stations/sql";
+import { stationsAddition, stationsMigration } from "@/lib/stations/sql";
 
 import { areaShapes, atlasRegistered, STATION_AREAS } from "../scripts/stations/areas";
 import { readCentres, readPositions, stationAreasData } from "../scripts/stations/read";
@@ -29,6 +29,8 @@ function eq(name: string, got: unknown, want: unknown) {
 const WANT: Record<string, { centres: number; streams: number; voters: number }> = {
   nairobi: { centres: 378, streams: 3643, voters: 2415310 },
   mathira: { centres: 109, streams: 201, voters: 104492 },
+  githunguri: { centres: 63, streams: 184, voters: 104592 },
+  athwana: { centres: 14, streams: 20, voters: 9123 },
 };
 
 for (const area of STATION_AREAS) {
@@ -101,6 +103,14 @@ eq(
     stationsMigration(stationAreasData()),
   true,
 );
+for (const name of new Set(STATION_AREAS.flatMap((a) => (a.migration ? [a.migration] : [])))) {
+  eq(
+    `${name} is the one data/stations writes`,
+    readFileSync(`supabase/migrations/${name}`, "utf8") ===
+      stationsAddition(stationAreasData(name)),
+    true,
+  );
+}
 
 console.log(`${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

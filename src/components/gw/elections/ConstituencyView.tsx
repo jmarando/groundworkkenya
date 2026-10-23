@@ -46,7 +46,10 @@ export function ConstituencyView({
     .filter((a) => a.parent === area.key)
     .map((w) => figuresFor(d, w.key, race, year));
   const estimateYear = wards.find((w) => w.population)?.population?.year ?? null;
-  const missing = RACES.filter((r) => !blocks.some((b) => b.race === r)).map((r) => RACE_NAMES[r]);
+  // A ward's own race (MCA) is counted in its wards, never here.
+  const missing = RACES.filter((r) => r !== "mca" && !blocks.some((b) => b.race === r)).map(
+    (r) => RACE_NAMES[r],
+  );
   return (
     <>
       <AreaNumbers

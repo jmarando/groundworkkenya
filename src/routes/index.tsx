@@ -120,13 +120,53 @@ export const Route = createFileRoute("/")({
 });
 
 const COUNTIES = [
-  "Baringo", "Bomet", "Bungoma", "Busia", "Elgeyo-Marakwet", "Embu", "Garissa",
-  "Homa Bay", "Isiolo", "Kajiado", "Kakamega", "Kericho", "Kiambu", "Kilifi",
-  "Kirinyaga", "Kisii", "Kisumu", "Kitui", "Kwale", "Laikipia", "Lamu",
-  "Machakos", "Makueni", "Mandera", "Marsabit", "Meru", "Migori", "Mombasa",
-  "Murang'a", "Nairobi", "Nakuru", "Nandi", "Narok", "Nyamira", "Nyandarua",
-  "Nyeri", "Samburu", "Siaya", "Taita-Taveta", "Tana River", "Tharaka-Nithi",
-  "Trans Nzoia", "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot",
+  "Baringo",
+  "Bomet",
+  "Bungoma",
+  "Busia",
+  "Elgeyo-Marakwet",
+  "Embu",
+  "Garissa",
+  "Homa Bay",
+  "Isiolo",
+  "Kajiado",
+  "Kakamega",
+  "Kericho",
+  "Kiambu",
+  "Kilifi",
+  "Kirinyaga",
+  "Kisii",
+  "Kisumu",
+  "Kitui",
+  "Kwale",
+  "Laikipia",
+  "Lamu",
+  "Machakos",
+  "Makueni",
+  "Mandera",
+  "Marsabit",
+  "Meru",
+  "Migori",
+  "Mombasa",
+  "Murang'a",
+  "Nairobi",
+  "Nakuru",
+  "Nandi",
+  "Narok",
+  "Nyamira",
+  "Nyandarua",
+  "Nyeri",
+  "Samburu",
+  "Siaya",
+  "Taita-Taveta",
+  "Tana River",
+  "Tharaka-Nithi",
+  "Trans Nzoia",
+  "Turkana",
+  "Uasin Gishu",
+  "Vihiga",
+  "Wajir",
+  "West Pokot",
 ];
 
 function Mark({ stroke }: { stroke: string }) {
@@ -202,7 +242,12 @@ function DemoForm() {
       </label>
       <label className="full">
         Email
-        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          autoComplete="email"
+        />
       </label>
       <label>
         Seat
@@ -452,9 +497,9 @@ function Landing() {
                 <h2>The people you sign up in year one run your polling stations in August.</h2>
               </div>
               <p>
-                Most campaigns run on spreadsheets, WhatsApp groups and a tally centre built the week
-                before. Groundwork keeps one record per person and one roster of agents, from the
-                first door knock to the last Form 34A.
+                Most campaigns run on spreadsheets, WhatsApp groups and a tally centre built the
+                week before. Groundwork keeps one record per person and one roster of agents, from
+                the first door knock to the last Form 34A.
               </p>
             </div>
             <div className="three">
@@ -609,7 +654,8 @@ function Landing() {
               </h3>
               <p>
                 Write a question in English and Kiswahili, pick the wards, and send it by SMS, USSD,
-                WhatsApp or a web link. Results are weighted to the register before anyone reads them.
+                WhatsApp or a web link. Results are weighted to the register before anyone reads
+                them.
               </p>
               <ul className="ticks">
                 <li>
@@ -633,7 +679,10 @@ function Landing() {
             </div>
             <div className="duo">
               <div className="pic">
-                <img src={shot4} alt="Poll builder with question, audience, channels, reward and a USSD preview" />
+                <img
+                  src={shot4}
+                  alt="Poll builder with question, audience, channels, reward and a USSD preview"
+                />
               </div>
               <div className="ussd" aria-label="USSD menu">
                 {`*384*27#
@@ -679,7 +728,10 @@ Nini kirekebishwe kwanza mtaani kwako?
               </ul>
             </div>
             <div className="pic">
-              <img src={shot5} alt="Unified inbox with SMS, Messenger, Instagram, TikTok and USSD conversations" />
+              <img
+                src={shot5}
+                alt="Unified inbox with SMS, Messenger, Instagram, TikTok and USSD conversations"
+              />
             </div>
           </div>
 
@@ -780,8 +832,8 @@ Nini kirekebishwe kwanza mtaani kwako?
                   Built for <span className="m">sunlight.</span>
                 </h3>
                 <p>
-                  Big targets, 2px borders, no data needed to keep working. The canvasser you train in
-                  November is the agent you deploy in August, on the same app.
+                  Big targets, 2px borders, no data needed to keep working. The canvasser you train
+                  in November is the agent you deploy in August, on the same app.
                 </p>
                 <ul className="ticks">
                   <li>
@@ -804,12 +856,12 @@ Nini kirekebishwe kwanza mtaani kwako?
                 </ul>
               </div>
               <div className="field-preview">
-                  <div className="landing-phone">
-                    <img
-                      src={shot8}
-                      alt="Field app on a phone: agent's walk list stop with household, script and outcome buttons"
-                    />
-                  </div>
+                <div className="landing-phone">
+                  <img
+                    src={shot8}
+                    alt="Field app on a phone: agent's walk list stop with household, script and outcome buttons"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -832,7 +884,10 @@ Nini kirekebishwe kwanza mtaani kwako?
             <div className="trust">
               <div className="tr">
                 <b>One campaign per workspace</b>
-                <p>Nothing is shared between campaigns, and we never pool your supporters with anyone else's.</p>
+                <p>
+                  Nothing is shared between campaigns, and we never pool your supporters with anyone
+                  else's.
+                </p>
               </div>
               <div className="tr">
                 <b>Consent on every record</b>
@@ -840,7 +895,10 @@ Nini kirekebishwe kwanza mtaani kwako?
               </div>
               <div className="tr">
                 <b>Least privilege</b>
-                <p>Agents see their walk list, not the county. Phone numbers are masked unless a role needs them.</p>
+                <p>
+                  Agents see their walk list, not the county. Phone numbers are masked unless a role
+                  needs them.
+                </p>
               </div>
               <div className="tr">
                 <b>A full audit trail</b>
@@ -969,8 +1027,7 @@ Nini kirekebishwe kwanza mtaani kwako?
               <b>groundwork</b>
             </a>
             <p style={{ marginTop: 14, maxWidth: "34ch" }}>
-              The campaign OS. Every voter known, every shilling accounted for, every vote
-              counted.
+              The campaign OS. Every voter known, every shilling accounted for, every vote counted.
             </p>
           </div>
           <div>

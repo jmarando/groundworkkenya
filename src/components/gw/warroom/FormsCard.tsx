@@ -1,6 +1,6 @@
 import type { WarRoomData } from "@/lib/console.functions";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const hhmm = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-GB", {
     timeZone: "Africa/Nairobi",

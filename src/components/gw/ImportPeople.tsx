@@ -12,8 +12,8 @@ import {
   type Mapping,
 } from "@/lib/people";
 import { beginImport, importChunk, type ChunkResult } from "@/lib/people.functions";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const CHUNK = 500;
 const MAX_BYTES = 20 * 1024 * 1024;
 

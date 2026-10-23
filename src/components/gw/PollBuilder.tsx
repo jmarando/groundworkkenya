@@ -11,6 +11,7 @@ import {
   type RewardMethod,
 } from "@/lib/polls.engine";
 import { createPoll, estimateAudience, getAudienceOptions } from "@/lib/polls.functions";
+import { nf } from "@/lib/format";
 
 const CHANNELS: { id: string; label: string; note: string }[] = [
   { id: "sms", label: "SMS", note: "Any handset. Replies come back as 1–9." },
@@ -20,8 +21,6 @@ const CHANNELS: { id: string; label: string; note: string }[] = [
 ];
 
 type Option = { label: string; labelSw: string };
-
-const nf = new Intl.NumberFormat("en-KE");
 
 export function PollBuilder({
   onClose,
@@ -332,7 +331,6 @@ export function PollBuilder({
               >
                 <option value="none">None</option>
                 <option value="airtime">Airtime</option>
-                <option value="mpesa">M-Pesa</option>
               </select>
             </label>
             {rewardMethod !== "none" && (
@@ -340,7 +338,7 @@ export function PollBuilder({
                 <span>KES per person · max {REWARD_MAX_KES}</span>
                 <input
                   type="number"
-                  min={rewardMethod === "mpesa" ? 10 : 1}
+                  min={5}
                   max={REWARD_MAX_KES}
                   inputMode="numeric"
                   value={rewardAmount}
@@ -352,9 +350,9 @@ export function PollBuilder({
 
           {rewardMethod !== "none" && (
             <p className="f-note">
-              Paying people who answer is spending: it belongs in Finance with its purpose recorded,
-              and it is exactly what a disclosure return asks about. Only the first answer from each
-              number is paid.
+              Airtime goes through Africa&apos;s Talking (5 to {REWARD_MAX_KES} shillings each),
+              only for the first answer from each number, and each day&apos;s total posts to Finance
+              the next morning: it is exactly what a disclosure return asks about.
             </p>
           )}
         </div>

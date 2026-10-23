@@ -11,8 +11,8 @@ import {
 } from "@/lib/broadcast.functions";
 import { plainify, smsParts } from "@/lib/sms";
 import { ChannelTabs, WhatsAppComposer } from "@/components/gw/WhatsAppComposer";
+import { nf } from "@/lib/format";
 
-const nf = new Intl.NumberFormat("en-KE");
 const kes = new Intl.NumberFormat("en-KE", { maximumFractionDigits: 2 });
 
 export function BroadcastComposer({
@@ -21,6 +21,7 @@ export function BroadcastComposer({
   initialBody,
   smsRate,
   onClose,
+  initialChannel = "sms",
 }: {
   audience: BroadcastAudience;
   /** Plain-language summary of the filters, e.g. "Youth in Kileleshwa". */
@@ -28,8 +29,9 @@ export function BroadcastComposer({
   initialBody: string;
   smsRate: number;
   onClose: () => void;
+  initialChannel?: "sms" | "wa";
 }) {
-  const [channel, setChannel] = useState<"sms" | "wa">("sms");
+  const [channel, setChannel] = useState<"sms" | "wa">(initialChannel);
   if (channel === "wa") {
     return (
       <WhatsAppComposer

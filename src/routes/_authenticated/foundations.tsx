@@ -30,9 +30,21 @@ const SWATCHES = [
 ];
 
 const STATUSES = [
-  { g: "●", name: "Reporting", d: "Live and sending. Green only when data arrived in the last cycle." },
-  { g: "◐", name: "On station", d: "Present but not yet reporting. Amber is a prompt, not an alarm." },
-  { g: "▲", name: "Missed", d: "Expected data did not arrive. Always paired with what to do next." },
+  {
+    g: "●",
+    name: "Reporting",
+    d: "Live and sending. Green only when data arrived in the last cycle.",
+  },
+  {
+    g: "◐",
+    name: "On station",
+    d: "Present but not yet reporting. Amber is a prompt, not an alarm.",
+  },
+  {
+    g: "▲",
+    name: "Missed",
+    d: "Expected data did not arrive. Always paired with what to do next.",
+  },
   { g: "○", name: "Unstaffed", d: "Nobody assigned. Counted openly rather than hidden." },
 ];
 
@@ -117,8 +129,8 @@ function Foundations() {
             <span className="spec-lbl">Body · Geist</span>
             <div>
               <p style={{ margin: 0 }}>
-                Plain sentences, short lines, no jargon. If a field agent cannot read it at arm&apos;s
-                length on a cracked screen, rewrite it.
+                Plain sentences, short lines, no jargon. If a field agent cannot read it at
+                arm&apos;s length on a cracked screen, rewrite it.
               </p>
             </div>
           </div>

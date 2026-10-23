@@ -18,8 +18,7 @@ import {
 } from "@/lib/race-data";
 import type { SearchRead } from "@/lib/search-interest";
 import type { TopOfMind } from "@/lib/top-of-mind";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 /** The race as it stands: published polls, who's running, the week's issues, last time. */
 export function RaceReal({
@@ -177,11 +176,18 @@ function RivalsCard({
   canEdit: boolean;
   onEdit: () => void;
 }) {
-  const active = race.rivals.filter(r => race.posts.some(p => p.rivalId === r.id));
+  const active = race.rivals.filter((r) => race.posts.some((p) => p.rivalId === r.id));
   return (
     <section className="home-rivals home-rival-activity" aria-labelledby="home-rivals-h">
       <div className="card-head">
-        <div><h2 id="home-rivals-h">Latest candidate activity</h2><p className="meta">{active.length ? "From their own public posts." : "No recent candidate posts collected."}</p></div>
+        <div>
+          <h2 id="home-rivals-h">Latest candidate activity</h2>
+          <p className="meta">
+            {active.length
+              ? "From their own public posts."
+              : "No recent candidate posts collected."}
+          </p>
+        </div>
         {canEdit && (
           <Button variant="outline" size="sm" onClick={onEdit}>
             Edit rivals
@@ -215,9 +221,7 @@ function RivalsCard({
             );
           })}
         </ul>
-      ) : (
-        null
-      )}
+      ) : null}
     </section>
   );
 }

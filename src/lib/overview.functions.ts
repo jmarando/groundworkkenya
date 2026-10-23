@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { spendingLimit } from "@/lib/spending-limit";
 import { pageAll } from "@/lib/page-all";
-
-const STATUTORY_LIMIT = 433_800_000;
 
 export type OverviewData = {
   supporters: number;
@@ -12,7 +11,9 @@ export type OverviewData = {
   contactsThisWeek: number;
   contactsLastWeek: number;
   spendKes: number;
-  statutoryLimit: number;
+  /** The seat's gazetted limit; null when it isn't on file. */
+  statutoryLimit: number | null;
+  statutoryLimitSource: string | null;
   biggestGap: { name: string; constituency: string; gap: number } | null;
   offPace: { name: string; constituency: string; gap: number }[];
   growth: { label: string; value: number }[];
@@ -49,6 +50,7 @@ export async function loadOverview(sb: Client): Promise<OverviewData> {
     { count: openIncidents },
     { count: unstaffed },
     { count: activePolls },
+    limit,
   ] = await Promise.all([
     sb.from("wards").select("id, name, constituency, target_votes"),
     pageAll<{ ward_id: string | null; created_at: string }>((from, to) =>
@@ -70,6 +72,7 @@ export async function loadOverview(sb: Client): Promise<OverviewData> {
       .select("id", { count: "exact", head: true })
       .eq("status", "unstaffed"),
     sb.from("polls").select("id", { count: "exact", head: true }).eq("status", "live"),
+    spendingLimit(sb),
   ]);
 
   const perWard = new Map<string, number>();
@@ -132,7 +135,8 @@ export async function loadOverview(sb: Client): Promise<OverviewData> {
     contactsThisWeek,
     contactsLastWeek,
     spendKes,
-    statutoryLimit: STATUTORY_LIMIT,
+    statutoryLimit: limit?.kes ?? null,
+    statutoryLimitSource: limit?.source ?? null,
     biggestGap: gaps[0] ?? null,
     offPace: gaps.filter((g) => g.gap < 0).slice(0, 5),
     growth: months,

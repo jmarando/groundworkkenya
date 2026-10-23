@@ -2,8 +2,9 @@
 // (src/lib/map-areas.ts), from Google Open Buildings v3 (CC BY 4.0), as one
 // PMTiles file per area and the number of houses in each ward.
 //
-//   npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz>
+//   npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz> [id …]
 //
+// With ids (roysambu, mathira …), only those areas are built: the S2 cell must cover them.
 // <183_buildings.csv.gz> is the S2 cell covering Nairobi and Nyeri (1.76 GB):
 //   https://storage.googleapis.com/open-buildings-data/v3/polygons_s2_level_4_gzip/183_buildings.csv.gz
 // Writes public/tiles/houses-<id>.pmtiles and public/tiles/houses-<id>.json,
@@ -38,7 +39,13 @@ if (!src) {
   process.exit(1);
 }
 
-const areas = MAP_AREAS.map((area) => {
+const only = process.argv.slice(3);
+const unknown = only.filter((id) => !MAP_AREAS.some((a) => a.id === id));
+if (unknown.length) {
+  console.error(`No map area with id ${unknown.join(", ")}`);
+  process.exit(1);
+}
+const areas = MAP_AREAS.filter((a) => !only.length || only.includes(a.id)).map((area) => {
   const [west, south, east, north] = area.bounds;
   const box: Box = { west, south, east, north };
   const wards = wardShapes(JSON.parse(readFileSync(`public${area.wards}`, "utf8")));

@@ -11,17 +11,24 @@ import { wardShapes } from "@/lib/area-map";
 import { HEADERS } from "@/lib/atlas-files";
 import { areaKm2, indicatorRows, makeLocator, withConstituencies } from "@/lib/building-stats";
 import { decodeTile, HOUSE_ZOOM, toTileSpace } from "@/lib/house-tiles";
-import { mapAreaFor, type HouseCounts } from "@/lib/map-areas";
+import { MAP_AREAS, mapAreaFor, type HouseCounts } from "@/lib/map-areas";
 import { gunzip, openArchive } from "@/lib/pmtiles";
 
 import { readAtlas } from "./read";
 
 const area = mapAreaFor(process.argv[2]);
 if (!area) {
-  console.error("usage: buildings.ts <map area: nairobi | nyeri/mathira>");
+  console.error("usage: buildings.ts <map area: nairobi | nyeri/mathira | kiambu/githunguri | …>");
   process.exit(2);
 }
 const county = area.key.split("/")[0]!;
+// The county's whole indicators file is written from this one area: a ward campaign's map
+// inside a mapped county (Roysambu in Nairobi) would replace the county's other wards.
+const wider = MAP_AREAS.find((a) => a !== area && area.key.startsWith(`${a.key}/`));
+if (wider) {
+  console.error(`${area.key} lies inside ${wider.key}: run buildings.ts ${wider.key} instead.`);
+  process.exit(2);
+}
 
 const { files } = readAtlas("data/atlas", [county]);
 const wardKey = new Map(
@@ -56,10 +63,13 @@ for (let x = x0; x <= x1; x++)
     }
   }
 
+// A ward campaign's map (meru/tigania-west/athwana) holds one of its constituency's wards, so
+// the constituency isn't measured from it, however few of its wards the atlas lists.
+const wardOnly = area.key.split("/").length === 3;
 const areas = withConstituencies(
   shapes.map((s) => ({ key: s.key, km2: areaKm2(s.polygons), sizes: sizes.get(s.key)! })),
   files.areas
-    .filter((a) => a.level === "constituency")
+    .filter((a) => a.level === "constituency" && !wardOnly)
     .map((c) => ({
       key: c.key,
       wards: files.areas.filter((a) => a.parent === c.key).map((a) => a.key),

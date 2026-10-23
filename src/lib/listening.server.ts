@@ -9,6 +9,7 @@
 
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
 import { takeCredits } from "./social-credits";
+import { OFF_TOPIC } from "./top-of-mind";
 import {
   ScrapeCreatorsCreditError,
   scConfigured,
@@ -43,7 +44,10 @@ export type ScanResult = {
 
 export class PauseError extends Error {
   reason: string;
-  constructor(reason: string, public status?: number) {
+  constructor(
+    reason: string,
+    public status?: number,
+  ) {
     super(reason);
     this.reason = reason;
   }
@@ -90,6 +94,9 @@ type Found = {
   publishedAt: string | null;
   /** Set when the address doesn't say where it came from (Google Alerts). */
   source?: string;
+  author?: string | null;
+  reach?: number | null;
+  shares?: number | null;
 };
 
 async function firecrawlSearch(query: string, limit: number, tbs: string): Promise<Found[]> {
@@ -98,6 +105,7 @@ async function firecrawlSearch(query: string, limit: number, tbs: string): Promi
   if (!lovableKey || !connKey) throw new PauseError("Web search is not connected.");
 
   const res = await fetch(`${FIRECRAWL_GATEWAY}/search`, {
+    signal: AbortSignal.timeout(45_000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -132,7 +140,12 @@ async function firecrawlSearch(query: string, limit: number, tbs: string): Promi
 
 /* -------------------------------------------------------------- ai moods */
 
-type Verdict = { id: string; sentiment: "positive" | "neutral" | "negative"; issue: string; score: number };
+type Verdict = {
+  id: string;
+  sentiment: "positive" | "neutral" | "negative";
+  issue: string;
+  score: number;
+};
 
 const MOOD_SCHEMA = {
   type: "object",
@@ -156,13 +169,19 @@ const MOOD_SCHEMA = {
   },
 };
 
-async function readMoods(items: { id: string; text: string }[]): Promise<Verdict[]> {
+async function readMoods(
+  items: { id: string; text: string; campaign?: string; keyword?: string }[],
+): Promise<Verdict[]> {
   const prompt = [
-    "You monitor Kenyan news, blogs and social posts for a county political campaign.",
+    "You monitor Kenyan news, blogs and social posts for political campaigns.",
+    "Each item names the campaign (candidate and seat) and the keyword that found it.",
     "Text may mix English, Kiswahili and Sheng.",
-    "For each item return the mood towards the campaign (positive, neutral or negative),",
+    "For each item return the mood towards that campaign (positive, neutral or negative),",
     "a short lowercase issue label (roads, water, garbage, jobs, bursaries, security, health, housing,",
     "corruption, transport, land, campaign, general), and a score from -1 (furious) to 1 (delighted).",
+    `Use the issue "${OFF_TOPIC}" when the item is an advert, a job listing or promotion, or is not`,
+    "about the campaign's seat, its candidate, its rivals or the keyword's subject (for example a",
+    "post about another county or constituency that a search happened to return).",
     "Keep the given id for each entry.",
     "",
     JSON.stringify(items),
@@ -177,6 +196,7 @@ export async function askAiJson<T>(prompt: string, name: string, schema: object)
   if (!key) throw new PauseError("AI is not configured.");
 
   const res = await fetch(AI_GATEWAY, {
+    signal: AbortSignal.timeout(90_000),
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -253,7 +273,11 @@ export async function runListeningScan(
   };
   const now = new Date();
 
-  const { data: job } = await sb.from("listening_jobs").select("*").eq("key", JOB_KEY).maybeSingle();
+  const { data: job } = await sb
+    .from("listening_jobs")
+    .select("*")
+    .eq("key", JOB_KEY)
+    .maybeSingle();
 
   // Paused because the search service refused work (402/403/429): try one
   // keyword six hours later. If it is still refused the pause stands, so no
@@ -297,12 +321,16 @@ export async function runListeningScan(
   }
 
   const lockedUntil = new Date(now.getTime() + LEASE_MINUTES * 60_000).toISOString();
-  await sb
-    .from("listening_jobs")
-    .upsert(
-      { key: JOB_KEY, locked_until: lockedUntil, status: "running", paused_reason: null, updated_at: now.toISOString() },
-      { onConflict: "key" },
-    );
+  await sb.from("listening_jobs").upsert(
+    {
+      key: JOB_KEY,
+      locked_until: lockedUntil,
+      status: "running",
+      paused_reason: null,
+      updated_at: now.toISOString(),
+    },
+    { onConflict: "key" },
+  );
 
   let found = 0;
   let stored = 0;
@@ -322,7 +350,10 @@ export async function runListeningScan(
     for (const topic of topics ?? []) {
       const extra = (topic.keywords ?? []).slice(0, 3).join(" OR ");
       const exclude = (topic.exclude_terms ?? []).map((t: string) => `-${t}`).join(" ");
-      const query = [topic.query, extra ? `(${extra})` : "", exclude].filter(Boolean).join(" ").slice(0, 300);
+      const query = [topic.query, extra ? `(${extra})` : "", exclude]
+        .filter(Boolean)
+        .join(" ")
+        .slice(0, 300);
 
       let hits: Found[] = [];
       try {
@@ -339,10 +370,13 @@ export async function runListeningScan(
       const feed = typeof topic.alert_feed_url === "string" ? topic.alert_feed_url : "";
       if (feed && !ALERT_FEED.test(feed)) {
         failed.feeds++;
-        notes.push(`${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`);
+        notes.push(
+          `${topic.label}: its alert link is not a Google Alerts feed, so it was not read.`,
+        );
       } else if (feed) {
         try {
           const res = await fetch(feed, {
+            signal: AbortSignal.timeout(15_000),
             headers: { Accept: "application/atom+xml, application/xml" },
           });
           if (!res.ok) throw new Error(`the feed answered ${res.status}`);
@@ -401,6 +435,9 @@ export async function runListeningScan(
         url: h.url,
         snippet: h.snippet?.slice(0, 1200) ?? null,
         published_at: h.publishedAt ? new Date(h.publishedAt).toISOString() : null,
+        author: h.author?.slice(0, 120) ?? null,
+        reach: h.reach ?? null,
+        shares: h.shares ?? null,
       }));
 
       if (rows.length) {
@@ -414,21 +451,53 @@ export async function runListeningScan(
           notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
         }
         stored += ins?.length ?? 0;
+        // A post found again keeps its latest views and shares, so a spreading post shows it.
+        for (const r of rows.filter((x) => x.reach !== null && topic.campaign_id)) {
+          await sb
+            .from("listening_mentions")
+            .update({ reach: r.reach, shares: r.shares })
+            .eq("campaign_id", topic.campaign_id)
+            .eq("url", r.url)
+            .lt("reach", r.reach);
+        }
       }
 
-      await sb.from("listening_topics").update({ last_scanned_at: new Date().toISOString() }).eq("id", topic.id);
+      await sb
+        .from("listening_topics")
+        .update({ last_scanned_at: new Date().toISOString() })
+        .eq("id", topic.id);
     }
 
     // read the mood on anything not yet rated
     const { data: pending } = await sb
       .from("listening_mentions")
-      .select("id, title, snippet")
+      .select("id, title, snippet, campaign_id, topic_id")
       .is("sentiment", null)
       .order("found_at", { ascending: false })
       .limit(classifyLimit);
 
+    // Each post is read against its own campaign and keyword, so a stray result can be set aside.
+    const ids = (k: "campaign_id" | "topic_id") => [
+      ...new Set((pending ?? []).map((m: any) => m[k]).filter(Boolean)),
+    ];
+    const [{ data: camps }, { data: kws }] = await Promise.all([
+      ids("campaign_id").length
+        ? sb.from("campaigns").select("id, candidate, seat").in("id", ids("campaign_id"))
+        : Promise.resolve({ data: [] }),
+      ids("topic_id").length
+        ? sb.from("listening_topics").select("id, label, query").in("id", ids("topic_id"))
+        : Promise.resolve({ data: [] }),
+    ]);
+    const campOf = new Map(
+      (camps ?? []).map((c: any) => [c.id, [c.candidate, c.seat].filter(Boolean).join(", ")]),
+    );
+    const kwOf = new Map(
+      (kws ?? []).map((t: any) => [t.id, t.query ? `${t.label} (${t.query})` : t.label]),
+    );
     const batch = (pending ?? []).map((m: any) => ({
       id: m.id as string,
+      ...(campOf.get(m.campaign_id) ? { campaign: campOf.get(m.campaign_id) as string } : {}),
+      ...(kwOf.get(m.topic_id) ? { keyword: kwOf.get(m.topic_id) as string } : {}),
       text: `${m.title ?? ""} — ${m.snippet ?? ""}`.slice(0, 600),
     }));
 
@@ -497,18 +566,19 @@ export async function runListeningScan(
 
 const HOURS = (h: number) => h * 3600_000;
 
+/**
+ * Each campaign's alerts against its own posts of the last 48 hours: keywords, moods and, when an
+ * alert asks, how far a post spread. Email goes out at once through the managed sender; "app"
+ * alerts wait in Listening; WhatsApp waits until the campaign's number is live.
+ */
 export async function evaluateAlerts(sb: AnyClient): Promise<number> {
   const { data: alerts } = await sb.from("listening_alerts").select("*").eq("active", true);
   if (!alerts?.length) return 0;
 
   const since = new Date(Date.now() - HOURS(48)).toISOString();
-  const { data: mentions } = await sb
-    .from("listening_mentions")
-    .select("id, topic_id, title, snippet, url, sentiment, issue, found_at")
-    .gte("found_at", since)
-    .not("sentiment", "is", null)
-    .order("found_at", { ascending: false })
-    .limit(300);
+  const campaigns = [...new Set(alerts.map((a: any) => a.campaign_id as string))].filter(Boolean);
+  const { data: names } = await sb.from("campaigns").select("id, name").in("id", campaigns);
+  const nameOf = new Map((names ?? []).map((c: any) => [c.id, c.name as string]));
 
   const { data: fired } = await sb
     .from("listening_alert_events")
@@ -516,60 +586,116 @@ export async function evaluateAlerts(sb: AnyClient): Promise<number> {
     .gte("created_at", since);
   const already = new Set((fired ?? []).map((f: any) => `${f.alert_id}:${f.mention_id}`));
 
-  const { data: wa } = await sb.from("social_accounts").select("live").eq("platform", "whatsapp").maybeSingle();
-  const whatsappLive = wa?.live === true;
-
   let count = 0;
 
-  for (const alert of alerts) {
-    if (alert.frequency === "daily" && alert.last_fired_at) {
-      if (Date.now() - new Date(alert.last_fired_at).getTime() < HOURS(24)) continue;
+  for (const campaignId of campaigns) {
+    const { data: mentions } = await sb
+      .from("listening_mentions")
+      .select(
+        "id, topic_id, title, snippet, url, sentiment, issue, found_at, reach, author, source",
+      )
+      .eq("campaign_id", campaignId)
+      .or(`issue.is.null,issue.neq.${OFF_TOPIC}`)
+      .gte("found_at", since)
+      .order("found_at", { ascending: false })
+      .limit(400);
+    const { data: wa } = await sb
+      .from("social_accounts")
+      .select("live")
+      .eq("campaign_id", campaignId)
+      .eq("platform", "whatsapp")
+      .maybeSingle();
+    const whatsappLive = wa?.live === true;
+
+    for (const alert of alerts.filter((a: any) => a.campaign_id === campaignId)) {
+      if (alert.frequency === "daily" && alert.last_fired_at) {
+        if (Date.now() - new Date(alert.last_fired_at).getTime() < HOURS(24)) continue;
+      }
+      const words: string[] = (alert.keywords ?? [])
+        .map((k: string) => k.toLowerCase())
+        .filter(Boolean);
+      const moods: string[] = alert.sentiments ?? [];
+      const minReach: number | null = alert.min_reach ?? null;
+
+      const matched = (mentions ?? []).filter((m: any) => {
+        if (already.has(`${alert.id}:${m.id}`)) return false;
+        if (alert.topic_id && m.topic_id !== alert.topic_id) return false;
+        if (minReach !== null) {
+          if ((m.reach ?? 0) < minReach) return false;
+        } else {
+          // Without a reach rule an alert waits for the mood to be read.
+          if (!m.sentiment) return false;
+          if (moods.length && !moods.includes(m.sentiment)) return false;
+        }
+        if (minReach !== null && moods.length && m.sentiment && !moods.includes(m.sentiment))
+          return false;
+        if (!words.length) return true;
+        const hay = `${m.title ?? ""} ${m.snippet ?? ""}`.toLowerCase();
+        return words.some((w) => hay.includes(w));
+      });
+
+      if (matched.length < (alert.min_matches ?? 1)) continue;
+
+      const subject = `Groundwork alert · ${alert.name} (${matched.length})`;
+      const body = matched
+        .slice(0, 10)
+        .map(
+          (m: any) =>
+            `• ${m.sentiment ? `[${m.sentiment}] ` : ""}${m.title ?? m.url}${m.reach ? ` (seen ${Number(m.reach).toLocaleString("en-KE")} times)` : ""}${m.author ? ` by ${m.author}` : ""}\n  ${m.url}`,
+        )
+        .join("\n");
+
+      const channel = alert.channel as string;
+      let status = "staged";
+      let detail: string | null = null;
+      if (channel === "app") {
+        status = "delivered";
+      } else if (channel === "email") {
+        try {
+          const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+          const r = await sendTemplateEmail("campaign-message", alert.destination, {
+            templateData: {
+              campaignName: nameOf.get(campaignId) ?? "Groundwork",
+              subject,
+              body: `${body}\n\nOpen Listening in Groundwork to react.`,
+              senderName: "Groundwork Listening",
+            },
+            idempotencyKey: `alert-${alert.id}-${matched[0].id}`,
+            fromName: "Groundwork Listening",
+          });
+          status = r.sent ? "sent" : "failed";
+          detail = r.sent ? null : "This address bounced or unsubscribed earlier.";
+        } catch (e) {
+          status = "failed";
+          detail = e instanceof Error ? e.message.slice(0, 200) : "The email could not be sent.";
+        }
+      } else if (whatsappLive) {
+        status = "queued";
+      } else {
+        detail = "Waiting on the WhatsApp Business number being switched live.";
+      }
+
+      const events = matched.slice(0, 10).map((m: any) => ({
+        campaign_id: campaignId,
+        alert_id: alert.id,
+        mention_id: m.id,
+        channel,
+        destination: alert.destination,
+        subject,
+        body,
+        status,
+        detail,
+      }));
+
+      const { error } = await sb.from("listening_alert_events").insert(events);
+      if (error) continue;
+
+      await sb
+        .from("listening_alerts")
+        .update({ last_fired_at: new Date().toISOString() })
+        .eq("id", alert.id);
+      count += events.length;
     }
-    const words: string[] = (alert.keywords ?? []).map((k: string) => k.toLowerCase()).filter(Boolean);
-    const moods: string[] = alert.sentiments ?? [];
-
-    const matched = (mentions ?? []).filter((m: any) => {
-      if (already.has(`${alert.id}:${m.id}`)) return false;
-      if (alert.topic_id && m.topic_id !== alert.topic_id) return false;
-      if (moods.length && !moods.includes(m.sentiment)) return false;
-      if (!words.length) return true;
-      const hay = `${m.title ?? ""} ${m.snippet ?? ""}`.toLowerCase();
-      return words.some((w) => hay.includes(w));
-    });
-
-    if (matched.length < (alert.min_matches ?? 1)) continue;
-
-    const subject = `Groundwork alert · ${alert.name} (${matched.length})`;
-    const body = matched
-      .slice(0, 10)
-      .map((m: any) => `• [${m.sentiment}] ${m.title ?? m.url}\n  ${m.url}`)
-      .join("\n");
-
-    const channel = alert.channel as string;
-    const deliverable = channel === "whatsapp" ? whatsappLive : false;
-    const detail =
-      channel === "email"
-        ? "Waiting on the campaign sender domain being set up."
-        : whatsappLive
-          ? null
-          : "Waiting on the WhatsApp Business number being switched live.";
-
-    const events = matched.slice(0, 10).map((m: any) => ({
-      alert_id: alert.id,
-      mention_id: m.id,
-      channel,
-      destination: alert.destination,
-      subject,
-      body,
-      status: deliverable ? "queued" : "staged",
-      detail,
-    }));
-
-    const { error } = await sb.from("listening_alert_events").insert(events);
-    if (error) continue;
-
-    await sb.from("listening_alerts").update({ last_fired_at: new Date().toISOString() }).eq("id", alert.id);
-    count += events.length;
   }
 
   return count;

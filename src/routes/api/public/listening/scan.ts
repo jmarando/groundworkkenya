@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClient } from "@supabase/supabase-js";
 
 import { runListeningScan } from "@/lib/listening.server";
 import { runMorningStory } from "@/lib/morning-story.server";
 import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
+import { tokenMatches } from "@/lib/webhook-token.server";
+import { runXSweep } from "@/lib/x-sweep.server";
+import { autoReadWiderNews } from "@/lib/roadmap.functions";
 
 /**
  * Hourly listening sweep. Called by the scheduler with the shared cron secret.
@@ -15,25 +17,27 @@ export const Route = createFileRoute("/api/public/listening/scan")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const allowed = [process.env["LISTENING_CRON_TOKEN"], process.env["LOVABLE_CRON_SECRET"]].filter(
-          (v): v is string => typeof v === "string" && v.length > 0,
-        );
         const sent = request.headers.get("x-cron-secret");
-        if (!sent || !allowed.includes(sent)) {
+        const allowed = [process.env["LISTENING_CRON_TOKEN"], process.env["LOVABLE_CRON_SECRET"]].some(
+          (expected) => tokenMatches(sent, expected),
+        );
+        if (!allowed) {
           return new Response(JSON.stringify({ error: "unauthorized" }), {
             status: 401,
             headers: { "Content-Type": "application/json" },
           });
         }
 
-        const sb = createClient(
-          process.env["SUPABASE_URL"]!,
-          process.env["SUPABASE_SERVICE_ROLE_KEY"]!,
-          { auth: { autoRefreshToken: false, persistSession: false } },
-        );
+        const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
 
-        const result = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 }).catch((e: Error) => ({
+        const result = await runListeningScan(sb as never, { topicLimit: 6, classifyLimit: 40 }).catch((e: Error) => ({
           ran: false,
+          error: e.message,
+        }));
+        // X itself, keyword by keyword, the ones searched longest ago first.
+        const x = await runXSweep(sb as never).catch((e: Error) => ({ ran: false, error: e.message }));
+        // Each campaign's newest county or national story read for its seat (two a day at most).
+        const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
           error: e.message,
         }));
         // Always check the morning record, even when collection throws or pauses.
@@ -52,7 +56,15 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
-        return Response.json({ ...result, rivals, story, search });
+        // Yesterday's SMS charges onto the ledger, as each campaign's pending comms expense.
+        const comms = await sb
+          .rpc("comms_to_ledger")
+          .then(({ data, error }) => (error ? { error: error.message } : { posted: data }));
+        // Last, records past their keeping time (old webhook payloads, alert events, posts).
+        const pruned = await sb
+          .rpc("prune_old_records")
+          .then(({ data, error }) => (error ? { error: error.message } : data));
+        return Response.json({ ...result, x, wider, rivals, story, search, comms, pruned });
       },
     },
   },

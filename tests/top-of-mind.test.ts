@@ -3,7 +3,15 @@
 // this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/top-of-mind.test.ts
 
-import { issueKey, listOf, mindBasis, pct, sourcesOf, topOfMind } from "@/lib/top-of-mind";
+import {
+  issueKey,
+  listOf,
+  mindBasis,
+  pct,
+  seatNews,
+  sourcesOf,
+  topOfMind,
+} from "@/lib/top-of-mind";
 
 let pass = 0;
 let fail = 0;
@@ -97,6 +105,33 @@ eq(
   "lists",
   [listOf(["a"]), listOf(["a", "b"]), listOf(["a", "b", "c"])],
   ["a", "a and b", "a, b and c"],
+);
+
+const post = (title: string | null, kind: string | null = "issue") => ({
+  issue: "jobs",
+  title,
+  url: null,
+  kind,
+});
+eq(
+  "only the seat's own keywords, with a real title, and no adverts",
+  seatNews([
+    post("Githunguri farmers wait for milk payments"),
+    post("Mombasa girl thinking of relocating to Kisumu. What should I know?", "county"),
+    post("Treasury tables the Finance Bill", "national"),
+    post("#AD "),
+    post("#ad Get your loan in minutes today"),
+    post("Sponsored: new homes in Ruiru"),
+    post(null),
+    post("Wamuchomba visits Komothai", "campaign"),
+    post("Water rationing in Githunguri town", null),
+    { ...post("Kawira Mwangaza on what happened in Githongo", "campaign"), issue: "off-topic" },
+  ]).map((r) => r.title),
+  [
+    "Githunguri farmers wait for milk payments",
+    "Wamuchomba visits Komothai",
+    "Water rationing in Githunguri town",
+  ],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

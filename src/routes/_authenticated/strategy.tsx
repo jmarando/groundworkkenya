@@ -6,6 +6,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { FindingItem } from "@/components/gw/findings/FindingItem";
 import { Outlook2027 } from "@/components/gw/strategy/Outlook2027";
 import { NoPathToCityHall, PathToCityHall } from "@/components/gw/strategy/PathToCityHall";
+import { PathToParliament } from "@/components/gw/strategy/PathToParliament";
 import { PathToStateHouse } from "@/components/gw/strategy/PathToStateHouse";
 import { useAccess } from "@/hooks/useAccess";
 import { useFindings } from "@/hooks/useFindings";
@@ -21,6 +22,7 @@ import {
   RULES,
   within,
 } from "@/lib/findings/core";
+import { mpSeatFromAtlas } from "@/lib/mp-path";
 import { outlookNotes, registered2026 } from "@/lib/outlook-data";
 import { registeredFor } from "@/lib/outlook-notes";
 import { youthFacts } from "@/lib/outlook-youth";
@@ -81,6 +83,12 @@ function Strategy() {
     const row = seat?.ok ? registeredFor(registered2026, seat.seat.countyName) : null;
     return row ? { count: row.newRegistrations, period: row.period, source: row.source } : null;
   }, [seat]);
+  // An MP's or MCA's last race, or why there is none; null for any other race.
+  const mpSeat = useMemo(() => {
+    const race = campaign?.level;
+    if (!atlas || !home || (race !== "mp" && race !== "mca")) return null;
+    return mpSeatFromAtlas(atlas, race, home, atlas.sides[`2022-${race}`] ?? null);
+  }, [campaign, atlas, home]);
   const places =
     atlas && home
       ? atlas.areas
@@ -106,6 +114,16 @@ function Strategy() {
         </>
       ) : seat ? (
         <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
+      ) : null}
+      {mpSeat?.ok ? (
+        <PathToParliament seat={mpSeat.seat} />
+      ) : mpSeat ? (
+        <section className="card pth" aria-labelledby="ptp-none">
+          <h2 id="ptp-none">
+            {campaign?.level === "mca" ? "Path to the County Assembly" : "Path to Parliament"}
+          </h2>
+          <p className="f-note">{mpSeat.why}</p>
+        </section>
       ) : null}
       <PathToStateHouse
         president={campaign?.level === "president"}
@@ -133,7 +151,7 @@ function Strategy() {
     <section className="view active" aria-label="Strategy">
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Operate · Strategy</span>
+          <span className="eyebrow">Strategy · what the numbers say</span>
           <h1>What the numbers say</h1>
           <p className="meta">
             {data

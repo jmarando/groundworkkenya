@@ -8,6 +8,19 @@ import type { StoryView } from "@/lib/morning-story";
 import { pct, sourcesOf, type MindLine } from "@/lib/top-of-mind";
 
 const COUNT = ["", "One thing", "Two things", "Three things"];
+
+export type SpokenStrategy = {
+  headline: string | null;
+  next: { title: string; on: string } | null;
+  wider: { title: string; stance: string; move: string | null } | null;
+};
+
+const STANCE_WORD: Record<string, string> = {
+  strength: "it helps you",
+  threat: "it hurts you",
+  opening: "it is an opening",
+  context: "it is context to keep in mind",
+};
 const ORDINAL = ["First", "Second", "Third"];
 
 export function spokenTime(time: string): string {
@@ -34,19 +47,26 @@ export function spokenHome(o: {
   story: StoryView | null;
   plan: DiaryEntry[];
   mind: MindLine | null;
+  /** Strategy at a glance, when Home has it: the fortnight's plan, the next IEBC date, wider news. */
+  strategy?: SpokenStrategy | null;
 }): string {
   const out = [
     `Good morning, ${o.name}. Let's get you ready for ${spokenDate(o.today)}. ${daysBetween(o.today, ELECTION_DAY)} days to the election. Here's your campaign morning.`,
   ];
   const st = o.story?.story;
+  const earlier = o.story && o.story.day < o.today ? o.story.day : null;
   if (st?.kind === "written") {
-    out.push(`First, the story making headlines. ${st.headline}. ${st.summary}`);
+    out.push(
+      earlier
+        ? `Today's story is not in yet, so here is ${spokenDate(earlier)}'s. ${st.headline}. ${st.summary}`
+        : `First, the story making headlines. ${st.headline}. ${st.summary}`,
+    );
     if (st.why) out.push(`Why it matters to your campaign: ${st.why}`);
     if (st.rivals) out.push(`What rivals are saying: ${st.rivals}`);
     if (st.line) out.push(`For your next conversation, a suggested line: ${st.line}`);
   } else if (st?.kind === "headlines" && st.also.length) {
     out.push(
-      `First, the headlines: ${st.also
+      `${earlier ? `Today's headlines are not in yet. ${spokenDate(earlier)}'s` : "First, the headlines"}: ${st.also
         .slice(0, 3)
         .map((a) => a.title)
         .join(". ")}.`,
@@ -58,7 +78,22 @@ export function spokenHome(o: {
       `On people's minds this week: ${o.mind.label.toLowerCase()}. It accounts for ${pct(o.mind.score)} of what was raised across ${sourcesOf(o.mind)}.`,
     );
   }
-  if (o.items.length) out.push(`Over to today's priorities. ${COUNT[o.items.length] ?? `${o.items.length} things`} to focus on.`);
+  const sg = o.strategy;
+  if (sg?.headline) out.push(`Your plan for these two weeks: ${sg.headline}.`);
+  if (sg?.next) {
+    const days = daysBetween(o.today, sg.next.on);
+    out.push(
+      `The next deadline: ${sg.next.title}, on ${spokenDate(sg.next.on)}${days > 0 ? `, ${days === 1 ? "tomorrow" : `in ${days} days`}` : ", today"}.`,
+    );
+  }
+  if (sg?.wider)
+    out.push(
+      `Beyond the seat: ${sg.wider.title}. For your campaign, ${STANCE_WORD[sg.wider.stance] ?? "it is worth knowing"}.${sg.wider.move ? ` What to do: ${sg.wider.move}` : ""}`,
+    );
+  if (o.items.length)
+    out.push(
+      `Over to today's priorities. ${COUNT[o.items.length] ?? `${o.items.length} things`} to focus on.`,
+    );
   o.items.forEach((t, i) => out.push(`${ORDINAL[i] ?? "Next"}: ${t.title}. ${t.detail}`));
   if (o.plan.length) {
     out.push("And now, your day on the ground.");

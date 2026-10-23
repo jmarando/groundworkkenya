@@ -162,7 +162,8 @@ function Elections() {
       </div>
       <div className="el-switches">
         <div className="seg" role="group" aria-label="Race">
-          {RACES.map((r) => (
+          {/* The MCA race is a ward's own: offered on a ward, or while it is the race shown. */}
+          {RACES.filter((r) => r !== "mca" || area.level === "ward" || race === "mca").map((r) => (
             <button key={r} type="button" aria-pressed={race === r} onClick={() => go({ race: r })}>
               {RACE_NAMES[r]}
             </button>

@@ -103,7 +103,7 @@ eq("a name that only contains a bloc's is no side", sideFromBloc("Not Azimio"), 
     b: { share: 5, turnout: -2 },
     c: { share: 5, turnout: -2 },
   });
-  eq("and the first scenario is untouched", five.a, { share: 5, turnout: 0 });
+  eq("and the first scenario is untouched", five["a"], { share: 5, turnout: 0 });
   eq("keys left at zero and zero are dropped", setAll(five, keys, { share: 0 }), {});
   eq(
     "keys not listed are left alone",
@@ -112,7 +112,7 @@ eq("a name that only contains a bloc's is no side", sideFromBloc("Not Azimio"), 
   );
   eq(
     "a move already there for a listed key is kept in the part not given",
-    setAll({ a: { share: 1, turnout: 4 } }, keys, { share: 9 }).a,
+    setAll({ a: { share: 1, turnout: 4 } }, keys, { share: 9 })["a"],
     { share: 9, turnout: 4 },
   );
   eq("with no keys nothing changes", setAll(five, [], { share: 9 }), five);

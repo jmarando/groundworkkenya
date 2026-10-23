@@ -91,21 +91,40 @@ export const Route = createFileRoute("/api/public/social/x")({
         if (items.length === 0) return new Response("ok");
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { channelCampaignId } = await import("@/lib/tenant.server");
+
+        // The campaign that connected the X account these events are for; Groundwork's own line
+        // takes anything no campaign claims.
+        const forUser = payload.for_user_id ? String(payload.for_user_id) : null;
+        const { data: owners } = forUser
+          ? await supabaseAdmin
+              .from("social_accounts")
+              .select("campaign_id")
+              .eq("platform", "x")
+              .eq("external_id", forUser)
+          : { data: [] };
+        const campaignId =
+          owners?.length === 1 ? owners[0]!.campaign_id : await channelCampaignId(supabaseAdmin);
+        const logged = (what: string, error: { message: string } | null) => {
+          if (error) console.error(`X webhook: could not ${what}: ${error.message}`);
+        };
 
         for (const item of items) {
           const threadId = `x:${item.threadId}`;
           const { data: existing } = await supabaseAdmin
             .from("conversations")
             .select("id, person_id")
+            .eq("campaign_id", campaignId)
             .eq("platform", "x")
             .eq("external_thread_id", threadId)
             .maybeSingle();
 
           let conversationId = existing?.id ?? null;
           if (!conversationId) {
-            const { data: convo } = await supabaseAdmin
+            const { data: convo, error } = await supabaseAdmin
               .from("conversations")
               .insert({
+                campaign_id: campaignId,
                 channel: "x",
                 platform: "x",
                 external_thread_id: threadId,
@@ -119,15 +138,18 @@ export const Route = createFileRoute("/api/public/social/x")({
               })
               .select("id")
               .maybeSingle();
+            logged("open the conversation", error);
             conversationId = convo?.id ?? null;
           } else {
-            await supabaseAdmin
+            const { error } = await supabaseAdmin
               .from("conversations")
               .update({ unread: true, last_message_at: item.at, snippet: item.body.slice(0, 280) })
               .eq("id", conversationId);
+            logged("update the conversation", error);
           }
 
-          await supabaseAdmin.from("messages").insert({
+          const { error: messageError } = await supabaseAdmin.from("messages").insert({
+            campaign_id: campaignId,
             person_id: existing?.person_id ?? null,
             conversation_id: conversationId,
             channel: "x",
@@ -142,11 +164,14 @@ export const Route = createFileRoute("/api/public/social/x")({
             created_at: item.at,
             sent_at: item.at,
           });
+          logged("save the message", messageError);
 
-          await supabaseAdmin
+          const { error: seenError } = await supabaseAdmin
             .from("social_accounts")
             .update({ last_event_at: item.at })
+            .eq("campaign_id", campaignId)
             .eq("platform", "x");
+          logged("note the account's last message", seenError);
         }
 
         return new Response("ok");
@@ -156,6 +181,8 @@ export const Route = createFileRoute("/api/public/social/x")({
 });
 
 type XPayload = {
+  /** The X account these events are for (Account Activity API). */
+  for_user_id?: string;
   users?: Record<string, { name?: string; screen_name?: string }>;
   tweet_create_events?: {
     id_str?: string;

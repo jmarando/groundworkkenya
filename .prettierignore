@@ -7,3 +7,11 @@ package-lock.json
 bun.lock
 routeTree.gen.ts
 data/atlas/REPORT.md
+# Hand-written prose and served files keep their own layout.
+*.md
+docs
+public
+.lovable
+data
+drizzle
+supabase

@@ -4,16 +4,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
 import { BroadcastComposer } from "@/components/gw/BroadcastComposer";
+import { Creators } from "@/components/gw/broadcast/Creators";
+import { AutoCalls } from "@/components/gw/broadcast/AutoCalls";
+import { PaidMedia } from "@/components/gw/broadcast/PaidMedia";
 import { useAccess } from "@/hooks/useAccess";
-import type { SupportBand } from "@/lib/broadcast.functions";
+import type { BroadcastAudience, SupportBand } from "@/lib/broadcast.functions";
 import { getBroadcast } from "@/lib/console.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { parseBroadcastSearch, type BroadcastSearch } from "@/lib/voters-view";
+import { nf, shortDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/broadcast")({
   component: Broadcast,
   // ?wards=a,b&support=strong: the audience Voters chose ("Message these people").
-  validateSearch: (search: Record<string, unknown>): BroadcastSearch => ({
+  validateSearch: (search: Record<string, unknown>): BroadcastSearch & { tab?: Tab } => ({
+    ...(TABS.some((t) => t.key === search["tab"]) ? { tab: search["tab"] as Tab } : {}),
     ...(typeof search["wards"] === "string" ? { wards: search["wards"] } : {}),
     ...(search["support"] === "strong" ||
     search["support"] === "persuadable" ||
@@ -39,40 +44,23 @@ export const Route = createFileRoute("/_authenticated/broadcast")({
   }),
 });
 
-const nf = new Intl.NumberFormat("en-KE");
-const stamp = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const stamp = shortDay;
 
-const PAID = [
-  {
-    code: "M",
-    cls: "ch--fb",
-    name: "Meta · FB + IG",
-    note: 'Election ads need page authorisation and a "Paid for by" disclaimer.',
-  },
-  {
-    code: "G",
-    cls: "ch--gg",
-    name: "Google Search + Display",
-    note: "Election ads need advertiser verification for Kenya.",
-  },
-  {
-    code: "YT",
-    cls: "ch--yt",
-    name: "YouTube",
-    note: "Same verification as Google. Cut long video to 15s bumpers.",
-  },
-  {
-    code: "TT",
-    cls: "ch--tt",
-    name: "TikTok",
-    note: "Bans paid political ads. Contracted, disclosed creators instead.",
-  },
-];
+const TABS = [
+  { key: "send", label: "Message people" },
+  { key: "calls", label: "Auto-calls" },
+  { key: "ads", label: "Paid ads" },
+  { key: "creators", label: "Creators" },
+  { key: "sent", label: "Sent" },
+] as const;
+type Tab = (typeof TABS)[number]["key"];
 
 function Broadcast() {
   const fetchBroadcast = useServerFn(getBroadcast);
-  const { data } = useQuery({ queryKey: ["broadcast"], queryFn: () => fetchBroadcast() });
+  const { data, isError, refetch } = useQuery({
+    queryKey: ["broadcast"],
+    queryFn: () => fetchBroadcast(),
+  });
 
   const start = parseBroadcastSearch(Route.useSearch());
   const [support45, setSupport45] = useState(start.strong);
@@ -82,7 +70,14 @@ function Broadcast() {
   /** One ward: rally mode, addressed to it. */
   const ward = wardIds.length === 1 ? wardIds[0]! : "";
   const [lang, setLang] = useState<"sw" | "en">("sw");
-  const [composing, setComposing] = useState(false);
+  const [composing, setComposing] = useState<null | "sms" | "wa">(null);
+  const { tab = "send" } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const setTab = (t: Tab) =>
+    void navigate({
+      search: (s: BroadcastSearch & { tab?: Tab }) => ({ ...s, tab: t }),
+      replace: true,
+    });
   const { isPrincipal } = useAccess();
 
   const contacts = data?.contacts ?? [];
@@ -100,7 +95,6 @@ function Broadcast() {
       }),
     [contacts, wardIds, segs, support45, undecided],
   );
-  const reachable = useMemo(() => matched.filter((c) => c.sms && !c.optedOut), [matched]);
   const toggleSeg = (slug: string) =>
     setSegs((cur) => (cur.includes(slug) ? cur.filter((s) => s !== slug) : [...cur, slug]));
 
@@ -113,7 +107,20 @@ function Broadcast() {
             <h1>
               One message, <span className="serif">the right doors.</span>
             </h1>
-            <p className="meta">Loading audience…</p>
+            {isError ? (
+              <p className="meta" role="alert">
+                Couldn&apos;t load the audience.{" "}
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => void refetch()}
+                >
+                  Try again
+                </button>
+              </p>
+            ) : (
+              <p className="meta">Loading audience…</p>
+            )}
           </div>
         </div>
       </section>
@@ -122,8 +129,6 @@ function Broadcast() {
 
   const a = data.audience;
   const reach = matched.length;
-  const sendable = reachable.length;
-  const cost = sendable * data.smsRate;
   const wardName = data.wardList.find((w) => w.id === ward)?.name ?? null;
   const place = wardName ?? (wardIds.length > 1 ? `${wardIds.length} wards` : null);
   const segNames = data.segments.filter((s) => segs.includes(s.slug)).map((s) => s.name);
@@ -171,74 +176,93 @@ function Broadcast() {
       ]),
     );
 
+  const audience: BroadcastAudience = {
+    wardIds,
+    segments: segs,
+    support: [
+      ...(support45 ? (["strong"] as SupportBand[]) : []),
+      ...(undecided ? (["undecided"] as SupportBand[]) : []),
+    ],
+  };
+  const describe = [
+    segNames.length ? segNames.join(", ") : "Everyone",
+    place ? `in ${place}` : "in every ward",
+    support45 && undecided
+      ? "· strong and undecided supporters"
+      : support45
+        ? "· strong supporters"
+        : undecided
+          ? "· undecided"
+          : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const live = matched.filter((c) => !c.optedOut && !c.sample);
+  const samples = matched.filter((c) => c.sample).length;
+  const byChannel = {
+    sms: live.filter((c) => c.sms).length,
+    wa: live.filter((c) => c.whatsapp).length,
+    call: live.filter((c) => c.call).length,
+  };
+
   return (
-    <section className="view active" aria-label="Broadcast">
+    <section className="view active bc-page" aria-label="Broadcast">
       {composing && (
         <BroadcastComposer
-          audience={{
-            wardIds,
-            segments: segs,
-            support: [
-              ...(support45 ? (["strong"] as SupportBand[]) : []),
-              ...(undecided ? (["undecided"] as SupportBand[]) : []),
-            ],
-          }}
-          describe={[
-            segNames.length ? segNames.join(", ") : "Everyone",
-            place ? `in ${place}` : "in every ward",
-            support45 && undecided
-              ? "· strong and undecided supporters"
-              : support45
-                ? "· strong supporters"
-                : undecided
-                  ? "· undecided"
-                  : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
+          audience={audience}
+          describe={describe}
           initialBody={body}
           smsRate={data.smsRate}
-          onClose={() => setComposing(false)}
+          initialChannel={composing}
+          onClose={() => setComposing(null)}
         />
       )}
       <div className="vh fx">
         <div>
-          <span className="eyebrow">Comms · broadcast &amp; paid media</span>
+          <span className="eyebrow">Comms · broadcast &amp; ads</span>
           <h1>
             One message, <span className="serif">the right doors.</span>
           </h1>
           <p className="meta">
-            Build the audience once. Send by SMS and USSD; buy the rest with the same ward
-            targeting.
+            Choose who, then how: SMS, an approved WhatsApp message, or an auto-call in the
+            candidate&apos;s voice. Only people who agreed to that channel are reached.
           </p>
         </div>
         <div className="vh-side">
-          {isPrincipal && (
-            <button
-              className="btn btn--primary"
-              type="button"
-              disabled={sendable === 0}
-              title={sendable === 0 ? "Nobody in this audience has agreed to SMS" : undefined}
-              onClick={() => setComposing(true)}
-            >
-              Send to this audience…
-            </button>
-          )}
           <span className="syncline">
-            <span className="dot-live" aria-hidden="true" /> {nf.format(a.sms)} consented for SMS
+            <span className="dot-live" aria-hidden="true" /> {nf.format(a.sms)} SMS ·{" "}
+            {nf.format(a.whatsapp)} WhatsApp · {nf.format(a.call)} calls agreed
           </span>
         </div>
       </div>
 
-      <div className="g2 fx2">
-        <div className="card">
+      <div className="bc-tabbar" role="tablist" aria-label="Broadcast">
+        {TABS.map((t) => (
+          <button
+            type="button"
+            role="tab"
+            key={t.key}
+            aria-selected={tab === t.key}
+            className={`bc-tab${tab === t.key ? " is-on" : ""}`}
+            onClick={() => setTab(t.key)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {(tab === "send" || tab === "calls") && (
+        <div className="card bc-who">
           <div className="card-head">
-            <h2>Audience</h2>
-            <span className="mono">{nf.format(sendable)} reachable</span>
-          </div>
-          <div className="stack" style={{ gap: 12 }}>
             <div>
-              <span className="kpi-lbl">Who · support</span>
+              <h2>Who</h2>
+              <p className="meta">{describe}</p>
+            </div>
+            <span className="mono">{nf.format(reach)} people match</span>
+          </div>
+          <div className="bc-filters">
+            <div>
+              <span className="kpi-lbl">Support</span>
               <div className="fchips" style={{ marginTop: 6 }}>
                 <button
                   type="button"
@@ -246,7 +270,7 @@ function Broadcast() {
                   aria-pressed={support45}
                   onClick={() => setSupport45((v) => !v)}
                 >
-                  Strong support 70+ · {nf.format(a.support45)}
+                  Strong 70+ · {nf.format(a.support45)}
                 </button>
                 <button
                   type="button"
@@ -259,7 +283,7 @@ function Broadcast() {
               </div>
             </div>
             <div>
-              <span className="kpi-lbl">Groups · boda, matatu, market and the rest</span>
+              <span className="kpi-lbl">Groups</span>
               <div className="fchips" style={{ marginTop: 6 }}>
                 {data.segments.map((s) => {
                   const count = contacts.filter((c) => c.segment === s.slug).length;
@@ -277,13 +301,13 @@ function Broadcast() {
                 })}
                 {segs.length ? (
                   <button type="button" className="fchip" onClick={() => setSegs([])}>
-                    Clear groups
+                    Clear
                   </button>
                 ) : null}
               </div>
             </div>
             <div>
-              <span className="kpi-lbl">Where · pick a ward for a rally</span>
+              <span className="kpi-lbl">Where</span>
               <div className="pbar" style={{ marginTop: 6 }}>
                 <select
                   value={wardIds.length > 1 ? "many" : ward}
@@ -291,52 +315,21 @@ function Broadcast() {
                     setWardIds(e.target.value && e.target.value !== "many" ? [e.target.value] : [])
                   }
                   aria-label="Ward"
-                  style={{ minWidth: 220 }}
                 >
-                  <option value="">Everywhere · all wards</option>
+                  <option value="">Every ward</option>
                   {wardIds.length > 1 ? (
                     <option value="many">These {wardIds.length} wards, from Voters</option>
                   ) : null}
                   {data.wardList.map((w) => (
                     <option value={w.id} key={w.id}>
-                      {w.name} · {w.constituency} · {nf.format(w.consented)} consented
+                      {w.name} · {w.constituency}
                     </option>
                   ))}
                 </select>
-                {wardIds.length ? (
-                  <button type="button" className="fchip" onClick={() => setWardIds([])}>
-                    {wardIds.length > 1 ? "Clear wards" : "Clear ward"}
-                  </button>
-                ) : null}
               </div>
-              {wardName ? (
-                <p className="f-note" style={{ marginTop: 6 }}>
-                  Rally mode · the message below is addressed to {wardName}
-                  {segNames.length ? ` and limited to ${segNames.join(", ")}` : ""}.
-                </p>
-              ) : null}
             </div>
           </div>
-
-          <div className="funnel" style={{ marginTop: 16 }}>
-            <div className="funnel-row">
-              <span>People on file</span>
-              <b className="stat">{nf.format(a.total)}</b>
-            </div>
-            <div className="funnel-row">
-              <span>Matching the filters</span>
-              <b className="stat">{nf.format(reach)}</b>
-            </div>
-            <div className="funnel-row">
-              <span>Consented for SMS · will receive</span>
-              <b className="stat">{nf.format(sendable)}</b>
-            </div>
-            <div className="funnel-row">
-              <span>Opted out · excluded</span>
-              <b className="stat">{nf.format(matched.filter((c) => c.optedOut).length)}</b>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+          <div className="bc-foot">
             <button
               type="button"
               className="btn btn--ghost btn--sm"
@@ -345,17 +338,27 @@ function Broadcast() {
             >
               Download this list · CSV
             </button>
+            <span className="f-note">
+              {nf.format(matched.filter((c) => c.optedOut).length)} opted out, left out of every
+              send.
+              {samples
+                ? ` ${nf.format(samples)} sample contacts are shown but never messaged or called.`
+                : ""}
+            </span>
           </div>
-          <p className="f-note">
-            Consent is checked per person, per channel, per purpose. Anyone outside it drops out of
-            the send.
-          </p>
         </div>
+      )}
 
-        <div className="card">
-          <div className="card-head">
-            <h2>Message</h2>
-            <div className="seg" role="group" aria-label="Language">
+      {tab === "send" && (
+        <div className="bc-channels">
+          <article className="card bc-channel">
+            <span className="eyebrow">SMS</span>
+            <b className="stat">{nf.format(byChannel.sms)}</b>
+            <p className="meta">
+              agreed to SMS · about KES {nf.format(Math.round(byChannel.sms * data.smsRate))} for
+              one text
+            </p>
+            <div className="seg" role="group" aria-label="Starting text">
               <button type="button" aria-pressed={lang === "sw"} onClick={() => setLang("sw")}>
                 Kiswahili
               </button>
@@ -363,99 +366,102 @@ function Broadcast() {
                 English
               </button>
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-start" }}>
-            <div className="preview-phone" style={{ flex: 1, minWidth: 220 }}>
-              <div className="from">SMS · GROUNDWORK · 1 of 1 · {body.length} chars</div>
-              <div className="bubble">{body}</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div className="f-rows" style={{ marginTop: 0 }}>
-                <div className="f-row">
-                  <span>SMS · consented</span>
-                  <b className="stat">{nf.format(a.sms)}</b>
-                </div>
-                <div className="f-row">
-                  <span>WhatsApp · consented</span>
-                  <b className="stat">{nf.format(a.whatsapp)}</b>
-                </div>
-                <div className="f-row">
-                  <span>Calls · consented</span>
-                  <b className="stat">{nf.format(a.call)}</b>
-                </div>
-                <div className="f-row">
-                  <span>Est. cost · SMS at KES {data.smsRate.toFixed(2)}</span>
-                  <b className="stat">KES {nf.format(Math.round(cost))}</b>
-                </div>
-                <div className="f-row">
-                  <span>Opt-out line</span>
-                  <span className="mono">STOP to 22xxx</span>
-                </div>
-              </div>
-              <p className="f-note">Every send posts to Finance as comms, with its receipt.</p>
-            </div>
-          </div>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              disabled={!isPrincipal || byChannel.sms === 0}
+              onClick={() => setComposing("sms")}
+            >
+              Write an SMS
+            </button>
+          </article>
+          <article className="card bc-channel">
+            <span className="eyebrow">WhatsApp</span>
+            <b className="stat">{nf.format(byChannel.wa)}</b>
+            <p className="meta">
+              agreed to WhatsApp · Meta-approved messages, with a picture if you like
+            </p>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              disabled={!isPrincipal || byChannel.wa === 0}
+              onClick={() => setComposing("wa")}
+            >
+              Choose a WhatsApp message
+            </button>
+          </article>
+          <article className="card bc-channel">
+            <span className="eyebrow">Auto-call</span>
+            <b className="stat">{nf.format(byChannel.call)}</b>
+            <p className="meta">
+              agreed to calls · a recorded message in the candidate&apos;s voice
+            </p>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              disabled={byChannel.call === 0}
+              onClick={() => setTab("calls")}
+            >
+              Make an auto-call
+            </button>
+          </article>
+          {!isPrincipal && (
+            <p className="f-note">Only the candidate and managers send to an audience.</p>
+          )}
         </div>
-      </div>
+      )}
 
-      <div className="card fx3" style={{ marginTop: 14 }}>
-        <div className="card-head">
-          <h2>Paid media · same audience, bought</h2>
-          <span className="mono">ward-level geo · disclosed sponsor</span>
-        </div>
-        <div className="g4">
-          {PAID.map((p) => (
-            <div className="conn-item" key={p.code}>
-              <span className={`ch ${p.cls}`}>{p.code}</span>
-              <b>{p.name}</b>
-              <p>{p.note}</p>
-              <span className="pill pill--amber">
-                <span className="g" aria-hidden="true">
-                  ◐
-                </span>{" "}
-                Verify before launch
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {tab === "calls" && <AutoCalls audience={audience} describe={describe} />}
+      {tab === "ads" && <PaidMedia wards={data.wardList} canBook={isPrincipal} />}
+      {tab === "creators" && <Creators canBrief={isPrincipal} />}
 
-      <div className="card fx4" style={{ marginTop: 14 }}>
-        <div className="card-head">
-          <h2>Campaigns sent</h2>
-          <span className="mono">from the live message log</span>
+      {tab === "sent" && (
+        <div className="card" style={{ marginTop: 14 }}>
+          <div className="card-head">
+            <h2>Sent</h2>
+            <span className="mono">from the message log</span>
+          </div>
+          {data.campaigns.length === 0 ? (
+            <p className="f-note">Nothing sent yet.</p>
+          ) : (
+            <div className="tblwrap">
+              <table className="tbl camp-tbl">
+                <thead>
+                  <tr>
+                    <th>Message</th>
+                    <th>Channel</th>
+                    <th style={{ textAlign: "right" }}>Sent</th>
+                    <th style={{ textAlign: "right" }}>Delivered</th>
+                    <th style={{ textAlign: "right" }}>Failed</th>
+                    <th style={{ textAlign: "right" }}>Cost · KES</th>
+                    <th>Last</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.campaigns.map((c) => (
+                    <tr key={c.key}>
+                      <td>{c.body.slice(0, 72)}…</td>
+                      <td>
+                        <span className={`ch ch--${c.channel === "whatsapp" ? "wa" : "sms"}`}>
+                          {c.channel === "whatsapp" ? "WhatsApp" : c.channel.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="num">{nf.format(c.sent)}</td>
+                      <td className="num">{nf.format(c.delivered)}</td>
+                      <td className="num">{c.failed ? nf.format(c.failed) : "—"}</td>
+                      <td className="num">{nf.format(Math.round(c.cost))}</td>
+                      <td className="meta">{stamp(c.last)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="f-note">
+            Auto-calls are listed under Auto-calls, with every call&apos;s outcome.
+          </p>
         </div>
-        <div className="tblwrap">
-          <table className="tbl camp-tbl">
-            <thead>
-              <tr>
-                <th>Campaign</th>
-                <th>Channel</th>
-                <th style={{ textAlign: "right" }}>Sent</th>
-                <th style={{ textAlign: "right" }}>Delivered</th>
-                <th style={{ textAlign: "right" }}>Failed</th>
-                <th style={{ textAlign: "right" }}>Cost · KES</th>
-                <th>Last</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.campaigns.map((c) => (
-                <tr key={c.key}>
-                  <td>{c.body.slice(0, 72)}…</td>
-                  <td>
-                    <span className="ch ch--sms">{c.channel.toUpperCase()}</span>
-                  </td>
-                  <td className="num">{nf.format(c.sent)}</td>
-                  <td className="num">{nf.format(c.delivered)}</td>
-                  <td className="num">{c.failed ? nf.format(c.failed) : "—"}</td>
-                  <td className="num">{nf.format(Math.round(c.cost))}</td>
-                  <td className="meta">{stamp(c.last)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      )}
     </section>
   );
 }

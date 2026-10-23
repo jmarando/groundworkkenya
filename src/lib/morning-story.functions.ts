@@ -9,9 +9,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database, Json } from "@/integrations/supabase/types";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import {
   cleanTeamStory,
+  hasNews,
+  homeStory,
   storyFromRow,
   type MorningStory,
   type StoryView,
@@ -48,6 +50,29 @@ export async function loadStory(sb: Sb, day: string): Promise<StoryView | null> 
   }
   return storyFromRow(data, editor);
 }
+
+/**
+ * Home's story: today's when it has news, else the last week's latest that
+ * had, so the morning is never blank while today's is still to come.
+ */
+export async function loadHomeStory(sb: Sb, day: string): Promise<StoryView | null> {
+  const today = await loadStory(sb, day);
+  if (today && hasNews(today)) return today;
+  const { data } = await sb
+    .from("morning_stories")
+    .select("day, story, written_by, created_at, edited_at")
+    .lt("day", day)
+    .gte("day", addDays(day, -7))
+    .order("day", { ascending: false })
+    .limit(7);
+  const earlier = (data ?? [])
+    .map((r) => storyFromRow(r, null))
+    .filter((v): v is StoryView => v !== null);
+  return homeStory(today, earlier);
+}
+
+const addDays = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
 
 /** Save `story` as the team's for `day`: over the morning's, or as the first. */
 export async function saveStoryAs(
@@ -112,7 +137,7 @@ export async function reviseAround(
   ]);
   const { data: c } = await sb
     .from("campaigns")
-    .select("id, name, candidate, seat")
+    .select("id, name, candidate, seat, map_area")
     .eq("id", String(campaignId ?? ""))
     .maybeSingle();
   if (!c) throw new Error("Could not find the campaign.");

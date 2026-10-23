@@ -7,7 +7,7 @@
 import { parseCSV } from "@/lib/csv";
 
 export const ATLAS_ELECTIONS = ["2013", "2017", "2022"].flatMap((y) =>
-  ["president", "governor", "mp"].map((r) => `${y}-${r}`),
+  ["president", "governor", "mp", "mca"].map((r) => `${y}-${r}`),
 );
 const LEVELS = ["country", "county", "constituency", "ward"] as const;
 export type Level = (typeof LEVELS)[number];
@@ -15,6 +15,7 @@ const SEAT_LEVEL: Record<string, Level> = {
   president: "country",
   governor: "county",
   mp: "constituency",
+  mca: "ward",
 };
 const KEY_SHAPE: Record<Level, RegExp> = {
   country: /^[a-z0-9-]+$/,
@@ -478,12 +479,12 @@ export function checkAtlas(
     else if (!slugify(c.name)) out.push(`${where}: the name has no letters an id can be made from`);
     length(where, "name", c.name, 2, 120);
     length(where, "party", c.party, 1, 120);
-    // An independent is a bloc of their own; in an MP race the bloc is the party, since
+    // An independent is a bloc of their own; in an MP or MCA race the bloc is the party, since
     // coalition partners stood against each other; otherwise the coalition file's, else the party.
     const want =
       !c.party || /^independent$/i.test(c.party)
         ? `Independent: ${c.name}`
-        : race === "mp"
+        : race === "mp" || race === "mca"
           ? c.party
           : (blocOf.get(`${c.election.slice(0, 4)}|${c.party}`) ?? c.party);
     if (!c.bloc) out.push(`${where}: needs a bloc`);

@@ -7,7 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { nairobiToday } from "@/lib/demo/insights";
+import { nairobiToday } from "@/lib/nairobi-date";
 import {
   byTime,
   cleanEntry,
@@ -119,4 +119,28 @@ export const removeDiaryEntry = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await removeEntry(context.supabase, data.id);
     return { ok: true };
+  });
+
+/** The caller's private calendar link token (made on first ask); `reset` makes a new one. */
+export const getCalendarFeed = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { reset?: boolean } | undefined) => ({ reset: input?.reset === true }))
+  .handler(async ({ data, context }) => {
+    const { data: token, error } = await (
+      context.supabase as unknown as {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => PromiseLike<{
+          data: unknown;
+          error: { code?: string; message: string } | null;
+        }>;
+      }
+    ).rpc("my_calendar_feed", { _reset: data.reset });
+    if (error)
+      throw new Error(
+        error.code === "42501" ? error.message : "Could not make your calendar link.",
+      );
+    if (typeof token !== "string") throw new Error("Could not make your calendar link.");
+    return { token };
   });

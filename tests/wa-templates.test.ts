@@ -2,11 +2,27 @@ import { strict as assert } from "node:assert";
 import { validateWaTemplate, WA_POLL_TEMPLATES, fillTemplate } from "@/lib/wa-templates";
 assert.equal(WA_POLL_TEMPLATES.length, 2);
 assert.throws(() => validateWaTemplate({ template: "unknown", fields: [] }));
-assert.throws(() => validateWaTemplate({ template: "rally_invitation_v2", fields: ["Today", "Grounds"] }, true));
-assert.throws(() => validateWaTemplate({ template: "poll_invitation_img", fields: ["https://groundwork.ke/p/test"] }, true));
+assert.throws(() =>
+  validateWaTemplate({ template: "rally_invitation_v2", fields: ["Today", "Grounds"] }, true),
+);
+assert.throws(() =>
+  validateWaTemplate(
+    { template: "poll_invitation_img", fields: ["https://groundwork.ke/p/test"] },
+    true,
+  ),
+);
 assert.throws(() => validateWaTemplate({ template: "rally_invitation_v2", fields: ["Today"] }));
-assert.throws(() => validateWaTemplate({ template: "poll_invitation_v2", fields: ["x".repeat(201)] }));
-const wa = validateWaTemplate({ template: "poll_invitation_img", fields: [" https://groundwork.ke/p/test "], imageUrl: "https://groundwork.ke/picture.jpg" }, true);
+assert.throws(() =>
+  validateWaTemplate({ template: "poll_invitation_v2", fields: ["x".repeat(201)] }),
+);
+const wa = validateWaTemplate(
+  {
+    template: "poll_invitation_img",
+    fields: [" https://groundwork.ke/p/test "],
+    imageUrl: "https://groundwork.ke/picture.jpg",
+  },
+  true,
+);
 assert.equal(wa.fields[0], "https://groundwork.ke/p/test");
 assert.equal(wa.imageUrl, "https://groundwork.ke/picture.jpg");
 assert.ok(fillTemplate(wa.t.text, ["Mary", "Campaign", wa.fields[0] ?? ""]).includes("Hello Mary"));

@@ -10,74 +10,26 @@ import { useAccess } from "@/hooks/useAccess";
 import { useSignOut } from "@/hooks/useSignOut";
 import { CampaignSwitcher } from "./CampaignSwitcher";
 import { canOpen } from "@/lib/access";
-
-type NavItem = {
-  to: string;
-  label: string;
-  faint?: string;
-  principalOnly?: boolean;
-  adminOnly?: boolean;
-  superOnly?: boolean;
-};
-
-const GROUPS: { title: string; items: NavItem[]; inert?: NavItem[] }[] = [
-  {
-    title: "Operate",
-    items: [
-      { to: "/home", label: "Home" },
-      { to: "/diary", label: "Diary & news" },
-      { to: "/voters", label: "Voters", faint: "MAP" },
-      { to: "/elections", label: "Elections", faint: "ATLAS" },
-      { to: "/strategy", label: "Strategy", faint: "SO WHAT" },
-      { to: "/polling", label: "Polling", faint: "LIVE" },
-      { to: "/agents", label: "Agents & stipends", faint: "§3.4" },
-    ],
-  },
-  {
-    title: "Comms",
-    items: [
-      { to: "/inbox", label: "Inbox" },
-      { to: "/broadcast", label: "Broadcast & ads" },
-      { to: "/website", label: "Website", faint: "PUBLIC" },
-      { to: "/listening", label: "Social & listening", faint: "LIVE" },
-    ],
-  },
-  {
-    title: "Money",
-    items: [{ to: "/finance", label: "Finance", principalOnly: true }],
-    inert: [{ to: "#", label: "Disclosure", faint: "§9.4" }],
-  },
-  {
-    title: "Election day",
-    items: [
-      { to: "/warroom", label: "War room" },
-      { to: "/field", label: "Field app" },
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { to: "/team", label: "Team", faint: "ACCESS", adminOnly: true },
-      { to: "/campaigns", label: "Campaigns", faint: "SUPER", superOnly: true },
-    ],
-  },
-];
+import { isCurrent, MENU, sectionOf, type MenuItem } from "@/lib/sections";
 
 export function ConsoleShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const { isPrincipal, isAdmin, isSuper, campaign, access } = useAccess();
-  const visible = (items: NavItem[]) =>
-    items.filter(
-      (i) =>
-        (!i.principalOnly || isPrincipal) &&
-        (!i.adminOnly || isAdmin) &&
-        (!i.superOnly || isSuper) &&
-        canOpen(access?.role ?? null, i.to),
-    );
-  const groups = GROUPS.map((g) => ({ ...g, items: visible(g.items) })).filter(
-    (g) => g.items.length > 0,
-  );
+  const role = access?.role ?? null;
+  /** A section shows the tabs its reader may open, and opens on the first of them. */
+  const allowed = (i: MenuItem): MenuItem | null => {
+    if ((i.principalOnly && !isPrincipal) || (i.adminOnly && !isAdmin) || (i.superOnly && !isSuper))
+      return null;
+    if (!i.tabs) return canOpen(role, i.to) ? i : null;
+    const tabs = i.tabs.filter((t) => canOpen(role, t.to));
+    return tabs.length ? { ...i, to: tabs[0]!.to, tabs } : null;
+  };
+  const groups = MENU.map((g) => ({
+    ...g,
+    items: g.items.flatMap((i) => allowed(i) ?? []),
+  })).filter((g) => g.items.length > 0);
+  const section = sectionOf(pathname, groups);
   const signOut = useSignOut();
 
   useEffect(() => setMenuOpen(false), [pathname]);
@@ -114,10 +66,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
               </div>
               {group.items.map((item) => (
                 <Link
-                  key={item.to}
+                  key={item.label}
                   to={item.to}
                   className="sb-item"
-                  activeProps={{ "aria-current": "page" }}
+                  aria-current={isCurrent(item, pathname) ? "page" : undefined}
                 >
                   {item.label}
                   {item.faint ? (
@@ -127,11 +79,6 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                     </>
                   ) : null}
                 </Link>
-              ))}
-              {group.inert?.map((item) => (
-                <button key={item.label} className="sb-item" data-inert type="button">
-                  {item.label} <span className="faint">{item.faint}</span>
-                </button>
               ))}
             </div>
           ))}
@@ -190,10 +137,10 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
                   <div className="mobile-menu-heading">{group.title}</div>
                   {group.items.map((item) => (
                     <Link
-                      key={item.to}
+                      key={item.label}
                       to={item.to}
                       className="mobile-menu-item"
-                      activeProps={{ "aria-current": "page" }}
+                      aria-current={isCurrent(item, pathname) ? "page" : undefined}
                       onClick={() => setMenuOpen(false)}
                     >
                       <span>{item.label}</span>
@@ -218,6 +165,21 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
         )}
         <div className="wrap">
           <OfflineBar />
+          {section?.tabs && section.tabs.length > 1 && (
+            <nav className="sec-tabs" aria-label={section.label}>
+              <span className="eyebrow sec-tabs-name">{section.label}</span>
+              {section.tabs.map((t) => (
+                <Link
+                  key={t.to}
+                  to={t.to}
+                  className="sec-tab"
+                  aria-current={isCurrent({ ...t }, pathname) ? "page" : undefined}
+                >
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
+          )}
           {children}
         </div>
       </div>

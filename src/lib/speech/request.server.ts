@@ -31,7 +31,12 @@ export function speechBody(config: SpeechConfig, text: string, download = false)
   }
 }
 
-export async function requestSpeech(config: SpeechConfig, text: string, download = false, signal?: AbortSignal) {
+export async function requestSpeech(
+  config: SpeechConfig,
+  text: string,
+  download = false,
+  signal?: AbortSignal,
+) {
   return fetch(`${config.baseURL}/v1/audio/speech`, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },

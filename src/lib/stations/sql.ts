@@ -62,6 +62,20 @@ on conflict (campaign_id, iebc_code) where iebc_code is not null do nothing;
 
 /** The whole migration: a check that no code the register needs is taken, each area, a count, the version. */
 export function stationsSql(areas: StationsArea[]): string {
+  return `${stationsBody(areas)}
+create or replace function public.groundwork_schema_version()
+returns integer
+language sql
+immutable
+as $$ select 27 $$;
+
+revoke all on function public.groundwork_schema_version() from public, anon, authenticated;
+grant execute on function public.groundwork_schema_version() to service_role;
+`;
+}
+
+/** The check, each area and the count, with no schema version: for areas added later too. */
+function stationsBody(areas: StationsArea[]): string {
   const keys = areas.map((a) => q(a.mapArea)).join(", ");
   const want = areas.map((a) => `(${q(a.mapArea)}, ${a.centres.length})`).join(", ");
   return `-- A station with no IEBC code holding a code the register needs would be lost: stop instead.
@@ -90,15 +104,6 @@ begin
     raise exception 'The centres did not all load: %', short;
   end if;
 end $$;
-
-create or replace function public.groundwork_schema_version()
-returns integer
-language sql
-immutable
-as $$ select 27 $$;
-
-revoke all on function public.groundwork_schema_version() from public, anon, authenticated;
-grant execute on function public.groundwork_schema_version() to service_role;
 `;
 }
 
@@ -109,3 +114,11 @@ export const stationsMigration = (areas: StationsArea[]): string =>
   "-- positions OpenStreetMap's schools gave (© OpenStreetMap contributors, ODbL). Safe to run again.\n" +
   "-- Written by scripts/stations/build-sql.ts: change the CSV files and run it again, not this file.\n\n" +
   stationsSql(areas);
+
+/** A later migration's file, for areas added to data/stations after schema 27: no schema change. */
+export const stationsAddition = (areas: StationsArea[]): string =>
+  `-- The polling centres of IEBC's 2022 register for ${areas.map((a) => a.mapArea).join(" and ")}, from\n` +
+  "-- data/stations, with the positions OpenStreetMap's schools gave (© OpenStreetMap contributors,\n" +
+  "-- ODbL), and each ward's registered voters. Safe to run again. No schema change.\n" +
+  "-- Written by scripts/stations/build-sql.ts: change the CSV files and run it again, not this file.\n\n" +
+  stationsBody(areas);

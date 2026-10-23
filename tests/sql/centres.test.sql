@@ -230,9 +230,27 @@ begin;
 \ir ../../supabase/migrations/20261015090100_polling_centres_data.sql
 do $$
 begin
-  assert (select count(*) from public.polling_stations where iebc_code is not null) = 378 + 378 + 109;
+  assert (select count(*) from public.polling_stations s join public.campaigns c on c.id = s.campaign_id
+           where s.iebc_code is not null and c.slug in ('kalonzo', 'sakaja', 'mathira')) = 378 + 378 + 109;
   assert (select count(*) from public.polling_stations s join public.campaigns c on c.id = s.campaign_id
            where c.slug = 'sakaja') = 378;
   assert public.groundwork_schema_version() = 27;
+end $$;
+rollback;
+
+-- test: the centres added later (Roysambu, Githunguri, Athwana) load once, however often run
+begin;
+\ir ../../supabase/migrations/20261019090000_ward_and_githunguri_campaigns.sql
+\ir ../../supabase/migrations/20261019090300_polling_centres_githunguri_athwana.sql
+do $$
+begin
+  assert (select count(*) from public.polling_stations s join public.campaigns c on c.id = s.campaign_id
+           where c.slug = 'roysambu') = 5;
+  assert (select count(*) from public.polling_stations s join public.campaigns c on c.id = s.campaign_id
+           where c.slug = 'githunguri') = 63;
+  assert (select sum(registered_voters) from public.wards w join public.campaigns c on c.id = w.campaign_id
+           where c.slug = 'githunguri') = 104592;
+  assert (select count(*) from public.polling_stations s join public.campaigns c on c.id = s.campaign_id
+           where c.slug = 'athwana') = 14;
 end $$;
 rollback;

@@ -43,8 +43,9 @@ export function readPositions(area: StationArea): CentrePosition[] {
 }
 
 /** Every area's centres, positions and ward boxes, as the migration is written from them. */
-export const stationAreasData = (): StationsArea[] =>
-  STATION_AREAS.map((a) => ({
+/** The areas a migration loads: schema 27's own (no name), or a later one's by file name. */
+export const stationAreasData = (migration?: string): StationsArea[] =>
+  STATION_AREAS.filter((a) => a.migration === migration).map((a) => ({
     mapArea: a.mapArea,
     centres: readCentres(a),
     positions: readPositions(a),

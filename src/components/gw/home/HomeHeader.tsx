@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { LoaderCircle, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBriefingSpeech } from "@/hooks/useBriefingSpeech";
@@ -45,6 +46,9 @@ export function HomeHeader({
             {longDate(today)} · <b>{days}</b> days to the election
           </p>
           {verdict ? <p className="home-verdict">{verdict}</p> : null}
+          <Link to="/plan" className="btn btn--primary btn--sm" style={{ marginTop: 10 }}>
+            The next two weeks →
+          </Link>
         </div>
         <div className="flex max-w-72 flex-col items-start gap-2">
           <Button
@@ -56,11 +60,25 @@ export function HomeHeader({
             onClick={() => (on ? speech.stop() : void speech.play(script))}
           >
             <span className="mb-listen-icon" aria-hidden="true">
-              {speech.state === "loading" ? <LoaderCircle className="animate-spin motion-reduce:animate-none" /> : on ? <Square /> : <Play />}
+              {speech.state === "loading" ? (
+                <LoaderCircle className="animate-spin motion-reduce:animate-none" />
+              ) : on ? (
+                <Square />
+              ) : (
+                <Play />
+              )}
             </span>
-            {speech.state === "loading" ? "Preparing · Stop" : on ? "Stop reading" : `Listen · ${minutes} min`}
+            {speech.state === "loading"
+              ? "Preparing · Stop"
+              : on
+                ? "Stop reading"
+                : `Listen · ${minutes} min`}
           </Button>
-          {speech.error && <p role="alert" className="text-sm text-destructive">{speech.error}</p>}
+          {speech.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {speech.error}
+            </p>
+          )}
         </div>
       </div>
     </header>

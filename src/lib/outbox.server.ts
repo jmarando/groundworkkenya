@@ -15,7 +15,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database, Json } from "@/integrations/supabase/types";
-import { phoneKey, sendSmsBatch, type AtBatchResult } from "@/lib/at.server";
+import {
+  AIRTIME_MAX_KES,
+  AIRTIME_MIN_KES,
+  atConfigured,
+  phoneKey,
+  sendAirtime,
+  sendSmsBatch,
+  type AtBatchResult,
+} from "@/lib/at.server";
 import { sendSmsBatchTwilio, twilioConfigured } from "@/lib/twilio.server";
 
 type Sb = SupabaseClient<Database>;
@@ -113,8 +121,35 @@ export function smsDailyCap(): number {
 const NO_PROVIDER: Record<string, string> = {
   wa: "WhatsApp broadcasts need an approved message template, which is not set up yet.",
   airtime: "No airtime provider is connected yet.",
-  mpesa: "No M-Pesa provider is connected yet.",
+  mpesa: "M-Pesa thank-yous are not offered; nothing was sent.",
 };
+
+/**
+ * Most airtime the outbox will send per day (Nairobi time), in shillings, from
+ * AIRTIME_DAILY_CAP_KES: a mistaken poll can cost no more than this.
+ */
+export const DEFAULT_AIRTIME_DAILY_CAP_KES = 1000;
+
+export function airtimeDailyCap(): number {
+  const n = Number(process.env["AIRTIME_DAILY_CAP_KES"]);
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_AIRTIME_DAILY_CAP_KES;
+}
+
+/** Airtime numbers per Africa's Talking request. */
+const AIRTIME_PER_REQUEST = 20;
+
+/** An airtime message's amount (its body), when it is one Africa's Talking will send. */
+export function airtimeAmount(body: string): number | null {
+  const n = Number(body.trim());
+  return Number.isInteger(n) && n >= AIRTIME_MIN_KES && n <= AIRTIME_MAX_KES ? n : null;
+}
+
+/** Midnight in Nairobi (UTC+3, no daylight saving) at the start of today, as an ISO time. */
+function nairobiMidnight(now = new Date()): string {
+  const local = new Date(now.getTime() + 3 * 3600_000);
+  local.setUTCHours(0, 0, 0, 0);
+  return new Date(local.getTime() - 3 * 3600_000).toISOString();
+}
 
 export type SmsBatch = { body: string; items: (Claimed & { key: string })[] };
 
@@ -223,15 +258,21 @@ export async function processOutbox(
   if (!claim || !claimed.length) return out;
 
   // Nothing to hand these to, so nothing was sent.
+  const airtimeLive = atConfigured();
+  const sendable = (m: Claimed) =>
+    Boolean(phoneKey(m.phone)) &&
+    (m.channel === "sms" ||
+      (m.channel === "airtime" && airtimeLive && airtimeAmount(m.body) !== null));
   const unsendable: Recorded[] = claimed
-    .filter((m) => m.channel !== "sms" || !phoneKey(m.phone))
+    .filter((m) => !sendable(m))
     .map((m) => ({
       id: m.id,
       ok: false,
-      error:
-        m.channel !== "sms"
-          ? (NO_PROVIDER[m.channel] ?? `No ${m.channel} provider is connected yet.`)
-          : "There is no phone number on this message.",
+      error: !phoneKey(m.phone)
+        ? "There is no phone number on this message."
+        : m.channel === "airtime" && airtimeLive
+          ? `Airtime of KES ${m.body} can't be sent: Africa's Talking sends ${AIRTIME_MIN_KES} to ${AIRTIME_MAX_KES} whole shillings.`
+          : (NO_PROVIDER[m.channel] ?? `No ${m.channel} provider is connected yet.`),
     }));
   await record(admin, claim, unsendable);
   out.failed += unsendable.length;
@@ -286,6 +327,57 @@ export async function processOutbox(
     // sender name) will meet the next request too. Stop, and leave the rest
     // queued for a later run. A bad number only fails its own text.
     if (reply.kind !== "answered" || reply.recipients.some((x) => x.accountWide)) stopped = true;
+  }
+
+  // Poll thank-you airtime, within the day's cap; what doesn't fit waits for tomorrow's room.
+  const airtime = claimed.filter((m) => m.channel === "airtime" && sendable(m));
+  if (airtime.length) {
+    const { data: spentRows } = await admin
+      .from("messages")
+      .select("cost_kes")
+      .eq("channel", "airtime")
+      .in("status", ["sent", "delivered"])
+      .gte("sent_at", nairobiMidnight());
+    let room =
+      airtimeDailyCap() - (spentRows ?? []).reduce((t, r) => t + Number(r.cost_kes ?? 0), 0);
+    const fits: (Claimed & { key: string; amount: number })[] = [];
+    for (const m of airtime) {
+      const amount = airtimeAmount(m.body)!;
+      if (stopped || amount > room || Date.now() - started > budgetMs) leftover.push(m.id);
+      else {
+        room -= amount;
+        fits.push({ ...m, key: phoneKey(m.phone), amount });
+      }
+    }
+    for (let i = 0; i < fits.length; i += AIRTIME_PER_REQUEST) {
+      const chunk = fits.slice(i, i + AIRTIME_PER_REQUEST);
+      if (stopped) {
+        leftover.push(...chunk.map((m) => m.id));
+        continue;
+      }
+      const { data: moved, error: markError } = await admin.rpc("outbox_mark_submitting", {
+        _claim: claim,
+        _ids: chunk.map((m) => m.id),
+      });
+      if (markError) {
+        console.error(`Could not mark airtime as submitting: ${markError.message}`);
+        stopped = true;
+        leftover.push(...chunk.map((m) => m.id));
+        continue;
+      }
+      const mine = new Set(moved ?? []);
+      const items = chunk.filter((m) => mine.has(m.id));
+      if (!items.length) continue;
+      const reply = await sendAirtime(items.map((m) => ({ phone: m.key, amountKes: m.amount })));
+      const rows = outcomesFor(items, reply);
+      await record(admin, claim, rows);
+      for (const row of rows) {
+        if (row.ok) out.sent++;
+        else if (row.error?.startsWith("Outcome unknown")) out.unknown++;
+        else out.failed++;
+      }
+      if (reply.kind !== "answered" || reply.recipients.some((x) => x.accountWide)) stopped = true;
+    }
   }
 
   if (leftover.length) {

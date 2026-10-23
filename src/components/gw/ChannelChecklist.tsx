@@ -3,9 +3,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { listChannels, saveChannel, type Channel, type ChannelKind } from "@/lib/campaigns.functions";
+import {
+  listChannels,
+  saveChannel,
+  type Channel,
+  type ChannelKind,
+} from "@/lib/campaigns.functions";
 
-const GUIDE: Record<ChannelKind, { name: string; field: string; placeholder: string; steps: (slug: string) => string[] }> = {
+const GUIDE: Record<
+  ChannelKind,
+  { name: string; field: string; placeholder: string; steps: (slug: string) => string[] }
+> = {
   whatsapp: {
     name: "WhatsApp",
     field: "Phone number",
@@ -78,7 +86,11 @@ export function ChannelChecklist({ campaignId, slug }: { campaignId: string; slu
   const save = useServerFn(saveChannel);
   const qc = useQueryClient();
   const [editing, setEditing] = useState<ChannelKind | null>(null);
-  const [form, setForm] = useState({ identifier: "", display: "", status: "pending" as Channel["status"] });
+  const [form, setForm] = useState({
+    identifier: "",
+    display: "",
+    status: "pending" as Channel["status"],
+  });
 
   const { data } = useQuery({
     queryKey: ["channels", campaignId],
@@ -110,7 +122,8 @@ export function ChannelChecklist({ campaignId, slug }: { campaignId: string; slu
             <li key={c.kind} className="team-row chk-row">
               <div className="team-who">
                 <b>
-                  {g.name} <span className={`chk-status chk-status--${c.status}`}>{STATUS[c.status]}</span>
+                  {g.name}{" "}
+                  <span className={`chk-status chk-status--${c.status}`}>{STATUS[c.status]}</span>
                 </b>
                 <span className="mono">{c.display || c.identifier || "—"}</span>
                 {editing === c.kind && (
@@ -142,7 +155,9 @@ export function ChannelChecklist({ campaignId, slug }: { campaignId: string; slu
                       <select
                         className="team-select"
                         value={form.status}
-                        onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as Channel["status"] }))}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, status: e.target.value as Channel["status"] }))
+                        }
                       >
                         {Object.entries(STATUS).map(([k, v]) => (
                           <option key={k} value={k}>
@@ -152,10 +167,19 @@ export function ChannelChecklist({ campaignId, slug }: { campaignId: string; slu
                       </select>
                     </label>
                     <div className="bc-actions">
-                      <button className="btn btn--primary btn--sm" type="button" disabled={m.isPending} onClick={() => m.mutate(c.kind)}>
+                      <button
+                        className="btn btn--primary btn--sm"
+                        type="button"
+                        disabled={m.isPending}
+                        onClick={() => m.mutate(c.kind)}
+                      >
                         {m.isPending ? "Saving…" : "Save"}
                       </button>
-                      <button className="btn btn--ghost btn--sm" type="button" onClick={() => setEditing(null)}>
+                      <button
+                        className="btn btn--ghost btn--sm"
+                        type="button"
+                        onClick={() => setEditing(null)}
+                      >
                         Cancel
                       </button>
                     </div>

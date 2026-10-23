@@ -16,6 +16,7 @@ import {
 import type { Top } from "@/lib/map-areas";
 import { plusCodeCentre } from "@/lib/pluscode";
 import type { Area, SearchChanges } from "@/lib/voters-view";
+import { nf } from "@/lib/format";
 
 export type Basemap = "satellite" | "streets";
 export type Level = "area" | "constituency" | "ward" | "street";
@@ -246,8 +247,6 @@ const fold = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-
-const nf = new Intl.NumberFormat("en-KE");
 
 /**
  * Wards and constituencies by name, polling centres by name or code (those that start with

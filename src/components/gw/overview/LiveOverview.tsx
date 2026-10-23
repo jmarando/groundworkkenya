@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
 import { getOverview } from "@/lib/overview.functions";
-
-const nf = new Intl.NumberFormat("en-KE");
+import { nf } from "@/lib/format";
 
 /** `embedded`: inside Home, which has its own header and Today list. */
 export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) {
@@ -48,7 +47,7 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
 
   const pct = (n: number, d: number) => (d > 0 ? (n / d) * 100 : 0);
   const supporterPct = pct(data.supporters, data.supporterTarget);
-  const spendPct = pct(data.spendKes, data.statutoryLimit);
+  const spendPct = pct(data.spendKes, data.statutoryLimit ?? 0);
   const delta =
     data.contactsLastWeek > 0
       ? Math.round(((data.contactsThisWeek - data.contactsLastWeek) / data.contactsLastWeek) * 100)
@@ -170,8 +169,10 @@ export function LiveOverview({ embedded = false }: { embedded?: boolean } = {}) 
               <i style={{ width: `${Math.min(spendPct, 100)}%` }} />
             </div>
             <span className="kpi-sub">
-              KES {(data.spendKes / 1_000_000).toFixed(1)}M of{" "}
-              {(data.statutoryLimit / 1_000_000).toFixed(1)}M statutory
+              KES {(data.spendKes / 1_000_000).toFixed(1)}M
+              {data.statutoryLimit
+                ? ` of ${(data.statutoryLimit / 1_000_000).toFixed(1)}M statutory`
+                : " · limit not on file"}
             </span>
           </div>
         </Link>
