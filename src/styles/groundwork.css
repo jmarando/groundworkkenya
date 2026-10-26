@@ -7515,6 +7515,28 @@ figure {
     height: 600px;
   }
 }
+/* Website: where the published site is, and the ways to pass it on. */
+.ws-live {
+  margin: 0 0 14px;
+  padding: 16px 18px;
+  border-left: 4px solid var(--status-reporting);
+}
+.ws-live-url {
+  display: block;
+  margin: 6px 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.ws-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .ws-actions {
   display: flex;
   gap: 8px;

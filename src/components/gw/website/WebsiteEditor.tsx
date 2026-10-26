@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { BiField, ItemTools, SectionCard, TextField } from "./fields";
+import { LiveLink } from "./LiveLink";
 import { PhonePreview } from "./PhonePreview";
 import { PhotoField } from "./PhotoField";
 import { LANG_NAME, move, siteMediaBase } from "./util";
@@ -23,6 +24,7 @@ import {
   type Social,
 } from "@/lib/site/content";
 import { renderSite } from "@/lib/site/render";
+import { shareWords } from "@/lib/site/share";
 import {
   publishSite,
   restoreSiteVersion,
@@ -193,6 +195,7 @@ export function WebsiteEditor({
   );
   const url = siteUrl(data.campaign.slug);
   const shownUrl = url.replace(/^https?:\/\//, "");
+  const [justPublished, setJustPublished] = useState(false);
 
   async function doPublish() {
     setBusy("publish");
@@ -206,6 +209,7 @@ export function WebsiteEditor({
       }
       await publish();
       setChanged(false);
+      setJustPublished(true);
       toast.success(`Published. It is live at ${shownUrl}`);
       onChanged();
     } catch (e) {
@@ -271,7 +275,7 @@ export function WebsiteEditor({
               ? `Draft saved ${when(savedAt)}`
               : "Nothing saved yet";
   const liveLine = data.live
-    ? `Live at ${shownUrl} · published ${when(data.publishedAt)}${changed ? " · the draft has changes not yet published" : " · up to date"}`
+    ? `Published ${when(data.publishedAt)}${changed ? " · the draft has changes not yet published" : " · up to date"}`
     : data.versions.length
       ? `Offline · last published ${when(data.versions[0]?.publishedAt ?? null)}`
       : "Not published yet";
@@ -292,11 +296,6 @@ export function WebsiteEditor({
             {status}
           </span>
           <div className="ws-actions">
-            {data.live ? (
-              <a className="btn btn--ghost btn--sm" href={url} target="_blank" rel="noreferrer">
-                View live
-              </a>
-            ) : null}
             {canEdit ? (
               <button
                 type="button"
@@ -316,6 +315,10 @@ export function WebsiteEditor({
           </div>
         </div>
       </div>
+
+      {data.live ? (
+        <LiveLink url={url} words={shareWords(data.campaign, url)} justPublished={justPublished} />
+      ) : null}
 
       {state === "conflict" ? (
         <div className="ws-banner" role="alert">
