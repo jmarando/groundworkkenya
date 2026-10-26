@@ -3,7 +3,9 @@
 // (scripts/seo/check.mjs). Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/seo.test.ts
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+
+import { ksh, TIERS } from "@/lib/pricing";
 
 const SITE = "https://groundwork.ke";
 const problems: string[] = [];
@@ -32,6 +34,9 @@ for (const entry of entries) {
   if (notForSearch.some((p) => path === p || path.startsWith(`${p}/`))) {
     fail(`sitemap.xml: ${loc} is not a page for search`);
   }
+  if (path.length > 1 && !existsSync(`src/routes/${path.slice(1)}.tsx`)) {
+    fail(`sitemap.xml: ${loc} has no page at src/routes${path}.tsx`);
+  }
   const lastmod = entry.match(/<lastmod>([^<]+)<\/lastmod>/)?.[1] ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(lastmod))
     fail(`sitemap.xml: ${loc} needs a lastmod (YYYY-MM-DD)`);
@@ -52,7 +57,8 @@ for (const bot of ["GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot", "Goo
   }
 }
 
-// llms.txt opens like the convention says and sends readers nowhere but this site.
+// llms.txt opens like the convention says, sends readers nowhere but this site, lists every page in
+// the sitemap, and says the prices the pages say.
 const landing = read("src/routes/index.tsx");
 const llms = read("public/llms.txt");
 if (!llms.startsWith("# ")) fail("llms.txt must open with a # title");
@@ -63,6 +69,32 @@ for (const m of llms.matchAll(/\]\((https?:[^)\s]+)\)/g)) {
 for (const m of llms.matchAll(/\]\(https:\/\/groundwork\.ke\/#([a-z-]+)\)/g)) {
   if (!landing.includes(`id="${m[1]}"`))
     fail(`llms.txt links to #${m[1]}, which the home page lacks`);
+}
+for (const loc of seen) if (!llms.includes(loc)) fail(`llms.txt does not link ${loc}`);
+const priced = new Set(TIERS.flatMap((t) => (t.monthly === null ? [] : [ksh(t.monthly)])));
+const stated = new Set(llms.match(/KSh [\d,]+/g) ?? []);
+for (const price of priced) if (!stated.has(price)) fail(`llms.txt does not state ${price}`);
+for (const price of stated) {
+  if (!priced.has(price)) {
+    fail(`llms.txt states ${price}, which is not a price in src/lib/pricing.ts`);
+  }
+}
+
+// Prices are written once, in src/lib/pricing.ts.
+for (const name of readdirSync("src/routes").filter((f) => f.endsWith(".tsx"))) {
+  if (/KSh\s?\d/.test(read(`src/routes/${name}`))) {
+    fail(`src/routes/${name} writes a price: take it from src/lib/pricing.ts`);
+  }
+}
+
+// Each public page gives its own path to pageHead, so its canonical, share cards and markup agree.
+for (const loc of seen) {
+  const path = loc.slice(SITE.length);
+  const file = `src/routes/${path.slice(1)}.tsx`;
+  if (path === "/" || path === "/privacy" || !existsSync(file)) continue;
+  if (!read(file).includes(`path: "${path}"`)) {
+    fail(`${file} must call pageHead with path "${path}"`);
+  }
 }
 
 // The sign-in screens and the console stay out of search; the home page and /privacy stay in.
@@ -78,15 +110,20 @@ for (const f of ["src/routes/index.tsx", "src/routes/privacy.tsx"]) {
   if (noindex(f)) fail(`${f} must stay indexable`);
 }
 
-// The FAQ markup and the visible FAQ come from one list, and nothing is marked up that the page
-// does not show.
-if ((landing.match(/FAQ\.map\(/g) ?? []).length < 2) {
-  fail("index.tsx: the FAQPage markup and the visible FAQ must both be built from FAQ");
+// The FAQ markup and the visible FAQ come from one list (src/lib/faq.ts), on the home page and on
+// /faq, and nothing is marked up that the pages do not show.
+const faqPage = read("src/routes/faq.tsx");
+if (!landing.includes("faqNode(FAQ)") || !landing.includes("FAQ.map(")) {
+  fail("index.tsx: the visible FAQ and the FAQPage markup must both be built from FAQ");
 }
-if (/aggregateRating|offers:|review:/.test(landing)) {
-  fail(
-    "index.tsx: ratings, reviews and offers are not shown on the page, so they are not marked up",
-  );
+if (!faqPage.includes("faqNode(FAQ)") || !faqPage.includes("items={FAQ}")) {
+  fail("faq.tsx: the visible questions and the FAQPage markup must both be built from FAQ");
+}
+if (/aggregateRating|review:/.test(landing)) {
+  fail("index.tsx: ratings and reviews are not shown on the page, so they are not marked up");
+}
+if (/offers:/.test(landing) && !/offers:\s*priceOffers\(/.test(landing)) {
+  fail("index.tsx: offers must come from priceOffers(), which uses the prices the page shows");
 }
 
 // Screenshots below the first screen load when scrolled to, with their size stated.

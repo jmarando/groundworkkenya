@@ -250,11 +250,16 @@ async function main() {
   } else {
     fail("faq-matches", `markup has ${marked.length}, the page shows ${questions.length}`);
   }
-  if (/aggregateRating|"review"|"offers"/.test(JSON.stringify(nodes))) {
-    fail(
-      "no-invented-markup",
-      "ratings, reviews or offers are marked up but not shown on the page",
-    );
+  const offerPrices = nodes.flatMap((n) => [n.offers ?? []].flat()).map((o) => o.price);
+  const shownText = visibleText(html);
+  const ksh = (amount) => `KSh ${String(amount).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+  const unshown = offerPrices.filter((price) => !shownText.includes(ksh(price)));
+  if (/aggregateRating|"review"/.test(JSON.stringify(nodes))) {
+    fail("no-invented-markup", "ratings or reviews are marked up but not shown on the page");
+  } else if (unshown.length) {
+    fail("no-invented-markup", `offers at ${unshown.join(", ")} are marked up but not shown`);
+  } else if (offerPrices.length) {
+    pass("no-invented-markup", `${offerPrices.length} offers, each price shown on the page`);
   } else pass("no-invented-markup", "no ratings, reviews or offers");
 
   // The files crawlers read first.
@@ -275,6 +280,7 @@ async function main() {
         `names the sitemap and allows search and ${AI_CRAWLERS.length} AI crawlers`,
       );
   }
+  const pages = [];
   const sitemap = await get(`${BASE}/sitemap.xml`);
   if (sitemap.status !== 200) fail("sitemap", `answered ${shown(sitemap)}`);
   else {
@@ -284,6 +290,7 @@ async function main() {
     for (const loc of locs) {
       const r = await get(loc.replace(SITE, BASE));
       const hidden = /noindex/i.test(metaOf(r.text, "robots") ?? "");
+      pages.push({ loc, page: r.text });
       if (!loc.startsWith(`${SITE}/`) || r.status !== 200 || hidden)
         bad.push(`${loc} (${shown(r)})`);
     }
@@ -303,6 +310,37 @@ async function main() {
     );
     if (off.length) fail("llms-txt", `links off the site: ${off.map((m) => m[1]).join(", ")}`);
     else pass("llms-txt", `${llms.text.split(/\s+/).length} words, links stay on the site`);
+  }
+
+  // Each page in the sitemap has its own title, description, canonical and h1, is linked from the
+  // home page, and is in llms.txt.
+  const flaws = [];
+  const titles = new Set();
+  for (const { loc, page } of pages) {
+    const path = loc.slice(SITE.length);
+    const pageTitle = titleOf(page);
+    const pageDescription = metaOf(page, "description") ?? "";
+    if (pageTitle.length < 20 || pageTitle.length > 70)
+      flaws.push(`${path}: title ${pageTitle.length} chars`);
+    if (pageDescription.length < 70 || pageDescription.length > 170) {
+      flaws.push(`${path}: description ${pageDescription.length} chars`);
+    }
+    if (linkOf(page, "canonical") !== loc)
+      flaws.push(`${path}: canonical is ${linkOf(page, "canonical")}`);
+    if ((page.match(/<h1\b/gi) ?? []).length !== 1) flaws.push(`${path}: not exactly one h1`);
+    if (titles.has(pageTitle)) flaws.push(`${path}: its title repeats another page's`);
+    titles.add(pageTitle);
+    if (path !== "/" && !html.includes(`href="${path}"`))
+      flaws.push(`${path}: not linked from the home page`);
+    if (llms.status === 200 && !llms.text.includes(loc)) flaws.push(`${path}: not in llms.txt`);
+  }
+  if (pages.length) {
+    if (flaws.length) fail("pages", flaws.join("; "));
+    else
+      pass(
+        "pages",
+        `${pages.length} pages: own title, description, canonical and h1, linked from home, in llms.txt`,
+      );
   }
 
   // Pages that are not for search, and a path that is not a page.
