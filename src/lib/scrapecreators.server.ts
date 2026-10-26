@@ -130,7 +130,7 @@ export async function scSearchReddit(query: string, limit = 8): Promise<Found[]>
 /* -------------------------------------------------------------- youtube */
 
 export async function scSearchYouTube(query: string, limit = 8): Promise<Found[]> {
-  const json = await scGet("/v1/youtube/search", { query, uploadDate: "week" });
+  const json = await scGet("/v1/youtube/search", { query, uploadDate: "this_week" });
   const items: any[] = [...(json?.videos ?? []), ...(json?.shorts ?? [])];
   return items
     .map((v: any): Found => ({
