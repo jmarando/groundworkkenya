@@ -1396,6 +1396,8 @@ export type AgentsData = {
     doors: number | null;
     /** Why the last M-Pesa payout didn't go, or what to check. */
     paymentError: string | null;
+    /** Why a day's stipend is held (schema 45): the field check's reasons, comma-separated. */
+    checkNote: string | null;
   }[];
   gaps: { code: string; name: string; ward: string | null; registered: number }[];
   board: {
@@ -1469,7 +1471,8 @@ export const getAgents = createServerFn({ method: "GET" })
         registered: st.reduce((a, s) => a + (s.registered_voters ?? 0), 0),
       },
       money: {
-        pending: sum("pending"),
+        // A held day is still owed until someone decides: counted with the pending.
+        pending: sum("pending") + sum("held"),
         approved: sum("approved"),
         paid: sum("paid"),
         total: sp.reduce((a, s) => a + Number(s.amount_kes ?? 0), 0),
@@ -1496,6 +1499,7 @@ export const getAgents = createServerFn({ method: "GET" })
         workDate: (s as { work_date?: string | null }).work_date ?? null,
         doors: (s as { doors?: number | null }).doors ?? null,
         paymentError: (s as { payment_error?: string | null }).payment_error ?? null,
+        checkNote: (s as { check_note?: string | null }).check_note ?? null,
       })),
       gaps: st
         .filter((s) => s.status !== "confirmed")

@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 
+import { FieldChecks } from "@/components/gw/agents/FieldChecks";
 import { StipendAction, StipendTools } from "@/components/gw/agents/StipendTools";
+import { reasonWords } from "@/lib/field-check";
 import { useMemo, useState } from "react";
 
 import { AssignAgent } from "@/components/gw/AssignAgent";
@@ -40,6 +42,7 @@ const day = (iso: string | null) =>
 const STATUS: { key: string; label: string }[] = [
   { key: "", label: "All" },
   { key: "pending", label: "Pending" },
+  { key: "held", label: "Held to check" },
   { key: "approved", label: "Approved" },
   { key: "sending", label: "With M-Pesa" },
   { key: "paid", label: "Paid" },
@@ -306,6 +309,8 @@ function Agents() {
         </div>
       </div>
 
+      <FieldChecks />
+
       <div className="card">
         <div className="card-head">
           <h2>Stipend run</h2>
@@ -376,7 +381,21 @@ function Agents() {
                   <td className="num">{nf.format(r.rate)}</td>
                   <td className="num">{r.days}</td>
                   <td className="num">{nf.format(r.amount)}</td>
-                  <td className="meta">{r.status}</td>
+                  <td className="meta">
+                    {r.status === "held" ? (
+                      <span
+                        className="fc-verdict fc-verdict--check"
+                        title={reasonWords(r.checkNote)}
+                      >
+                        Held to check
+                      </span>
+                    ) : (
+                      r.status
+                    )}
+                    {r.status === "held" && r.checkNote ? (
+                      <div className="ref">{reasonWords(r.checkNote)}</div>
+                    ) : null}
+                  </td>
                   <td className="mono">
                     {r.reference ? `${r.reference} · ${day(r.paidAt)}` : "—"}
                   </td>

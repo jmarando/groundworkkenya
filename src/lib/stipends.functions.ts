@@ -144,3 +144,19 @@ export const payStipendByMpesa = createServerFn({ method: "POST" })
       );
     throw new Error(sent.why);
   });
+
+/** Each person's days on walk lists in the last two weeks, checked against the doors (schema 45). */
+export const getFieldChecks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { nairobiToday } = await import("@/lib/nairobi-date");
+    const { fieldDays } = await import("@/lib/field-check");
+    const to = nairobiToday();
+    const from = new Date(Date.parse(`${to}T12:00:00+03:00`) - 13 * 864e5)
+      .toISOString()
+      .slice(0, 10);
+    const { data, error } = await sbOf(context).rpc("field_day_checks", { _from: from, _to: to });
+    // Before schema 45, or for someone outside the office: nothing to show, not an error.
+    if (error) return { days: [], ready: false };
+    return { days: fieldDays(data), ready: true };
+  });

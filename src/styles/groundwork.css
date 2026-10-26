@@ -11105,3 +11105,20 @@ figure {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* Field checks: was the agent at the doors? */
+.fc-verdict {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.fc-verdict--ok {
+  background: hsl(152 45% 40% / 0.12);
+  color: hsl(152 55% 24%);
+}
+.fc-verdict--check {
+  background: hsl(35 90% 50% / 0.16);
+  color: hsl(30 80% 30%);
+}

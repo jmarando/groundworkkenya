@@ -65,8 +65,11 @@ set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000b2';
 do $$
 declare lid uuid := (select id from public.my_walk_lists() limit 1);
 begin
-  perform public.record_door(gen_random_uuid(), null, null, 'not_home', null, '', '{}', '', now(), null, lid, 'TEST0000+01');
-  perform public.record_door(gen_random_uuid(), null, null, 'spoke', 4, 'Water', '{}', '', now(), null, lid, 'TEST0000+02');
+  -- With a position (a test code's house is nowhere, so the visit isn't checked against it).
+  perform public.record_door(gen_random_uuid(), null, null, 'not_home', null, '', '{}', '', now() - interval '5 minutes',
+    jsonb_build_object('lat', -1.28, 'lng', 36.78), lid, 'TEST0000+01');
+  perform public.record_door(gen_random_uuid(), null, null, 'spoke', 4, 'Water', '{}', '', now(),
+    jsonb_build_object('lat', -1.28, 'lng', 36.78), lid, 'TEST0000+02');
   assert pg_temp.state_of($q$select public.stipends_from_field(current_date, current_date, 1500)$q$) = '42501', 'an agent can''t make stipends';
 end $$;
 set local request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000c3';

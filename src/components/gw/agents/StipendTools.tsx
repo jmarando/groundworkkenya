@@ -154,7 +154,7 @@ export function StipendAction({
     onError: fail,
   });
 
-  if (status === "pending")
+  if (status === "pending" || status === "held")
     return (
       <button
         type="button"
@@ -162,7 +162,7 @@ export function StipendAction({
         disabled={approving.isPending}
         onClick={() => approving.mutate()}
       >
-        Approve
+        {status === "held" ? "Approve anyway" : "Approve"}
       </button>
     );
   if (status === "paid") return null;
