@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { campaignSlugFromHost } from "@/lib/access";
 import { getPublicCampaign, type PublicCampaign } from "@/lib/campaign-public.functions";
+import { FAQ } from "@/lib/faq";
+import { priceOffers } from "@/lib/pricing";
+import { faqNode, SITE, SOCIAL_CARD } from "@/lib/seo";
+import { TierGrid } from "@/components/gw/landing/PublicPage";
 import shot1 from "@/assets/landing/shot1.webp";
 import shot2 from "@/assets/landing/shot2.webp";
 import shot3 from "@/assets/landing/shot3.webp";
@@ -17,48 +21,11 @@ import shot8 from "@/assets/landing/shot8.webp";
 
 // The general site lives on the root domain; campaign subdomains share this page
 // (CampaignHome), so they point search engines here too.
-const SITE = "https://groundwork.ke";
 const TITLE = "Groundwork · the campaign OS for Kenyan elections";
 const DESCRIPTION =
   "The campaign OS for Kenyan elections: voters and doors, SMS and USSD polls, one inbox, social listening and election night, on IEBC's map of 1,450 wards.";
 const SHARE_DESCRIPTION =
   "Know every voter by ward and door, poll any phone in English or Kiswahili, answer every message, hear what's said online, and count every Form 34A on election night.";
-const SOCIAL_CARD = `${SITE}/brand/groundwork-social-card.png`;
-
-const FAQ: { q: string; a: string }[] = [
-  {
-    q: "Do our supporters need smartphones?",
-    a: "No. Polls and sign-ups work by SMS reply and by USSD on any phone. The web link and WhatsApp are there for people who prefer them. Agents use the field app on a low-cost Android phone, and it keeps working without data.",
-  },
-  {
-    q: "Can we message supporters on WhatsApp?",
-    a: "Your team can run WhatsApp from their own phones and log conversations in the Groundwork inbox. Meta's WhatsApp Business Policy doesn't allow political campaigns on its automated Business Platform, so SMS and USSD carry the automated sends. We'll walk you through what works best for your seat.",
-  },
-  {
-    q: "Does it work in Kiswahili?",
-    a: "Yes. Polls go out in English and Kiswahili and count replies in either, USSD menus and campaign websites come in both, and the inbox reads the mood and issue of a message in English, Kiswahili or Sheng.",
-  },
-  {
-    q: "What does social listening cover?",
-    a: "News and the open web, TikTok, YouTube and Reddit by keyword, your rivals' own posts, Google Alerts and Google Trends, swept on a schedule. Each sweep says what it could not reach, so a gap never passes for silence.",
-  },
-  {
-    q: "Where do the supporter records come from?",
-    a: "From your own campaign: door knocks, rallies, polls, sign-ups, events and your existing lists. Every record carries its source and consent, and we don't sell or supply contact lists.",
-  },
-  {
-    q: "Is the parallel tally an official result?",
-    a: "No. Only the IEBC declares results. Groundwork records the forms your agents observe and shows you where you stand, how much of the register you've covered, and where the forms disagree.",
-  },
-  {
-    q: "How long does it take to get started?",
-    a: "A workspace with your wards and your first team can be live within a week. The more time before polling day, the more doors you'll have on the map.",
-  },
-  {
-    q: "Do you work with every party?",
-    a: "Groundwork is a product, not a political consultancy. Each campaign gets its own workspace, and nothing is shared between them.",
-  },
-];
 
 // Machine-readable restatement of the product sections below; every line is the page's own wording.
 const FEATURES = [
@@ -103,16 +70,10 @@ const STRUCTURED_DATA = {
       inLanguage: ["en", "sw"],
       areaServed: { "@type": "Country", name: "Kenya" },
       featureList: FEATURES,
+      offers: priceOffers(`${SITE}/pricing`),
       publisher: { "@id": `${SITE}/#organization` },
     },
-    {
-      "@type": "FAQPage",
-      mainEntity: FAQ.map((f) => ({
-        "@type": "Question",
-        name: f.q,
-        acceptedAnswer: { "@type": "Answer", text: f.a },
-      })),
-    },
+    faqNode(FAQ),
   ],
 };
 
@@ -626,6 +587,9 @@ function Landing() {
                   </span>
                 </li>
               </ul>
+              <Link className="more" to="/voters-map">
+                More on the voters map →
+              </Link>
             </div>
             <div className="pic">
               <img
@@ -711,6 +675,9 @@ function Landing() {
                   </span>
                 </li>
               </ul>
+              <Link className="more" to="/sms-ussd-polls">
+                More on polling →
+              </Link>
             </div>
             <div className="duo">
               <div className="pic">
@@ -876,6 +843,9 @@ Nini kirekebishwe kwanza mtaani kwako?
                 <p>Only the IEBC declares results. Groundwork tells you where you stand.</p>
               </div>
             </div>
+            <Link className="more" to="/election-night">
+              More on election night →
+            </Link>
             <div className="feat" style={{ paddingBottom: 0 }}>
               <div className="ft">
                 <span className="eyebrow">Field app</span>
@@ -977,64 +947,14 @@ Nini kirekebishwe kwanza mtaani kwako?
                 are billed at cost, with nothing added on top.
               </p>
             </div>
-            <div className="tiers">
-              <div className="tier">
-                <span className="who">MCA</span>
-                <h3>Ward</h3>
-                <span className="n">1 ward · up to 60 agents</span>
-                <ul>
-                  <li>People, map &amp; walk lists</li>
-                  <li>Inbox &amp; SMS broadcast</li>
-                  <li>Field app &amp; tally</li>
-                </ul>
-                <a className="btn btn-o btn-s" href="#demo">
-                  Talk to us
-                </a>
-              </div>
-              <div className="tier">
-                <span className="who">MP</span>
-                <h3>Constituency</h3>
-                <span className="n">Up to 8 wards · 400 agents</span>
-                <ul>
-                  <li>Everything in Ward</li>
-                  <li>Polling &amp; listening</li>
-                  <li>Finance &amp; approvals</li>
-                </ul>
-                <a className="btn btn-o btn-s" href="#demo">
-                  Talk to us
-                </a>
-              </div>
-              <div className="tier hl">
-                <span className="who">Governor · Senator · Woman Rep</span>
-                <h3>County</h3>
-                <span className="n">Every ward in the county · unlimited agents</span>
-                <ul>
-                  <li>Everything in Constituency</li>
-                  <li>War room &amp; projection</li>
-                  <li>Paid media &amp; creators</li>
-                </ul>
-                <a className="btn btn-m btn-s" href="#demo">
-                  Book a demo
-                </a>
-              </div>
-              <div className="tier">
-                <span className="who">Presidential · parties</span>
-                <h3>National</h3>
-                <span className="n">47 counties · coalition workspaces</span>
-                <ul>
-                  <li>Everything in County</li>
-                  <li>Multi-county war room</li>
-                  <li>Dedicated support team</li>
-                </ul>
-                <a className="btn btn-o btn-s" href="#demo">
-                  Talk to us
-                </a>
-              </div>
-            </div>
+            <TierGrid local />
             <p className="note">
               Start early: the 18 months before polling day are when the roster, the map and the
               supporter list get built.
             </p>
+            <Link className="more" to="/pricing">
+              What each seat includes →
+            </Link>
           </div>
         </section>
 
@@ -1056,6 +976,9 @@ Nini kirekebishwe kwanza mtaani kwako?
                 </details>
               ))}
             </div>
+            <Link className="more" to="/faq">
+              All questions and answers →
+            </Link>
           </div>
         </section>
 
@@ -1087,15 +1010,15 @@ Nini kirekebishwe kwanza mtaani kwako?
           </div>
           <div>
             <h4>Product</h4>
-            <a href="#product">Organise</a>
-            <a href="#product">Talk and listen</a>
-            <a href="#election-night">Election night</a>
-            <a href="#pricing">Pricing</a>
+            <Link to="/voters-map">Voters map</Link>
+            <Link to="/sms-ussd-polls">Polling</Link>
+            <Link to="/election-night">Election night</Link>
+            <Link to="/pricing">Pricing</Link>
           </div>
           <div>
             <h4>Company</h4>
             <a href="#trust">Trust</a>
-            <a href="#faq">FAQ</a>
+            <Link to="/faq">FAQ</Link>
             <a href="#demo">Book a demo</a>
             <Link to="/privacy">Privacy</Link>
           </div>

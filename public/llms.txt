@@ -30,11 +30,22 @@ Polls go out in English and Kiswahili and count replies in either. USSD menus an
 
 ## Seats and pricing
 
-One workspace per campaign, sized to the seat: MCA (one ward, up to 60 agents), MP (up to 8 wards, 400 agents), Governor, Senator and Woman Rep (every ward in the county, unlimited agents), Presidential and parties (47 counties, coalition workspaces). Messaging, airtime and M-Pesa payouts are billed at cost, with nothing added on top. The site lists no prices; to ask, book a demo. A workspace with a campaign's wards and first team can be live within a week.
+One workspace per campaign, sized to the seat. Prices are in Kenya shillings a month:
+
+- MCA, Ward (one ward, up to 60 agents): KSh 50,000 a month.
+- MP, Constituency (up to 8 wards, 400 agents): KSh 100,000 a month.
+- Governor, Senator and Woman Rep, County (every ward in the county, unlimited agents): KSh 200,000 a month.
+- Presidential and parties, National (47 counties, coalition workspaces): talk to us.
+
+Messaging, airtime and M-Pesa payouts are billed at cost, with nothing added on top. A workspace with a campaign's wards and first team can be live within a week.
 
 ## Pages
 
 - [Home](https://groundwork.ke/): what Groundwork does, election night, trust, seats and pricing
-- [Questions asked on every first call](https://groundwork.ke/#faq)
+- [Voters map, walk lists and the field app](https://groundwork.ke/voters-map): the map from county to doorstep, one record per person, offline door visits
+- [SMS and USSD polls](https://groundwork.ke/sms-ussd-polls): polls in English and Kiswahili for any phone, weighted to the register
+- [Election night](https://groundwork.ke/election-night): the parallel tally from Form 34A by USSD, with coverage on every figure
+- [Pricing](https://groundwork.ke/pricing): what each seat pays and includes
+- [Frequently asked questions](https://groundwork.ke/faq)
 - [Book a demo](https://groundwork.ke/#demo)
 - [Privacy policy](https://groundwork.ke/privacy)
