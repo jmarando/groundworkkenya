@@ -2,8 +2,8 @@
 // it is a sheet over the bottom of the map that drags between three heights
 // (peek, half and the map's full height) and snaps to the nearest when let
 // go. Its handle is also a button that steps up through them. An opened house
-// raises a peeking sheet to half; a new area lowers a full one, so the flight
-// shows.
+// raises a peeking sheet to half and scrolls the panel up to its card; a new
+// area lowers a full one, so the flight shows.
 
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 
@@ -64,8 +64,13 @@ export function Sheet({
     return () => ro.disconnect();
   }, [narrow]);
 
+  // An opened card is drawn at the panel's top, so the panel scrolls back up to show it: a list
+  // scrolled down (the ward's centres, say) would otherwise hide it, and the tap seem to do nothing.
+  const panel = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (raiseOn) setSnap((s) => (s === "peek" ? "half" : s));
+    if (!raiseOn) return;
+    setSnap((s) => (s === "peek" ? "half" : s));
+    panel.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [raiseOn]);
   const lastLower = useRef(lowerOn);
   useEffect(() => {
@@ -81,7 +86,7 @@ export function Sheet({
 
   if (!narrow)
     return (
-      <aside className="vpanel" aria-label={label}>
+      <aside ref={panel} className="vpanel" aria-label={label}>
         {children}
       </aside>
     );
@@ -126,7 +131,7 @@ export function Sheet({
       >
         <span aria-hidden="true" />
       </button>
-      <aside className="vpanel" aria-label={label}>
+      <aside ref={panel} className="vpanel" aria-label={label}>
         {children}
       </aside>
     </div>
