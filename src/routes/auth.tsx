@@ -16,6 +16,7 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in · Groundwork" },
+      { name: "robots", content: "noindex" },
       { name: "description", content: "Sign in to the Groundwork campaign console." },
       { property: "og:title", content: "Sign in · Groundwork" },
       { property: "og:description", content: "Sign in to the Groundwork campaign console." },

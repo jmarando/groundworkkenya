@@ -60,6 +60,19 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
+// Machine-readable restatement of the product sections below; every line is the page's own wording.
+const FEATURES = [
+  "One record per person, with consent on the record",
+  "Voters map from county to door, with walk lists and an offline door app",
+  "Polls by SMS, USSD and web link, in English and Kiswahili",
+  "One inbox for SMS, WhatsApp, email, Facebook and Instagram DMs, X and USSD call-backs",
+  "Social listening across news, TikTok, YouTube and Reddit",
+  "Agents and stipends by M-Pesa",
+  "Spend against the statutory limit, with a supporting document on every line",
+  "Parallel tally from Form 34A by USSD, with a photo of each form (not an official result)",
+  "Election atlas of 2013 to 2022 results",
+];
+
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
   "@graph": [
@@ -69,7 +82,16 @@ const STRUCTURED_DATA = {
       name: "Groundwork",
       url: `${SITE}/`,
       logo: `${SITE}/brand/groundwork-app-icon-512.png`,
+      description: DESCRIPTION,
       areaServed: { "@type": "Country", name: "Kenya" },
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE}/#website`,
+      name: "Groundwork",
+      alternateName: "groundwork.ke",
+      url: `${SITE}/`,
+      publisher: { "@id": `${SITE}/#organization` },
     },
     {
       "@type": "SoftwareApplication",
@@ -80,6 +102,7 @@ const STRUCTURED_DATA = {
       operatingSystem: "Web, Android",
       inLanguage: ["en", "sw"],
       areaServed: { "@type": "Country", name: "Kenya" },
+      featureList: FEATURES,
       publisher: { "@id": `${SITE}/#organization` },
     },
     {
@@ -429,6 +452,10 @@ function Landing() {
                 </div>
                 <img
                   src={shot1}
+                  width={1680}
+                  height={1050}
+                  fetchPriority="high"
+                  decoding="async"
                   alt="Groundwork console: satellite map of a ward with every building coloured by canvass status and agents' walking routes"
                 />
               </div>
@@ -603,6 +630,10 @@ function Landing() {
             <div className="pic">
               <img
                 src={shot2}
+                width={1400}
+                height={992}
+                loading="lazy"
+                decoding="async"
                 alt="Map of a ward with buildings coloured by support, an agent's numbered route, and the household list for one building"
               />
             </div>
@@ -641,6 +672,10 @@ function Landing() {
             <div className="pic">
               <img
                 src={shot3}
+                width={1300}
+                height={1154}
+                loading="lazy"
+                decoding="async"
                 alt="People list of Kileleshwa residents with support scores and tags, and one person's record with history and next best action"
               />
             </div>
@@ -681,6 +716,10 @@ function Landing() {
               <div className="pic">
                 <img
                   src={shot4}
+                  width={1600}
+                  height={1000}
+                  loading="lazy"
+                  decoding="async"
                   alt="Poll builder with question, audience, channels, reward and a USSD preview"
                 />
               </div>
@@ -730,6 +769,10 @@ Nini kirekebishwe kwanza mtaani kwako?
             <div className="pic">
               <img
                 src={shot5}
+                width={1300}
+                height={850}
+                loading="lazy"
+                decoding="async"
                 alt="Unified inbox with SMS, Messenger, Instagram, TikTok and USSD conversations"
               />
             </div>
@@ -768,6 +811,10 @@ Nini kirekebishwe kwanza mtaani kwako?
             <div className="pic">
               <img
                 src={shot6}
+                width={1600}
+                height={1000}
+                loading="lazy"
+                decoding="async"
                 alt="Finance view with spend against the statutory limit, contributions, documentation rate and approval queue"
               />
             </div>
@@ -792,6 +839,10 @@ Nini kirekebishwe kwanza mtaani kwako?
             <div className="pic">
               <img
                 src={shot7}
+                width={1600}
+                height={1000}
+                loading="lazy"
+                decoding="async"
                 alt="Election-night war room showing the parallel tally, projection band, station coverage and incidents"
               />
             </div>
@@ -859,6 +910,10 @@ Nini kirekebishwe kwanza mtaani kwako?
                 <div className="landing-phone">
                   <img
                     src={shot8}
+                    width={520}
+                    height={1283}
+                    loading="lazy"
+                    decoding="async"
                     alt="Field app on a phone: agent's walk list stop with household, script and outcome buttons"
                   />
                 </div>
