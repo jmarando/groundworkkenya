@@ -7,6 +7,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { emailAddress } from "@/lib/email";
 
 export const ROLES = ["candidate", "manager", "organiser", "agent"] as const;
 /** "viewer" is a waiting (pending) member with no access. */
@@ -132,9 +133,10 @@ export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { campaignId: string; email: string; role: Role }) => {
     if (!input?.campaignId) throw new Error("Which campaign?");
-    if (!input.email?.includes("@")) throw new Error("Add their email.");
+    const email = emailAddress(input.email);
+    if (!email) throw new Error("Add their email address, like name@example.com.");
     if (input.role === "viewer" || !(input.role in RANK)) throw new Error("Pick a role.");
-    return { ...input, email: input.email.trim().toLowerCase() };
+    return { ...input, email };
   })
   .handler(async ({ data, context }) => {
     const { data: result, error } = await context.supabase.rpc("invite_member", {

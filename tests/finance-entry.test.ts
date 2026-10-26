@@ -49,7 +49,30 @@ eq(
 refused(
   "M-Pesa needs its code",
   () => cleanContribution({ ...gift, reference: " " }),
-  "Add the M-Pesa code, bank or cheque reference.",
+  "Add the M-Pesa code from the confirmation SMS.",
+);
+refused(
+  "random letters are not an M-Pesa code",
+  () => cleanContribution({ ...gift, reference: "asdfgh" }),
+  '"asdfgh" isn\'t an M-Pesa code. An M-Pesa code is the 10 letters and numbers at the start of the confirmation SMS, like SJK3L2M9QX.',
+);
+eq(
+  "an M-Pesa code typed in small letters or with spaces is tidied",
+  cleanContribution({ ...gift, reference: " sjk7 q2x9pl " }).reference,
+  "SJK7Q2X9PL",
+);
+eq(
+  "a bank reference and a cheque number are kept as written",
+  [
+    cleanContribution({ ...gift, method: "bank", reference: " FT26298ABC12 " }).reference,
+    cleanContribution({ ...gift, method: "cheque", reference: "000123" }).reference,
+  ],
+  ["FT26298ABC12", "000123"],
+);
+refused(
+  "a bank reference with no number in it",
+  () => cleanContribution({ ...gift, method: "bank", reference: "paid" }),
+  "A bank reference has numbers in it, like FT26298ABC12.",
 );
 refused(
   "no donor",

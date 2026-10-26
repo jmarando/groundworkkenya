@@ -181,8 +181,11 @@ export function StipendAction({
         <input
           id={`rc-${id}`}
           value={receipt}
-          placeholder="M-Pesa receipt"
-          maxLength={40}
+          placeholder="e.g. SJK3L2M9QX"
+          maxLength={14}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
           onChange={(e) => setReceipt(e.target.value.toUpperCase())}
         />
         <button type="submit" className="btn btn--primary btn--sm" disabled={recording.isPending}>

@@ -5,6 +5,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { refused, type Failure } from "@/lib/db-error";
+import { MPESA_HINT, mpesaCode } from "@/lib/payment-ref";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,11 +58,8 @@ export const recordStipendReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string; receipt: string }) => {
     if (!input || !UUID.test(String(input.id))) throw new Error("Which stipend?");
-    const receipt = String(input.receipt ?? "")
-      .trim()
-      .toUpperCase();
-    if (!/^[A-Z0-9-]{6,40}$/.test(receipt))
-      throw new Error("Give the M-Pesa receipt (letters and numbers).");
+    const receipt = mpesaCode(input.receipt);
+    if (!receipt) throw new Error(`That isn't an M-Pesa code. ${MPESA_HINT}`);
     return { id: input.id, receipt };
   })
   .handler(async ({ data, context }) => {

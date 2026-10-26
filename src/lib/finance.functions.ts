@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { nf } from "@/lib/format";
+import { paymentRef } from "@/lib/payment-ref";
 import { requireRole } from "@/lib/require-role";
 
 /**
@@ -80,15 +82,14 @@ export function cleanContribution(input: unknown): NewContribution {
   if (!donorType) throw new Error("Say what kind of donor it is.");
   const method = PAY_METHODS.find((t) => t === i["method"]);
   if (!method) throw new Error("Say how it was paid.");
-  const reference = text(i["reference"], 80) || null;
-  if (method !== "cash" && !reference)
-    throw new Error("Add the M-Pesa code, bank or cheque reference.");
+  const reference = paymentRef(method, i["reference"]);
+  if (!reference.ok) throw new Error(reference.error);
   return {
     donorName,
     donorType,
     amountKes: amount(i["amountKes"]),
     method,
-    reference,
+    reference: reference.ref,
     receivedOn: pastDay(i["receivedOn"]),
   };
 }
@@ -118,6 +119,20 @@ export const recordContribution = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => cleanContribution(input))
   .handler(async ({ data, context }) => {
     await requireRole(context.supabase, ROLES, "Only the candidate and managers record money.");
+    // One payment, one entry: the same M-Pesa code or reference twice is the same money twice.
+    if (data.reference && data.method !== "cash") {
+      const { data: same } = await context.supabase
+        .from("contributions")
+        .select("donor_name, amount_kes, received_at")
+        .eq("method", data.method)
+        .eq("reference", data.reference)
+        .limit(1)
+        .maybeSingle();
+      if (same)
+        throw new Error(
+          `That ${data.method === "mpesa" ? "M-Pesa code" : "reference"} is already recorded: KES ${nf.format(Number(same.amount_kes) || 0)} from ${same.donor_name}, ${String(same.received_at).slice(0, 10)}.`,
+        );
+    }
     const { error } = await context.supabase.from("contributions").insert({
       donor_name: data.donorName,
       donor_type: data.donorType,
