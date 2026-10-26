@@ -10,6 +10,7 @@ export const Route = createFileRoute("/set-password")({
   head: () => ({
     meta: [
       { title: "Set your password · Groundwork" },
+      { name: "robots", content: "noindex" },
       { name: "description", content: "Choose a password for your Groundwork campaign account." },
       { property: "og:title", content: "Set your password · Groundwork" },
       {

@@ -1,0 +1,40 @@
+# Groundwork
+
+> The campaign OS for Kenyan elections: voters and doors, SMS and USSD polls, one inbox, social listening and election night, on IEBC's map of 1,450 wards.
+
+Groundwork is a product, not a political consultancy. Each campaign gets its own workspace, and nothing is shared between campaigns. Kenyan elections are won ward by ward, so Groundwork is built on the country's real map, down to the doorstep: 47 counties, 290 constituencies, 1,450 county assembly wards and 22.1M registered voters (source: IEBC, 2022 general election register).
+
+## What it does
+
+- Organise: one record per person (door knocks, SMS and USSD replies, messages, campaign website sign-ups and imports), a voters map from county to door, walk lists and an offline door app, and agents with stipends paid by M-Pesa.
+- Talk and listen: one inbox for SMS, WhatsApp, email, Facebook and Instagram DMs, X and USSD call-backs; broadcasts that respect STOP; polls by SMS, USSD and web link in English and Kiswahili, with results weighted to the register; social listening across news, TikTok, YouTube and Reddit.
+- Protect the vote: agents key the counts from each signed Form 34A by USSD on any phone and send a photo of the form; a war room shows the parallel tally against the official stream, with coverage stated on every figure; incidents are kept with a chain of custody; an election atlas covers 2013 to 2022.
+- Money: spend against the statutory limit, a supporting document on every line, and an authorised person who approves before anything moves.
+
+## What it is not
+
+- The parallel tally is not an official result. Only the IEBC declares results; Groundwork reports where a campaign stands.
+- Groundwork does not sell or supply contact lists. Supporter records come from a campaign's own door knocks, rallies, polls, sign-ups, events and existing lists, and every record carries its source and consent.
+- WhatsApp: a team can run WhatsApp from their own phones and log conversations in the Groundwork inbox. Meta's WhatsApp Business Policy doesn't allow political campaigns on its automated Business Platform, so SMS and USSD carry the automated sends.
+
+## Data
+
+- One campaign per workspace. Nothing is shared between campaigns.
+- Consent on every record, channel by channel, with who captured it and when. STOP works on the spot.
+- Least privilege: agents see their walk list, not the county. Phone numbers are masked unless a role needs them.
+- A full audit trail: every export, message and payout is logged against the person who did it.
+
+## Languages and phones
+
+Polls go out in English and Kiswahili and count replies in either. USSD menus and campaign websites come in both. The inbox reads the mood and issue of a message in English, Kiswahili or Sheng. Polls and sign-ups work by SMS reply and by USSD on any phone; agents use the field app on a low-cost Android phone, and it keeps working without data.
+
+## Seats and pricing
+
+One workspace per campaign, sized to the seat: MCA (one ward, up to 60 agents), MP (up to 8 wards, 400 agents), Governor, Senator and Woman Rep (every ward in the county, unlimited agents), Presidential and parties (47 counties, coalition workspaces). Messaging, airtime and M-Pesa payouts are billed at cost, with nothing added on top. The site lists no prices; to ask, book a demo. A workspace with a campaign's wards and first team can be live within a week.
+
+## Pages
+
+- [Home](https://groundwork.ke/): what Groundwork does, election night, trust, seats and pricing
+- [Questions asked on every first call](https://groundwork.ke/#faq)
+- [Book a demo](https://groundwork.ke/#demo)
+- [Privacy policy](https://groundwork.ke/privacy)

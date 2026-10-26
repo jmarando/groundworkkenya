@@ -164,6 +164,8 @@ function Authenticated() {
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
+  // The signed-in console is not for search: its screens hold nothing a crawler could read.
+  head: () => ({ meta: [{ name: "robots", content: "noindex" }] }),
   // With no signal, or a connection too weak to answer in time, the sign-in kept on the phone.
   beforeLoad: async () => {
     const user = await entryUser(() => supabase.auth.getUser(), phoneUser, navigator.onLine);
