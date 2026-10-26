@@ -10026,6 +10026,22 @@ figure {
   }
 }
 
+/* Voters: how an area's supporters to find are worked out, under its numbers. */
+.vt-why {
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  color: var(--muted-foreground);
+}
+.vt-why summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.vt-why p {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
 /* Field plan: the fortnight board, list chips and the planning form. */
 .fp-nav {
   display: flex;

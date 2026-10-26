@@ -18,6 +18,8 @@ import {
   areaNumbers,
   doorIssues,
   share,
+  targetWords,
+  toFind,
   wardsIn,
   type Area,
   type SearchChanges,
@@ -97,7 +99,7 @@ export function MapPanel({
       label: "Supporters found",
       value: nf.format(n.supporters),
       note: n.target
-        ? `${share(n.supporters / n.target)} of the ${nf.format(n.target)} needed`
+        ? `${share(n.supporters / toFind(n.target))} of the ${nf.format(toFind(n.target))} to find`
         : "no target set",
       ...(isAgent ? {} : { open: () => onSearch({ tab: "people", support: "strong" }) }),
     },
@@ -137,6 +139,12 @@ export function MapPanel({
           );
         })}
       </div>
+      {targetWords(n) ? (
+        <details className="vt-why">
+          <summary>How the {nf.format(toFind(n.target))} is worked out</summary>
+          <p>{targetWords(n)}</p>
+        </details>
+      ) : null}
 
       {isAgent ? null : <LastTimeHere area={area} wards={wards} />}
       {isAgent ? null : <VotersFindings area={area} wards={wards} />}

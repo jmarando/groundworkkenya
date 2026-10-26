@@ -5,6 +5,8 @@
 
 import {
   areaNumbers,
+  targetWords,
+  toFind,
   areaParam,
   areaTitle,
   broadcastSearch,
@@ -413,6 +415,30 @@ eq(
   "opening a list is a step Back undoes, and doesn't go back to the top",
   stepFor({ list: LIST }),
   { replace: false, resetScroll: false },
+);
+
+eq(
+  "supporters to find: a quarter more than the votes needed, as one in five doesn't vote",
+  [toFind(7219), toFind(8), toFind(0), toFind(-3)],
+  [9024, 10, 0, 0],
+);
+eq(
+  "how a ward's target is worked out, in words",
+  targetWords({ registered: 18876, target: 7219 }),
+  "7,219 votes are needed here: 38% of the 18,876 registered voters, which is half the votes cast if 76% of them vote. To have 7,219 votes on the day, find 9,024 supporters: about one supporter in five doesn't vote.",
+);
+eq(
+  "a target over half the register says so; no register, no turnout; no target, no words",
+  [
+    targetWords({ registered: 1000, target: 600 }),
+    targetWords({ registered: 0, target: 40 }),
+    targetWords({ registered: 18876, target: 0 }),
+  ],
+  [
+    "600 votes are needed here: 60% of the 1,000 registered voters, which is more than half of everyone registered. To have 600 votes on the day, find 750 supporters: about one supporter in five doesn't vote.",
+    "40 votes are needed here. To have 40 votes on the day, find 50 supporters: about one supporter in five doesn't vote.",
+    null,
+  ],
 );
 
 console.log(`${pass} passed, ${fail} failed`);

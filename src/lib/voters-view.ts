@@ -315,6 +315,34 @@ export const share = (x: number): string =>
   x > 0 && x < 0.005 ? "under 1%" : `${Math.round(x * 100)}%`;
 
 /**
+ * Of the supporters a campaign finds, the share who vote on the day. Not all do, so the
+ * supporters to find for a number of votes needed are a quarter more than the votes.
+ */
+export const SUPPORTERS_WHO_VOTE = 0.8;
+
+/** The supporters to find so that `votes` of them vote. */
+export const toFind = (votes: number): number =>
+  votes > 0 ? Math.ceil(votes / SUPPORTERS_WHO_VOTE) : 0;
+
+const whole = (n: number) => Math.round(n).toLocaleString("en-KE");
+
+/**
+ * How an area's target is worked out, in words: the votes needed against the register, the
+ * turnout that makes them half the votes, and the supporters to find. Null with no target.
+ */
+export function targetWords(n: { registered: number; target: number }): string | null {
+  if (n.target <= 0) return null;
+  const find = `To have ${whole(n.target)} votes on the day, find ${whole(toFind(n.target))} supporters: about one supporter in five doesn't vote.`;
+  if (n.registered <= 0) return `${whole(n.target)} votes are needed here. ${find}`;
+  const r = n.target / n.registered;
+  const half =
+    r < 0.5
+      ? `half the votes cast if ${Math.round(r * 200)}% of them vote`
+      : "more than half of everyone registered";
+  return `${whole(n.target)} votes are needed here: ${share(r)} of the ${whole(n.registered)} registered voters, which is ${half}. ${find}`;
+}
+
+/**
  * How a change moves the page: a new area, tab, house, centre or walk list is a step Back
  * can undo, and a new area or tab goes back to the top, where its title is.
  */
