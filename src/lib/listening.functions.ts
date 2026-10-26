@@ -107,6 +107,8 @@ export type ListeningData = {
   rivalPosts: number;
   /** The candidate and managers draft reactions to posts. */
   canReact: boolean;
+  /** One sweep serves every campaign, so only Groundwork's own admin restarts it. */
+  canRestart: boolean;
 };
 
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -332,6 +334,7 @@ export const getListening = createServerFn({ method: "GET" })
         : null,
       rivalJob: rivalJob ? { lastRunAt: rivalJob.last_run_at, detail: rivalJob.detail } : null,
       canReact: PRINCIPAL_ROLES.includes(role as MyRole),
+      canRestart: role === "super",
       rivalPosts: rivalPosts ?? 0,
     };
   });

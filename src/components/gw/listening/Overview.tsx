@@ -1,12 +1,12 @@
-// Listening's overview: what to do this week, every conversation with its mood, where the posts
-// were found, and the posts behind any of it (src/lib/listening-read.ts works the figures out).
-import { useMemo, useState } from "react";
+// Listening's overview, kept short: what needs you, then what is being said, and the posts behind
+// any line (src/lib/listening-read.ts works the figures out). No week-on-week comparisons and no
+// mood bars here: the posts, their moods and their sources are one tap away.
+import { useState } from "react";
 
 import type { Mention } from "@/lib/listening.functions";
 import {
   actions,
   conversations,
-  hasLastWeek,
   postsFor,
   sourceName,
   type Conversation,
@@ -36,6 +36,9 @@ type Mark = (ids: string[], status: "new" | "actioned") => void;
 /** Opens a reaction to a post; absent where the caller can't react. */
 export type React = ((mentionId: string) => void) | undefined;
 
+/** Actions shown before "Show more": the few that matter most, most pressing first. */
+const FIRST = 3;
+
 export function Overview({
   topics,
   mentions,
@@ -44,7 +47,6 @@ export function Overview({
   openKeywords,
   react,
   threshold = SPREAD_DEFAULT,
-  pings = 0,
 }: {
   topics: Topic[];
   mentions: Mention[];
@@ -54,20 +56,13 @@ export function Overview({
   react?: React;
   /** Views a post needs to count as spreading. */
   threshold?: number;
-  /** In-app alerts raised in the last two days. */
-  pings?: number;
 }) {
   const [focus, setFocus] = useState<Focus | null>(null);
+  const [allActions, setAllActions] = useState(false);
   // A week back from when the posts were loaded; recomputed with each load.
   const now = Date.now();
   const convos = conversations(topics, mentions, now);
   const todo = actions(convos, mentions, now);
-  const compare = hasLastWeek(mentions, now);
-  const sources = useMemo(() => {
-    const n = new Map<string, number>();
-    for (const m of mentions) n.set(m.source, (n.get(m.source) ?? 0) + 1);
-    return [...n.entries()].sort((a, b) => b[1] - a[1]);
-  }, [mentions]);
 
   if (focus) {
     return (
@@ -82,31 +77,26 @@ export function Overview({
     );
   }
   const spread = spreading(mentions, threshold, now);
+  const shown = allActions ? todo : todo.slice(0, FIRST);
 
-  const groups: { key: Conversation["group"]; title: string; note: string }[] = [
-    { key: "you", title: "About you", note: "Your name, your party and your own accounts." },
-    { key: "rivals", title: "Your rivals", note: "What is said about them, and what they post." },
-    { key: "issues", title: "Issues", note: "The subjects you asked us to follow." },
-    {
-      key: "wider",
-      title: "County and national news",
-      note: "Stories beyond the seat that move votes in it. Read them for the seat on Road to election day.",
-    },
+  const groups: { key: Conversation["group"]; title: string }[] = [
+    { key: "you", title: "About you" },
+    { key: "rivals", title: "Your rivals" },
+    { key: "issues", title: "Issues" },
+    { key: "wider", title: "County and national news" },
   ];
 
   return (
     <>
-      <div className={`card lsn-spread${spread.length ? " lsn-spread--on" : ""}`}>
-        <div className="card-head">
-          <div>
-            <h2>Spreading now</h2>
-            <p className="meta">
-              Posts of the last two days seen at least {nf.format(threshold)} times, where the
-              platform counts views (TikTok and YouTube today).
-              {pings > 0 ? ` ${pings} alert${pings === 1 ? "" : "s"} raised in Groundwork.` : ""}
-            </p>
-          </div>
-          {spread.length > 0 && (
+      {spread.length > 0 && (
+        <div className="card lsn-spread lsn-spread--on">
+          <div className="card-head">
+            <div>
+              <h2>Spreading now</h2>
+              <p className="meta">
+                Posts from the last two days seen at least {nf.format(threshold)} times.
+              </p>
+            </div>
             <button
               type="button"
               className="btn btn--sm"
@@ -114,11 +104,7 @@ export function Overview({
             >
               All {spread.length} →
             </button>
-          )}
-        </div>
-        {spread.length === 0 ? (
-          <p className="f-note">Nothing over the bar. Set the bar in Alerts (seen at least…).</p>
-        ) : (
+          </div>
           <ol className="lsn-acts">
             {spread.slice(0, 4).map((p) => (
               <li
@@ -134,7 +120,6 @@ export function Overview({
                   <p className="meta">
                     {sourceName(p.source)} · {voiceOf(p)?.name ?? "unknown account"} · seen{" "}
                     {nf.format(p.reach ?? 0)}
-                    {p.shares ? `, shared ${nf.format(p.shares)}` : ""}
                     {p.sentiment ? ` · ${MOOD[p.sentiment]?.word ?? p.sentiment}` : ""}
                     {p.status !== "new" ? " · handled" : ""}
                   </p>
@@ -147,103 +132,104 @@ export function Overview({
               </li>
             ))}
           </ol>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="card lsn-todo" style={{ marginTop: 14 }}>
         <div className="card-head">
           <div>
-            <h2>What to do this week</h2>
-            <p className="meta">
-              Read from the last seven days of posts. Each opens the posts it counts.
-            </p>
+            <h2>Needs you</h2>
+            <p className="meta">From the last seven days of posts.</p>
           </div>
         </div>
         {todo.length === 0 ? (
-          <p className="f-note">Nothing needs you this week. The next sweep may change that.</p>
+          <p className="f-note">
+            {mentions.length === 0
+              ? "Nothing has been swept yet. Posts appear here after the next sweep."
+              : "Nothing needs you this week. The next sweep may change that."}
+          </p>
         ) : (
-          <ol className="lsn-acts">
-            {todo.map((a) => (
-              <li key={a.key} className={`lsn-act lsn-act--${a.tone}`}>
-                <div>
-                  <b>{a.headline}</b>
-                  <p className="meta">{a.why}</p>
-                </div>
-                <button type="button" className="btn btn--sm" onClick={() => setFocus(a.focus)}>
-                  {a.todo} ({a.n}) →
-                </button>
-              </li>
-            ))}
-          </ol>
+          <>
+            <ol className="lsn-acts">
+              {shown.map((a) => (
+                <li key={a.key} className={`lsn-act lsn-act--${a.tone}`}>
+                  <div>
+                    <b>{a.headline}</b>
+                    <p className="meta">{a.why}</p>
+                  </div>
+                  <button type="button" className="btn btn--sm" onClick={() => setFocus(a.focus)}>
+                    {a.todo} ({a.n}) →
+                  </button>
+                </li>
+              ))}
+            </ol>
+            {todo.length > FIRST && (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                style={{ marginTop: 10 }}
+                onClick={() => setAllActions(!allActions)}
+              >
+                {allActions ? "Show fewer" : `Show ${todo.length - FIRST} more`}
+              </button>
+            )}
+          </>
         )}
       </div>
-
-      {groups.map((g) => {
-        const rows = convos.filter((c) => c.group === g.key);
-        return (
-          <div className="card" key={g.key} style={{ marginTop: 14 }}>
-            <div className="card-head">
-              <div>
-                <h2>{g.title}</h2>
-                <p className="meta">{g.note}</p>
-              </div>
-              <span className="mono">this week</span>
-            </div>
-            {rows.length === 0 ? (
-              <p className="f-note">
-                Nothing followed here yet.{" "}
-                <button type="button" className="btn btn--ghost btn--sm" onClick={openKeywords}>
-                  Add a keyword
-                </button>
-              </p>
-            ) : (
-              <ul className="lsn-convos">
-                {rows.map((c) => (
-                  <li key={c.key}>
-                    <button type="button" className="lsn-convo" onClick={() => setFocus(c.focus)}>
-                      <span className="lsn-convo-name">
-                        <b>{c.label}</b>
-                        <span className="meta">{convoLine(c)}</span>
-                      </span>
-                      <span className="lsn-convo-n">
-                        <b>{nf.format(c.week)}</b>
-                        <span className="meta">{compare ? change(c.week, c.prevWeek) : ""}</span>
-                      </span>
-                      <MoodBar c={c} />
-                      <span className="lsn-go" aria-hidden="true">
-                        →
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        );
-      })}
 
       <div className="card" style={{ marginTop: 14 }}>
         <div className="card-head">
           <div>
-            <h2>Where the posts were found</h2>
-            <p className="meta">
-              Every post the sweeps have kept, by where it was published. Open one to read them.
-            </p>
+            <h2>What is being said</h2>
+            <p className="meta">This week. Open a line to read the posts behind it.</p>
           </div>
         </div>
-        <div className="fchips">
-          {sources.map(([s, n]) => (
-            <button
-              type="button"
-              key={s}
-              className="fchip"
-              onClick={() => setFocus({ label: `Found on ${sourceName(s)}`, source: s })}
-            >
-              {sourceName(s)} · {nf.format(n)}
+        {convos.length === 0 ? (
+          <p className="f-note">
+            Nothing followed yet.{" "}
+            <button type="button" className="btn btn--ghost btn--sm" onClick={openKeywords}>
+              Add a keyword
             </button>
-          ))}
-          {sources.length === 0 && <p className="f-note">Nothing swept yet.</p>}
-        </div>
+          </p>
+        ) : (
+          groups.map((g) => {
+            const rows = convos.filter((c) => c.group === g.key);
+            if (rows.length === 0) return null;
+            return (
+              <section className="lsn-group" key={g.key}>
+                <h3 className="lsn-group-title">{g.title}</h3>
+                <ul className="lsn-convos">
+                  {rows.map((c) => (
+                    <li key={c.key}>
+                      <button type="button" className="lsn-convo" onClick={() => setFocus(c.focus)}>
+                        <span className="lsn-convo-name">
+                          <span className="lsn-convo-title">
+                            <b>{c.label}</b>
+                            {!c.own && c.unhandledAngry > 0 ? (
+                              <span
+                                className="pill pill--red"
+                                title="Angry posts nobody has handled yet"
+                              >
+                                {c.unhandledAngry} angry
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="meta">{convoLine(c)}</span>
+                        </span>
+                        <span className="lsn-convo-n">
+                          <b>{nf.format(c.week)}</b>
+                        </span>
+                        <span className="lsn-go" aria-hidden="true">
+                          →
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })
+        )}
       </div>
     </>
   );
@@ -255,35 +241,11 @@ function convoLine(c: Conversation): string {
     if (c.reach > 0) parts.push(`reached ${nf.format(c.reach)}`);
     if (c.commentsRead > 0)
       parts.push(`${c.commentsNegative} angry of ${c.commentsRead} replies read`);
-  } else {
-    if (c.unhandledAngry > 0) parts.push(`${c.unhandledAngry} angry, not handled`);
-    if (c.topIssue) parts.push(`mostly ${c.topIssue}`);
+  } else if (c.topIssue) {
+    parts.push(`mostly ${c.topIssue}`);
   }
   if (c.sources.length) parts.push(c.sources.map(sourceName).join(", "));
   return parts.join(" · ") || (c.week === 0 ? "nothing this week" : "");
-}
-
-function change(week: number, prev: number): string {
-  if (week === prev) return prev === 0 ? "" : "same as last week";
-  return `${week > prev ? "+" : ""}${week - prev} on last wk`;
-}
-
-function MoodBar({ c }: { c: Conversation }) {
-  const rated = c.positive + c.neutral + c.negative;
-  if (c.own || rated === 0) return <span className="lsn-mood lsn-mood--none" aria-hidden="true" />;
-  const pct = (n: number) => `${(n / rated) * 100}%`;
-  return (
-    <span
-      className="lsn-mood"
-      role="img"
-      aria-label={`${c.positive} warm, ${c.neutral} neutral, ${c.negative} angry`}
-      title={`${c.positive} warm · ${c.neutral} neutral · ${c.negative} angry`}
-    >
-      <i className="w" style={{ width: pct(c.positive) }} />
-      <i className="n" style={{ width: pct(c.neutral) }} />
-      <i className="a" style={{ width: pct(c.negative) }} />
-    </span>
-  );
 }
 
 export function Drill({

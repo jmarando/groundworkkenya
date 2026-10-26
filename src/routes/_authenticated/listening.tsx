@@ -18,7 +18,9 @@ import {
 } from "@/lib/listening.functions";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { filterMentions } from "@/lib/listening-filter";
+import { sweepProblems } from "@/lib/listening-health";
 import { Overview, PostList } from "@/components/gw/listening/Overview";
+import { SweepProblems } from "@/components/gw/listening/SweepProblems";
 import { sourceName } from "@/lib/listening-read";
 import { nf, stamp } from "@/lib/format";
 import { QueryState } from "@/components/gw/QueryState";
@@ -120,9 +122,6 @@ function Listening() {
     SPREAD_DEFAULT,
     ...(data?.alerts ?? []).filter((a) => a.active && a.minReach).map((a) => a.minReach!),
   );
-  const pings = (data?.events ?? []).filter(
-    (e) => e.channel === "app" && Date.now() - new Date(e.at).getTime() < 2 * 864e5,
-  ).length;
 
   const act = async (fn: () => Promise<unknown>, ok: string) => {
     setBusy(true);
@@ -196,8 +195,8 @@ function Listening() {
             Everything said about you, <span className="serif">in one room.</span>
           </h1>
           <p className="meta">
-            News, Facebook, X, Instagram, TikTok, YouTube and blogs swept every hour against your
-            keywords. Start with what to do; open anything to read the posts behind it.
+            News, social posts and blogs, swept every hour and read for mood. Start with what needs
+            you.
           </p>
         </div>
         <div className="vh-side">
@@ -210,14 +209,21 @@ function Listening() {
               ? "sweeping paused"
               : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
           </span>
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={busy}
-            onClick={() => act(() => sweep({ data: {} }), "Sweep finished.")}
-          >
-            {busy ? "Sweeping…" : "Sweep now"}
-          </button>
+          {data?.job?.status === "paused" ? null : (
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={busy}
+              onClick={() =>
+                act(async () => {
+                  const r = await sweep({ data: {} });
+                  if (!r.ran) throw new Error(r.notes[0] ?? "The sweep did not run.");
+                }, "Sweep finished.")
+              }
+            >
+              {busy ? "Sweeping…" : "Sweep now"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -228,21 +234,12 @@ function Listening() {
         what="what was found"
       />
 
-      {data?.job?.status === "paused" && (
-        <div className="card note--flag" style={{ marginTop: 12 }}>
-          <div className="card-head">
-            <h2>Sweeping stopped</h2>
-            <button
-              type="button"
-              className="btn btn--sm"
-              onClick={() => act(() => resume(), "Sweeping restarted.")}
-            >
-              Restart
-            </button>
-          </div>
-          <p className="f-note">{data.job.pausedReason}</p>
-        </div>
-      )}
+      <SweepProblems
+        problems={sweepProblems({ job: data?.job ?? null, rivalJob: data?.rivalJob ?? null })}
+        canRestart={data?.canRestart === true}
+        busy={busy}
+        restart={() => void act(() => resume(), "Sweeping restarted.")}
+      />
 
       {note && (
         <p className="f-note" style={{ marginTop: 10 }}>
@@ -265,34 +262,15 @@ function Listening() {
       </div>
 
       {tab === "overview" && (
-        <>
-          <p className="meta lsn-status">
-            Following {(data?.topics ?? []).filter((tp) => tp.active).length} keywords
-            {" · "}
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => setTab("keywords")}
-            >
-              change
-            </button>
-            {" · "}
-            Candidates&apos; own accounts:{" "}
-            {data?.rivalJob?.lastRunAt
-              ? `last read ${stamp(data.rivalJob.lastRunAt)}${data.rivalJob.detail ? ` (${data.rivalJob.detail})` : ""}`
-              : "not read yet"}
-          </p>
-          <Overview
-            topics={data?.topics ?? []}
-            mentions={data?.mentions ?? []}
-            busy={busy}
-            mark={mark}
-            openKeywords={() => setTab("keywords")}
-            react={react}
-            threshold={threshold}
-            pings={pings}
-          />
-        </>
+        <Overview
+          topics={data?.topics ?? []}
+          mentions={data?.mentions ?? []}
+          busy={busy}
+          mark={mark}
+          openKeywords={() => setTab("keywords")}
+          react={react}
+          threshold={threshold}
+        />
       )}
 
       {tab === "voices" && (
