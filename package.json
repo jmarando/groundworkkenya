@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.tests.json",
+    "seo:check": "node scripts/seo/check.mjs",
     "test": "bash tests/run.sh"
   },
   "overrides": {

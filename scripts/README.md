@@ -30,3 +30,9 @@ data tests; they are not run on their own.
 door knocks, a diary week, money, an inbox, a poll) for the named campaigns. Every row it writes is
 marked so `supabase/seeds/sample-activity-remove.sql` can remove it; no sample person has agreed to
 be contacted, so nothing a campaign sends reaches the numbers.
+
+## Checks
+
+| Script | What it tells you |
+| --- | --- |
+| `seo/check.mjs` | How the live site (or a preview, with `--base http://127.0.0.1:5199`) meets a crawler that does not run JavaScript: the content and head in the raw HTML, structured data, robots.txt, sitemap.xml, llms.txt, redirects and speed. Run `npm run seo:check`; any `FAIL` exits 1. |
