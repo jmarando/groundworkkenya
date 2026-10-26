@@ -32,7 +32,7 @@ export const Route = createFileRoute("/api/public/calendar/$token")({
             id: String(r["id"]),
             day: String(r["day"]),
             startsAt: text(r["starts_at"]),
-            title: text(r["title"]) ?? "Diary",
+            title: text(r["title"]) ?? "Campaign calendar",
             kind: text(r["kind"]),
             note: text(r["note"]),
             wardName: text(r["ward_name"]),

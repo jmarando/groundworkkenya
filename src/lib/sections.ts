@@ -21,7 +21,7 @@ export const MENU: MenuGroup[] = [
     title: "Operate",
     items: [
       { to: "/home", label: "Home" },
-      { to: "/diary", label: "Diary & news" },
+      { to: "/diary", label: "Calendar & events" },
       {
         to: "/plan",
         label: "Strategy",

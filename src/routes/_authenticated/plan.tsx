@@ -86,7 +86,7 @@ function Plan() {
         },
       }),
     onSuccess: async () => {
-      toast.success("In the diary.");
+      toast.success("In the calendar.");
       await qc.invalidateQueries({ queryKey: ["plan"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -205,7 +205,9 @@ function Plan() {
                           disabled={inDiary || toDiary.isPending}
                           onClick={() => toDiary.mutate(m)}
                         >
-                          {inDiary ? "In the diary ✓" : `Put in the diary for ${shortDay(day)}`}
+                          {inDiary
+                            ? "In the calendar ✓"
+                            : `Put in the calendar for ${shortDay(day)}`}
                         </button>
                       )}
                     </article>
