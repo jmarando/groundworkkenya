@@ -1375,3 +1375,86 @@
     min-height: 40px;
   }
 }
+
+/* The inner pages (/election-night, /polling, /voters-map, /pricing, /faq) reuse the pieces above. */
+.gw-landing .hero.page {
+  padding-bottom: 88px;
+}
+.gw-landing .hero.page h1 {
+  font-size: clamp(36px, 5.4vw, 64px);
+  max-width: 20ch;
+  line-height: 1;
+}
+.gw-landing .qa {
+  max-width: 860px;
+}
+.gw-landing .qa article {
+  border-top: 1px solid var(--line);
+  padding: 28px 0;
+}
+.gw-landing .qa article:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.gw-landing .qa h2 {
+  font-size: 24px;
+  font-weight: 700;
+  font-stretch: 106%;
+  line-height: 1.25;
+}
+.gw-landing .qa p {
+  margin-top: 10px;
+  max-width: 66ch;
+  color: var(--field);
+  font-size: 16.5px;
+}
+.gw-landing .cta {
+  background: var(--soil);
+  color: var(--stone);
+  padding-block: 72px;
+}
+.gw-landing .cta .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px 48px;
+}
+.gw-landing .cta .eyebrow {
+  color: var(--mist);
+}
+.gw-landing .cta h2 {
+  font-size: 36px;
+  font-weight: 800;
+  font-stretch: 110%;
+  margin-top: 12px;
+}
+.gw-landing .cta p {
+  margin-top: 12px;
+  max-width: 52ch;
+  color: hsl(60 8% 72%);
+}
+.gw-landing .more {
+  display: block;
+  width: fit-content;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+.gw-landing .tier .price {
+  font: 800 30px/1.05 var(--display);
+  font-stretch: 110%;
+  font-variant-numeric: tabular-nums;
+}
+.gw-landing .tier .price small {
+  display: block;
+  margin-top: 4px;
+  font: 400 13px/1.4 var(--mono);
+  color: var(--field);
+}
+.gw-landing .tier.hl .price small {
+  color: var(--mist);
+}
+.gw-landing .rules {
+  color: var(--stone);
+}

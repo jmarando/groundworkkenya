@@ -12,8 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ElectionNightRouteImport } from './routes/election-night'
+import { Route as FaqRouteImport } from './routes/faq'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SetPasswordRouteImport } from './routes/set-password'
+import { Route as SmsUssdPollsRouteImport } from './routes/sms-ussd-polls'
+import { Route as VotersMapRouteImport } from './routes/voters-map'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedArchiveRouteImport } from './routes/_authenticated/archive'
 import { Route as AuthenticatedBriefingRouteImport } from './routes/_authenticated/briefing'
@@ -81,6 +86,21 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ElectionNightRoute = ElectionNightRouteImport.update({
+  id: '/election-night',
+  path: '/election-night',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -89,6 +109,16 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const SetPasswordRoute = SetPasswordRouteImport.update({
   id: '/set-password',
   path: '/set-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmsUssdPollsRoute = SmsUssdPollsRouteImport.update({
+  id: '/sms-ussd-polls',
+  path: '/sms-ussd-polls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VotersMapRoute = VotersMapRouteImport.update({
+  id: '/voters-map',
+  path: '/voters-map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
@@ -361,8 +391,13 @@ const LovableEmailTransactionalPreviewRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/election-night': typeof ElectionNightRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
+  '/sms-ussd-polls': typeof SmsUssdPollsRoute
+  '/voters-map': typeof VotersMapRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/archive': typeof AuthenticatedArchiveRoute
   '/briefing': typeof AuthenticatedBriefingRoute
@@ -419,8 +454,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/election-night': typeof ElectionNightRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
+  '/sms-ussd-polls': typeof SmsUssdPollsRoute
+  '/voters-map': typeof VotersMapRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/archive': typeof AuthenticatedArchiveRoute
   '/briefing': typeof AuthenticatedBriefingRoute
@@ -479,8 +519,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/election-night': typeof ElectionNightRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/set-password': typeof SetPasswordRoute
+  '/sms-ussd-polls': typeof SmsUssdPollsRoute
+  '/voters-map': typeof VotersMapRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/archive': typeof AuthenticatedArchiveRoute
   '/_authenticated/briefing': typeof AuthenticatedBriefingRoute
@@ -539,8 +584,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/election-night'
+    | '/faq'
+    | '/pricing'
     | '/privacy'
     | '/set-password'
+    | '/sms-ussd-polls'
+    | '/voters-map'
     | '/agents'
     | '/archive'
     | '/briefing'
@@ -597,8 +647,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/election-night'
+    | '/faq'
+    | '/pricing'
     | '/privacy'
     | '/set-password'
+    | '/sms-ussd-polls'
+    | '/voters-map'
     | '/agents'
     | '/archive'
     | '/briefing'
@@ -656,8 +711,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/election-night'
+    | '/faq'
+    | '/pricing'
     | '/privacy'
     | '/set-password'
+    | '/sms-ussd-polls'
+    | '/voters-map'
     | '/_authenticated/agents'
     | '/_authenticated/archive'
     | '/_authenticated/briefing'
@@ -716,8 +776,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ElectionNightRoute: typeof ElectionNightRoute
+  FaqRoute: typeof FaqRoute
+  PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   SetPasswordRoute: typeof SetPasswordRoute
+  SmsUssdPollsRoute: typeof SmsUssdPollsRoute
+  VotersMapRoute: typeof VotersMapRoute
   ApiSpeechRoute: typeof ApiSpeechRoute
   PCodeRoute: typeof PCodeRoute
   SSlugRoute: typeof SSlugRoute
@@ -769,6 +834,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/election-night': {
+      id: '/election-night'
+      path: '/election-night'
+      fullPath: '/election-night'
+      preLoaderRoute: typeof ElectionNightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -781,6 +867,20 @@ declare module '@tanstack/react-router' {
       path: '/set-password'
       fullPath: '/set-password'
       preLoaderRoute: typeof SetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sms-ussd-polls': {
+      id: '/sms-ussd-polls'
+      path: '/sms-ussd-polls'
+      fullPath: '/sms-ussd-polls'
+      preLoaderRoute: typeof SmsUssdPollsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/voters-map': {
+      id: '/voters-map'
+      path: '/voters-map'
+      fullPath: '/voters-map'
+      preLoaderRoute: typeof VotersMapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/agents': {
@@ -1215,8 +1315,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ElectionNightRoute: ElectionNightRoute,
+  FaqRoute: FaqRoute,
+  PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   SetPasswordRoute: SetPasswordRoute,
+  SmsUssdPollsRoute: SmsUssdPollsRoute,
+  VotersMapRoute: VotersMapRoute,
   ApiSpeechRoute: ApiSpeechRoute,
   PCodeRoute: PCodeRoute,
   SSlugRoute: SSlugRoute,
