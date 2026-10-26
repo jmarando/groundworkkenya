@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { QueryState } from "@/components/gw/QueryState";
@@ -92,6 +92,19 @@ function Roadmap() {
   );
 }
 
+/** Seconds since `on` turned true, ticking while it stays true. */
+function useSeconds(on: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!on) return;
+    const started = Date.now();
+    setSeconds(0);
+    const t = window.setInterval(() => setSeconds(Math.round((Date.now() - started) / 1000)), 1000);
+    return () => window.clearInterval(t);
+  }, [on]);
+  return seconds;
+}
+
 function Body({ data }: { data: RoadmapData }) {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: ["roadmap"] });
@@ -100,14 +113,20 @@ function Body({ data }: { data: RoadmapData }) {
   const [asking, setAsking] = useState(false);
   const drafting = useMutation({
     mutationFn: () => draft({ data: { ask } }),
-    onSuccess: async () => {
-      toast.success("A new draft is in. The last one stays on record.");
+    onSuccess: async (out) => {
+      const kept = out.kept ?? [];
+      toast.success(
+        kept.length
+          ? `A new draft is in. The AI couldn't write ${kept.join(" and ")} this time, so ${kept.length === 1 ? "that phase keeps" : "those phases keep"} the starting plan.`
+          : "A new draft is in. The last one stays on record.",
+      );
       setAsk("");
       setAsking(false);
       await refresh();
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const seconds = useSeconds(drafting.isPending);
 
   const r = data.roadmap;
   const now = currentPhase(r, data.today);
@@ -156,7 +175,7 @@ function Body({ data }: { data: RoadmapData }) {
           <p className="meta">
             The draft reads your gaps, IEBC&apos;s dates, the latest two-week brief, the stories
             already read for this seat, every note below, the last draft and three months of what
-            Listening kept. It takes about a minute. The last draft stays on record.
+            Listening kept. It takes a minute or so. The last draft stays on record.
           </p>
           <label className="auth-field">
             <span>Anything this draft should weigh (optional)</span>
@@ -174,8 +193,13 @@ function Body({ data }: { data: RoadmapData }) {
             disabled={drafting.isPending}
             onClick={() => drafting.mutate()}
           >
-            {drafting.isPending ? "Drafting…" : "Write the draft"}
+            {drafting.isPending ? `Drafting… ${seconds} s` : "Write the draft"}
           </button>
+          {drafting.isError && !drafting.isPending ? (
+            <p className="f-note" role="alert" style={{ marginTop: 10 }}>
+              {drafting.error.message}
+            </p>
+          ) : null}
         </div>
       )}
 

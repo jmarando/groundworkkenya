@@ -7,6 +7,7 @@
  * Used by the manual "Sweep now" button and by the hourly cron route.
  */
 
+import { aiStream, answerFault } from "./ai-answer";
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
 import { takeCredits } from "./social-credits";
 import { OFF_TOPIC } from "./top-of-mind";
@@ -190,62 +191,74 @@ async function readMoods(
   return parsed.results ?? [];
 }
 
-/** One structured answer from the AI gateway, read from its stream and parsed. */
-export async function askAiJson<T>(prompt: string, name: string, schema: object): Promise<T> {
+/**
+ * One structured answer from the AI gateway, read from its stream and parsed. An answer that runs
+ * past `timeoutMs`, is cut off or fails says so in its error ("AI took too long", "AI answer cut
+ * off", "AI answer failed"); src/lib/ai-answer.ts puts those in plain words.
+ */
+export async function askAiJson<T>(
+  prompt: string,
+  name: string,
+  schema: object,
+  timeoutMs = 90_000,
+): Promise<T> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new PauseError("AI is not configured.");
 
-  const res = await fetch(AI_GATEWAY, {
-    signal: AbortSignal.timeout(90_000),
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-      "X-Lovable-AIG-SDK": "fetch",
-    },
-    body: JSON.stringify({
-      model: "openai/gpt-6-astra",
-      input: prompt,
-      stream: true,
-      reasoning: { effort: "low", summary: "auto" },
-      include: ["reasoning.encrypted_content"],
-      text: { format: { type: "json_schema", name, strict: true, schema } },
-    }),
-  });
+  const stream = aiStream();
+  try {
+    const res = await fetch(AI_GATEWAY, {
+      signal: AbortSignal.timeout(timeoutMs),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-6-astra",
+        input: prompt,
+        stream: true,
+        reasoning: { effort: "low", summary: "auto" },
+        include: ["reasoning.encrypted_content"],
+        text: { format: { type: "json_schema", name, strict: true, schema } },
+      }),
+    });
 
-  if (!res.ok || !res.body) {
-    const body = await res.text();
-    if (isBlocking(res.status))
-      throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`, res.status);
-    throw new Error(`AI request failed (${res.status}): ${body.slice(0, 180)}`);
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let text = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-    for (const part of parts) {
-      const line = part.split("\n").find((l) => l.startsWith("data:"));
-      if (!line) continue;
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-      try {
-        const evt = JSON.parse(payload) as { type?: string; delta?: string };
-        if (evt.type === "response.output_text.delta" && typeof evt.delta === "string")
-          text += evt.delta;
-      } catch {
-        /* skip malformed frame */
-      }
+    if (!res.ok || !res.body) {
+      const body = await res.text();
+      if (isBlocking(res.status))
+        throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`, res.status);
+      throw new Error(`AI request failed (${res.status}): ${body.slice(0, 180)}`);
     }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      stream.push(decoder.decode(value, { stream: true }));
+    }
+    stream.push(decoder.decode());
+  } catch (err) {
+    const why = (err as { name?: unknown } | null)?.name;
+    if (why === "TimeoutError" || why === "AbortError")
+      throw new Error(
+        `AI took too long (no full answer within ${Math.round(timeoutMs / 1000)} s).`,
+      );
+    throw err;
   }
 
-  return JSON.parse(text) as T;
+  const answer = stream.finish();
+  const fault = answerFault(answer);
+  if (fault) throw new Error(fault);
+  try {
+    return JSON.parse(answer.text) as T;
+  } catch {
+    throw new Error(
+      `AI answer unreadable (${answer.text.length} characters${answer.end === "open" ? ", the stream ended early" : ""}).`,
+    );
+  }
 }
 
 /* ------------------------------------------------------------ the sweep */

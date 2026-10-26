@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES } from "@/lib/access";
+import { aiTrouble } from "@/lib/ai-answer";
 import { readBrief } from "@/lib/brief";
 import { loadDiary } from "@/lib/diary.functions";
 import { daysUntil, ELECTION_DAY, keyDates } from "@/lib/election-calendar";
@@ -20,12 +21,12 @@ import { requireOffice, requireRole } from "@/lib/require-role";
 import {
   baseRoadmap,
   gaps,
-  PHASE_KEYS,
+  mergeDraft,
   phasesFor,
   readImpact,
-  readPhases,
   readRoadmap,
   WORKSTREAMS,
+  type DraftedPhase,
   type Figures,
   type Gap,
   type NewsImpact,
@@ -422,34 +423,42 @@ const MILESTONE = {
     title: { type: "string" },
     why: { type: "string" },
     how: { type: "array", items: { type: "string" } },
-    by: { type: ["string", "null"] },
-    measure: { type: ["string", "null"] },
+    by: { type: "string" },
+    measure: { type: "string" },
   },
 };
-const ROADMAP_SCHEMA = {
+/** One phase of the road. Each phase is asked for on its own and all at once, so no answer is long. */
+const PHASE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["headline", "summary", "phases"],
+  required: ["focus", "milestones"],
   properties: {
-    headline: { type: "string" },
-    summary: { type: "string" },
-    phases: {
-      type: "array",
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["key", "focus", "milestones"],
-        properties: {
-          key: { type: "string", enum: [...PHASE_KEYS] },
-          focus: { type: "string" },
-          milestones: { type: "array", items: MILESTONE },
-        },
-      },
-    },
+    focus: { type: "string" },
+    milestones: { type: "array", items: MILESTONE },
   },
 };
+const HEADLINE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["headline", "summary"],
+  properties: { headline: { type: "string" }, summary: { type: "string" } },
+};
 
-/** A new draft of the road to election day, written by the AI from the record and kept. */
+/** Asks again straight away when the trouble is the kind that passes (busy, cut off). */
+async function askTwice<T>(ask: () => Promise<T>): Promise<T> {
+  try {
+    return await ask();
+  } catch (err) {
+    if (!aiTrouble(err).retry) throw err;
+    return ask();
+  }
+}
+
+/**
+ * A new draft of the road to election day, written by the AI from the record and kept. The
+ * headline and each phase are asked for separately and at once (one long answer ran past the
+ * time an answer may take); a phase the AI can't write keeps the starting plan's.
+ */
 export const draftRoadmap = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { ask?: string } | undefined) => ({
@@ -472,12 +481,11 @@ export const draftRoadmap = createServerFn({ method: "POST" })
     ]);
     const base = baseRoadmap(figures, today);
     const shell = phasesFor(campaign.level, today);
-    const prompt = [
+    const record = [
       `You are the chief strategist for ${campaign.candidate ?? campaign.name}, running for ${campaign.seat} in Kenya's general election on ${ELECTION_DAY} (${daysUntil(today, ELECTION_DAY)} days from today, ${today}).`,
-      "Write the road to election day: for each phase, its focus and 3 to 7 milestones across the workstreams, shaped around THIS campaign's gaps, its news and its team's notes. Put the biggest gaps first. Every milestone says why, how (concrete steps, places by name), a date to have it done by inside the phase, and how to measure it. Keep a milestone's key when it is the same milestone as the starting plan's, so the team's progress carries over; new milestones get a new key like phase-workstream-word.",
       RULES,
       "",
-      "PHASES (fixed dates):",
+      "THE ROAD'S PHASES (fixed dates):",
       ...shell.map((p) => `- ${p.key}: ${p.title}, ${p.from} to ${p.to}`),
       "",
       "IEBC DATES:",
@@ -490,35 +498,59 @@ export const draftRoadmap = createServerFn({ method: "POST" })
       "THE GAPS:",
       ...gaps(figures, today).map((g) => `- [${g.tone}] ${g.workstream}: ${g.headline}. ${g.why}`),
       "",
-      "THE STARTING PLAN (milestone keys to keep where they fit):",
-      ...base.phases.flatMap((p) => p.milestones.map((m) => `- ${m.key}: ${m.title}`)),
-      "",
       memory,
       data.ask ? `\nWHAT THE CANDIDATE OR MANAGER ASKS FOR IN THIS DRAFT:\n${data.ask}` : "",
     ].join("\n");
+    const phaseTask = (p: (typeof shell)[number]) =>
+      [
+        `Write ONE phase of the road to election day: "${p.title}" (${p.key}), ${p.from} to ${p.to}. The other phases are written separately, so stay inside this one.`,
+        "Give the phase's focus in two or three sentences, and 3 to 7 milestones across the workstreams, shaped around THIS campaign's gaps, its news and its team's notes, the biggest gaps first. Every milestone says why, how (concrete steps, places by name), a date inside the phase to have it done by (YYYY-MM-DD, or an empty string if none fits) and how to measure it (an empty string if nothing can be counted). Keep a milestone's key when it is the same milestone as the starting plan's, so the team's progress carries over; a new milestone gets a new key like phase-workstream-word.",
+        "THE STARTING PLAN FOR THIS PHASE (keys to keep where they fit):",
+        ...(base.phases.find((b) => b.key === p.key)?.milestones ?? []).map(
+          (m) => `- ${m.key}: ${m.title}`,
+        ),
+      ].join("\n");
+    const headlineTask =
+      "Write the road's headline: one line under 120 characters naming the single biggest thing this campaign must get right between now and polling day. Then a summary in 3 to 5 sentences: where the campaign stands, its biggest gaps and what the road does about them.";
+
     const { askAiJson } = await import("@/lib/listening.server");
-    const out = await askAiJson<{
-      headline: string;
-      summary: string;
-      phases: { key: string; focus: string; milestones: unknown[] }[];
-    }>(prompt, "roadmap", ROADMAP_SCHEMA);
-    const phases = readPhases(
-      shell.map((p) => {
-        const drafted = out.phases.find((x) => x.key === p.key);
-        return { ...p, focus: drafted?.focus || p.focus, milestones: drafted?.milestones ?? [] };
-      }),
+    const ask = <T>(task: string, name: string, schema: object) =>
+      askTwice(() => askAiJson<T>(`${record}\n\nYOUR TASK:\n${task}`, name, schema, 75_000));
+    const [head, ...drafted] = await Promise.allSettled([
+      ask<{ headline: string; summary: string }>(headlineTask, "roadmap_headline", HEADLINE_SCHEMA),
+      ...shell.map((p) => ask<DraftedPhase>(phaseTask(p), "roadmap_phase", PHASE_SCHEMA)),
+    ]);
+    [head, ...drafted].forEach((r, i) => {
+      if (r.status === "rejected")
+        console.warn(`roadmap draft: ${i === 0 ? "headline" : shell[i - 1]!.key} failed`, r.reason);
+    });
+
+    const { phases, kept } = mergeDraft(
+      shell,
+      base,
+      drafted.map((r) => (r.status === "fulfilled" ? r.value : null)),
     );
-    if (!out.headline || phases.every((p) => p.milestones.length === 0))
-      throw new Error("The draft came back empty. Try again.");
+    if (kept.length === shell.length) {
+      const failed = [head, ...drafted].find((r) => r.status === "rejected");
+      throw new Error(
+        failed?.status === "rejected"
+          ? aiTrouble(failed.reason).words
+          : "The draft came back empty. Try again.",
+      );
+    }
+    const headline = head.status === "fulfilled" ? String(head.value.headline ?? "").trim() : "";
+    const summary = head.status === "fulfilled" ? String(head.value.summary ?? "").trim() : "";
     const { error } = await sb.from("campaign_roadmaps").insert({
-      headline: out.headline.slice(0, 300),
-      summary: (out.summary ?? "").slice(0, 4000),
+      headline: (headline || base.headline).slice(0, 300),
+      summary: (headline ? summary : base.summary).slice(0, 4000),
       phases,
       gaps: gaps(figures, today),
-      written_by: "Drafted with AI from the campaign's record",
+      written_by: kept.length
+        ? `Drafted with AI from the campaign's record (${kept.join(", ")}: the starting plan)`
+        : "Drafted with AI from the campaign's record",
     });
     if (error) throw new Error("Could not save the draft.");
-    return { ok: true };
+    return { ok: true, kept };
   });
 
 /* ------------------------------------------------------------ wider news */

@@ -655,6 +655,41 @@ export function readPhases(v: unknown): Phase[] {
   });
 }
 
+/** One phase as the AI wrote it, read without trust by readPhases. */
+export type DraftedPhase = { focus: unknown; milestones: unknown };
+
+/**
+ * The drafted road, phase by phase: each phase as the AI wrote it, or, where the AI could not
+ * write a phase, the starting plan's phase as it is, so one slow phase never sinks the whole
+ * draft. A milestone key an earlier phase already uses gets its phase's key in front, so two
+ * milestones never share progress. `kept` names the phases kept from the starting plan.
+ */
+export function mergeDraft(
+  shell: Omit<Phase, "milestones">[],
+  base: Pick<Roadmap, "phases">,
+  drafted: (DraftedPhase | null)[],
+): { phases: Phase[]; kept: string[] } {
+  const kept: string[] = [];
+  const raw = shell.map((p, i) => {
+    const d = drafted[i];
+    if (d && list(d.milestones).length > 0)
+      return { ...p, focus: str(d.focus, 1500) || p.focus, milestones: d.milestones };
+    kept.push(p.title);
+    const b = base.phases.find((x) => x.key === p.key);
+    return { ...p, focus: b?.focus || p.focus, milestones: b?.milestones ?? [] };
+  });
+  const seen = new Set<string>();
+  const phases = readPhases(raw).map((p) => ({
+    ...p,
+    milestones: p.milestones.map((m) => {
+      const key = seen.has(m.key) ? slug(`${p.key}-${m.key}`) : m.key;
+      seen.add(key);
+      return key === m.key ? m : { ...m, key };
+    }),
+  }));
+  return { phases, kept };
+}
+
 export function readRoadmap(row: Record<string, unknown> | null | undefined): Roadmap | null {
   if (!row) return null;
   const headline = str(row["headline"], 300);

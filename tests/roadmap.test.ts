@@ -9,6 +9,7 @@ import {
   baseRoadmap,
   currentPhase,
   gaps,
+  mergeDraft,
   phasesFor,
   readImpact,
   readPhases,
@@ -190,6 +191,65 @@ eq(
   ),
   ["m3", "m9"],
 );
+
+// A draft written phase by phase: what the AI wrote where it could, the starting plan elsewhere.
+{
+  const shell = phasesFor("mp", today);
+  const ms = (key: string, title: string) => ({
+    key,
+    workstream: "field",
+    title,
+    why: "w",
+    how: ["h"],
+    by: "",
+    measure: "",
+  });
+  const out = mergeDraft(shell, base, [
+    { focus: "Agents first.", milestones: [ms("build-field-walk", "Walk every ward")] },
+    null,
+    { focus: "", milestones: [] },
+    { focus: "Out every day.", milestones: [ms("build-field-walk", "Walk it again")] },
+    { focus: "Guard the count.", milestones: [ms("polling-agents", "Agents at every stream")] },
+  ]);
+  eq(
+    "phases the AI wrote keep its focus; empty or missing ones keep the starting plan's",
+    out.phases.map((p) => [p.key, p.focus === base.phases.find((b) => b.key === p.key)?.focus]),
+    [
+      ["build", false],
+      ["primaries", true],
+      ["ticket", true],
+      ["campaign", false],
+      ["polling", false],
+    ],
+  );
+  eq(
+    "kept phases are named, in order",
+    out.kept,
+    shell.filter((p) => p.key === "primaries" || p.key === "ticket").map((p) => p.title),
+  );
+  eq(
+    "a kept phase has the starting plan's milestones",
+    out.phases[1]!.milestones.map((m) => m.key),
+    base.phases[1]!.milestones.map((m) => m.key),
+  );
+  eq(
+    "an empty date or measure reads as none",
+    [out.phases[0]!.milestones[0]!.by, out.phases[0]!.milestones[0]!.measure],
+    [null, null],
+  );
+  eq(
+    "a key an earlier phase used gets its phase in front, so progress isn't shared",
+    out.phases[3]!.milestones.map((m) => m.key),
+    ["campaign-build-field-walk"],
+  );
+  const all = out.phases.flatMap((p) => p.milestones.map((m) => m.key));
+  eq("every key in the merged draft is unique", new Set(all).size, all.length);
+  eq(
+    "nothing written keeps every phase",
+    mergeDraft(shell, base, [null, null, null, null, null]).kept.length,
+    5,
+  );
+}
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
