@@ -47,6 +47,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           campaign_id: string
+          check_note: string | null
           created_at: string
           days: number
           doors: number | null
@@ -74,6 +75,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           campaign_id?: string
+          check_note?: string | null
           created_at?: string
           days?: number
           doors?: number | null
@@ -101,6 +103,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           campaign_id?: string
+          check_note?: string | null
           created_at?: string
           days?: number
           doors?: number | null
@@ -1493,6 +1496,7 @@ export type Database = {
           campaign_id: string
           client_id: string
           created_at: string
+          distance_m: number | null
           id: string
           issue: string | null
           lat: number | null
@@ -1500,6 +1504,7 @@ export type Database = {
           outcome: string
           pc: string
           person_id: string | null
+          place_check: string | null
           support: number | null
           visited_at: string
           walk_list_id: string | null
@@ -1511,6 +1516,7 @@ export type Database = {
           campaign_id?: string
           client_id: string
           created_at?: string
+          distance_m?: number | null
           id?: string
           issue?: string | null
           lat?: number | null
@@ -1518,6 +1524,7 @@ export type Database = {
           outcome: string
           pc: string
           person_id?: string | null
+          place_check?: string | null
           support?: number | null
           visited_at: string
           walk_list_id?: string | null
@@ -1529,6 +1536,7 @@ export type Database = {
           campaign_id?: string
           client_id?: string
           created_at?: string
+          distance_m?: number | null
           id?: string
           issue?: string | null
           lat?: number | null
@@ -1536,6 +1544,7 @@ export type Database = {
           outcome?: string
           pc?: string
           person_id?: string | null
+          place_check?: string | null
           support?: number | null
           visited_at?: string
           walk_list_id?: string | null
@@ -3924,6 +3933,47 @@ export type Database = {
         }
         Returns: Json
       }
+      field_day_checks: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          at_door: number
+          doors: number
+          far: number
+          first_at: string
+          held: boolean
+          last_at: string
+          late: number
+          name: string
+          near: number
+          no_gps: number
+          quick: number
+          reasons: string[]
+          unchecked: number
+          user_id: string
+          ward: string
+          work_date: string
+        }[]
+      }
+      field_days: {
+        Args: { _campaign: string; _from: string; _to: string }
+        Returns: {
+          at_door: number
+          doors: number
+          far: number
+          first_at: string
+          held: boolean
+          last_at: string
+          late: number
+          near: number
+          no_gps: number
+          quick: number
+          reasons: string[]
+          unchecked: number
+          user_id: string
+          ward_id: string
+          work_date: string
+        }[]
+      }
       field_plan: {
         Args: { _from: string; _to: string }
         Returns: {
@@ -4041,6 +4091,10 @@ export type Database = {
         Args: { _poll_id: string; _sms_body: string }
         Returns: Json
       }
+      metres_between: {
+        Args: { _lat1: number; _lat2: number; _lng1: number; _lng2: number }
+        Returns: number
+      }
       my_calendar_feed: { Args: { _reset?: boolean }; Returns: string }
       my_campaign: { Args: never; Returns: string }
       my_campaign_role: { Args: never; Returns: string }
@@ -4124,6 +4178,10 @@ export type Database = {
       place_station: {
         Args: { _lat: number; _lng: number; _station_id: string }
         Returns: undefined
+      }
+      pluscode_centre: {
+        Args: { _pc: string }
+        Returns: Record<string, unknown>
       }
       poll_tallies: { Args: { _poll_id: string }; Returns: Json }
       process_outbox: {
