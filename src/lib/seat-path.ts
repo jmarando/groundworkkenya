@@ -163,10 +163,17 @@ export function seatTurnoutLever(seat: Seat): {
   return best;
 }
 
-/** The constituencies reported separately with the smallest margins either way, ties by name. */
-export function closestSeats(seat: Seat, sc: Scenario = {}, n = 4): BucketNow[] {
+/**
+ * The constituencies reported separately that are close, the smallest margins
+ * either way first, ties by name, at most `n`: a margin is close when it is at
+ * most `within` (default 0.05) of the votes between the two main candidates.
+ */
+export function closestSeats(seat: Seat, sc: Scenario = {}, n = 4, within = 0.05): BucketNow[] {
   return runSeat(seat, sc)
-    .buckets.filter((b) => !b.together)
+    .buckets.filter(
+      (b) =>
+        !b.together && b.yours + b.rival > 0 && Math.abs(b.margin) <= within * (b.yours + b.rival),
+    )
     .sort((a, b) => Math.abs(a.margin) - Math.abs(b.margin) || a.name.localeCompare(b.name))
     .slice(0, n);
 }

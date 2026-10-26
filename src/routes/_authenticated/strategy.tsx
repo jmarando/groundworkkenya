@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { FindingItem } from "@/components/gw/findings/FindingItem";
+import { Outlook2027 } from "@/components/gw/strategy/Outlook2027";
 import { NoPathToCityHall, PathToCityHall } from "@/components/gw/strategy/PathToCityHall";
 import { PathToParliament } from "@/components/gw/strategy/PathToParliament";
 import { PathToStateHouse } from "@/components/gw/strategy/PathToStateHouse";
@@ -22,6 +23,9 @@ import {
   within,
 } from "@/lib/findings/core";
 import { mpSeatFromAtlas } from "@/lib/mp-path";
+import { outlookNotes, registered2026 } from "@/lib/outlook-data";
+import { registeredFor } from "@/lib/outlook-notes";
+import { youthFacts } from "@/lib/outlook-youth";
 import { sideFromBloc } from "@/lib/path-view";
 import { placeOfSeat, seatForCampaign } from "@/lib/seat";
 
@@ -70,6 +74,15 @@ function Strategy() {
     () => (atlas && home ? seatForCampaign(campaign, atlas, home) : null),
     [campaign, atlas, home],
   );
+  // The people-in-places facts and the county's new registrations behind the Outlook 2027.
+  const youth = useMemo(
+    () => (atlas && seat?.ok ? youthFacts(atlas, seat.seat) : null),
+    [atlas, seat],
+  );
+  const registration = useMemo(() => {
+    const row = seat?.ok ? registeredFor(registered2026, seat.seat.countyName) : null;
+    return row ? { count: row.newRegistrations, period: row.period, source: row.source } : null;
+  }, [seat]);
   // An MP's or MCA's last race, or why there is none; null for any other race.
   const mpSeat = useMemo(() => {
     const race = campaign?.level;
@@ -83,6 +96,42 @@ function Strategy() {
           .sort((a, b) => a.key.localeCompare(b.key))
       : [];
 
+  // The paths do not depend on the findings, so they show whether or not those load. They wait
+  // for the atlas, so the side it names is there from the first sight of them.
+  const paths = atlasPending ? null : (
+    <>
+      {seat?.ok ? (
+        <>
+          <PathToCityHall seat={seat.seat} />
+          <Outlook2027
+            key={`${campaign?.id ?? ""}:${seat.seat.county}`}
+            seat={seat.seat}
+            youth={youth}
+            registration={registration}
+            notes={outlookNotes}
+            candidate={campaign?.candidate ?? null}
+          />
+        </>
+      ) : seat ? (
+        <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
+      ) : null}
+      {mpSeat?.ok ? (
+        <PathToParliament seat={mpSeat.seat} />
+      ) : mpSeat ? (
+        <section className="card pth" aria-labelledby="ptp-none">
+          <h2 id="ptp-none">
+            {campaign?.level === "mca" ? "Path to the County Assembly" : "Path to Parliament"}
+          </h2>
+          <p className="f-note">{mpSeat.why}</p>
+        </section>
+      ) : null}
+      <PathToStateHouse
+        president={campaign?.level === "president"}
+        startSide={sideFromBloc(atlas?.sides["2022-president"])}
+      />
+    </>
+  );
+
   if (isError)
     return (
       <section className="view active" aria-label="Strategy">
@@ -92,6 +141,7 @@ function Strategy() {
             Try again
           </button>
         </div>
+        {paths}
       </section>
     );
 
@@ -169,32 +219,7 @@ function Strategy() {
             );
           })
         : null}
-      {
-        // Once the atlas has answered, so the side it names is there from the first sight of the section.
-        atlasPending ? null : (
-          <>
-            {seat?.ok ? (
-              <PathToCityHall seat={seat.seat} />
-            ) : seat ? (
-              <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
-            ) : null}
-            {mpSeat?.ok ? (
-              <PathToParliament seat={mpSeat.seat} />
-            ) : mpSeat ? (
-              <section className="card pth" aria-labelledby="ptp-none">
-                <h2 id="ptp-none">
-                  {campaign?.level === "mca" ? "Path to the County Assembly" : "Path to Parliament"}
-                </h2>
-                <p className="f-note">{mpSeat.why}</p>
-              </section>
-            ) : null}
-            <PathToStateHouse
-              president={campaign?.level === "president"}
-              startSide={sideFromBloc(atlas?.sides["2022-president"])}
-            />
-          </>
-        )
-      }
+      {paths}
     </section>
   );
 }

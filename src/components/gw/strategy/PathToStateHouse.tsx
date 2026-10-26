@@ -176,7 +176,7 @@ export function PathToStateHouse({
             </button>
           </div>
         </div>
-        <div className="pth-score">
+        <div className="pth-score" aria-live="polite" aria-atomic="true">
           <Tile
             label="Share of valid votes"
             value={sharePercent(t.share)}

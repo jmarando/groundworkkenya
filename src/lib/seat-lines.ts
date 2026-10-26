@@ -27,21 +27,33 @@ const figure = (
   origin: { source: string; period: string },
 ): Figure => ({ label, value, text, ...origin });
 
-/** About, to the nearest hundred. */
-const hundreds = (n: number) => count(Math.round(n / 100) * 100);
-const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
+/** About: to the ten under a thousand, else the hundred. */
+export function hundreds(n: number): string {
+  const unit = n < 1000 ? 10 : 100;
+  return count(Math.round(n / unit) * unit);
+}
+export const plural = (n: number, one: string, many: string) => (n === 1 ? one : many);
 
-type Lean = { word: "ahead" | "behind" | "level"; n: number };
+export type Lean = { word: "ahead" | "behind" | "level"; n: number };
 /** A margin read as a side, to the whole vote: "level" when it rounds to nothing. */
-function lean(margin: number): Lean {
+export function lean(margin: number): Lean {
   const n = Math.round(Math.abs(margin));
   return n === 0 ? { word: "level", n: 0 } : { word: margin > 0 ? "ahead" : "behind", n };
 }
 /** "ahead by 728", "behind by 184", "level". */
-const short = (l: Lean) => (l.word === "level" ? "level" : `${l.word} by ${count(l.n)}`);
+export const short = (l: Lean) => (l.word === "level" ? "level" : `${l.word} by ${count(l.n)}`);
 /** "ahead by 125,876 votes", "behind by 1 vote", "level". */
 const votes = (l: Lean) =>
   l.word === "level" ? "level" : `${short(l)} ${plural(l.n, "vote", "votes")}`;
+
+/** The words above the screen: where it starts, and, when no side is set and it still starts from the winner's, that. */
+export function seatIntro(seat: Seat, flipped: boolean): string {
+  return `Start from the 2022 result in each constituency and change one's share or turnout. A governor is elected in one round by the most votes.${
+    seat.defaulted && !flipped
+      ? " Your side isn't set in Elections, so this starts from the winner's."
+      : ""
+  }`;
+}
 
 /**
  * The readings for a seat and a scenario: where the path stands, the votes that
@@ -143,8 +155,8 @@ export function seatLines(seat: Seat, sc: Scenario = {}): PathLine[] {
         );
         lines.push({
           id: "lever",
-          line: `${biggest.name} is the biggest constituency reported separately, with ${two.text} votes between the two main candidates. Five points of share there is worth about ${worth.text} votes on the margin.`,
-          figures: [two, worth],
+          line: `On ${year.text}'s map, ${biggest.name} is the biggest constituency reported separately, with ${two.text} votes between the two main candidates. Five points of share there is worth about ${worth.text} votes on the margin.`,
+          figures: [year, two, worth],
         });
       }
     }

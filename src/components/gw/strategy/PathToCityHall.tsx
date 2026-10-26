@@ -4,12 +4,66 @@ import { Reading, Tile } from "@/components/gw/strategy/PathParts";
 import { count, percent } from "@/lib/findings/core";
 import { isBaseline, type Move, type Scenario } from "@/lib/path";
 import { sharePercent } from "@/lib/path-lines";
-import { lead, RANGE, setMove, signed } from "@/lib/path-view";
+import { commonMove, lead, RANGE, setAll, setMove, signed } from "@/lib/path-view";
 import { flipSeat, type Seat } from "@/lib/seat";
-import { hallName, seatLines } from "@/lib/seat-lines";
+import { hallName, seatIntro, seatLines } from "@/lib/seat-lines";
 import { runSeat, type BucketNow } from "@/lib/seat-path";
 
 const NO_MOVE: Move = { share: 0, turnout: 0 };
+
+/** One move for every constituency at once; "mixed" where the rows below differ. */
+function AllRow({
+  common,
+  onMove,
+}: {
+  common: { share: number | null; turnout: number | null };
+  onMove: (patch: Partial<Move>) => void;
+}) {
+  const id = useId();
+  const part = (n: number | null) => (n === null ? "mixed" : signed(n, " pts"));
+  return (
+    <li className="pth-row pth-all" data-moved={common.share !== 0 || common.turnout !== 0}>
+      <div className="pth-head">
+        <h3>Every constituency</h3>
+        <p className="meta">Moves them all by the same points; the rows below can then differ</p>
+      </div>
+      <div className="pth-sliders">
+        <div className="pth-slider">
+          <label htmlFor={`${id}-share`}>Share</label>
+          <input
+            id={`${id}-share`}
+            type="range"
+            min={-RANGE.share}
+            max={RANGE.share}
+            step={1}
+            value={common.share ?? 0}
+            aria-valuetext={
+              common.share === null ? "mixed" : `${signed(common.share, " points")} of share`
+            }
+            onChange={(e) => onMove({ share: Number(e.target.value) })}
+          />
+          <output htmlFor={`${id}-share`}>{part(common.share)}</output>
+        </div>
+        <div className="pth-slider">
+          <label htmlFor={`${id}-turnout`}>Turnout</label>
+          <input
+            id={`${id}-turnout`}
+            type="range"
+            min={-RANGE.turnout}
+            max={RANGE.turnout}
+            step={1}
+            value={common.turnout ?? 0}
+            aria-valuetext={
+              common.turnout === null ? "mixed" : `${signed(common.turnout, " points")} of turnout`
+            }
+            onChange={(e) => onMove({ turnout: Number(e.target.value) })}
+          />
+          <output htmlFor={`${id}-turnout`}>{part(common.turnout)}</output>
+        </div>
+      </div>
+    </li>
+  );
+}
 
 function BucketRow({
   b,
@@ -113,13 +167,7 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
         <span className="meta">The 2022 governor race, constituency by constituency</span>
       </summary>
       <div className="pth-body">
-        <p className="meta pth-intro">
-          Start from the 2022 result in each constituency and change one's share or turnout. A
-          governor is elected in one round by the most votes.
-          {seat.defaulted
-            ? " Your side isn't set in Elections, so this starts from the winner's."
-            : ""}
-        </p>
+        <p className="meta pth-intro">{seatIntro(seat, flipped)}</p>
         <div className="pth-side">
           <span className="eyebrow">Start from</span>
           <div className="seg" role="group" aria-label="Start from">
@@ -131,7 +179,7 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
             </button>
           </div>
         </div>
-        <div className="pth-score">
+        <div className="pth-score" aria-live="polite" aria-atomic="true">
           <Tile
             label={ahead.label}
             value={ahead.text || "—"}
@@ -169,6 +217,21 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
           ))}
         </ol>
         <ul className="pth-rows" aria-label="Constituencies, biggest first">
+          <AllRow
+            common={commonMove(
+              moves,
+              rows.map((b) => b.key),
+            )}
+            onMove={(patch) =>
+              setMoves((m) =>
+                setAll(
+                  m,
+                  rows.map((b) => b.key),
+                  patch,
+                ),
+              )
+            }
+          />
           {rows.map((b) => (
             <BucketRow
               key={b.key}
@@ -208,6 +271,11 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
             <li>
               A governor is elected in one round by the most votes: there is no second bar. "Votes
               to turn the county" is half the margin, and one.
+            </li>
+            <li>
+              The comparison with the presidential vote is of two totals of votes. It says nothing
+              about how many people voted for one party's candidate for governor and another's for
+              president.
             </li>
             <li>Constituencies are places. Nothing here records or guesses anyone's community.</li>
           </ul>

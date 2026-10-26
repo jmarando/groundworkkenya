@@ -3,7 +3,16 @@
 // a lead is worded. Pure. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/path-view.test.ts
 
-import { RANGE, bySize, lead, setMove, sideFromBloc, signed } from "@/lib/path-view";
+import {
+  RANGE,
+  bySize,
+  commonMove,
+  lead,
+  setAll,
+  setMove,
+  sideFromBloc,
+  signed,
+} from "@/lib/path-view";
 
 let pass = 0;
 let fail = 0;
@@ -75,6 +84,59 @@ eq("a name that only contains a bloc's is no side", sideFromBloc("Not Azimio"), 
     setMove({}, "coast", { share: 0 }),
     {},
   );
+}
+
+// ------------------------------------------------------------- the same move for every region
+
+{
+  const keys = ["a", "b", "c"];
+  const none = {};
+  const five = setAll(none, keys, { share: 5 });
+  eq("a part of every listed move is set", five, {
+    a: { share: 5, turnout: 0 },
+    b: { share: 5, turnout: 0 },
+    c: { share: 5, turnout: 0 },
+  });
+  eq("the empty scenario is untouched", none, {});
+  eq("the other part merges with the first", setAll(five, keys, { turnout: -2 }), {
+    a: { share: 5, turnout: -2 },
+    b: { share: 5, turnout: -2 },
+    c: { share: 5, turnout: -2 },
+  });
+  eq("and the first scenario is untouched", five["a"], { share: 5, turnout: 0 });
+  eq("keys left at zero and zero are dropped", setAll(five, keys, { share: 0 }), {});
+  eq(
+    "keys not listed are left alone",
+    setAll({ z: { share: 1, turnout: 2 } }, ["a"], { share: 3 }),
+    { z: { share: 1, turnout: 2 }, a: { share: 3, turnout: 0 } },
+  );
+  eq(
+    "a move already there for a listed key is kept in the part not given",
+    setAll({ a: { share: 1, turnout: 4 } }, keys, { share: 9 })["a"],
+    { share: 9, turnout: 4 },
+  );
+  eq("with no keys nothing changes", setAll(five, [], { share: 9 }), five);
+  eq("nothing set: zero and zero", commonMove({}, keys), { share: 0, turnout: 0 });
+  eq("all alike: that move", commonMove(five, keys), { share: 5, turnout: 0 });
+  eq(
+    "differing shares: null, turnout still common",
+    commonMove(setMove(five, "b", { share: 7 }), keys),
+    { share: null, turnout: 0 },
+  );
+  eq(
+    "differing turnouts: null",
+    commonMove(setMove(five, "c", { turnout: 3 }), keys).turnout,
+    null,
+  );
+  eq("one set and the rest not: null", commonMove({ a: { share: 5, turnout: 0 } }, keys), {
+    share: null,
+    turnout: 0,
+  });
+  eq("a subset of the keys", commonMove(setMove(five, "c", { share: 8 }), ["a", "b"]), {
+    share: 5,
+    turnout: 0,
+  });
+  eq("no keys: zero and zero", commonMove(five, []), { share: 0, turnout: 0 });
 }
 
 // ------------------------------------------------------------- the sliders' reach

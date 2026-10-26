@@ -6,7 +6,7 @@
 import { unaccounted } from "@/lib/findings/core";
 import type { Scenario } from "@/lib/path";
 import { flipSeat, seatFromAtlas, type Seat, type SeatBucket } from "@/lib/seat";
-import { hallName, seatLines } from "@/lib/seat-lines";
+import { hallName, hundreds, seatIntro, seatLines } from "@/lib/seat-lines";
 
 import { atlasFromCsv } from "./atlas-csv";
 
@@ -222,13 +222,40 @@ eq(
   "closest with fewer than four",
   line(
     toy([
-      ["a", 10, 5, 100],
-      ["b", 20, 30, 100],
+      ["a", 1000, 970, 4000],
+      ["b", 2000, 2060, 6000],
     ]),
     {},
     "closest",
   ),
-  "The closest constituencies: A (ahead by 5) and B (behind by 10).",
+  "The closest constituencies: A (ahead by 30) and B (behind by 60).",
+);
+eq(
+  "closest lists only the close ones: a constituency a third apart is not close",
+  line(
+    toy([
+      ["a", 1000, 970, 4000],
+      ["b", 1000, 500, 4000],
+    ]),
+    {},
+    "closest",
+  ),
+  "The closest constituency: A (ahead by 30).",
+);
+eq(
+  "closest: none within five points of a tie, no line",
+  line(toy([["a", 1000, 500, 4000]]), {}, "closest"),
+  undefined,
+);
+eq(
+  "closest: exactly five points of the votes between the two is still close",
+  line(toy([["a", 525, 475, 4000]]), {}, "closest"),
+  "The closest constituency: A (ahead by 50).",
+);
+eq(
+  "closest: just past five points is not",
+  line(toy([["a", 526, 474, 4000]]), {}, "closest"),
+  undefined,
 );
 eq(
   "closest with one, level",
@@ -246,7 +273,7 @@ eq(
 eq(
   "lever",
   line(nairobi, {}, "lever"),
-  "Kasarani is the biggest constituency reported separately, with 88,440 votes between the two main candidates. Five points of share there is worth about 8,800 votes on the margin.",
+  "On 2022's map, Kasarani is the biggest constituency reported separately, with 88,440 votes between the two main candidates. Five points of share there is worth about 8,800 votes on the margin.",
 );
 eq(
   "lever is worked out on 2022's map, whatever has been changed",
@@ -262,7 +289,7 @@ eq(
     ]),
     {},
     "lever",
-  )?.startsWith("A is the biggest"),
+  )?.startsWith("On 2022's map, A is the biggest"),
   true,
 );
 eq(
@@ -282,7 +309,7 @@ eq(
     ),
     {},
     "lever",
-  )?.startsWith("A is the biggest"),
+  )?.startsWith("On 2022's map, A is the biggest"),
   true,
 );
 
@@ -369,9 +396,37 @@ eq(
   [
     ["standing", "turn", "closest", "lever", "turnout", "ticket"],
     ["standing", "turn", "closest", "lever", "ticket"],
-    ["standing", "turn", "closest"],
+    ["standing", "turn"],
   ],
 );
+
+// ------------------------------------------------------------- about, to a sensible round
+
+eq(
+  "about, in hundreds: to the ten under a thousand",
+  [hundreds(11655), hundreds(1746.5), hundreds(8844), hundreds(640), hundreds(34), hundreds(0.4)],
+  ["11,700", "1,700", "8,800", "640", "30", "0"],
+);
+
+// ------------------------------------------------------------- the words above the screen
+
+{
+  const base =
+    "Start from the 2022 result in each constituency and change one's share or turnout. A governor is elected in one round by the most votes.";
+  const def = (() => {
+    const d = seatFromAtlas(atlasFromCsv(), "nairobi", null);
+    if (!d.ok) throw new Error(d.why);
+    return d.seat;
+  })();
+  eq("the intro, with a side set", seatIntro(nairobi, false), base);
+  eq("the intro, with a side set, from the other side", seatIntro(nairobi, true), base);
+  eq(
+    "no side set: the note says where it starts",
+    seatIntro(def, false),
+    `${base} Your side isn't set in Elections, so this starts from the winner's.`,
+  );
+  eq("no side set, but started from the other side: no note", seatIntro(def, true), base);
+}
 
 // ------------------------------------------------------------- the hall
 
@@ -456,10 +511,11 @@ eq(
       seatLines(nairobi, { "nairobi/westlands": MOVE(-1) })[0]!.figures.some(
         (f) => f.text === "2022",
       ),
+      seatLines(nairobi)[3]!.figures.some((f) => f.text === "2022"),
       seatLines(nairobi)[4]!.figures.some((f) => f.text === "2022"),
       seatLines(nairobi)[5]!.figures.some((f) => f.text === "2022"),
     ],
-    [true, false, true, true],
+    [true, false, true, true, true],
   );
 }
 
