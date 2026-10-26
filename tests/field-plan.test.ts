@@ -6,6 +6,7 @@ import {
   addDays,
   cell,
   dayLabel,
+  dayParts,
   forToday,
   fortnight,
   mondayOf,
@@ -30,6 +31,14 @@ function eq(name: string, got: unknown, want: unknown) {
   }
 }
 
+eq(
+  "a column head's day in two parts, the weekday over the date",
+  [dayParts("2026-10-19"), dayParts("2026-11-01")],
+  [
+    { weekday: "Mon", date: "19 Oct" },
+    { weekday: "Sun", date: "1 Nov" },
+  ],
+);
 eq("Monday of a Wednesday", mondayOf("2026-10-21"), "2026-10-19");
 eq("Monday of a Sunday", mondayOf("2026-10-25"), "2026-10-19");
 eq("a Monday is its own", mondayOf("2026-10-19"), "2026-10-19");

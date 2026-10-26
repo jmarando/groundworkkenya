@@ -10010,12 +10010,26 @@ figure {
   gap: 6px;
   flex-wrap: wrap;
 }
-.fp-board {
+/* table.fp-board, not .fp-board: table.tbl's 640px would win and squeeze fourteen days into
+   36px each. A fixed table takes its widths from the first row, so the head sets Who's. */
+table.fp-board {
   min-width: 1100px;
   table-layout: fixed;
 }
+.fp-board thead th:first-child {
+  width: 140px;
+}
 .fp-board th[scope="col"] {
   font-size: 10px;
+  /* "Mon" over "19 Oct": a whole day name and date is wider than a day's column. */
+  padding-right: 4px;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  white-space: normal;
+}
+.fp-board th[scope="col"] span {
+  display: block;
+  white-space: nowrap;
 }
 .fp-board th[scope="row"] {
   width: 140px;

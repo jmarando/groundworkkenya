@@ -62,6 +62,12 @@ export const shortDay = (day: string) =>
     timeZone: "UTC",
   });
 
+/** A day in two parts for a narrow column head: "Mon" over "20 Oct". */
+export function dayParts(day: string): { weekday: string; date: string } {
+  const [weekday = "", ...rest] = shortDay(day).split(" ");
+  return { weekday, date: rest.join(" ") };
+}
+
 /** How a list's day reads to the person walking it. */
 export function dayLabel(dueOn: string | null, shift: Shift | null, today: string): string | null {
   if (!dueOn) return null;
