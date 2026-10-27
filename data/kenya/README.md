@@ -33,3 +33,22 @@ Edit the `region` of a county in `counties.csv` to another `id` from `regions.cs
 - `registered-2026.csv`: new registrations by county in the IEBC's mass registration drive of 30 March to 28 April 2026, for the 17 counties that Capital FM printed on 1 May 2026 (the drive's national total was 2,345,476; the 17 add up to 1,107,452). `code` is IEBC's county code (checked against `counties.csv`). The figures are gross and unaudited, with no age breakdown. They leave out the 267,249 continuous registrations since 29 September 2025, which no source splits by county. Add a county only from a source that prints it.
 
 Both files are read by `src/lib/outlook-notes.ts`, which refuses a bad file and names every problem.
+
+## Campaign spending limits for 2027: `limits-2027-*.csv`
+
+The most a candidate may spend in the general election of 10 August 2027, as IEBC published it in Kenya Gazette Notice No. 12251, a special issue of 7 August 2026 (https://www.iebc.or.ke/uploads/resources/QUTuQXad27.pdf). Published figures only.
+
+- `limits-2027-counties.csv`: the Second Schedule, 47 rows. The notice's heading says the limit is for a county Governor, a Senator and a county Woman Member of the National Assembly. Columns: `code` (IEBC's county code, `001` to `047`), `county`, `population`, `area_km2` (the notice's "approximate area"), `limit_kes`.
+- `limits-2027-constituencies.csv`: the Third Schedule, 290 rows, for a National Assembly candidate. The same columns, with `county` (a county `code`) after the constituency's name.
+- `limits-2027-wards.csv`: the Fourth Schedule, 1,450 rows, for a County Assembly ward candidate. `code` runs `0001` to `1450`.
+- The First Schedule (a presidential candidate: KSh 6,112,543,133), the Fifth (what political parties may spend, item by item: KSh 24,450,172,531) and the Sixth's fixed costs are short, so they sit in `src/lib/spending-limits.ts`.
+
+How they were copied and checked:
+
+- The notice's text (`pdftotext -layout`) was split into rows, then read a second time by a different script: the two readings agree on every row (names compared without case or punctuation).
+- The notice lists constituencies without their counties. Each is placed in the county whose population its constituencies add up to; every county is within 5 people of its printed population.
+- The Fourth Schedule prints each county's name beside its wards, but at a page break the name can sit a few rows below the block's first row. Read as printed, that put 8 wards in the wrong county: Kanyenya-Ini, Muguru and Rwathia in Kirinyaga instead of Murang'a, and Olkeri, Ongata Rongai, Nkaimurunya, Oloolua and Ngong in Narok instead of Kajiado. So wards are placed the way constituencies are, by adding them up in code order: every county's wards are within 5 people of its population, and Kirinyaga, Murang'a, Narok and Kajiado have 20, 35, 30 and 25 wards.
+- The notice prints Kirinyaga's number as `0` and calls Nairobi "Nairobi City". The files use the code `020` and the name `counties.csv` gives.
+- The Sixth Schedule says each limit is a fixed cost plus a cost per person and a cost per square kilometre, and prints them (ward: KSh 3,225,105, 42.10 and 1,655; constituency: 10,795,432, 53.72 and 2,112; county: 14,406,545, 33.83 and 1,330). The schedules' limits do not follow from those numbers: for wards the fixed cost and the land-area cost fit exactly, but the cost per person that fits is about 47.20, not 42.10, and for constituencies and counties no such sum fits exactly. Nothing here recomputes a limit; the files hold the schedules' own figures.
+
+`tests/spending-limits.test.ts` checks the row counts, the sums above, the figures the guide quotes, and that a bad file is refused with every problem named.
