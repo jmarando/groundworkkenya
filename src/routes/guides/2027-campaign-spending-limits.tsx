@@ -102,9 +102,10 @@ function SpendingLimits() {
         <Status title="The rules are in court: check before you rely on a figure">
           <Statements items={CHALLENGE} />
           <p>
-            These reports describe the order differently and we have not seen the order itself, so
-            this guide cannot say whether the limits can be enforced today. It gives the figures as
-            IEBC gazetted them.
+            The Star describes the order as stopping Parliament from considering the regulations;
+            the Nation reports it as stopping implementation of the limits themselves. We have not
+            seen the order, so this guide cannot say whether the limits can be enforced today. It
+            gives the figures as IEBC gazetted them.
           </p>
         </Status>
 

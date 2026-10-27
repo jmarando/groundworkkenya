@@ -91,7 +91,7 @@ export const CHALLENGE: Statement[] = [
     from: STAR_ORDER,
   },
   {
-    says: "The Nation reported on 23 October 2026 that two parties, the Republican Liberty Party and the Grassroots Development Party, are challenging the rules in court, and that the court has temporarily stopped implementation of the new expenditure limits pending the petition. The article is behind a paywall and we could not confirm this wording.",
+    says: "The Nation reported on 23 October 2026 that the High Court has temporarily stopped implementation of the new expenditure limits IEBC gazetted on 7 August 2026, pending determination of a petition brought by the Republican Liberty Party and the Grassroots Development Party, and that the order effectively halts any immediate parliamentary deliberation or regulatory enforcement.",
     ref: "Article of 23 October 2026",
     from: NATION_PARTIES,
   },
