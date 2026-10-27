@@ -313,9 +313,11 @@ async function main() {
   }
 
   // Each page in the sitemap has its own title, description, canonical and h1, is linked from the
-  // home page, and is in llms.txt.
+  // home page, and is in llms.txt. A page that names no share image gets a screenshot Lovable picks,
+  // so each one should name the site's own card.
   const flaws = [];
   const titles = new Set();
+  const borrowed = [];
   for (const { loc, page } of pages) {
     const path = loc.slice(SITE.length);
     const pageTitle = titleOf(page);
@@ -333,6 +335,7 @@ async function main() {
     if (path !== "/" && !html.includes(`href="${path}"`))
       flaws.push(`${path}: not linked from the home page`);
     if (llms.status === 200 && !llms.text.includes(loc)) flaws.push(`${path}: not in llms.txt`);
+    if (!(metaOf(page, "og:image", "property") ?? "").startsWith(`${SITE}/`)) borrowed.push(path);
   }
   if (pages.length) {
     if (flaws.length) fail("pages", flaws.join("; "));
@@ -341,6 +344,9 @@ async function main() {
         "pages",
         `${pages.length} pages: own title, description, canonical and h1, linked from home, in llms.txt`,
       );
+    if (borrowed.length)
+      warn("share-images", `no share image of the site's own on ${borrowed.join(", ")}`);
+    else pass("share-images", `${pages.length} pages name the site's own share image`);
   }
 
   // Pages that are not for search, and a path that is not a page.
@@ -352,8 +358,9 @@ async function main() {
   if (open.length) fail("noindex-app", `${open.join(", ")} can be indexed`);
   else pass("noindex-app", "/auth, /set-password and the console say noindex");
   const gone = await get(`${BASE}/no-such-page-${Date.now()}`);
-  if (gone.status === 404) pass("not-found", "an unknown path answers 404");
-  else fail("not-found", `an unknown path answers ${shown(gone)}`);
+  if (gone.status !== 404) fail("not-found", `an unknown path answers ${shown(gone)}`);
+  else if (!titleOf(gone.text)) warn("not-found", "an unknown path answers 404, with no title");
+  else pass("not-found", `an unknown path answers 404: ${titleOf(gone.text)}`);
 
   // Hosts and redirects (the real hosts only).
   if (!LOCAL) {

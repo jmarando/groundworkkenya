@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { SOCIAL_CARD } from "@/lib/seo";
+
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
@@ -17,7 +19,12 @@ export const Route = createFileRoute("/privacy")({
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://groundwork.ke/privacy" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:image", content: SOCIAL_CARD },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Groundwork, the campaign OS" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: SOCIAL_CARD },
     ],
     links: [{ rel: "canonical", href: "https://groundwork.ke/privacy" }],
   }),
