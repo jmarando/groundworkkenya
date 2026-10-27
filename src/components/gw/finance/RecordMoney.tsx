@@ -12,6 +12,7 @@ import {
   recordContribution,
   recordExpense,
 } from "@/lib/finance.functions";
+import { MPESA_HINT } from "@/lib/payment-ref";
 
 const today = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
 const METHOD: Record<string, string> = {
@@ -117,13 +118,34 @@ function ContributionForm({ done }: { done: () => void }) {
         </select>
       </label>
       <label className="pb-field">
-        <span>Reference {f.method === "cash" ? "(optional)" : ""}</span>
+        <span>
+          {f.method === "mpesa"
+            ? "M-Pesa code"
+            : f.method === "cheque"
+              ? "Cheque number"
+              : f.method === "bank"
+                ? "Bank reference"
+                : "Reference (optional)"}
+        </span>
         <input
           value={f.reference}
           onChange={set("reference")}
-          maxLength={80}
-          placeholder="M-Pesa code or bank reference"
+          maxLength={f.method === "mpesa" ? 14 : 80}
+          autoCapitalize={f.method === "mpesa" ? "characters" : undefined}
+          autoComplete="off"
+          spellCheck={false}
+          required={f.method !== "cash"}
+          placeholder={
+            f.method === "mpesa"
+              ? "e.g. SJK3L2M9QX"
+              : f.method === "cheque"
+                ? "e.g. 000123"
+                : f.method === "bank"
+                  ? "e.g. FT26298ABC12"
+                  : ""
+          }
         />
+        {f.method === "mpesa" ? <small className="f-note">{MPESA_HINT}</small> : null}
       </label>
       <label className="pb-field">
         <span>Received on</span>

@@ -26,15 +26,15 @@ export const Route = createFileRoute("/_authenticated/archive")({
   loader: ({ context, deps }) => context.queryClient.ensureQueryData(archiveOptions(deps.month)),
   head: () => ({
     meta: [
-      { title: "Morning news & diary archive · Groundwork" },
+      { title: "Morning news & calendar archive · Groundwork" },
       {
         name: "description",
-        content: "Read your campaign’s saved daily briefings, sources and diary by month.",
+        content: "Read your campaign’s saved daily briefings, sources and calendar by month.",
       },
-      { property: "og:title", content: "Morning news & diary archive · Groundwork" },
+      { property: "og:title", content: "Morning news & calendar archive · Groundwork" },
       {
         property: "og:description",
-        content: "Your campaign’s saved morning news and diary, in one dated record.",
+        content: "Your campaign’s saved morning news and calendar, in one dated record.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -49,12 +49,12 @@ function ArchivePage() {
   const { campaign } = useAccess();
   const [tab, setTab] = useState<"news" | "diary">("news");
   return (
-    <section className="view active briefing-archive" aria-label="News and diary archive">
+    <section className="view active briefing-archive" aria-label="News and calendar archive">
       <header className="archive-head">
         <div>
           <span className="eyebrow">{campaign?.name}</span>
           <h1>
-            <Archive size={25} /> News & diary archive
+            <Archive size={25} /> News & calendar archive
           </h1>
         </div>
         <label className="archive-month">
@@ -74,7 +74,7 @@ function ArchivePage() {
           <Newspaper /> Morning news <span>{data.stories.length}</span>
         </Button>
         <Button variant={tab === "diary" ? "default" : "outline"} onClick={() => setTab("diary")}>
-          <CalendarDays /> Diary <span>{data.diary.length}</span>
+          <CalendarDays /> Calendar <span>{data.diary.length}</span>
         </Button>
       </nav>
       {tab === "news" ? (
@@ -126,7 +126,7 @@ function ArchivePage() {
           </article>
         ))
       ) : (
-        <p className="archive-empty">No diary items this month.</p>
+        <p className="archive-empty">Nothing in the calendar this month.</p>
       )}
     </section>
   );

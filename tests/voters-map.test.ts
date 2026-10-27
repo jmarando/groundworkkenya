@@ -187,7 +187,7 @@ eq(
     hintFor("area", "county"),
   ],
   [
-    "Click a house to open it",
+    "Click a house to see who lives there",
     "Zoom in, or click, to see the houses",
     "Click a ward to drop in",
     "Click a ward to drop in, or a constituency's name",
@@ -435,9 +435,9 @@ eq(
     hintFor("area", "county", true),
   ],
   [
-    "Click a centre to open it",
+    "Click a centre for its details",
     "Zoom in, or click, to see the houses",
-    "Click a house to open it",
+    "Click a house to see who lives there",
     "Click a ward to drop in",
     "Click a ward to drop in, or a constituency's name",
   ],

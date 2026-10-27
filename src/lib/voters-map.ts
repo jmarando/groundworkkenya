@@ -155,9 +155,9 @@ export function listStays(
  * show has polling centres on the map, which a click opens.
  */
 export function hintFor(level: Level, top: Top, centres = false): string {
-  if (level === "street") return "Click a house to open it";
+  if (level === "street") return "Click a house to see who lives there";
   if (level === "ward")
-    return centres ? "Click a centre to open it" : "Zoom in, or click, to see the houses";
+    return centres ? "Click a centre for its details" : "Zoom in, or click, to see the houses";
   if (level === "constituency" || top === "constituency") return "Click a ward to drop in";
   return "Click a ward to drop in, or a constituency's name";
 }

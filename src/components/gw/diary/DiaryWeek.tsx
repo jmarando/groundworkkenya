@@ -222,7 +222,7 @@ function RemoveEntry({ entry }: { entry: DiaryEntry }) {
   const removing = useMutation({
     mutationFn: () => remove({ data: { id: entry.id } }),
     onSuccess: async () => {
-      toast.success("Removed from the diary.");
+      toast.success("Removed from the calendar.");
       await refresh();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -272,7 +272,7 @@ function EntryForm({
   const saving = useMutation({
     mutationFn: () => save({ data: input }),
     onSuccess: async () => {
-      toast.success(entry ? "Diary updated." : "Added to the diary.");
+      toast.success(entry ? "Calendar updated." : "Added to the calendar.");
       await refresh();
       onDone();
     },

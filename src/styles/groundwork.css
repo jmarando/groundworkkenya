@@ -7515,6 +7515,28 @@ figure {
     height: 600px;
   }
 }
+/* Website: where the published site is, and the ways to pass it on. */
+.ws-live {
+  margin: 0 0 14px;
+  padding: 16px 18px;
+  border-left: 4px solid var(--status-reporting);
+}
+.ws-live-url {
+  display: block;
+  margin: 6px 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.ws-live-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .ws-actions {
   display: flex;
   gap: 8px;
@@ -10004,18 +10026,48 @@ figure {
   }
 }
 
+/* Voters: how an area's supporters to find are worked out, under its numbers. */
+.vt-why {
+  margin: -4px 0 14px;
+  font-size: 12.5px;
+  color: var(--muted-foreground);
+}
+.vt-why summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.vt-why p {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
 /* Field plan: the fortnight board, list chips and the planning form. */
 .fp-nav {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
-.fp-board {
+/* table.fp-board, not .fp-board: table.tbl's 640px would win and squeeze fourteen days into
+   36px each. A fixed table takes its widths from the first row, so the head sets Who's. */
+table.fp-board {
   min-width: 1100px;
   table-layout: fixed;
 }
+.fp-board thead th:first-child {
+  width: 140px;
+}
 .fp-board th[scope="col"] {
   font-size: 10px;
+  /* "Mon" over "19 Oct": a whole day name and date is wider than a day's column. */
+  padding-right: 4px;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  white-space: normal;
+}
+.fp-board th[scope="col"] span {
+  display: block;
+  white-space: nowrap;
 }
 .fp-board th[scope="row"] {
   width: 140px;
@@ -10250,7 +10302,7 @@ figure {
 .lsn-convo {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px 120px 16px;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 14px;
   padding: 12px 2px;
@@ -10277,6 +10329,12 @@ figure {
 .lsn-convo-n {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+.lsn-convo-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
 }
 .lsn-mood {
   display: flex;
@@ -10347,17 +10405,57 @@ figure {
     flex-direction: column;
     align-items: stretch;
   }
-  .lsn-convo {
-    grid-template-columns: minmax(0, 1fr) 64px 16px;
-  }
-  .lsn-convo .lsn-mood {
-    grid-column: 1 / 3;
-    grid-row: 2;
-  }
-  .lsn-convo .lsn-go {
-    grid-row: 1;
-    grid-column: 3;
-  }
+}
+
+/* Listening: one note when sweeping has stopped or a service can't be read. */
+.lsn-problems {
+  margin-top: 12px;
+  padding: 14px 18px;
+  border-left: 4px solid var(--status-onstation);
+}
+.lsn-problem {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+.lsn-problem + .lsn-problem {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.lsn-problem h2 {
+  font-size: 15px;
+}
+.lsn-problem p {
+  margin-top: 4px;
+}
+.lsn-problem .btn {
+  flex-shrink: 0;
+}
+.lsn-detail {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.lsn-detail summary {
+  cursor: pointer;
+}
+.lsn-detail .mono {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+/* A group of conversations inside one card: a small title, then its lines. */
+.lsn-group + .lsn-group {
+  margin-top: 14px;
+}
+.lsn-group-title {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
 /* A row of small controls that wraps on a phone. */

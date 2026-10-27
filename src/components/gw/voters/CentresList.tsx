@@ -66,9 +66,10 @@ export function CentresList({
                 <button
                   type="button"
                   className="btn btn--ghost btn--sm"
+                  aria-label={`Details of ${c.name}`}
                   onClick={() => onOpen(c.code)}
                 >
-                  Open
+                  Details
                 </button>
               </div>
             );
@@ -90,9 +91,10 @@ export function CentresList({
                     <button
                       type="button"
                       className="btn btn--ghost btn--sm"
+                      aria-label={`Details of ${c.name}`}
                       onClick={() => onOpen(c.code)}
                     >
-                      Open
+                      Details
                     </button>
                     {canPlace ? (
                       <button

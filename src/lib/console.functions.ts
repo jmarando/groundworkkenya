@@ -11,6 +11,7 @@ const every = <T>(build: (from: number, to: number) => PromiseLike<{ data: T[] |
 import { officeLabel, resultForm } from "@/lib/race";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { spendingLimit } from "@/lib/spending-limit";
+import { toFind } from "@/lib/voters-view";
 
 /* ------------------------------------------------------------------ finance */
 
@@ -1820,9 +1821,12 @@ export const getBriefing = createServerFn({ method: "GET" })
       )[0];
 
     const headlines: string[] = [];
-    const shortfall = Math.max(0, totals.target - totals.supporters);
+    // Supporters against supporters: a win number counts votes, and about one supporter in five
+    // doesn't vote, so the supporters to find are a quarter more (voters-view.ts toFind).
+    const find = toFind(totals.target);
+    const shortfall = Math.max(0, find - totals.supporters);
     headlines.push(
-      `${nfmt(totals.supporters)} confirmed supporters against a ${nfmt(totals.target)} win number — ${nfmt(shortfall)} still to find across ${totals.wards} wards.`,
+      `${nfmt(totals.supporters)} confirmed supporters of the ${nfmt(find)} to find for a ${nfmt(totals.target)}-vote win number — ${nfmt(shortfall)} still to find across ${totals.wards} wards.`,
     );
     if (sortedWards[0])
       headlines.push(

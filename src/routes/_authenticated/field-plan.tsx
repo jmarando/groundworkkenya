@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   addDays,
   cell,
+  dayParts,
   fortnight,
   mondayOf,
   nairobiToday,
@@ -289,11 +290,14 @@ function FieldPlan() {
                 <thead>
                   <tr>
                     <th scope="col">Who</th>
-                    {days.map((d) => (
-                      <th key={d} scope="col" data-today={d === today}>
-                        {shortDay(d)}
-                      </th>
-                    ))}
+                    {days.map((d) => {
+                      const { weekday, date } = dayParts(d);
+                      return (
+                        <th key={d} scope="col" data-today={d === today}>
+                          <span>{weekday}</span> <span>{date}</span>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody>

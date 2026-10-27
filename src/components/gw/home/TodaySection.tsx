@@ -1,5 +1,5 @@
 import { ActionButton } from "@/components/gw/briefing/parts";
-import { DiaryPlan } from "@/components/gw/home/DiaryPlan";
+import { DiaryPlan, TodayCalendar } from "@/components/gw/home/DiaryPlan";
 import { MorningNews, MorningStoryBlock } from "@/components/gw/home/MorningStoryBlock";
 import type { DiaryEntry } from "@/lib/diary";
 import type { TodayItem } from "@/lib/home";
@@ -42,6 +42,7 @@ export function TodaySection({
 }) {
   const checkMorning = useServerFn(catchUpMorning);
   const queryClient = useQueryClient();
+  const ahead = upcoming.length > 0 || watch.length > 0;
   const catchUp = useMutation({
     mutationFn: () => checkMorning(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["home"] }),
@@ -51,7 +52,7 @@ export function TodaySection({
       <div className="morning-tools">
         <Button variant="ghost" size="sm" asChild>
           <Link to="/archive" search={{ month: new Date().toISOString().slice(0, 7) }}>
-            <Archive /> News & diary archive
+            <Archive /> News & calendar archive
           </Link>
         </Button>
         {canEdit && (!story || !story.story.from || story.day < today) && (
@@ -66,6 +67,7 @@ export function TodaySection({
         )}
         {catchUp.isError && <p role="alert">{catchUp.error.message}</p>}
       </div>
+      <TodayCalendar plan={plan} today={today} loading={loading} canEdit={canEdit} />
       <div className="mb-three">
         <h2 id="home-today" className="mb-three-h">
           Today, in order
@@ -80,7 +82,7 @@ export function TodaySection({
           ))}
         </ol>
       </div>
-      <div className="mb-grid">
+      <div className={ahead ? "mb-grid" : undefined}>
         <MorningStoryBlock
           view={story}
           loading={loading}
@@ -89,15 +91,11 @@ export function TodaySection({
           canEdit={canEdit}
           onEdit={onEditStory}
         />
-        <aside className="mb-side" aria-label="Today's plan">
-          <DiaryPlan
-            plan={plan}
-            watch={watch}
-            upcoming={upcoming}
-            loading={loading}
-            canEdit={canEdit}
-          />
-        </aside>
+        {ahead ? (
+          <aside className="mb-side" aria-label="Coming up">
+            <DiaryPlan watch={watch} upcoming={upcoming} />
+          </aside>
+        ) : null}
       </div>
       <MorningNews view={story} />
     </section>

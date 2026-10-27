@@ -25,13 +25,13 @@ export const Route = createFileRoute("/_authenticated/diary")({
   component: DiaryPage,
   head: () => ({
     meta: [
-      { title: "Diary · Groundwork" },
+      { title: "Calendar · Groundwork" },
       {
         name: "description",
         content:
           "Where the candidate will be, planned a week at a time, and what to keep an eye on.",
       },
-      { property: "og:title", content: "Diary · Groundwork" },
+      { property: "og:title", content: "Calendar · Groundwork" },
       {
         property: "og:description",
         content:
@@ -55,12 +55,12 @@ function DiaryPage() {
   });
   const first = data?.days[0];
   return (
-    <section className="view active" aria-label="Diary">
+    <section className="view active" aria-label="Calendar">
       <div className="diary">
         <div className="diary-head">
           <div>
-            <span className="eyebrow">Operate · Diary</span>
-            <h1>{first ? `Week of ${dayName(first)}` : "The diary"}</h1>
+            <span className="eyebrow">Operate · Calendar & events</span>
+            <h1>{first ? `Week of ${dayName(first)}` : "The calendar"}</h1>
             <p className="meta">
               Where the candidate will be, and what to keep an eye on.{" "}
               {isPrincipal ? "Plan the week here; Home shows each day." : "Home shows each day."}

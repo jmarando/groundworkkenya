@@ -35,7 +35,7 @@ export function CalendarLink() {
   return (
     <div className="card cal-link">
       <div className="card-head">
-        <h2>Add the diary to your calendar</h2>
+        <h2>Put this calendar on your phone</h2>
         <span className="mono">Google · Apple · Outlook</span>
       </div>
       {!links ? (
