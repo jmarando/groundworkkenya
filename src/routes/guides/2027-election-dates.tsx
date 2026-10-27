@@ -50,7 +50,7 @@ function ElectionDates() {
             Kenya's 2027 election dates, <span className="m">as IEBC gazetted them.</span>
           </>
         }
-        lead="Polling day is Tuesday 10 August 2027. Every date below is printed in IEBC's Kenya Gazette special issue of 20 August 2026 or in its press release of the same day, and each one says where."
+        lead="Polling day is Tuesday 10 August 2027. Each date below comes from IEBC's Kenya Gazette special issue of 20 August 2026, its press release of the same day or, where it says so, the Elections Act, and each one links to where it is printed."
       />
 
       <GuideBody>
@@ -73,7 +73,7 @@ function ElectionDates() {
           </p>
         </Status>
 
-        <h2 id="key-dates">Every gazetted date, in order</h2>
+        <h2 id="key-dates">The dates, in order</h2>
         <p>
           Dates for parties, candidates, the Commission and voters. The last column links to the
           document and says where in it the date is printed.

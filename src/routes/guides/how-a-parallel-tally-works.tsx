@@ -61,10 +61,10 @@ function ParallelTally() {
 
         <Status title="Only IEBC declares results" tone="info">
           <p>
-            A parallel tally is a check on the count. It is not a result, and nothing in it is
-            declared by anyone but the Commission (Elections Act, section 39(1), and Article 138 of
-            the Constitution for the President). This guide uses "parallel tally" to mean adding up
-            the forms yourself; the law does not use the phrase in the provisions quoted below.
+            A parallel tally is a check on the count, not a result: only the Commission declares
+            results (Elections Act, section 39(1), and Article 138 of the Constitution for the
+            President). This guide uses "parallel tally" to mean adding up the forms yourself; the
+            law does not use the phrase in the provisions quoted below.
           </p>
         </Status>
 
@@ -118,7 +118,7 @@ function ParallelTally() {
           for example Form 34A is "Presidential election results at the polling station" and Form
           37C is "Declaration of the county Governor election results at the county tallying
           centre". The polling-station forms are made under regulation 79. At the polling station
-          the count itself is first recorded on Form 33 ( regulation 76).
+          the count itself is first recorded on Form 33 (regulation 76).
         </p>
 
         <h2 id="how-results-move">How results move up</h2>
@@ -168,9 +168,9 @@ function ParallelTally() {
         <h2 id="portal">What the public portal showed in 2022</h2>
         <Statements items={PORTAL_2022} />
         <p>
-          The same report notes that the portal went live only days before the election. Section
-          39(1C)(c) of the <Cite s={ACT}>Elections Act</Cite> requires the Commission to publish the
-          polling result forms on an online public portal for a presidential election.
+          The same report notes that the portal went live only days before the election (page 10).
+          Section 39(1C)(c) of the <Cite s={ACT}>Elections Act</Cite> requires the Commission to
+          publish the polling result forms on an online public portal for a presidential election.
         </p>
 
         <h2 id="if-they-differ">If your figures differ</h2>

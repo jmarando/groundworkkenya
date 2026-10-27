@@ -8,7 +8,7 @@ import type { Statement } from "@/lib/guides";
 import { rowsOf } from "@/lib/kenya";
 
 export const NOTICE: Source = {
-  label: "Kenya Gazette Notice No. 12251, special issue of 7 August 2026 (IEBC)",
+  label: "Kenya Gazette special issue, Notice No. 12251 (IEBC)",
   url: "https://www.iebc.or.ke/uploads/resources/QUTuQXad27.pdf",
   date: "2026-08-07",
 };

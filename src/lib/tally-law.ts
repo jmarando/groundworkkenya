@@ -106,8 +106,13 @@ export const WHO_DECLARES: Statement[] = [
     from: ACT,
   },
   {
+    says: "IEBC said on 30 July 2026 that the Supreme Court's decision in the 2017 presidential election petition affirmed that the result recorded in the statutory Form 34A is the primary and final record of results at the polling station.",
+    ref: "Article of 30 July 2026",
+    from: BILL_REPORT,
+  },
+  {
     says: "The Carter Center's report on the 2022 election says that under the Elections Act the declaration of results is the sole responsibility of IEBC, and that only the polling-station Forms 34A are legally binding, citing the decision in Independent Electoral & Boundaries Commission v Maina Kiai & 5 Others [2017] eKLR.",
-    ref: "Results transmission section",
+    ref: "Report, page 8",
     from: CARTER,
   },
 ];
@@ -116,12 +121,12 @@ export const WHO_DECLARES: Statement[] = [
 export const PORTAL_2022: Statement[] = [
   {
     says: "Less than 24 hours after the polls closed, scans of 97.71 percent of the polling-station results forms had been posted on the public portal (as of 2:40 p.m. on 10 August 2022), and by 12 August more than 99 percent of the Forms 34A had been received.",
-    ref: "Results transmission and verification sections",
+    ref: "Report, pages 2 and 8",
     from: CARTER,
   },
   {
     says: "The portal posted scans of the forms, not the figures in them. The Carter Center said the verification process could have been strengthened by posting the numeric tallies on the portal, which would let the media and interested parties check the tabulated results.",
-    ref: "Results verification section",
+    ref: "Report, page 10",
     from: CARTER,
   },
 ];
@@ -143,7 +148,7 @@ export const IF_THEY_DIFFER: Statement[] = [
 /** What IEBC has said may change before the election. */
 export const CHANGES: Statement[] = [
   {
-    says: "IEBC says it has submitted to Parliament the Elections Laws (Amendment) Bill, 2026, and draft amendments to the Elections (General), Voter Registration, Voter Education, Party List and Party Primaries, and Technology Regulations.",
+    says: "IEBC says it has submitted the Elections Laws (Amendment) Bill, 2026 to Parliament, and that it has also drafted amendments to the Elections (General), Voter Registration, Voter Education, Party List and Party Primaries, and Technology Regulations.",
     ref: "Paragraphs 37 to 39",
     from: PRESS_RELEASE,
   },

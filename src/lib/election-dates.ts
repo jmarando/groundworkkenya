@@ -10,13 +10,12 @@ import type { Statement } from "@/lib/guides";
 export const POLLING_DAY = "2027-08-10";
 
 export const GAZETTE: Source = {
-  label:
-    "Kenya Gazette special issue, Vol. CXXVIII, No. 144, 20 August 2026 (IEBC Notices 13497 to 13503)",
+  label: "Kenya Gazette special issue, Vol. CXXVIII, No. 144 (IEBC Notices 13497 to 13503)",
   url: "https://www.iebc.or.ke/uploads/resources/3MMJlcBEs1.pdf",
   date: "2026-08-20",
 };
 export const PRESS_RELEASE: Source = {
-  label: "IEBC press release, Status of election preparedness, 20 August 2026",
+  label: "IEBC press release: Status of election preparedness",
   url: "https://www.iebc.or.ke/uploads/resources/j6iEmZgi3w.pdf",
   date: "2026-08-20",
 };
@@ -189,9 +188,10 @@ export const DATES: DateEntry[] = [
     on: "2027-04-16",
     printed: "Friday",
     who: "The Commission",
-    what: "Publishes in the Gazette the names of the persons contesting in a party primary and the date of the primary, within seven days of receiving the names.",
+    what: "Publishes in the Gazette the names of the persons contesting in a party primary and the date of the primary, within seven days of receipt of the names of the candidates.",
     ref: "Notice 13497 (h)",
     from: GAZETTE,
+    note: 'The notice ends the sentence "by Friday 16th April, 2027", which can be read as the day the names are due or the day of publication.',
   },
   {
     on: "2027-05-08",
@@ -311,7 +311,7 @@ export const DATES: DateEntry[] = [
     on: "2027-11-08",
     printed: null,
     who: "Political parties and candidates",
-    what: "Notify the Commission of, and report on, the action taken on any surplus campaign funds.",
+    what: "Notification and report on the action taken on any surplus campaign funds.",
     ref: "Notice 13503 (h)",
     from: GAZETTE,
   },
@@ -414,7 +414,7 @@ export const DIFFERENCES: Difference[] = [
         from: GAZETTE,
       },
       {
-        says: '"Political parties shall submit their membership lists to the Commission by Tuesday, 16th March 2027. On the same day, they are also required to submit the names of candidates contesting in their party primaries, along with the dates and venues for those primaries."',
+        says: 'IEBC says "political parties shall submit their membership lists to the Commission by Tuesday, 16th March 2027. On the same day, they are also required to submit the names of candidates contesting in their party primaries, along with the dates and venues for those primaries."',
         ref: "Paragraph 18",
         from: PRESS_RELEASE,
       },
@@ -430,7 +430,7 @@ export const DIFFERENCES: Difference[] = [
         from: GAZETTE,
       },
       {
-        says: '"The campaign period shall commence upon registration of a candidate by the Commission, but not earlier than 29th May 2027, and shall end on 7th August 2027, 48 hours before Election Day."',
+        says: 'IEBC says the campaign period "shall commence upon registration of a candidate by the Commission, but not earlier than 29th May 2027, and shall end on 7th August 2027, 48 hours before Election Day".',
         ref: "Paragraph 24",
         from: PRESS_RELEASE,
       },
@@ -452,7 +452,7 @@ export const RULING: Statement[] = [
     from: PRESS_RELEASE,
   },
   {
-    says: 'Reporting the ruling of 7 August 2026, Kenyans.co.ke quotes the court as saying that its declaration "is hereby suspended until after the next general election" and that cancelling or postponing the planned 2027 election at this stage "would no doubt plunge the country into chaos".',
+    says: 'Reporting the ruling of 7 August 2026, Kenyans.co.ke quotes its order as suspending the declaration "until after the next general election", and reports that Justice Thande said cancelling or postponing the planned 2027 election at this stage would plunge the country into chaos.',
     ref: "Article of 7 August 2026",
     from: RULING_REPORT,
   },
