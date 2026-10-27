@@ -3,6 +3,8 @@
 // the schedules were copied and checked. Pure.
 
 import type { Source } from "@/lib/brief";
+import { PRESS_RELEASE } from "@/lib/election-dates";
+import type { Statement } from "@/lib/guides";
 import { rowsOf } from "@/lib/kenya";
 
 export const NOTICE: Source = {
@@ -41,6 +43,59 @@ export const WARD_RANGE = {
   low: { ward: "Shella", county: "Lamu", kes: 3_486_686 },
   high: { ward: "Turbi", county: "Marsabit", kes: 22_095_682 },
 };
+
+/** A whole number of shillings with its thousands separators: 6112543133 is "6,112,543,133". */
+export const kes = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+/** What the notice says campaign spending is: the items its limits apply to. */
+export const AUTHORIZED_ITEMS = [
+  "Venues where campaigns may be undertaken",
+  "Publicity material for campaigns",
+  "Advertising for the campaigns",
+  "Campaign personnel",
+  "Transportation in respect of campaign activities",
+  "Any other justifiable expenses, including communication, nomination fees, security, accommodation and administrative costs",
+];
+
+export const STAR_ORDER: Source = {
+  label: "The Star: MPs accuse IEBC of sidelining them on campaign financing",
+  url: "https://www.the-star.co.ke/news/2026-10-22-mps-accuse-iebc-of-sidelining-them-on-campaign-financing",
+  date: "2026-10-22",
+};
+export const NATION_PARTIES: Source = {
+  label: "Daily Nation: Why parties are opposed to IEBC rules on campaign billions",
+  url: "https://nation.africa/kenya/news/politics/why-parties-are-opposed-to-iebc-rules-on-campaign-billions-5642192",
+  date: "2026-10-23",
+};
+export const STANDARD_SUED: Source = {
+  label: "The Standard: IEBC sued over 2027 campaign finance regulations",
+  url: "https://thestandard.ke/business/national/article/2001556248/iebc-sued-over-2027-campaign-finance-regulations",
+  date: "2026-08-26",
+};
+
+/** What is on record about the court challenge to the rules and the limits. */
+export const CHALLENGE: Statement[] = [
+  {
+    says: "IEBC says that on 7 August 2026 it gazetted the Election Campaign Financing Regulations, 2026 and the contribution and spending limits for the 2027 general election.",
+    ref: "Paragraph 40",
+    from: PRESS_RELEASE,
+  },
+  {
+    says: "The Standard reported on 26 August 2026 that IEBC had been sued over the 2027 campaign finance regulations. We could not read the body of that article.",
+    ref: "Article of 26 August 2026",
+    from: STANDARD_SUED,
+  },
+  {
+    says: "The Star reported on 22 October 2026 that the High Court issued a stay order on 18 September 2026, pending an inter-partes hearing, and that MPs were told of a court order stopping Parliament from considering the regulations.",
+    ref: "Article of 22 October 2026",
+    from: STAR_ORDER,
+  },
+  {
+    says: "The Nation reported on 23 October 2026 that two parties, the Republican Liberty Party and the Grassroots Development Party, are challenging the rules in court, and that the court has temporarily stopped implementation of the new expenditure limits pending the petition. The article is behind a paywall and we could not confirm this wording.",
+    ref: "Article of 23 October 2026",
+    from: NATION_PARTIES,
+  },
+];
 
 export type Limit = {
   /** IEBC's code: "001" to "047" for a county, "001" to "290" for a constituency, "0001" to "1450" for a ward. */

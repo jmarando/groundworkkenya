@@ -13,6 +13,12 @@ const fail = (message: string) => problems.push(message);
 const read = (path: string) => readFileSync(path, "utf8");
 const today = new Date().toISOString().slice(0, 10);
 
+/** The route file of a public path: src/routes/<path>.tsx, or src/routes/<path>/index.tsx for a folder's own page. */
+const routeFile = (path: string) =>
+  [`src/routes/${path.slice(1)}.tsx`, `src/routes/${path.slice(1)}/index.tsx`].find((f) =>
+    existsSync(f),
+  );
+
 // sitemap.xml lists only pages meant to be found, written the way the site writes them.
 const consolePages = readdirSync("src/routes/_authenticated")
   .filter((f) => f.endsWith(".tsx") && f !== "route.tsx")
@@ -34,8 +40,8 @@ for (const entry of entries) {
   if (notForSearch.some((p) => path === p || path.startsWith(`${p}/`))) {
     fail(`sitemap.xml: ${loc} is not a page for search`);
   }
-  if (path.length > 1 && !existsSync(`src/routes/${path.slice(1)}.tsx`)) {
-    fail(`sitemap.xml: ${loc} has no page at src/routes${path}.tsx`);
+  if (path.length > 1 && !routeFile(path)) {
+    fail(`sitemap.xml: ${loc} has no page at src/routes${path}.tsx or src/routes${path}/index.tsx`);
   }
   const lastmod = entry.match(/<lastmod>([^<]+)<\/lastmod>/)?.[1] ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(lastmod))
@@ -90,8 +96,8 @@ for (const name of readdirSync("src/routes").filter((f) => f.endsWith(".tsx"))) 
 // Each public page gives its own path to pageHead, so its canonical, share cards and markup agree.
 for (const loc of seen) {
   const path = loc.slice(SITE.length);
-  const file = `src/routes/${path.slice(1)}.tsx`;
-  if (path === "/" || path === "/privacy" || !existsSync(file)) continue;
+  const file = routeFile(path);
+  if (path === "/" || path === "/privacy" || !file) continue;
   if (!read(file).includes(`path: "${path}"`)) {
     fail(`${file} must call pageHead with path "${path}"`);
   }

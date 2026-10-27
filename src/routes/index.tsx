@@ -1023,6 +1023,13 @@ Nini kirekebishwe kwanza mtaani kwako?
             <Link to="/privacy">Privacy</Link>
           </div>
           <div>
+            <h4>Guides</h4>
+            <Link to="/guides">All guides</Link>
+            <Link to="/guides/2027-election-dates">2027 election dates</Link>
+            <Link to="/guides/2027-campaign-spending-limits">Spending limits</Link>
+            <Link to="/guides/how-a-parallel-tally-works">Parallel tally</Link>
+          </div>
+          <div>
             <h4>Account</h4>
             <Link to="/auth">Sign in</Link>
             <a href="mailto:justin@glab.africa">justin@glab.africa</a>

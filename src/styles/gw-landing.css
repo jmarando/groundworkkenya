@@ -785,7 +785,7 @@
 }
 .gw-landing footer .wrap {
   display: grid;
-  grid-template-columns: 2fr repeat(3, 1fr);
+  grid-template-columns: 2fr repeat(4, 1fr);
   gap: 32px;
 }
 .gw-landing footer .brand b {
@@ -1457,4 +1457,179 @@
 }
 .gw-landing .rules {
   color: var(--stone);
+}
+
+/* The guides (/guides): sourced explainers. They reuse the inner pages' hero, sections and call to action. */
+.gw-landing .guide {
+  max-width: 920px;
+  font-size: 17px;
+}
+.gw-landing .guide .checked {
+  font: 400 13px/1.5 var(--mono);
+  color: var(--field);
+}
+.gw-landing .guide h2 {
+  margin-top: 56px;
+  font-size: 30px;
+  font-weight: 800;
+  font-stretch: 108%;
+  scroll-margin-top: 90px;
+}
+.gw-landing .guide .checked + h2 {
+  margin-top: 32px;
+}
+.gw-landing .guide h3 {
+  margin-top: 30px;
+  font-size: 20px;
+  font-weight: 700;
+  font-stretch: 104%;
+}
+.gw-landing .guide p {
+  margin-top: 14px;
+  max-width: 72ch;
+}
+.gw-landing .guide ul,
+.gw-landing .guide ol {
+  margin: 14px 0 0;
+  padding-left: 22px;
+}
+.gw-landing .guide ul {
+  list-style: disc;
+}
+.gw-landing .guide ol {
+  list-style: decimal;
+}
+.gw-landing .guide li {
+  margin-top: 8px;
+  max-width: 72ch;
+}
+.gw-landing .guide a {
+  color: var(--murram-d);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.gw-landing .guide small {
+  display: block;
+  margin-top: 6px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--field);
+}
+.gw-landing .status {
+  margin-top: 24px;
+  padding: 18px 22px 20px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--amber);
+  border-radius: 12px;
+  background: var(--card);
+}
+.gw-landing .status.info {
+  border-left-color: var(--field);
+}
+.gw-landing .status > b {
+  display: block;
+  font: 700 18px/1.3 var(--display);
+  font-stretch: 106%;
+}
+.gw-landing .status p,
+.gw-landing .status li {
+  font-size: 16px;
+}
+.gw-landing .gtable-wrap {
+  margin-top: 18px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.gw-landing .gtable {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.gw-landing .gtable th {
+  padding: 12px 16px;
+  text-align: left;
+  font: 600 12px/1.2 var(--body);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--field);
+  background: var(--stone-2);
+}
+.gw-landing .gtable td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  vertical-align: top;
+}
+.gw-landing .gtable .date {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.gw-landing .gtable .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.gw-landing .gtable.tight {
+  min-width: 460px;
+}
+.gw-landing .sources li {
+  font-size: 15px;
+}
+.gw-landing .sources .mono {
+  color: var(--field);
+}
+.gw-landing .guide .faq {
+  max-width: none;
+  margin-top: 18px;
+}
+.gw-landing .guide .faq summary {
+  flex-wrap: wrap;
+  align-items: baseline;
+  font-size: 17px;
+}
+.gw-landing .guide .faq summary > span:first-child {
+  flex: 1 1 220px;
+}
+.gw-landing .guide .faq summary .mono {
+  font-weight: 400;
+  color: var(--field);
+}
+.gw-landing .guide .faq details {
+  padding: 14px 0;
+}
+.gw-landing .guide .faq .dir-body {
+  padding-top: 6px;
+}
+.gw-landing .guide .faq .dir-body h3 {
+  margin-top: 18px;
+  font-size: 16px;
+}
+@media (max-width: 600px) {
+  .gw-landing .gtable.tight {
+    min-width: 0;
+  }
+  .gw-landing .guide .faq summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+  }
+  .gw-landing .guide .faq summary .mono {
+    grid-column: 1;
+  }
+  .gw-landing .guide .faq summary::after {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .gw-landing .guide {
+    font-size: 16px;
+  }
+  .gw-landing .guide h2 {
+    margin-top: 44px;
+    font-size: 25px;
+  }
 }

@@ -46,6 +46,10 @@ import { Route as AuthenticatedVotersRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedWarroomRouteImport } from './routes/_authenticated/warroom'
 import { Route as AuthenticatedWebsiteRouteImport } from './routes/_authenticated/website'
 import { Route as ApiSpeechRouteImport } from './routes/api/speech'
+import { Route as GuidesIndexRouteImport } from './routes/guides/index'
+import { Route as Guides2027CampaignSpendingLimitsRouteImport } from './routes/guides/2027-campaign-spending-limits'
+import { Route as Guides2027ElectionDatesRouteImport } from './routes/guides/2027-election-dates'
+import { Route as GuidesHowAParallelTallyWorksRouteImport } from './routes/guides/how-a-parallel-tally-works'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as SSlugRouteImport } from './routes/s.$slug'
 import { Route as ApiPublicHealthRouteImport } from './routes/api/public/health'
@@ -257,6 +261,28 @@ const ApiSpeechRoute = ApiSpeechRouteImport.update({
   path: '/api/speech',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuidesIndexRoute = GuidesIndexRouteImport.update({
+  id: '/guides/',
+  path: '/guides/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Guides2027CampaignSpendingLimitsRoute =
+  Guides2027CampaignSpendingLimitsRouteImport.update({
+    id: '/guides/2027-campaign-spending-limits',
+    path: '/guides/2027-campaign-spending-limits',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Guides2027ElectionDatesRoute = Guides2027ElectionDatesRouteImport.update({
+  id: '/guides/2027-election-dates',
+  path: '/guides/2027-election-dates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesHowAParallelTallyWorksRoute =
+  GuidesHowAParallelTallyWorksRouteImport.update({
+    id: '/guides/how-a-parallel-tally-works',
+    path: '/guides/how-a-parallel-tally-works',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const PCodeRoute = PCodeRouteImport.update({
   id: '/p/$code',
   path: '/p/$code',
@@ -425,8 +451,12 @@ export interface FileRoutesByFullPath {
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
   '/api/speech': typeof ApiSpeechRoute
+  '/guides/2027-campaign-spending-limits': typeof Guides2027CampaignSpendingLimitsRoute
+  '/guides/2027-election-dates': typeof Guides2027ElectionDatesRoute
+  '/guides/how-a-parallel-tally-works': typeof GuidesHowAParallelTallyWorksRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
+  '/guides/': typeof GuidesIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
@@ -488,8 +518,12 @@ export interface FileRoutesByTo {
   '/warroom': typeof AuthenticatedWarroomRoute
   '/website': typeof AuthenticatedWebsiteRoute
   '/api/speech': typeof ApiSpeechRoute
+  '/guides/2027-campaign-spending-limits': typeof Guides2027CampaignSpendingLimitsRoute
+  '/guides/2027-election-dates': typeof Guides2027ElectionDatesRoute
+  '/guides/how-a-parallel-tally-works': typeof GuidesHowAParallelTallyWorksRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
+  '/guides': typeof GuidesIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug/privacy': typeof SSlugPrivacyRoute
@@ -553,8 +587,12 @@ export interface FileRoutesById {
   '/_authenticated/warroom': typeof AuthenticatedWarroomRoute
   '/_authenticated/website': typeof AuthenticatedWebsiteRoute
   '/api/speech': typeof ApiSpeechRoute
+  '/guides/2027-campaign-spending-limits': typeof Guides2027CampaignSpendingLimitsRoute
+  '/guides/2027-election-dates': typeof Guides2027ElectionDatesRoute
+  '/guides/how-a-parallel-tally-works': typeof GuidesHowAParallelTallyWorksRoute
   '/p/$code': typeof PCodeRoute
   '/s/$slug': typeof SSlugRoute
+  '/guides/': typeof GuidesIndexRoute
   '/api/public/health': typeof ApiPublicHealthRoute
   '/api/public/ussd': typeof ApiPublicUssdRoute
   '/s/$slug_/privacy': typeof SSlugPrivacyRoute
@@ -618,8 +656,12 @@ export interface FileRouteTypes {
     | '/warroom'
     | '/website'
     | '/api/speech'
+    | '/guides/2027-campaign-spending-limits'
+    | '/guides/2027-election-dates'
+    | '/guides/how-a-parallel-tally-works'
     | '/p/$code'
     | '/s/$slug'
+    | '/guides/'
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug/privacy'
@@ -681,8 +723,12 @@ export interface FileRouteTypes {
     | '/warroom'
     | '/website'
     | '/api/speech'
+    | '/guides/2027-campaign-spending-limits'
+    | '/guides/2027-election-dates'
+    | '/guides/how-a-parallel-tally-works'
     | '/p/$code'
     | '/s/$slug'
+    | '/guides'
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug/privacy'
@@ -745,8 +791,12 @@ export interface FileRouteTypes {
     | '/_authenticated/warroom'
     | '/_authenticated/website'
     | '/api/speech'
+    | '/guides/2027-campaign-spending-limits'
+    | '/guides/2027-election-dates'
+    | '/guides/how-a-parallel-tally-works'
     | '/p/$code'
     | '/s/$slug'
+    | '/guides/'
     | '/api/public/health'
     | '/api/public/ussd'
     | '/s/$slug_/privacy'
@@ -784,8 +834,12 @@ export interface RootRouteChildren {
   SmsUssdPollsRoute: typeof SmsUssdPollsRoute
   VotersMapRoute: typeof VotersMapRoute
   ApiSpeechRoute: typeof ApiSpeechRoute
+  Guides2027CampaignSpendingLimitsRoute: typeof Guides2027CampaignSpendingLimitsRoute
+  Guides2027ElectionDatesRoute: typeof Guides2027ElectionDatesRoute
+  GuidesHowAParallelTallyWorksRoute: typeof GuidesHowAParallelTallyWorksRoute
   PCodeRoute: typeof PCodeRoute
   SSlugRoute: typeof SSlugRoute
+  GuidesIndexRoute: typeof GuidesIndexRoute
   ApiPublicHealthRoute: typeof ApiPublicHealthRoute
   ApiPublicUssdRoute: typeof ApiPublicUssdRoute
   SSlugPrivacyRoute: typeof SSlugPrivacyRoute
@@ -1072,6 +1126,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSpeechRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/guides/': {
+      id: '/guides/'
+      path: '/guides'
+      fullPath: '/guides/'
+      preLoaderRoute: typeof GuidesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/2027-campaign-spending-limits': {
+      id: '/guides/2027-campaign-spending-limits'
+      path: '/guides/2027-campaign-spending-limits'
+      fullPath: '/guides/2027-campaign-spending-limits'
+      preLoaderRoute: typeof Guides2027CampaignSpendingLimitsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/2027-election-dates': {
+      id: '/guides/2027-election-dates'
+      path: '/guides/2027-election-dates'
+      fullPath: '/guides/2027-election-dates'
+      preLoaderRoute: typeof Guides2027ElectionDatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/how-a-parallel-tally-works': {
+      id: '/guides/how-a-parallel-tally-works'
+      path: '/guides/how-a-parallel-tally-works'
+      fullPath: '/guides/how-a-parallel-tally-works'
+      preLoaderRoute: typeof GuidesHowAParallelTallyWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/$code': {
       id: '/p/$code'
       path: '/p/$code'
@@ -1323,8 +1405,12 @@ const rootRouteChildren: RootRouteChildren = {
   SmsUssdPollsRoute: SmsUssdPollsRoute,
   VotersMapRoute: VotersMapRoute,
   ApiSpeechRoute: ApiSpeechRoute,
+  Guides2027CampaignSpendingLimitsRoute: Guides2027CampaignSpendingLimitsRoute,
+  Guides2027ElectionDatesRoute: Guides2027ElectionDatesRoute,
+  GuidesHowAParallelTallyWorksRoute: GuidesHowAParallelTallyWorksRoute,
   PCodeRoute: PCodeRoute,
   SSlugRoute: SSlugRoute,
+  GuidesIndexRoute: GuidesIndexRoute,
   ApiPublicHealthRoute: ApiPublicHealthRoute,
   ApiPublicUssdRoute: ApiPublicUssdRoute,
   SSlugPrivacyRoute: SSlugPrivacyRoute,

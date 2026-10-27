@@ -47,5 +47,9 @@ Messaging, airtime and M-Pesa payouts are billed at cost, with nothing added on 
 - [Election night](https://groundwork.ke/election-night): the parallel tally from Form 34A by USSD, with coverage on every figure
 - [Pricing](https://groundwork.ke/pricing): what each seat pays and includes
 - [Frequently asked questions](https://groundwork.ke/faq)
+- [Guides](https://groundwork.ke/guides): sourced guides to Kenya's 2027 election rules; each fact links to the page that prints it
+- [2027 election dates](https://groundwork.ke/guides/2027-election-dates): every date IEBC has gazetted for 10 August 2027, seat by seat, with the notice each comes from and the High Court ruling on the date
+- [2027 campaign spending limits](https://groundwork.ke/guides/2027-campaign-spending-limits): IEBC's limits for President, Governor, Senator, Woman Rep, MP and MCA, county by county, from Gazette Notice 12251, and what is known of the court challenge
+- [How a parallel tally works](https://groundwork.ke/guides/how-a-parallel-tally-works): what the Elections Act and Regulations give an agent at the polling station, the result forms, and why only IEBC declares results
 - [Book a demo](https://groundwork.ke/#demo)
 - [Privacy policy](https://groundwork.ke/privacy)
