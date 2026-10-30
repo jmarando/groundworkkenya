@@ -243,13 +243,13 @@ export function platformSplit(posts: { source: string; reach: number | null }[])
 export function soWhat(s: { mood: "angry" | "warm" | "mixed"; place: "local" | "county" | "national"; trend: "climbing" | "settled" | "unchecked"; views: number; days: number; outlets: number }): string; // ends with: First seen means the first post we found, not proof of who started it.
 ```
 
-- [ ] **Step 1: Write the tests.**
+- [x] **Step 1: Write the tests.**
   - `sameStory`: two posts sharing an article address 5 hours apart → true; the same link 80 hours apart → false; two posts sharing only `https://www.example.co.ke/` → false; two sharing `t.co` links only → false; overlap 0.35 with 4 shared words → true, with 3 shared words → false; an X reply whose `refersTo` is the other post's url → true.
   - `groupStories`: a chain A–B and B–C joins all three; a group of two posts from one voice is dropped; the saved story id is kept when a saved story's post is in the group and the oldest id wins when two meet; the first post is the earliest.
   - `viewsCurve`: two posts with readings interleaved give a non-decreasing sum at each time; a post without readings adds 0; empty input gives `[]`.
   - `trendOf`: 10% growth between the two latest readings with the latest 2 hours old → climbing; 5% growth → settled; latest 13 hours old → unchecked with `since`; fewer than 2 readings → settled when one exists, unchecked when none.
   - `platformSplit` shares sum to 1 over posts with views and give `[]` when none has views; `soWhat` ends with the caveat sentence and names the number of outlets.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS. **Step 5: Commit** `Stories: grouping, the views curve and the so-what line, as plain code`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS. **Step 5: Commit** `Stories: grouping, the views curve and the so-what line, as plain code`.
 
 ### Task 10: Stories in the database
 
