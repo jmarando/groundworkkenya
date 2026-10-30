@@ -3,7 +3,8 @@
 // matches each story against every keyword the way a search reads it: every word of the search
 // in the headline or summary (filler such as "news" or "county" left out; quoted phrases and OR
 // as written), one of the keyword's extra words when it has any, and none of the words it leaves
-// out. Pure: src/lib/listening.server.ts fetches.
+// out. It also reads the keyword news search's answers (Serper). Pure: src/lib/news-sources.server.ts
+// fetches.
 
 import { plain, realLink } from "./alerts-feed";
 
@@ -211,41 +212,59 @@ export const recent = <T extends { publishedAt: string | null }>(
 /** The same story under two addresses reads the same here: its headline, folded and cut short. */
 export const titleKey = (title: string | null): string => (title ? fold(title).slice(0, 120) : "");
 
-/* ---------------------------------------------------------------- Google News */
+/* ---------------------------------------------------------------- news search */
 
-/** A story from Google News's search feed: the headline without its " - Outlet" tail, and the outlet's own site. */
+/** A story from the keyword news search: the outlet's name, and its own site. */
 export type NewsHit = FeedStory & { outlet: string | null; domain: string | null };
 
+const UNIT_MS: Record<string, number> = {
+  second: 1_000,
+  minute: 60_000,
+  min: 60_000,
+  hour: 3_600_000,
+  day: 86_400_000,
+  week: 7 * 86_400_000,
+  month: 30 * 86_400_000,
+  year: 365 * 86_400_000,
+};
+
 /**
- * The stories of a Google News search feed. Its links are Google's own (they lead on to the
- * article) and it carries no summary; the outlet and its site come from `source`.
+ * When a search result says it was published: "3 hours ago", "an hour ago", "yesterday", or a date
+ * such as "Oct 28, 2026". Null when it says neither.
  */
-export function googleNewsStories(xml: string): NewsHit[] {
+export function whenSaid(raw: unknown, now = Date.now()): string | null {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s) return null;
+  const ago = /^(\d+|an?)\s+(second|minute|min|hour|day|week|month|year)s?\s+ago$/i.exec(s);
+  if (ago) {
+    const n = /^an?$/i.test(ago[1]!) ? 1 : Number(ago[1]);
+    return new Date(now - n * UNIT_MS[ago[2]!.toLowerCase()]!).toISOString();
+  }
+  if (/^yesterday$/i.test(s)) return new Date(now - UNIT_MS["day"]!).toISOString();
+  return when(s);
+}
+
+/**
+ * The stories of a Serper news search: Google News's results, each at the article's own address,
+ * with the outlet's name and a short summary.
+ */
+export function serperStories(json: unknown, now = Date.now()): NewsHit[] {
+  const news = json && typeof json === "object" ? (json as { news?: unknown }).news : null;
+  if (!Array.isArray(news)) return [];
   const out: NewsHit[] = [];
-  for (const [body = ""] of xml.matchAll(/<item[\s>][\s\S]*?<\/item>/g)) {
-    const link = element(body, "link")?.trim();
-    const url = link ? realLink(plain(link)) : null;
+  for (const item of news) {
+    const r = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+    const url = typeof r["link"] === "string" ? realLink(r["link"]) : null;
     if (!url) continue;
-    const outletRaw = element(body, "source");
-    const outlet = outletRaw ? plain(outletRaw).slice(0, 80) || null : null;
-    const site = /<source[^>]*\surl="([^"]+)"/.exec(body)?.[1];
-    let domain: string | null = null;
-    try {
-      domain = site ? new URL(plain(site)).hostname.replace(/^www\./, "") : null;
-    } catch {
-      domain = null;
-    }
-    const titleRaw = element(body, "title");
-    let title = titleRaw ? plain(titleRaw) : "";
-    if (outlet && title.endsWith(` - ${outlet}`))
-      title = title.slice(0, -(outlet.length + 3)).trim();
+    const text = (v: unknown, max: number) =>
+      typeof v === "string" ? plain(v).slice(0, max) || null : null;
     out.push({
       url,
-      title: title.slice(0, 300) || null,
-      snippet: null,
-      publishedAt: when(element(body, "pubDate")),
-      outlet,
-      domain,
+      title: text(r["title"], 300),
+      snippet: text(r["snippet"], 1200),
+      publishedAt: whenSaid(r["date"], now),
+      outlet: text(r["source"], 80),
+      domain: new URL(url).hostname.replace(/^www\./, ""),
     });
   }
   return out;
