@@ -7,10 +7,12 @@ import {
   GEMINI_MODELS,
   geminiAnswer,
   geminiBody,
+  geminiBusy,
   geminiError,
   geminiKeyRefused,
   geminiUrl,
 } from "@/lib/gemini";
+import { askAiJson, PauseError } from "@/lib/listening.server";
 
 let pass = 0;
 let fail = 0;
@@ -28,12 +30,25 @@ function eq(name: string, got: unknown, want: unknown) {
 // ---------------------------------------------------------------- the request
 
 eq(
-  "reading posts uses the lighter model",
-  geminiUrl("read"),
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODELS.read}:generateContent`,
+  "a model's address",
+  geminiUrl("gemini-3.5-flash-lite"),
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
 );
-eq("writing uses the better one", geminiUrl("write").includes(GEMINI_MODELS.write), true);
-eq("the two tiers differ", String(GEMINI_MODELS.read) !== String(GEMINI_MODELS.write), true);
+eq(
+  "reading posts uses the lighter models, writing the better ones, each with a second to ask",
+  [GEMINI_MODELS.read.length, GEMINI_MODELS.write.length],
+  [2, 2],
+);
+eq(
+  "the two tiers share no model",
+  GEMINI_MODELS.read.some((m) => (GEMINI_MODELS.write as readonly string[]).includes(m)),
+  false,
+);
+eq(
+  "busy or broken on Google's side; a limit or a refusal is not",
+  [500, 503, 504, 400, 403, 429].map(geminiBusy),
+  [true, true, true, false, false, false],
+);
 
 const schema = {
   type: "object",
@@ -132,5 +147,76 @@ eq(
   false,
 );
 
-console.log(`${pass} passed, ${fail} failed`);
-if (fail) process.exit(1);
+// ------------------------------------------------------- a busy model, the next
+
+const BUSY = JSON.stringify({
+  error: {
+    code: 503,
+    status: "UNAVAILABLE",
+    message: "This model is currently experiencing high demand.",
+  },
+});
+const OK = JSON.stringify(reply([{ text: '{"headline":"x"}' }], "STOP"));
+
+/** Gemini stood in for: each model answers as `answers` says; the models asked, in order. */
+function stubGemini(answers: Record<string, { status: number; body: string }>) {
+  const asked: string[] = [];
+  globalThis.fetch = (async (url: string | URL) => {
+    const model = /models\/([^:]+):/.exec(String(url))?.[1] ?? "";
+    asked.push(model);
+    const a = answers[model] ?? { status: 404, body: "{}" };
+    return new Response(a.body, { status: a.status });
+  }) as typeof fetch;
+  return asked;
+}
+
+async function main() {
+  process.env["GEMINI_API_KEY"] = "test-key";
+  const [first, second] = GEMINI_MODELS.write;
+  const ask = () => askAiJson<{ headline: string }>("Write it.", "story", schema);
+
+  {
+    const asked = stubGemini({ [first]: { status: 503, body: BUSY }, [second]: { status: 200, body: OK } });
+    eq("a busy model hands the question to the next, which answers", await ask(), { headline: "x" });
+    eq("both were asked, best first", asked, [first, second]);
+  }
+  {
+    const asked = stubGemini({ [first]: { status: 200, body: OK } });
+    await ask();
+    eq("a model that answers is the only one asked", asked, [first]);
+  }
+  {
+    stubGemini({ [first]: { status: 503, body: BUSY }, [second]: { status: 503, body: BUSY } });
+    const err = await ask().catch((e: Error) => e);
+    eq(
+      "every model busy: the last refusal, in Google's words",
+      String((err as Error).message),
+      "AI request failed (503): UNAVAILABLE: This model is currently experiencing high demand.",
+    );
+  }
+  {
+    const asked = stubGemini({ [first]: { status: 429, body: "{}" }, [second]: { status: 200, body: OK } });
+    const err = await ask().catch((e: Error) => e);
+    eq("a limit reached stops at once", [err instanceof PauseError, asked], [true, [first]]);
+  }
+  {
+    const asked = stubGemini({ [first]: { status: 400, body: "{}" }, [second]: { status: 200, body: OK } });
+    const err = await ask().catch((e: Error) => e);
+    eq(
+      "a request Google calls wrong is not asked again",
+      [String((err as Error).message).startsWith("AI request failed (400)"), asked],
+      [true, [first]],
+    );
+  }
+  {
+    const [lite, liteNext] = GEMINI_MODELS.read;
+    const asked = stubGemini({ [lite]: { status: 503, body: BUSY }, [liteNext]: { status: 200, body: OK } });
+    await askAiJson("Read these.", "moods", schema, 90_000, "read");
+    eq("reading falls back within its own tier", asked, [lite, liteNext]);
+  }
+
+  console.log(`${pass} passed, ${fail} failed`);
+  if (fail) process.exit(1);
+}
+
+void main();

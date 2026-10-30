@@ -12,8 +12,10 @@ import { answerFault } from "./ai-answer";
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
 import {
   type AiTier,
+  GEMINI_MODELS,
   geminiAnswer,
   geminiBody,
+  geminiBusy,
   geminiError,
   geminiKeyRefused,
   geminiUrl,
@@ -255,26 +257,19 @@ async function readMoods(
   return parsed.results ?? [];
 }
 
-/**
- * One structured answer from Gemini (Google's AI, on the campaign's own key, GEMINI_API_KEY),
- * parsed. `tier` picks the model: "read" for posts in bulk, "write" for anything written for a
- * person. An answer that runs past `timeoutMs`, is cut off or fails says so in its error ("AI took
- * too long", "AI answer cut off", "AI answer failed"); src/lib/ai-answer.ts puts those in plain
- * words. The name each caller gives its schema is no longer needed and is kept for them.
- */
-export async function askAiJson<T>(
-  prompt: string,
-  _name: string,
-  schema: object,
-  timeoutMs = 90_000,
-  tier: AiTier = "write",
-): Promise<T> {
-  const key = process.env["GEMINI_API_KEY"];
-  if (!key) throw new PauseError("AI is not configured.");
+/** Google failed on its side (busy or broken), so the tier's next model may answer. */
+class BusyError extends Error {}
 
-  let json: unknown;
+/** One model asked once: Gemini's reply as JSON, or an error that says what went wrong. */
+async function askGemini(
+  model: string,
+  key: string,
+  prompt: string,
+  schema: object,
+  timeoutMs: number,
+): Promise<unknown> {
   try {
-    const res = await fetch(geminiUrl(tier), {
+    const res = await fetch(geminiUrl(model), {
       signal: AbortSignal.timeout(timeoutMs),
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -286,10 +281,11 @@ export async function askAiJson<T>(
       // A limit reached, or the key itself turned away: stop the sweep rather than ask again.
       if (isBlocking(res.status) || geminiKeyRefused(res.status, body))
         throw new PauseError(`AI stopped (${res.status}): ${why}`, res.status);
-      throw new Error(`AI request failed (${res.status}): ${why}`);
+      const failed = `AI request failed (${res.status}): ${why}`;
+      throw geminiBusy(res.status) ? new BusyError(failed) : new Error(failed);
     }
     try {
-      json = JSON.parse(body);
+      return JSON.parse(body);
     } catch {
       throw new Error(`AI answer unreadable (${body.length} characters, not JSON).`);
     }
@@ -300,6 +296,37 @@ export async function askAiJson<T>(
         `AI took too long (no full answer within ${Math.round(timeoutMs / 1000)} s).`,
       );
     throw err;
+  }
+}
+
+/**
+ * One structured answer from Gemini (Google's AI, on the campaign's own key, GEMINI_API_KEY),
+ * parsed. `tier` picks the models: "read" for posts in bulk, "write" for anything written for a
+ * person; when Google says one is busy, the tier's next model is asked. An answer that runs past
+ * `timeoutMs`, is cut off or fails says so in its error ("AI took too long", "AI answer cut off",
+ * "AI answer failed"); src/lib/ai-answer.ts puts those in plain words. The name each caller gives
+ * its schema is no longer needed and is kept for them.
+ */
+export async function askAiJson<T>(
+  prompt: string,
+  _name: string,
+  schema: object,
+  timeoutMs = 90_000,
+  tier: AiTier = "write",
+): Promise<T> {
+  const key = process.env["GEMINI_API_KEY"];
+  if (!key) throw new PauseError("AI is not configured.");
+
+  const models = GEMINI_MODELS[tier];
+  let json: unknown;
+  for (const [i, model] of models.entries()) {
+    try {
+      json = await askGemini(model, key, prompt, schema, timeoutMs);
+      break;
+    } catch (err) {
+      if (err instanceof BusyError && i < models.length - 1) continue;
+      throw err;
+    }
   }
 
   const answer = geminiAnswer(json);
