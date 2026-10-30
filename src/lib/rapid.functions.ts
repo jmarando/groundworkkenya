@@ -147,11 +147,15 @@ const DRAFT_SCHEMA = {
 /** The AI reads one post with the campaign's record and drafts the reaction; it is saved. */
 export const draftReaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { mentionId: string; ask?: string }) => {
+  .inputValidator((input: { mentionId: string; ask?: string; storyId?: string }) => {
     const mentionId = String(input?.mentionId ?? "");
     if (!/^[0-9a-f-]{36}$/.test(mentionId)) throw new Error("No such post.");
+    const storyId = /^[0-9a-f-]{36}$/.test(String(input?.storyId ?? ""))
+      ? String(input.storyId)
+      : null;
     return {
       mentionId,
+      storyId,
       ask: String(input?.ask ?? "")
         .trim()
         .slice(0, 1000),
@@ -219,6 +223,8 @@ export const draftReaction = createServerFn({ method: "POST" })
       .from("rapid_responses")
       .insert({
         mention_id: data.mentionId,
+        // The story the reaction answers (schema 48); left out when there is none.
+        ...(data.storyId ? { story_id: data.storyId } : {}),
         post_url: /^https:\/\//.test(url) ? url : null,
         platform: m["source"],
         what_happened: (out.what_happened || String(m["title"] ?? "A post")).slice(0, 2000),

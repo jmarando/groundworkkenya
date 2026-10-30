@@ -1,9 +1,13 @@
 // Listening's voices: how each platform's conversation differs, the accounts and outlets that lead
 // it, and a map of them by how warm they are to the campaign and how often they are heard.
 // Worked out in src/lib/voices.ts from the posts Listening kept; every dot opens its posts.
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 
+import { BigVoicesPanel } from "@/components/gw/listening/BigVoicesPanel";
 import { Drill, type React } from "@/components/gw/listening/Overview";
+import type { BigVoice } from "@/lib/big-voices";
+import { getListeningPosts } from "@/lib/listening-history.functions";
 import { nf } from "@/lib/format";
 import type { Mention } from "@/lib/listening.functions";
 import { sourceName, type Focus } from "@/lib/listening-read";
@@ -37,6 +41,11 @@ export function Voices({
 }) {
   const [days, setDays] = useState(30);
   const [focus, setFocus] = useState<Focus | null>(null);
+  // A big voice's posts are read by id, so ones older than the latest 600 show too.
+  const [bigFocus, setBigFocus] = useState<{ focus: Focus; posts: Mention[] } | null>(null);
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const fetchPosts = useServerFn(getListeningPosts);
   const now = useMemo(() => Date.now(), [mentions]);
   const reads = useMemo(() => platforms(mentions, { now, days }), [mentions, now, days]);
   const all = useMemo(() => voices(mentions, { now, days }), [mentions, now, days]);
@@ -47,6 +56,38 @@ export function Voices({
       label: `${v.name} on ${sourceName(v.platform)}`,
       ids: mentions.filter((m) => !m.rivalId && voiceOf(m)?.key === v.key).map((m) => m.id),
     });
+
+  const openBig = async (v: BigVoice) => {
+    setOpenError(null);
+    setOpening(true);
+    try {
+      const page = await fetchPosts({ data: { ids: v.postIds } });
+      setBigFocus({
+        focus: {
+          label: `${v.name} on ${sourceName(v.platform)}`,
+          ids: page.posts.map((p) => p.id),
+        },
+        posts: page.posts,
+      });
+    } catch (e) {
+      setOpenError(e instanceof Error ? e.message : "Those posts could not be read.");
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  if (bigFocus) {
+    return (
+      <Drill
+        focus={bigFocus.focus}
+        posts={bigFocus.posts}
+        back={() => setBigFocus(null)}
+        busy={busy}
+        mark={mark}
+        react={react}
+      />
+    );
+  }
 
   if (focus) {
     const posts = mentions.filter((m) => focus.ids?.includes(m.id));
@@ -78,7 +119,15 @@ export function Voices({
         ))}
       </div>
 
-      <div className="card" style={{ marginTop: 10 }}>
+      <BigVoicesPanel days={days} open={(v) => void openBig(v)} react={react} />
+      {opening && <p className="f-note">Opening posts…</p>}
+      {openError && (
+        <p className="f-note" role="alert">
+          {openError}
+        </p>
+      )}
+
+      <div className="card" style={{ marginTop: 14 }}>
         <div className="card-head">
           <div>
             <h2>Platform by platform</h2>
@@ -154,73 +203,76 @@ export function Voices({
 
       <VoiceMap voices={all.slice(0, 60)} open={open} />
 
-      <div className="card" style={{ marginTop: 14 }}>
-        <div className="card-head">
-          <div>
-            <h2>Who shapes the conversation</h2>
-            <p className="meta">
-              Accounts and outlets behind the posts your keywords found, the most seen first (views
-              where the platform counts them, else how often they post). Candidates&apos; own
-              accounts are under Your rivals.
-            </p>
-          </div>
-          <span className="mono">{all.length} voices</span>
-        </div>
-        <div className="vx-table" role="table" aria-label="Voices">
-          <div className="vx-row vx-row--head" role="row">
-            <span role="columnheader">Voice</span>
-            <span role="columnheader">Posts</span>
-            <span role="columnheader">Seen</span>
-            <span role="columnheader">Towards you</span>
-            <span role="columnheader">About</span>
-            <span role="columnheader" />
-          </div>
-          {all.slice(0, 30).map((v) => (
-            <div className="vx-row" role="row" key={v.key}>
-              <span role="cell">
-                <i style={{ background: colour(v.platform) }} aria-hidden="true" />{" "}
-                {v.url ? (
-                  <a href={v.url} target="_blank" rel="noreferrer">
-                    {v.name}
-                  </a>
-                ) : (
-                  v.name
-                )}{" "}
-                <span className="meta">{sourceName(v.platform)}</span>
-              </span>
-              <span role="cell" className="mono">
-                {v.posts}
-              </span>
-              <span role="cell" className="mono">
-                {v.reach ? nf.format(v.reach) : "–"}
-              </span>
-              <span role="cell">
-                {v.mood === null ? "not read" : `${v.positive} warm · ${v.negative} angry`}
-              </span>
-              <span role="cell" className="meta">
-                {[
-                  v.aboutYou ? `you ${v.aboutYou}` : "",
-                  v.aboutRivals ? `rivals ${v.aboutRivals}` : "",
-                  v.topIssue ?? "",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-              <span role="cell">
-                <button type="button" className="btn btn--sm" onClick={() => open(v)}>
-                  Posts →
-                </button>
-              </span>
+      <details className="bv-all">
+        <summary>See all voices ({all.length})</summary>
+        <div className="card" style={{ marginTop: 10 }}>
+          <div className="card-head">
+            <div>
+              <h2>Who shapes the conversation</h2>
+              <p className="meta">
+                Accounts and outlets behind the posts your keywords found, the most seen first
+                (views where the platform counts them, else how often they post). Candidates&apos;
+                own accounts are under Your rivals.
+              </p>
             </div>
-          ))}
+            <span className="mono">{all.length} voices</span>
+          </div>
+          <div className="vx-table" role="table" aria-label="Voices">
+            <div className="vx-row vx-row--head" role="row">
+              <span role="columnheader">Voice</span>
+              <span role="columnheader">Posts</span>
+              <span role="columnheader">Seen</span>
+              <span role="columnheader">Towards you</span>
+              <span role="columnheader">About</span>
+              <span role="columnheader" />
+            </div>
+            {all.slice(0, 30).map((v) => (
+              <div className="vx-row" role="row" key={v.key}>
+                <span role="cell">
+                  <i style={{ background: colour(v.platform) }} aria-hidden="true" />{" "}
+                  {v.url ? (
+                    <a href={v.url} target="_blank" rel="noreferrer">
+                      {v.name}
+                    </a>
+                  ) : (
+                    v.name
+                  )}{" "}
+                  <span className="meta">{sourceName(v.platform)}</span>
+                </span>
+                <span role="cell" className="mono">
+                  {v.posts}
+                </span>
+                <span role="cell" className="mono">
+                  {v.reach ? nf.format(v.reach) : "–"}
+                </span>
+                <span role="cell">
+                  {v.mood === null ? "not read" : `${v.positive} warm · ${v.negative} angry`}
+                </span>
+                <span role="cell" className="meta">
+                  {[
+                    v.aboutYou ? `you ${v.aboutYou}` : "",
+                    v.aboutRivals ? `rivals ${v.aboutRivals}` : "",
+                    v.topIssue ?? "",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+                <span role="cell">
+                  <button type="button" className="btn btn--sm" onClick={() => open(v)}>
+                    Posts →
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+          {all.length === 0 && (
+            <p className="f-note">
+              No voices yet. TikTok, YouTube and Reddit posts carry who posted; Facebook, X and
+              Instagram links usually name the page.
+            </p>
+          )}
         </div>
-        {all.length === 0 && (
-          <p className="f-note">
-            No voices yet. TikTok, YouTube and Reddit posts carry who posted; Facebook, X and
-            Instagram links usually name the page.
-          </p>
-        )}
-      </div>
+      </details>
     </>
   );
 }

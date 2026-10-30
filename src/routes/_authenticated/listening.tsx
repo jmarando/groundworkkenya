@@ -26,17 +26,24 @@ import { nf, stamp } from "@/lib/format";
 import { QueryState } from "@/components/gw/QueryState";
 import { Alerts, Keywords } from "@/components/gw/listening/Settings";
 import { Reactions } from "@/components/gw/listening/Reactions";
+import { ReplayPanel } from "@/components/gw/listening/ReplayPanel";
+import { StoryPanel } from "@/components/gw/listening/StoryPanel";
+import { StoryProvider } from "@/components/gw/listening/story-context";
 import { Voices } from "@/components/gw/listening/Voices";
 import { draftReaction } from "@/lib/rapid.functions";
 import { SPREAD_DEFAULT } from "@/lib/voices";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/listening")({
-  // ?issue=water: a link from Home opens the mentions about that issue.
-  validateSearch: (search: Record<string, unknown>): { issue?: string } => {
+  // ?issue=water: a link from Home opens the mentions about that issue. ?story=<id> opens a story.
+  validateSearch: (search: Record<string, unknown>): { issue?: string; story?: string } => {
     const v =
       typeof search["issue"] === "string" ? search["issue"].trim().toLowerCase().slice(0, 40) : "";
-    return v ? { issue: v } : {};
+    const story =
+      typeof search["story"] === "string" && /^[0-9a-f-]{36}$/.test(search["story"])
+        ? search["story"]
+        : "";
+    return { ...(v ? { issue: v } : {}), ...(story ? { story } : {}) };
   },
   component: Listening,
   head: () => ({
@@ -64,6 +71,7 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "voices", label: "Voices & platforms" },
   { key: "reactions", label: "Reactions" },
+  { key: "replay", label: "Replay" },
   { key: "mentions", label: "All posts" },
   { key: "keywords", label: "Keywords" },
   { key: "alerts", label: "Alerts" },
@@ -92,9 +100,16 @@ function Listening() {
     queryFn: () => fetchData(),
   });
 
-  const { issue } = Route.useSearch();
+  const { issue, story } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const [tab, setTab] = useState<Tab>(issue ? "mentions" : "overview");
+  // A story opened from a link, a post or the address; it replaces the tab until closed.
+  const [openStory, setOpenStory] = useState<string | null>(story ?? null);
+  const showStory = (id: string | null) => {
+    setOpenStory(id);
+    void navigate({ search: id ? { story: id } : {}, replace: true });
+  };
+  const view = openStory ? null : tab;
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [source, setSource] = useState("all");
@@ -106,13 +121,14 @@ function Listening() {
 
   /** Drafts a reaction to a post with the AI, then opens it under Reactions. */
   const react = data?.canReact
-    ? (mentionId: string) => {
+    ? (mentionId: string, storyId?: string) => {
         const t = toast.loading("Reading the post and drafting a reaction…");
-        draft({ data: { mentionId } })
+        draft({ data: { mentionId, ...(storyId ? { storyId } : {}) } })
           .then(async ({ id }) => {
             toast.success("Reaction drafted.", { id: t });
             await queryClient.invalidateQueries({ queryKey: ["reactions"] });
             setOpenReaction(id);
+            if (openStory) showStory(null);
             setTab("reactions");
           })
           .catch((e: Error) => toast.error(e.message, { id: t }));
@@ -187,185 +203,213 @@ function Listening() {
     );
 
   return (
-    <section className="view active" aria-label="Listening">
-      <div className="vh fx">
-        <div>
-          <span className="eyebrow">Comms · listening</span>
-          <h1>
-            Everything said about you, <span className="serif">in one room.</span>
-          </h1>
-          <p className="meta">
-            News, social posts and blogs, swept every hour and read for mood. Start with what needs
-            you.
-          </p>
-        </div>
-        <div className="vh-side">
-          <span className="syncline">
-            <span
-              className={data?.job?.status === "paused" ? "dot-stale" : "dot-live"}
-              aria-hidden="true"
-            />{" "}
-            {data?.job?.status === "paused"
-              ? "sweeping paused"
-              : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
-          </span>
-          {data?.job?.status === "paused" ? null : (
-            <button
-              type="button"
-              className="btn btn--primary"
-              disabled={busy}
-              onClick={() =>
-                act(async () => {
-                  const r = await sweep({ data: {} });
-                  if (!r.ran) throw new Error(r.notes[0] ?? "The sweep did not run.");
-                }, "Sweep finished.")
-              }
-            >
-              {busy ? "Sweeping…" : "Sweep now"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <QueryState
-        isLoading={isLoading}
-        isError={isError}
-        retry={() => void refetch()}
-        what="what was found"
-      />
-
-      <SweepProblems
-        problems={sweepProblems({ job: data?.job ?? null, rivalJob: data?.rivalJob ?? null })}
-        canRestart={data?.canRestart === true}
-        busy={busy}
-        restart={() => void act(() => resume(), "Sweeping restarted.")}
-      />
-
-      {note && (
-        <p className="f-note" style={{ marginTop: 10 }}>
-          {note}
-        </p>
-      )}
-
-      <div className="fchips" style={{ marginTop: 14 }}>
-        {TABS.map((x) => (
-          <button
-            type="button"
-            key={x.key}
-            className={`fchip${tab === x.key ? " active" : ""}`}
-            aria-pressed={tab === x.key}
-            onClick={() => setTab(x.key)}
-          >
-            {x.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "overview" && (
-        <Overview
-          topics={data?.topics ?? []}
-          mentions={data?.mentions ?? []}
-          busy={busy}
-          mark={mark}
-          openKeywords={() => setTab("keywords")}
-          react={react}
-          threshold={threshold}
-        />
-      )}
-
-      {tab === "voices" && (
-        <Voices mentions={data?.mentions ?? []} busy={busy} mark={mark} react={react} />
-      )}
-
-      {tab === "reactions" && <Reactions openId={openReaction} />}
-
-      {tab === "mentions" && (
-        <div className="card" style={{ marginTop: 14 }}>
-          <div className="card-head">
-            <div>
-              <h2>Every post found</h2>
-              <p className="meta">
-                {nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.
-              </p>
-            </div>
-            <button type="button" className="btn btn--sm" onClick={exportMentions}>
-              Download CSV
-            </button>
+    <StoryProvider
+      value={{
+        open: showStory,
+        title: (id) => data?.stories.find((x) => x.id === id)?.title,
+      }}
+    >
+      <section className="view active" aria-label="Listening">
+        <div className="vh fx">
+          <div>
+            <span className="eyebrow">Comms · listening</span>
+            <h1>
+              Everything said about you, <span className="serif">in one room.</span>
+            </h1>
+            <p className="meta">
+              News, social posts and blogs, swept every hour and read for mood. Start with what
+              needs you.
+            </p>
           </div>
-
-          <div className="ibx-f" style={{ gap: 8, flexWrap: "wrap" }}>
-            {issue ? (
+          <div className="vh-side">
+            <span className="syncline">
+              <span
+                className={data?.job?.status === "paused" ? "dot-stale" : "dot-live"}
+                aria-hidden="true"
+              />{" "}
+              {data?.job?.status === "paused"
+                ? "sweeping paused"
+                : `last sweep ${stamp(data?.job?.lastRunAt ?? null)}`}
+            </span>
+            {data?.job?.status === "paused" ? null : (
               <button
                 type="button"
-                className="fchip active"
-                aria-label={`Showing ${issue} only. Show every issue`}
-                onClick={() => void navigate({ search: {} })}
+                className="btn btn--primary"
+                disabled={busy}
+                onClick={() =>
+                  act(async () => {
+                    const r = await sweep({ data: {} });
+                    if (!r.ran) throw new Error(r.notes[0] ?? "The sweep did not run.");
+                  }, "Sweep finished.")
+                }
               >
-                Issue: {issue} ×
+                {busy ? "Sweeping…" : "Sweep now"}
               </button>
-            ) : null}
-            <input
-              className="ibx-search"
-              aria-label="Search headlines and text"
-              placeholder="Search headlines and text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select
-              aria-label="Keyword"
-              value={topicFilter}
-              onChange={(e) => setTopicFilter(e.target.value)}
-            >
-              <option value="all">All keywords</option>
-              {(data?.topics ?? []).map((tp) => (
-                <option key={tp.id} value={tp.id}>
-                  {tp.label}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
-              <option value="all">All sources</option>
-              {(data?.bySource ?? []).map((s) => (
-                <option key={s.source} value={s.source}>
-                  {sourceName(s.source)}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Mood" value={mood} onChange={(e) => setMood(e.target.value)}>
-              <option value="all">Any mood</option>
-              <option value="negative">Angry</option>
-              <option value="neutral">Neutral</option>
-              <option value="positive">Warm</option>
-              <option value="unrated">Not read yet</option>
-            </select>
+            )}
           </div>
-
-          <PostList posts={mentions} busy={busy} mark={mark} react={react} />
         </div>
-      )}
 
-      {tab === "keywords" && (
-        <Keywords
-          data={data}
-          busy={busy}
-          act={act}
-          save={upsertTopic}
-          flip={flipTopic}
-          drop={dropTopic}
+        <QueryState
+          isLoading={isLoading}
+          isError={isError}
+          retry={() => void refetch()}
+          what="what was found"
         />
-      )}
 
-      {tab === "alerts" && (
-        <Alerts
-          data={data}
+        <SweepProblems
+          problems={sweepProblems({ job: data?.job ?? null, rivalJob: data?.rivalJob ?? null })}
+          canRestart={data?.canRestart === true}
           busy={busy}
-          act={act}
-          save={upsertAlert}
-          flip={flipAlert}
-          drop={dropAlert}
-          test={fireTest}
+          restart={() => void act(() => resume(), "Sweeping restarted.")}
         />
-      )}
-    </section>
+
+        {note && (
+          <p className="f-note" style={{ marginTop: 10 }}>
+            {note}
+          </p>
+        )}
+
+        <div className="fchips" style={{ marginTop: 14 }}>
+          {TABS.map((x) => (
+            <button
+              type="button"
+              key={x.key}
+              className={`fchip${tab === x.key ? " active" : ""}`}
+              aria-pressed={tab === x.key}
+              onClick={() => {
+                if (openStory) showStory(null);
+                setTab(x.key);
+              }}
+            >
+              {x.label}
+            </button>
+          ))}
+        </div>
+
+        {openStory && (
+          <StoryPanel
+            id={openStory}
+            back={() => showStory(null)}
+            react={react}
+            brief={() => {
+              showStory(null);
+              setTab("voices");
+            }}
+          />
+        )}
+
+        {view === "overview" && (
+          <Overview
+            topics={data?.topics ?? []}
+            mentions={data?.mentions ?? []}
+            busy={busy}
+            mark={mark}
+            openKeywords={() => setTab("keywords")}
+            react={react}
+            threshold={threshold}
+          />
+        )}
+
+        {view === "voices" && (
+          <Voices mentions={data?.mentions ?? []} busy={busy} mark={mark} react={react} />
+        )}
+
+        {view === "reactions" && <Reactions openId={openReaction} />}
+
+        {view === "replay" && <ReplayPanel busy={busy} mark={mark} react={react} />}
+
+        {view === "mentions" && (
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="card-head">
+              <div>
+                <h2>Every post found</h2>
+                <p className="meta">
+                  {nf.format(mentions.length)} shown of {nf.format(data?.mentions.length ?? 0)}.
+                </p>
+              </div>
+              <button type="button" className="btn btn--sm" onClick={exportMentions}>
+                Download CSV
+              </button>
+            </div>
+
+            <div className="ibx-f" style={{ gap: 8, flexWrap: "wrap" }}>
+              {issue ? (
+                <button
+                  type="button"
+                  className="fchip active"
+                  aria-label={`Showing ${issue} only. Show every issue`}
+                  onClick={() => void navigate({ search: {} })}
+                >
+                  Issue: {issue} ×
+                </button>
+              ) : null}
+              <input
+                className="ibx-search"
+                aria-label="Search headlines and text"
+                placeholder="Search headlines and text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                aria-label="Keyword"
+                value={topicFilter}
+                onChange={(e) => setTopicFilter(e.target.value)}
+              >
+                <option value="all">All keywords</option>
+                {(data?.topics ?? []).map((tp) => (
+                  <option key={tp.id} value={tp.id}>
+                    {tp.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+              >
+                <option value="all">All sources</option>
+                {(data?.bySource ?? []).map((s) => (
+                  <option key={s.source} value={s.source}>
+                    {sourceName(s.source)}
+                  </option>
+                ))}
+              </select>
+              <select aria-label="Mood" value={mood} onChange={(e) => setMood(e.target.value)}>
+                <option value="all">Any mood</option>
+                <option value="negative">Angry</option>
+                <option value="neutral">Neutral</option>
+                <option value="positive">Warm</option>
+                <option value="unrated">Not read yet</option>
+              </select>
+            </div>
+
+            <PostList posts={mentions} busy={busy} mark={mark} react={react} />
+          </div>
+        )}
+
+        {view === "keywords" && (
+          <Keywords
+            data={data}
+            busy={busy}
+            act={act}
+            save={upsertTopic}
+            flip={flipTopic}
+            drop={dropTopic}
+          />
+        )}
+
+        {view === "alerts" && (
+          <Alerts
+            data={data}
+            busy={busy}
+            act={act}
+            save={upsertAlert}
+            flip={flipAlert}
+            drop={dropAlert}
+            test={fireTest}
+          />
+        )}
+      </section>
+    </StoryProvider>
   );
 }

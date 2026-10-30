@@ -1,6 +1,7 @@
 // Listening's overview, kept short: what needs you, then what is being said, and the posts behind
 // any line (src/lib/listening-read.ts works the figures out). No week-on-week comparisons and no
 // mood bars here: the posts, their moods and their sources are one tap away.
+import { useStoryLinks } from "@/components/gw/listening/story-context";
 import { useState } from "react";
 
 import type { Mention } from "@/lib/listening.functions";
@@ -34,7 +35,7 @@ const when = (iso: string | null) =>
 type Topic = { id: string; label: string; kind: string; active: boolean };
 type Mark = (ids: string[], status: "new" | "actioned") => void;
 /** Opens a reaction to a post; absent where the caller can't react. */
-export type React = ((mentionId: string) => void) | undefined;
+export type React = ((mentionId: string, storyId?: string) => void) | undefined;
 
 /** Actions shown before "Show more": the few that matter most, most pressing first. */
 const FIRST = 3;
@@ -59,6 +60,7 @@ export function Overview({
 }) {
   const [focus, setFocus] = useState<Focus | null>(null);
   const [allActions, setAllActions] = useState(false);
+  const links = useStoryLinks();
   // A week back from when the posts were loaded; recomputed with each load.
   const now = Date.now();
   const convos = conversations(topics, mentions, now);
@@ -123,6 +125,18 @@ export function Overview({
                     {p.sentiment ? ` · ${MOOD[p.sentiment]?.word ?? p.sentiment}` : ""}
                     {p.status !== "new" ? " · handled" : ""}
                   </p>
+                  {p.storyId && links?.title(p.storyId) && (
+                    <p className="meta">
+                      Part of the story{" "}
+                      <button
+                        type="button"
+                        className="linklike"
+                        onClick={() => links.open(p.storyId as string)}
+                      >
+                        {links.title(p.storyId)}
+                      </button>
+                    </p>
+                  )}
                 </div>
                 {react && (
                   <button type="button" className="btn btn--sm" onClick={() => react(p.id)}>
@@ -252,6 +266,7 @@ export function Drill({
   focus,
   posts,
   back,
+  backLabel = "← Overview",
   busy,
   mark,
   react,
@@ -259,6 +274,8 @@ export function Drill({
   focus: Focus;
   posts: Mention[];
   back: () => void;
+  /** What the way back is called, when it does not lead to the Overview. */
+  backLabel?: string;
   busy: boolean;
   mark: Mark;
   react?: React;
@@ -272,7 +289,7 @@ export function Drill({
       <div className="card-head">
         <div>
           <button type="button" className="btn btn--ghost btn--sm" onClick={back}>
-            ← Overview
+            {backLabel}
           </button>
           <h2 style={{ marginTop: 8 }}>{focus.label}</h2>
           <p className="meta">
@@ -329,6 +346,7 @@ export function PostList({
   react?: React;
 }) {
   const [limit, setLimit] = useState(40);
+  const links = useStoryLinks();
   if (posts.length === 0) return <p className="f-note">No posts here.</p>;
   return (
     <>
@@ -371,6 +389,15 @@ export function PostList({
               {react && !m.rivalIsUs && (
                 <button type="button" className="btn btn--sm" onClick={() => react(m.id)}>
                   React
+                </button>
+              )}
+              {m.storyId && links?.title(m.storyId) && (
+                <button
+                  type="button"
+                  className="btn btn--sm"
+                  onClick={() => links.open(m.storyId as string)}
+                >
+                  Story
                 </button>
               )}
               <button

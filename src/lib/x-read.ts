@@ -11,11 +11,25 @@ export type XHit = {
   reach: number | null;
   /** Reposts and quotes. */
   shares: number | null;
+  /** How many follow the author, when the answer says. */
+  followers: number | null;
+  /** The post this one quotes or replies to, as its address, when the answer says. */
+  refersTo: string | null;
   source: "x";
 };
 
 const num = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.round(v) : null;
+
+/** A post's id when it is one: digits only, as a string (a number could have lost digits). */
+const postId = (v: unknown): string | null =>
+  typeof v === "string" && /^\d{1,25}$/.test(v.trim()) ? v.trim() : null;
+
+/** The address of the post a quote or reply points at; "i" stands in for a user we are not told. */
+const statusUrl = (id: string | null, handle: unknown): string | null =>
+  id
+    ? `https://x.com/${typeof handle === "string" && /^\w{1,30}$/.test(handle) ? handle : "i"}/status/${id}`
+    : null;
 
 export function readXSearch(raw: unknown): XHit[] {
   const tweets = (raw as { tweets?: unknown } | null)?.tweets;
@@ -33,6 +47,11 @@ export function readXSearch(raw: unknown): XHit[] {
     const at = typeof o["createdAt"] === "string" ? Date.parse(o["createdAt"]) : NaN;
     const reposts = num(o["retweetCount"]);
     const quotes = num(o["quoteCount"]);
+    const quoted = (o["quoted_tweet"] ?? o["quotedTweet"]) as Record<string, unknown> | null;
+    const quotedAuthor = (quoted?.["author"] ?? {}) as Record<string, unknown>;
+    const refersTo =
+      statusUrl(postId(quoted?.["id"]), quotedAuthor["userName"]) ??
+      statusUrl(postId(o["inReplyToId"]), o["inReplyToUsername"]);
     return [
       {
         url: `https://x.com/${user}/status/${id}`,
@@ -42,6 +61,8 @@ export function readXSearch(raw: unknown): XHit[] {
         author: `@${user}`,
         reach: num(o["viewCount"]),
         shares: reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0),
+        followers: num(author["followers"]),
+        refersTo,
         source: "x",
       },
     ];
@@ -111,6 +132,16 @@ export function readScXSearch(raw: unknown): XHit[] {
     );
     const reposts = count(legacy["retweet_count"] ?? t["retweet_count"] ?? t["retweets"]);
     const quotes = count(legacy["quote_count"] ?? t["quote_count"] ?? t["quotes"]);
+    const quotedResult = o(o(t["quoted_status_result"])["result"]);
+    const refersTo =
+      statusUrl(
+        postId(legacy["quoted_status_id_str"] ?? t["quoted_status_id"] ?? quotedResult["rest_id"]),
+        null,
+      ) ??
+      statusUrl(
+        postId(legacy["in_reply_to_status_id_str"] ?? t["in_reply_to_status_id"]),
+        legacy["in_reply_to_screen_name"] ?? t["in_reply_to_screen_name"],
+      );
     return [
       {
         url: `https://x.com/${handle}/status/${id}`,
@@ -120,6 +151,10 @@ export function readScXSearch(raw: unknown): XHit[] {
         author: `@${handle}`,
         reach: count(o(t["views"])["count"] ?? t["view_count"] ?? t["views"] ?? t["viewCount"]),
         shares: reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0),
+        followers: count(
+          userLegacy["followers_count"] ?? author["followers_count"] ?? author["followers"],
+        ),
+        refersTo,
         source: "x",
       },
     ];

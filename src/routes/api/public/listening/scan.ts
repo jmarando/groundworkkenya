@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { runListeningScan } from "@/lib/listening.server";
+import { runProfileLookups } from "@/lib/profiles.server";
+import { recordSweepDays } from "@/lib/readings.server";
+import { runStories } from "@/lib/stories.server";
 import { runMorningStory } from "@/lib/morning-story.server";
 import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
@@ -36,6 +39,16 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         }));
         // X itself, keyword by keyword, the ones searched longest ago first.
         const x = await runXSweep(sb as never).catch((e: Error) => ({ ran: false, error: e.message }));
+        // A few follower counts for the accounts that lead each campaign's columns.
+        const profiles = await runProfileLookups(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
+        // Posts about one thing, followed from the first we found: grouped, saved and named.
+        const stories = await runStories(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
         // Each campaign's newest county or national story read for its seat (two a day at most).
         const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
           error: e.message,
@@ -56,6 +69,10 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
+        // History: a run that gathered records its day for every campaign with a keyword (the last
+        // week is recounted, so moods read late land on their own day). A paused run records
+        // nothing, which is what lets Replay tell a paused day from a quiet one.
+        const days = result.ran ? await recordSweepDays(sb as never) : { swept: 0 };
         // Yesterday's SMS charges onto the ledger, as each campaign's pending comms expense.
         const comms = await sb
           .rpc("comms_to_ledger")
@@ -64,7 +81,19 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         const pruned = await sb
           .rpc("prune_old_records")
           .then(({ data, error }) => (error ? { error: error.message } : data));
-        return Response.json({ ...result, x, wider, rivals, story, search, comms, pruned });
+        return Response.json({
+          ...result,
+          x,
+          profiles,
+          stories,
+          wider,
+          rivals,
+          story,
+          search,
+          days,
+          comms,
+          pruned,
+        });
       },
     },
   },

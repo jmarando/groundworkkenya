@@ -21,6 +21,7 @@ const KEYS: Record<string, string[][]> = {
   people: [["campaign_id", "phone"]],
   listening_mentions: [["campaign_id", "url"]],
   listening_jobs: [["key"]],
+  listening_accounts: [["voice_key"]],
   morning_stories: [["campaign_id", "day"]],
   search_interest: [["campaign_id", "day", "kind"]],
   atlas_settings: [["campaign_id"]],
