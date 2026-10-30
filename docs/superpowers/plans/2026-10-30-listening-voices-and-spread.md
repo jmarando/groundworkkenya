@@ -310,13 +310,14 @@ export function replaySoWhat(cur: PeriodStats, prev: PeriodStats | null): string
 ### Task 14: The Replay tab
 
 **Files:**
+- **As built:** the screen is `Replay.tsx` (pure, `ReplayView`) and its data side is `ReplayPanel.tsx` (period state, a day's posts through `getListeningPosts`, a way back that reads "← Replay" through a `backLabel` on `Drill`). `replay.ts` gained what the loader needs as plain code with tests: `kindOf`, `parseSpan`, `compareWith` (while a week is not over it is set against the same days of the week before, and says so), `periodWord`, `periodLabel`, `totalsOf`, `issueCounts`, `lateByDay`, `loudestVoices`. `loadWindow` takes an upper bound (`until`). The loader's `briefed` is 0 until Task 16 reads `voice_outreach`. The default period is last week (Monday to Sunday).
 - Create: `src/lib/replay.functions.ts`, `src/components/gw/listening/Replay.tsx`, `tests/replay-render.test.ts`
 - Modify: `src/routes/_authenticated/listening.tsx` (a "Replay" tab after Reactions), `src/styles/groundwork.css`
 
 **Interfaces — Produces:** `getReplay({ from, to })` → `{ period, previous, days: DayRow[], late: Record<string, number>, stats: PeriodStats, prevStats: PeriodStats }` (office roles; `listening_days` for both periods; the period's posts through the same loader as `getListeningPosts` for issues, voices (listed ones only, the Part 2 floor), stories, reactions, briefed); `Replay({ data, setPeriod, openDay })` presentational with a bar chart, the five lines, the so-what, a Week / Month / Pick dates control with arrows and "Compare with the period before" on; a day's bar opens that day's posts.
 
-- [ ] **Step 1: Write `tests/replay-render.test.ts`:** renders five lines and the so-what; a paused day shows "Sweeping paused"; a day before the record shows "Nothing gathered"; an empty period renders without `NaN`.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 5: Commit** `Replay: any past week or month, set against the one before`.
+- [x] **Step 1: Write `tests/replay-render.test.ts`:** renders five lines and the so-what; a paused day shows "Sweeping paused"; a day before the record shows "Nothing gathered"; an empty period renders without `NaN`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 5: Commit** `Replay: any past week or month, set against the one before`.
 
 ---
 

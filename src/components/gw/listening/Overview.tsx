@@ -266,6 +266,7 @@ export function Drill({
   focus,
   posts,
   back,
+  backLabel = "← Overview",
   busy,
   mark,
   react,
@@ -273,6 +274,8 @@ export function Drill({
   focus: Focus;
   posts: Mention[];
   back: () => void;
+  /** What the way back is called, when it does not lead to the Overview. */
+  backLabel?: string;
   busy: boolean;
   mark: Mark;
   react?: React;
@@ -286,7 +289,7 @@ export function Drill({
       <div className="card-head">
         <div>
           <button type="button" className="btn btn--ghost btn--sm" onClick={back}>
-            ← Overview
+            {backLabel}
           </button>
           <h2 style={{ marginTop: 8 }}>{focus.label}</h2>
           <p className="meta">

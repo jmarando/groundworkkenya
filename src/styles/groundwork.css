@@ -11462,6 +11462,170 @@ table.fp-board {
   margin-top: 12px;
 }
 
+/* Listening: Replay, a past week or month day by day */
+.rp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.rp-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rp-range {
+  min-width: 12ch;
+  text-align: center;
+}
+.rp-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+.rp-compare {
+  display: block;
+  margin-top: 10px;
+}
+.rp-bars {
+  display: flex;
+  gap: 6px;
+  height: 190px;
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+.rp-bars--long {
+  gap: 2px;
+}
+.rp-bars--flat {
+  height: auto;
+}
+.rp-bars--flat .rp-plot {
+  flex: none;
+  height: 24px;
+}
+.rp-day {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.rp-day button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.rp-day button:disabled {
+  cursor: default;
+}
+.rp-day button:not(:disabled):hover .rp-col {
+  opacity: 0.8;
+}
+.rp-day button:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+.rp-plot {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+}
+.rp-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  min-height: 3px;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+}
+.rp-col i {
+  display: block;
+  flex-basis: 0;
+  min-height: 2px;
+}
+.rp-col .a,
+.rp-legend .a {
+  background: var(--status-missed);
+}
+.rp-col .n,
+.rp-legend .n {
+  background: var(--muted-foreground);
+  opacity: 0.35;
+}
+.rp-col .w,
+.rp-legend .w {
+  background: var(--status-reporting);
+}
+.rp-col .u,
+.rp-legend .u {
+  background: var(--limit-track);
+}
+.rp-stub {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+}
+/* A day nothing ran is a hatched block, so it never reads as a quiet day. */
+.rp-day--paused .rp-stub {
+  height: 100%;
+  border: 1px dashed var(--muted-foreground);
+  border-radius: 3px;
+  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--border) 4px 6px);
+}
+.rp-day--nothing .rp-stub {
+  background: none;
+  border-bottom: 2px dotted var(--muted-foreground);
+}
+.rp-wd,
+.rp-num {
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted-foreground);
+  min-height: 1.2em;
+}
+.rp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+}
+.rp-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.rp-h {
+  margin: 18px 0 6px;
+  font-size: 15px;
+}
+.rp-lines {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rp-line {
+  overflow-wrap: anywhere;
+}
+
 /* Road to election day: dates, phases, milestones, notes */
 .rm-dates {
   list-style: none;

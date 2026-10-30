@@ -26,6 +26,7 @@ import { nf, stamp } from "@/lib/format";
 import { QueryState } from "@/components/gw/QueryState";
 import { Alerts, Keywords } from "@/components/gw/listening/Settings";
 import { Reactions } from "@/components/gw/listening/Reactions";
+import { ReplayPanel } from "@/components/gw/listening/ReplayPanel";
 import { StoryPanel } from "@/components/gw/listening/StoryPanel";
 import { StoryProvider } from "@/components/gw/listening/story-context";
 import { Voices } from "@/components/gw/listening/Voices";
@@ -70,6 +71,7 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "voices", label: "Voices & platforms" },
   { key: "reactions", label: "Reactions" },
+  { key: "replay", label: "Replay" },
   { key: "mentions", label: "All posts" },
   { key: "keywords", label: "Keywords" },
   { key: "alerts", label: "Alerts" },
@@ -313,6 +315,8 @@ function Listening() {
         )}
 
         {view === "reactions" && <Reactions openId={openReaction} />}
+
+        {view === "replay" && <ReplayPanel busy={busy} mark={mark} react={react} />}
 
         {view === "mentions" && (
           <div className="card" style={{ marginTop: 14 }}>

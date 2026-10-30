@@ -84,7 +84,7 @@ export function compareWith(p: Period, today: string): { period: Period; partial
 }
 
 /** What a period is called, and what the one before it is called, in the lines about it. */
-export const periodWord = (p: Pick<Period, "kind">): { word: string; before: string } =>
+export const periodWord = (p: Period): { word: string; before: string } =>
   p.kind === "week"
     ? { word: "week", before: "the week before" }
     : p.kind === "month"
