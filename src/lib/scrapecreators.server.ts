@@ -48,6 +48,14 @@ export function scConfigured(): boolean {
   return Boolean(process.env["SCRAPECREATORS_API_KEY"]);
 }
 
+/** One profile lookup (an account's followers): the request from src/lib/profiles.ts, the answer as given. */
+export async function scProfile(req: {
+  path: string;
+  params: Record<string, string>;
+}): Promise<unknown> {
+  return scGet(req.path, req.params);
+}
+
 async function scGet(path: string, params: Record<string, string>): Promise<any> {
   const key = process.env["SCRAPECREATORS_API_KEY"];
   if (!key) throw new ScrapeCreatorsCreditError("ScrapeCreators key is not set.");

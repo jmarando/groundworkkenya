@@ -42,6 +42,7 @@ eq("views and reposts", [hits[0]!.reach, hits[0]!.shares], [12500, 45]);
 eq("published time read", hits[0]!.publishedAt, "2026-10-20T07:00:30.000Z");
 eq("no negative counts, no empty text", [hits[1]!.reach, hits[1]!.title], [null, null]);
 eq("not an answer: nothing", readXSearch({ error: "x" }), []);
+eq("followers from the author", [hits[0]!.followers, hits[1]!.followers], [30000, null]);
 
 // ScrapeCreators: X's GraphQL tweets, flat tweets and found links all read.
 const sc = readScXSearch({
@@ -49,7 +50,9 @@ const sc = readScXSearch({
   tweets: [
     {
       rest_id: "1848000000000000010",
-      core: { user_results: { result: { legacy: { screen_name: "nation" } } } },
+      core: {
+        user_results: { result: { legacy: { screen_name: "nation", followers_count: 880000 } } },
+      },
       legacy: {
         full_text: "Kiambu dairy prices fall",
         created_at: "Mon Oct 19 08:00:00 +0000 2026",
@@ -61,7 +64,7 @@ const sc = readScXSearch({
     {
       id: "1848000000000000011",
       text: "Githunguri roads",
-      author: { screen_name: "kiambu_voice" },
+      author: { screen_name: "kiambu_voice", followers_count: "12000" },
       view_count: "8660",
     },
     {
@@ -88,6 +91,11 @@ eq(
   [45000, 15, 8660],
 );
 eq("a found link keeps its text", sc[2]!.snippet, "body");
+eq(
+  "followers from either shape, none from a found link",
+  [sc[0]!.followers, sc[1]!.followers, sc[2]!.followers],
+  [880000, 12000, null],
+);
 eq(
   "posts under data",
   readScXSearch({ data: [{ id: "1", text: "t", username: "kenya" }] }).length,

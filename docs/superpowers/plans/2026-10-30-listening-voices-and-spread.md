@@ -187,11 +187,11 @@ export async function runProfileLookups(sb: AnyClient): Promise<{ ran: boolean; 
 export async function saveAccounts(sb: AnyClient, rows: { voice_key: string; platform: string; name: string; url: string | null; followers: number | null }[]): Promise<void>; // service-role upsert on voice_key, only rows with followers, sets checked_at
 ```
 
-- [ ] **Step 1: Write the tests.** `x-read`: a TwitterAPI.io-shaped tweet with `author.followers: 31000` yields `followers: 31000`; a ScrapeCreators GraphQL-shaped tweet with `core.user_results.result.legacy.followers_count` yields it; none yields null. `profiles-server` with a fake client and a stubbed fetch: two candidates → two requests with the right paths, rows saved with followers; a 402 answer stops the loop and notes it; an unreadable answer sets `failed_at`; with the `profiles` budget refused, nothing is requested.
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Implement.** Reuse `scGet` (export it from `src/lib/scrapecreators.server.ts` if it is private), `takeCredits(sb, "profiles", 1)`. In the scan route run it after the X sweep, with the usual `.catch`.
-- [ ] **Step 4: Run** those tests, `tests/x-sweep` tests if present, `npm run typecheck` — PASS.
-- [ ] **Step 5: Commit** `Follower counts looked up each hour from a small daily budget, and taken free from X posts`.
+- [x] **Step 1: Write the tests.** `x-read`: a TwitterAPI.io-shaped tweet with `author.followers: 31000` yields `followers: 31000`; a ScrapeCreators GraphQL-shaped tweet with `core.user_results.result.legacy.followers_count` yields it; none yields null. `profiles-server` with a fake client and a stubbed fetch: two candidates → two requests with the right paths, rows saved with followers; a 402 answer stops the loop and notes it; an unreadable answer sets `failed_at`; with the `profiles` budget refused, nothing is requested.
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Implement.** Reuse `scGet` (export it from `src/lib/scrapecreators.server.ts` if it is private), `takeCredits(sb, "profiles", 1)`. In the scan route run it after the X sweep, with the usual `.catch`.
+- [x] **Step 4: Run** those tests, `tests/x-sweep` tests if present, `npm run typecheck` — PASS.
+- [x] **Step 5: Commit** `Follower counts looked up each hour from a small daily budget, and taken free from X posts`.
 
 ### Task 7: The Big voices data
 

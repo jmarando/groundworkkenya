@@ -11,6 +11,8 @@ export type XHit = {
   reach: number | null;
   /** Reposts and quotes. */
   shares: number | null;
+  /** How many follow the author, when the answer says. */
+  followers: number | null;
   source: "x";
 };
 
@@ -42,6 +44,7 @@ export function readXSearch(raw: unknown): XHit[] {
         author: `@${user}`,
         reach: num(o["viewCount"]),
         shares: reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0),
+        followers: num(author["followers"]),
         source: "x",
       },
     ];
@@ -120,6 +123,9 @@ export function readScXSearch(raw: unknown): XHit[] {
         author: `@${handle}`,
         reach: count(o(t["views"])["count"] ?? t["view_count"] ?? t["views"] ?? t["viewCount"]),
         shares: reposts === null && quotes === null ? null : (reposts ?? 0) + (quotes ?? 0),
+        followers: count(
+          userLegacy["followers_count"] ?? author["followers_count"] ?? author["followers"],
+        ),
         source: "x",
       },
     ];

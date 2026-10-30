@@ -5,6 +5,7 @@
 // latest counts. Moods are read by the main sweep. It searches through ScrapeCreators, or
 // TwitterAPI.io when that key is set (src/lib/x-search.server.ts); with neither it does nothing.
 
+import { saveAccounts } from "@/lib/profiles.server";
 import { recordCounts } from "@/lib/readings.server";
 import { takeCredits } from "@/lib/social-credits";
 import { searchX, xConfigured, XCreditError } from "@/lib/x-search.server";
@@ -71,6 +72,23 @@ export async function runXSweep(sb: AnyClient): Promise<XSweep> {
         if (error) notes.push(`${t.label}: X posts could not be stored.`);
         // A post found again keeps its highest counts, and each sighting is a reading.
         await recordCounts(sb, rows);
+        // The author's follower count comes with the post, so the account needs no lookup.
+        await saveAccounts(
+          sb,
+          hits.flatMap((h) =>
+            h.author && h.followers !== null
+              ? [
+                  {
+                    voice_key: `x:${h.author.toLowerCase()}`,
+                    platform: "x",
+                    name: h.author,
+                    url: `https://x.com/${h.author.slice(1)}`,
+                    followers: h.followers,
+                  },
+                ]
+              : [],
+          ),
+        );
       }
     } catch (e) {
       if (e instanceof XCreditError) {
