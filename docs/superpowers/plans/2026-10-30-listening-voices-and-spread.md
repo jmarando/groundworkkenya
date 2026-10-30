@@ -51,17 +51,17 @@ Inputs the spec implies but a happy-path test would miss, with the task that pin
 - `backfill_listening_days() returns integer` — one row per campaign-day that has posts and no row, `backfilled = true`, `sweeps` null; called once by the migration; safe to call again.
 - All four functions are `security definer`, executable by `service_role` only.
 
-- [ ] **Step 1: Write `tests/sql/history.test.sql`** (each block begins/rolls back as `rapid.test.sql` does):
+- [x] **Step 1: Write `tests/sql/history.test.sql`** (each block begins/rolls back as `rapid.test.sql` does):
   - schema ≥ 46.
   - a post with null `reach` takes its first count (100) and gets one reading; a second call with 150 raises the post to 150 and adds a reading; a third with 120 adds a reading but the post keeps 150; the same counts again within 6 hours add none; after setting the latest reading's `at` back 7 hours, the same counts add one; `shares` rises on its own; a row with both counts null, or an unknown url, saves nothing.
   - `refresh_listening_days`: a post found `2026-10-28 21:30+00` counts on `2026-10-29`; an off-topic post and a rival's own post are left out; `unread` counts posts with no mood.
   - `record_sweep_days` bumps today's `sweeps` once per call and skips a campaign with no active keyword; `backfill_listening_days` marks `backfilled = true` and `sweeps` null and does nothing the second time.
   - RLS: manager `c3` reads Sakaja's rows; agent `b2` and Mathira candidate `e5` read none; `authenticated` cannot execute the four functions (`has_function_privilege`) and cannot insert into either table.
   - `prune_old_records()` deletes a reading 181 days old and keeps one 179 days old.
-- [ ] **Step 2: Run** `bash tests/sql/run.sh` — expect the new file to FAIL (tables missing).
-- [ ] **Step 3: Write the migration.** RLS as `rapid_responses` (restrictive own-campaign, office-role select; no insert/update for `authenticated`). Call `backfill_listening_days()` at the end. Extend `prune_old_records()` (full body from `20261029090000_roadmap.sql` + readings > 180 days + `listening_days` rows with `day` older than 3 years; add `'readings'` to the returned jsonb).
-- [ ] **Step 4: Run** `bash tests/sql/run.sh` — expect all PASS.
-- [ ] **Step 5: Commit** `Listening history: a views reading per sweep and a record of each day`.
+- [x] **Step 2: Run** `bash tests/sql/run.sh` — expect the new file to FAIL (tables missing).
+- [x] **Step 3: Write the migration.** RLS as `rapid_responses` (restrictive own-campaign, office-role select; no insert/update for `authenticated`). Call `backfill_listening_days()` at the end. Extend `prune_old_records()` (full body from `20261029090000_roadmap.sql` + readings > 180 days + `listening_days` rows with `day` older than 3 years; add `'readings'` to the returned jsonb).
+- [x] **Step 4: Run** `bash tests/sql/run.sh` — expect all PASS.
+- [x] **Step 5: Commit** `Listening history: a views reading per sweep and a record of each day`.
 
 ### Task 2: The sweeps save readings; the hourly run records its day
 
