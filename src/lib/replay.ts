@@ -2,16 +2,17 @@
 // one), the period in five lines set against the one before, and the so-what line. Plain code, no
 // AI: every number is a count of what Listening kept. Pure.
 
+import { NO_ISSUE, type Column } from "@/lib/big-voices";
 import { nf } from "@/lib/format";
 import { mondayOf } from "@/lib/field-plan";
-import { addDays } from "@/lib/nairobi-date";
+import { addDays, nairobiDay } from "@/lib/nairobi-date";
 
 export type Period = { kind: "week" | "month" | "dates"; from: string; to: string };
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const DAY_MS = 86_400_000;
 const days = (p: { from: string; to: string }) =>
-  Math.round((Date.parse(`${p.to}T00:00:00Z`) - Date.parse(`${p.from}T00:00:00Z`)) / 86_400_000) +
-  1;
+  Math.round((Date.parse(`${p.to}T00:00:00Z`) - Date.parse(`${p.from}T00:00:00Z`)) / DAY_MS) + 1;
 
 /** The calendar month that holds `day`, or the one `offset` months away from it. */
 function monthOf(day: string, offset = 0): { from: string; to: string } {
@@ -43,6 +44,83 @@ export function stepPeriod(p: Period, dir: -1 | 1): Period {
 
 /** The period to set this one against: the week or month before, or as many days ending the day before. */
 export const periodBefore = (p: Period): Period => stepPeriod(p, -1);
+
+/** The kind two days make: a Monday-to-Sunday week, a whole calendar month, or any other run of days. */
+export function kindOf(from: string, to: string): Period["kind"] {
+  if (from === mondayOf(from) && to === addDays(from, 6)) return "week";
+  const month = monthOf(from);
+  return from === month.from && to === month.to ? "month" : "dates";
+}
+
+const isDay = (s: unknown): s is string => {
+  if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const t = Date.parse(`${s}T00:00:00Z`);
+  // A day that does not exist (30 February) rolls over in some engines; it must not pass.
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s;
+};
+
+/** Two Nairobi days read from a request: real, in order, and no more than `max` days (93) in all. */
+export function parseSpan(
+  from: unknown,
+  to: unknown,
+  max = 93,
+): { from: string; to: string } | null {
+  if (!isDay(from) || !isDay(to) || from > to) return null;
+  return days({ from, to }) <= max ? { from, to } : null;
+}
+
+/**
+ * The period to set `p` against: the one before it, and, while `p` is not over, only the same days
+ * of it (a week that is three days old is not fairly set against a whole week).
+ */
+export function compareWith(p: Period, today: string): { period: Period; partial: boolean } {
+  const before = periodBefore(p);
+  if (today < p.from || today > p.to) return { period: before, partial: false };
+  const to = addDays(before.from, days({ from: p.from, to: today }) - 1);
+  return {
+    period: to >= before.to ? before : { kind: "dates", from: before.from, to },
+    partial: true,
+  };
+}
+
+/** What a period is called, and what the one before it is called, in the lines about it. */
+export const periodWord = (p: Pick<Period, "kind">): { word: string; before: string } =>
+  p.kind === "week"
+    ? { word: "week", before: "the week before" }
+    : p.kind === "month"
+      ? { word: "month", before: "the month before" }
+      : { word: "period", before: "the days before" };
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const parts = (day: string) => {
+  const [y, m, d] = day.split("-").map(Number) as [number, number, number];
+  return { y, m: m - 1, d };
+};
+
+/** "26 Oct – 1 Nov 2026", "10 – 14 Oct 2026", "29 Oct 2026", or "October 2026" for a whole month. */
+export function periodLabel(p: Period): string {
+  const a = parts(p.from);
+  const b = parts(p.to);
+  if (p.kind === "month") return `${MONTH_NAMES[a.m]} ${a.y}`;
+  if (p.from === p.to) return `${a.d} ${MONTHS[a.m]} ${a.y}`;
+  if (a.y !== b.y) return `${a.d} ${MONTHS[a.m]} ${a.y} – ${b.d} ${MONTHS[b.m]} ${b.y}`;
+  if (a.m !== b.m) return `${a.d} ${MONTHS[a.m]} – ${b.d} ${MONTHS[b.m]} ${b.y}`;
+  return `${a.d} – ${b.d} ${MONTHS[b.m]} ${b.y}`;
+}
 
 /** What the daily record holds for a Nairobi day (listening_days). */
 export type DayRow = {
@@ -125,6 +203,83 @@ export type PeriodStats = {
   /** Days of the period the record had begun and nothing ran. */
   pausedDays: number;
 };
+
+/** The daily record summed over the days of a period; days outside it are left out. */
+export function totalsOf(
+  p: { from: string; to: string },
+  rows: DayRow[],
+): Pick<PeriodStats, "posts" | "warm" | "neutral" | "angry"> {
+  const t = { posts: 0, warm: 0, neutral: 0, angry: 0 };
+  for (const r of rows) {
+    if (r.day < p.from || r.day > p.to) continue;
+    t.posts += r.posts;
+    t.warm += r.warm;
+    t.neutral += r.neutral;
+    t.angry += r.angry;
+  }
+  return t;
+}
+
+/** What a period's posts were about: a count per issue, without the candidates' own posts or issues that say nothing. */
+export function issueCounts(
+  posts: { issue: string | null; rivalId: string | null }[],
+): { issue: string; n: number }[] {
+  const n = new Map<string, number>();
+  for (const p of posts)
+    if (p.issue && !p.rivalId && !NO_ISSUE.has(p.issue)) n.set(p.issue, (n.get(p.issue) ?? 0) + 1);
+  return [...n.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([issue, count]) => ({ issue, n: count }));
+}
+
+/** How many of each Nairobi day's finds were published more than a day before they were found. */
+export function lateByDay(
+  posts: { foundAt: string; publishedAt: string | null; rivalId: string | null }[],
+): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const p of posts) {
+    if (p.rivalId || !p.publishedAt) continue;
+    if (!(Date.parse(p.foundAt) - Date.parse(p.publishedAt) > DAY_MS)) continue;
+    const day = nairobiDay(p.foundAt);
+    out.set(day, (out.get(day) ?? 0) + 1);
+  }
+  return out;
+}
+
+/**
+ * The voices to name for a period: the biggest accounts across the columns (a voice in two columns
+ * has its views added), then outlets by posts to fill what is left. Only voices the columns list,
+ * so none is under the size floor.
+ */
+export function loudestVoices(columns: Column[], n = 3): string[] {
+  const accounts = new Map<
+    string,
+    { name: string; seen: number | null; followers: number | null }
+  >();
+  const outlets = new Map<string, { name: string; posts: number }>();
+  for (const c of columns) {
+    for (const v of c.accounts) {
+      const a = accounts.get(v.key) ?? { name: v.name, seen: null, followers: null };
+      if (v.seen !== null) a.seen = (a.seen ?? 0) + v.seen;
+      if (v.followers !== null) a.followers = Math.max(a.followers ?? 0, v.followers);
+      accounts.set(v.key, a);
+    }
+    for (const v of c.outlets) {
+      const o = outlets.get(v.key) ?? { name: v.name, posts: 0 };
+      o.posts += v.posts;
+      outlets.set(v.key, o);
+    }
+  }
+  const size = (a: { seen: number | null; followers: number | null }) => a.seen ?? a.followers ?? 0;
+  return [
+    ...[...accounts.values()]
+      .sort((a, b) => size(b) - size(a) || a.name.localeCompare(b.name))
+      .map((a) => a.name),
+    ...[...outlets.values()]
+      .sort((a, b) => b.posts - a.posts || a.name.localeCompare(b.name))
+      .map((o) => o.name),
+  ].slice(0, n);
+}
 
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
 const read = (s: PeriodStats) => s.warm + s.neutral + s.angry;

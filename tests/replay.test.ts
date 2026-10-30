@@ -4,13 +4,23 @@
 // Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/replay.test.ts
 
+import type { BigVoice, Column } from "@/lib/big-voices";
 import {
   bars,
+  compareWith,
   fiveLines,
+  issueCounts,
+  kindOf,
+  lateByDay,
+  loudestVoices,
+  parseSpan,
   periodBefore,
   periodFor,
+  periodLabel,
+  periodWord,
   replaySoWhat,
   stepPeriod,
+  totalsOf,
   type DayRow,
   type PeriodStats,
 } from "@/lib/replay";
@@ -349,6 +359,250 @@ const before = stats({
     true,
   );
   eq("no pause, no sentence", replaySoWhat(stats(), before, "week").includes("paused"), false);
+}
+
+// ---- what a request names: its kind, and whether it is a real span of days
+eq("Monday to Sunday is a week", kindOf("2026-10-26", "2026-11-01"), "week");
+eq("the 1st to the last is a month", kindOf("2026-10-01", "2026-10-31"), "month");
+eq("a short February is a month", kindOf("2026-02-01", "2026-02-28"), "month");
+eq(
+  "a 28-day February that starts on a Monday is still a month",
+  kindOf("2027-02-01", "2027-02-28"),
+  "month",
+);
+eq("Tuesday to Monday is only dates", kindOf("2026-10-27", "2026-11-02"), "dates");
+eq("five days are dates", kindOf("2026-10-10", "2026-10-14"), "dates");
+eq("one day is dates", kindOf("2026-10-29", "2026-10-29"), "dates");
+
+eq("a real span", parseSpan("2026-10-26", "2026-11-01"), { from: "2026-10-26", to: "2026-11-01" });
+eq("one day is a span", parseSpan("2026-10-29", "2026-10-29"), {
+  from: "2026-10-29",
+  to: "2026-10-29",
+});
+eq("reversed", parseSpan("2026-11-01", "2026-10-26"), null);
+eq("a month that does not exist", parseSpan("2026-13-01", "2026-13-02"), null);
+eq("a day that does not exist", parseSpan("2026-02-30", "2026-03-01"), null);
+eq("words are not days", parseSpan("26 Oct", "1 Nov"), null);
+eq("a missing end", parseSpan("2026-10-01", undefined), null);
+eq("93 days are allowed", parseSpan("2026-08-01", "2026-11-01")?.to, "2026-11-01");
+eq("94 days are not", parseSpan("2026-07-31", "2026-11-01"), null);
+
+// ---- the period to set a period against: fair while the period is not over
+{
+  const week = periodFor("week", "2026-10-29");
+  eq("a finished week is set against the whole week before", compareWith(week, "2026-11-03"), {
+    period: { kind: "week", from: "2026-10-19", to: "2026-10-25" },
+    partial: false,
+  });
+  eq(
+    "a week on its last day is finished at the day's end, not before",
+    compareWith(week, "2026-11-01").partial,
+    true,
+  );
+  eq(
+    "a week that is not over is set against the same days before",
+    compareWith(week, "2026-10-29"),
+    {
+      period: { kind: "dates", from: "2026-10-19", to: "2026-10-22" },
+      partial: true,
+    },
+  );
+  eq("the first day of a week is one day", compareWith(week, "2026-10-26"), {
+    period: { kind: "dates", from: "2026-10-19", to: "2026-10-19" },
+    partial: true,
+  });
+  eq("a month part way", compareWith(periodFor("month", "2026-10-10"), "2026-10-15"), {
+    period: { kind: "dates", from: "2026-09-01", to: "2026-09-15" },
+    partial: true,
+  });
+  eq(
+    "a month part way is never set against more than the month before",
+    compareWith(periodFor("month", "2026-03-10"), "2026-03-30").period,
+    { kind: "month", from: "2026-02-01", to: "2026-02-28" },
+  );
+  eq("a period still to come has nothing to cut", compareWith(week, "2026-10-20"), {
+    period: { kind: "week", from: "2026-10-19", to: "2026-10-25" },
+    partial: false,
+  });
+  eq(
+    "what to call the pair",
+    [periodWord(week), periodWord(periodFor("month", "2026-10-10"))],
+    [
+      { word: "week", before: "the week before" },
+      { word: "month", before: "the month before" },
+    ],
+  );
+  eq(
+    "dates are only a period",
+    periodWord({ kind: "dates", from: "2026-10-10", to: "2026-10-14" }),
+    { word: "period", before: "the days before" },
+  );
+}
+
+// ---- how a period reads on the page
+eq("a week", periodLabel(periodFor("week", "2026-10-29")), "26 Oct – 1 Nov 2026");
+eq("a month", periodLabel(periodFor("month", "2026-10-29")), "October 2026");
+eq(
+  "dates in one month",
+  periodLabel({ kind: "dates", from: "2026-10-10", to: "2026-10-14" }),
+  "10 – 14 Oct 2026",
+);
+eq("one day", periodLabel({ kind: "dates", from: "2026-10-29", to: "2026-10-29" }), "29 Oct 2026");
+eq(
+  "over a new year",
+  periodLabel({ kind: "dates", from: "2026-12-28", to: "2027-01-03" }),
+  "28 Dec 2026 – 3 Jan 2027",
+);
+
+// ---- the daily record, summed over a period
+{
+  const rows = [
+    row("2026-10-25", { posts: 99, warm: 9, neutral: 9, angry: 9 }),
+    row("2026-10-26", { posts: 10, warm: 2, neutral: 3, angry: 4 }),
+    row("2026-10-30", { posts: 20, warm: 5, neutral: 5, angry: 8 }),
+    row("2026-11-02", { posts: 77, warm: 7, neutral: 7, angry: 7 }),
+  ];
+  eq("only the days inside count", totalsOf({ from: "2026-10-26", to: "2026-11-01" }, rows), {
+    posts: 30,
+    warm: 7,
+    neutral: 8,
+    angry: 12,
+  });
+  eq("no rows is zero, not NaN", totalsOf({ from: "2026-10-26", to: "2026-11-01" }, []), {
+    posts: 0,
+    warm: 0,
+    neutral: 0,
+    angry: 0,
+  });
+}
+
+// ---- what the period was about
+{
+  const post = (issue: string | null, rivalId: string | null = null) => ({ issue, rivalId });
+  eq(
+    "counted by issue, most first, ties by name",
+    issueCounts([
+      post("water"),
+      post("roads"),
+      post("water"),
+      post("jobs"),
+      post("jobs"),
+      post("water"),
+    ]),
+    [
+      { issue: "water", n: 3 },
+      { issue: "jobs", n: 2 },
+      { issue: "roads", n: 1 },
+    ],
+  );
+  eq(
+    "what says nothing is left out, and so is a candidate's own post",
+    issueCounts([
+      post(null),
+      post("general"),
+      post("campaign"),
+      post("off-topic"),
+      post("water", "r1"),
+      post("water"),
+    ]),
+    [{ issue: "water", n: 1 }],
+  );
+  eq("no posts", issueCounts([]), []);
+}
+
+// ---- older posts that arrived this day
+{
+  const late = lateByDay([
+    { foundAt: "2026-10-29T10:00:00Z", publishedAt: "2026-10-27T10:00:00Z", rivalId: null },
+    { foundAt: "2026-10-29T10:00:00Z", publishedAt: "2026-10-29T07:00:00Z", rivalId: null },
+    // found 00:30 Nairobi on the 29th, published 30 hours before: late, on the Nairobi day
+    { foundAt: "2026-10-28T21:30:00Z", publishedAt: "2026-10-27T15:30:00Z", rivalId: null },
+    { foundAt: "2026-10-29T10:00:00Z", publishedAt: null, rivalId: null },
+    { foundAt: "2026-10-29T10:00:00Z", publishedAt: "2026-10-25T10:00:00Z", rivalId: "r1" },
+    // exactly a day is not more than a day
+    { foundAt: "2026-10-30T10:00:00Z", publishedAt: "2026-10-29T10:00:00Z", rivalId: null },
+    { foundAt: "2026-10-30T10:00:00Z", publishedAt: "2026-10-28T09:59:00Z", rivalId: null },
+  ]);
+  eq("counted on the day found, in Nairobi days", Object.fromEntries(late), {
+    "2026-10-29": 2,
+    "2026-10-30": 1,
+  });
+  eq("none is an empty map", lateByDay([]).size, 0);
+}
+
+// ---- the loudest voices of a period
+{
+  const voice = (name: string, o: Partial<BigVoice> = {}): BigVoice => ({
+    key: `x:@${name.toLowerCase()}`,
+    platform: "x",
+    name,
+    url: null,
+    kind: "account",
+    followers: null,
+    posts: 3,
+    seen: null,
+    topIssues: [],
+    read: 0,
+    warm: 0,
+    angry: 0,
+    towardsWarm: null,
+    towardsAngry: null,
+    move: "win-over",
+    angryPostId: null,
+    postIds: [],
+    last: "2026-10-29T10:00:00.000Z",
+    ...o,
+  });
+  const outlet = (name: string, posts: number): BigVoice =>
+    voice(name, { key: `site:${name.toLowerCase()}`, platform: "news", kind: "outlet", posts });
+  const column = (
+    level: Column["level"],
+    accounts: BigVoice[],
+    outlets: BigVoice[] = [],
+  ): Column => ({
+    level,
+    label: level,
+    accounts,
+    outlets,
+    smaller: 0,
+  });
+
+  eq(
+    "the biggest accounts across the columns, by views seen or followers",
+    loudestVoices([
+      column(
+        "seat",
+        [voice("A", { seen: 50_000 }), voice("B", { seen: 20_000 })],
+        [outlet("Nation", 9)],
+      ),
+      column("county", [
+        voice("B", { seen: 8_000 }),
+        voice("C", { seen: null, followers: 30_000 }),
+      ]),
+      column("country", [voice("D", { seen: 90_000 })]),
+    ]),
+    ["D", "A", "C"],
+  );
+  eq(
+    "a voice in two columns has its views added",
+    loudestVoices(
+      [
+        column("seat", [voice("A", { seen: 50_000 }), voice("B", { seen: 30_000 })]),
+        column("county", [voice("B", { seen: 30_000 })]),
+      ],
+      2,
+    ),
+    ["B", "A"],
+  );
+  eq(
+    "outlets fill what the accounts leave, by posts",
+    loudestVoices([
+      column("seat", [voice("A", { seen: 6_000 })], [outlet("Nation", 9), outlet("Star", 12)]),
+    ]),
+    ["A", "Star", "Nation"],
+  );
+  eq("only outlets", loudestVoices([column("seat", [], [outlet("Nation", 9)])]), ["Nation"]);
+  eq("no columns", loudestVoices([]), []);
 }
 
 console.log(`${pass} passed, ${fail} failed`);

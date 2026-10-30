@@ -17,7 +17,8 @@ export const FLOOR = { followers: 2000, seen: 5000 } as const;
 const DAY = 86_400_000;
 const LEVELS: Level[] = ["seat", "county", "country"];
 const MOODS = new Set(["positive", "neutral", "negative"]);
-const NO_ISSUE = new Set(["general", "campaign", OFF_TOPIC]);
+/** Issues that say nothing about what a post was about. */
+export const NO_ISSUE = new Set(["general", "campaign", OFF_TOPIC]);
 const POSTS_KEPT = 200;
 
 export type BigVoice = {
