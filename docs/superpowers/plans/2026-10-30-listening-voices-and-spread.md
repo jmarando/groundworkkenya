@@ -325,7 +325,7 @@ export function replaySoWhat(cur: PeriodStats, prev: PeriodStats | null): string
 
 ### Task 15: The invitation, the standing lines and the outreach record
 
-**Files:** Create `supabase/migrations/20261108090000_voice_outreach.sql`, `tests/sql/outreach.test.sql`, `src/lib/outreach.ts`, `tests/outreach.test.ts`.
+**Files:** (as built: the approach is dated by the `touch_updated_at` trigger, and `STANDING_LINES` reuse Pulse's `RAPID_RULES` wording so the two never disagree) Create `supabase/migrations/20261108090000_voice_outreach.sql`, `tests/sql/outreach.test.sql`, `src/lib/outreach.ts`, `tests/outreach.test.ts`.
 
 **Interfaces — Produces:** `voice_outreach(id uuid pk, campaign_id, voice_key text, platform text, name text, url text null, invitation text check (length ≤ 2000), channel text check in ('copied','pulse'), status text check in ('approached','invited','on_roster','declined') default 'approached', pulse_prospect_id text null, created_by uuid default auth.uid(), created_at, updated_at, unique (campaign_id, voice_key))`; RLS: restrictive own-campaign; office roles select; principals insert and update. TS:
 ```ts
@@ -334,8 +334,8 @@ export function whyThem(v: BigVoice, level: Level, days: number): string[]; // p
 export function invitation(c: { candidate: string | null; seat: string }, v: Pick<BigVoice, "name" | "platform" | "topIssues">): string; // a plain template, no AI; names the issue only when there is one
 ```
 
-- [ ] **Step 1: Write the tests.** SQL: a manager upserts an approach and updates its status; an organiser reads but cannot insert; an agent and Mathira see nothing; a second approach to the same voice conflicts; schema ≥ 49; `prune_old_records()` drops approaches older than 3 years. TS: `STANDING_LINES.length === 3` and the first mentions "Paid for by"; `invitation` contains the candidate, the seat and the issue, and with no issue omits that sentence cleanly; `whyThem` never contains a community word list item (assert none of "tribe", "community", "ethnic" appear apart from the standing lines) and states counts that match the voice.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Write the migration** (schema 49; full `prune_old_records()` body + approaches > 3 years) **and the module.** **Step 4: Run** — PASS. **Step 5: Commit** `Briefing a voice: the invitation, the standing lines and a record of who was approached`.
+- [x] **Step 1: Write the tests.** SQL: a manager upserts an approach and updates its status; an organiser reads but cannot insert; an agent and Mathira see nothing; a second approach to the same voice conflicts; schema ≥ 49; `prune_old_records()` drops approaches older than 3 years. TS: `STANDING_LINES.length === 3` and the first mentions "Paid for by"; `invitation` contains the candidate, the seat and the issue, and with no issue omits that sentence cleanly; `whyThem` never contains a community word list item (assert none of "tribe", "community", "ethnic" appear apart from the standing lines) and states counts that match the voice.
+- [x] **Step 2: Run** — FAIL. **Step 3: Write the migration** (schema 49; full `prune_old_records()` body + approaches > 3 years) **and the module.** **Step 4: Run** — PASS. **Step 5: Commit** `Briefing a voice: the invitation, the standing lines and a record of who was approached`.
 
 ### Task 16: The brief panel
 
