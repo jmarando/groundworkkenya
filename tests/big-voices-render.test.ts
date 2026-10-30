@@ -57,6 +57,8 @@ const data = (columns: Column[], o: Partial<BigVoicesData> = {}): BigVoicesData 
   truncated: false,
   canBrief: false,
   approaches: {},
+  campaign: { candidate: "Test Candidate", seat: "Githunguri" },
+  pulseConnected: false,
   ...o,
 });
 const render = (d: BigVoicesData, props: Record<string, unknown> = {}) =>

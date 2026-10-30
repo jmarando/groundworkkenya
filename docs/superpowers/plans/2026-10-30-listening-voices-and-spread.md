@@ -310,7 +310,7 @@ export function replaySoWhat(cur: PeriodStats, prev: PeriodStats | null): string
 ### Task 14: The Replay tab
 
 **Files:**
-- **As built:** the screen is `Replay.tsx` (pure, `ReplayView`) and its data side is `ReplayPanel.tsx` (period state, a day's posts through `getListeningPosts`, a way back that reads "← Replay" through a `backLabel` on `Drill`). `replay.ts` gained what the loader needs as plain code with tests: `kindOf`, `parseSpan`, `compareWith` (while a week is not over it is set against the same days of the week before, and says so), `periodWord`, `periodLabel`, `totalsOf`, `issueCounts`, `lateByDay`, `loudestVoices`. `loadWindow` takes an upper bound (`until`). The loader's `briefed` is 0 until Task 16 reads `voice_outreach`. The default period is last week (Monday to Sunday).
+- **As built:** the screen is `Replay.tsx` (pure, `ReplayView`) and its data side is `ReplayPanel.tsx` (period state, a day's posts through `getListeningPosts`, a way back that reads "← Replay" through a `backLabel` on `Drill`). `replay.ts` gained what the loader needs as plain code with tests: `kindOf`, `parseSpan`, `compareWith` (while a week is not over it is set against the same days of the week before, and says so), `periodWord`, `periodLabel`, `totalsOf`, `issueCounts`, `lateByDay`, `loudestVoices`. `loadWindow` takes an upper bound (`until`). `briefed` counts the `voice_outreach` rows made in the period. The default period is last week (Monday to Sunday).
 - Create: `src/lib/replay.functions.ts`, `src/components/gw/listening/Replay.tsx`, `tests/replay-render.test.ts`
 - Modify: `src/routes/_authenticated/listening.tsx` (a "Replay" tab after Reactions), `src/styles/groundwork.css`
 
@@ -340,13 +340,14 @@ export function invitation(c: { candidate: string | null; seat: string }, v: Pic
 ### Task 16: The brief panel
 
 **Files:**
-- Create: `src/lib/outreach.functions.ts` (`getApproaches`, `saveApproach`, `setApproachStatus`), `src/components/gw/listening/BriefVoice.tsx`, `tests/brief-render.test.ts`
+- **As built:** there is no separate `getApproaches`: `getBigVoices` reads `voice_outreach` and fills `approaches` (status, date of the last change, the invitation), plus `campaign` (candidate, seat) and `pulseConnected`. `pulseConnected` is **false** on purpose: Pulse has no door that takes a prospect (`groundwork-prospect`), so Send would do nothing; flip it, and wire `send`, when Pulse has one. The Brief button and "Approached 3 Nov" label were already in `BigVoices.tsx` (Task 8); the panel is opened from `BigVoicesPanel.tsx`, which also saves on Copy and sets a status by hand. What the office may save is checked by `checkApproach` and `checkStatus` in `outreach.ts` (an outlet is refused). "Brief voices" on a story still opens the Voices tab; the spec's filter to Recruit voices on the story's issue is not built.
+- Create: `src/lib/outreach.functions.ts` (`saveApproach`, `setApproachStatus`), `src/components/gw/listening/BriefVoice.tsx`, `tests/brief-render.test.ts`
 - Modify: `src/lib/big-voices.functions.ts` (fill `approaches`), `src/components/gw/listening/BigVoices.tsx` (a Brief button on accounts for principals; "Approached 3 Nov" on a voice already approached), `src/styles/groundwork.css`
 
 **Interfaces — Produces:** `saveApproach({ voice: { key, platform, name, url }, invitation, channel })` upserts on `(campaign_id, voice_key)` (principals); `BriefVoice({ voice, level, days, campaign, close, copy, pulseConnected })` presentational: why-them lines, the three standing lines (always shown), the editable invitation, "Copy for WhatsApp or DM" (writes to the clipboard and calls `copy`), and "Send to Daraja Pulse" disabled with "Daraja Pulse isn't connected to Groundwork yet" unless `pulseConnected` (read with the existing `pulse.server.ts` configured check).
 
-- [ ] **Step 1: Write `tests/brief-render.test.ts`:** renders the three standing lines, the editable invitation text and a disabled Send with its note; with `pulseConnected` true Send is enabled; no render path shows an outlet's Brief.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` — PASS. **Step 5: Commit** `Briefing a voice: the panel, and who has been approached`.
+- [x] **Step 1: Write `tests/brief-render.test.ts`:** renders the three standing lines, the editable invitation text and a disabled Send with its note; with `pulseConnected` true Send is enabled; no render path shows an outlet's Brief.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` — PASS. **Step 5: Commit** `Briefing a voice: the panel, and who has been approached`.
 
 ---
 

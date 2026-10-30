@@ -5,7 +5,14 @@
 //   npx tsx --tsconfig tsconfig.json tests/outreach.test.ts
 
 import type { BigVoice } from "@/lib/big-voices";
-import { invitation, STANDING_LINES, whyThem } from "@/lib/outreach";
+import {
+  APPROACH_STATUSES,
+  checkApproach,
+  checkStatus,
+  invitation,
+  STANDING_LINES,
+  whyThem,
+} from "@/lib/outreach";
 
 let pass = 0;
 let fail = 0;
@@ -207,6 +214,77 @@ ok(
     nobody,
   );
 }
+
+// ---- what is saved when an approach is recorded
+{
+  const good = {
+    voice: {
+      key: "tiktok:@mtaani_reels",
+      platform: "tiktok",
+      name: "@mtaani_reels",
+      url: "https://www.tiktok.com/@mtaani_reels",
+    },
+    invitation: "  Hello, we are the campaign team.  ",
+    channel: "copied",
+  };
+  const r = checkApproach(good);
+  ok(
+    "a good approach passes, its invitation trimmed",
+    r.ok && r.approach.invitation === "Hello, we are the campaign team.",
+    JSON.stringify(r),
+  );
+  ok(
+    "with no address it still passes",
+    checkApproach({ ...good, voice: { ...good.voice, url: null } }).ok,
+    "",
+  );
+  const why = (o: unknown) => {
+    const c = checkApproach(o);
+    return c.ok ? "ok" : c.why;
+  };
+  ok(
+    "an outlet is not briefed as a creator",
+    why({ ...good, voice: { ...good.voice, key: "site:nation.africa" } }).includes("outlet"),
+    why({ ...good, voice: { ...good.voice, key: "site:nation.africa" } }),
+  );
+  ok(
+    "an empty invitation",
+    why({ ...good, invitation: "   " }).includes("invitation"),
+    why({ ...good, invitation: "   " }),
+  );
+  ok(
+    "an invitation over 2,000 characters",
+    why({ ...good, invitation: "x".repeat(2001) }).includes("2,000"),
+    "",
+  );
+  ok("2,000 exactly passes", checkApproach({ ...good, invitation: "x".repeat(2000) }).ok, "");
+  ok(
+    "a channel that is not copied or pulse",
+    why({ ...good, channel: "sms" }).includes("went out"),
+    why({ ...good, channel: "sms" }),
+  );
+  ok(
+    "an address that is not secure",
+    why({ ...good, voice: { ...good.voice, url: "javascript:alert(1)" } }).includes("address"),
+    "",
+  );
+  ok(
+    "no voice",
+    why({ invitation: "Hello.", channel: "copied" }).includes("voice"),
+    why({ invitation: "Hello.", channel: "copied" }),
+  );
+  ok("nothing at all", !checkApproach(null).ok && !checkApproach("x").ok, "");
+}
+
+// ---- the status the office may set by hand
+eq("the four statuses", [...APPROACH_STATUSES], ["approached", "invited", "on_roster", "declined"]);
+eq("one of them", checkStatus({ key: "x:@a", status: "invited" }), {
+  ok: true,
+  key: "x:@a",
+  status: "invited",
+});
+eq("another word", checkStatus({ key: "x:@a", status: "hired" }).ok, false);
+eq("no voice", checkStatus({ status: "invited" }).ok, false);
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

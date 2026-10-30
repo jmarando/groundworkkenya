@@ -19,8 +19,16 @@ export type BigVoicesData = {
   truncated: boolean;
   /** The candidate and managers brief voices. */
   canBrief: boolean;
-  /** Voices already approached, by voice key. */
-  approaches: Record<string, { status: string; at: string }>;
+  /** Voices already approached, by voice key: where each stands, since when, and what was said. */
+  approaches: Record<string, { status: string; at: string; invitation?: string }>;
+  /** Who the invitation is from. */
+  campaign: { candidate: string | null; seat: string };
+  /**
+   * Whether an invitation can be sent through Daraja Pulse. False until Pulse has a door that takes
+   * a prospect (groundwork-prospect, in the 30 October design): until then the office copies the
+   * invitation for WhatsApp or a direct message.
+   */
+  pulseConnected: boolean;
 };
 
 const DAYS = [7, 30, 90];
@@ -42,6 +50,7 @@ export const getBigVoices = createServerFn({ method: "GET" })
       { data: rivals },
       { data: accounts },
       { data: campaign },
+      { data: approached },
     ] = await Promise.all([
       loadWindow(sb as never, { since: new Date(now - data.days * 86_400_000).toISOString() }),
       sb.from("listening_topics").select("id, label, kind"),
@@ -49,7 +58,18 @@ export const getBigVoices = createServerFn({ method: "GET" })
       loose(sb).from("listening_accounts").select("voice_key, followers").limit(5000) as Promise<{
         data: { voice_key: string; followers: number | null }[] | null;
       }>,
-      sb.from("campaigns").select("seat, map_area").eq("id", String(campaignId)).maybeSingle(),
+      sb
+        .from("campaigns")
+        .select("seat, map_area, candidate")
+        .eq("id", String(campaignId))
+        .maybeSingle(),
+      loose(sb)
+        .from("voice_outreach")
+        .select("voice_key, status, updated_at, invitation")
+        .limit(2000) as Promise<{
+        data:
+          { voice_key: string; status: string; updated_at: string; invitation: string }[] | null;
+      }>,
     ]);
 
     // The county's name, from the first part of the campaign's map area ("nyeri/mathira" is Nyeri).
@@ -83,6 +103,13 @@ export const getBigVoices = createServerFn({ method: "GET" })
       days: data.days,
       truncated,
       canBrief: PRINCIPAL_ROLES.includes(role),
-      approaches: {},
+      approaches: Object.fromEntries(
+        (approached ?? []).map((a) => [
+          a.voice_key,
+          { status: a.status, at: a.updated_at, invitation: a.invitation },
+        ]),
+      ),
+      campaign: { candidate: campaign?.candidate ?? null, seat: campaign?.seat ?? "your seat" },
+      pulseConnected: false,
     };
   });

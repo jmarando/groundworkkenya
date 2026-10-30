@@ -11462,6 +11462,32 @@ table.fp-board {
   margin-top: 12px;
 }
 
+/* Listening: briefing a voice */
+.br-h {
+  margin: 16px 0 6px;
+  font-size: 15px;
+}
+.br-why,
+.br-lines {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+.br textarea {
+  width: 100%;
+  resize: vertical;
+}
+.br .rx-acts {
+  margin-top: 8px;
+}
+.br-status {
+  max-width: 260px;
+  margin-top: 14px;
+}
+
 /* Listening: Replay, a past week or month day by day */
 .rp-controls {
   display: flex;

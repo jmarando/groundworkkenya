@@ -81,6 +81,7 @@ export const getReplay = createServerFn({ method: "GET" })
       { data: accounts },
       { data: storyRows },
       reactions,
+      briefed,
     ] = await Promise.all([
       db
         .from("listening_days")
@@ -105,6 +106,11 @@ export const getReplay = createServerFn({ method: "GET" })
         .limit(50),
       db
         .from("rapid_responses")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", cur.gte)
+        .lt("created_at", cur.lt),
+      db
+        .from("voice_outreach")
         .select("id", { count: "exact", head: true })
         .gte("created_at", cur.gte)
         .lt("created_at", cur.lt),
@@ -186,8 +192,7 @@ export const getReplay = createServerFn({ method: "GET" })
           ).size,
         })),
         reactions: reactions.count ?? 0,
-        // Voices briefed arrive with the brief panel (voice_outreach).
-        briefed: 0,
+        briefed: briefed.count ?? 0,
         pausedDays: paused(period, late),
       },
       prevStats: {

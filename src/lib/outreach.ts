@@ -44,6 +44,65 @@ export function whyThem(v: BigVoice, level: Level, days: number): string[] {
   return out;
 }
 
+/** Where an approach stands, in the order it usually travels. The office sets it by hand until Pulse reports it. */
+export const APPROACH_STATUSES = ["approached", "invited", "on_roster", "declined"] as const;
+export type ApproachStatus = (typeof APPROACH_STATUSES)[number];
+
+/** What each status is called on screen. */
+export const APPROACH_LABEL: Record<ApproachStatus, string> = {
+  approached: "Approached",
+  invited: "Invited",
+  on_roster: "On roster",
+  declined: "Declined",
+};
+
+/** An approach as the office records it when it copies or sends an invitation. */
+export type ApproachInput = {
+  voice: { key: string; platform: string; name: string; url: string | null };
+  invitation: string;
+  channel: "copied" | "pulse";
+};
+
+const str = (v: unknown, max: number): string =>
+  typeof v === "string" ? v.trim().slice(0, max) : "";
+
+/** The approach as it will be saved, or the sentence saying what is wrong with it. */
+export function checkApproach(
+  raw: unknown,
+): { ok: true; approach: ApproachInput } | { ok: false; why: string } {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const v = (r["voice"] ?? {}) as Record<string, unknown>;
+  const key = str(v["key"], 300);
+  const platform = str(v["platform"], 40);
+  const name = str(v["name"], 200);
+  if (key.length < 3 || !platform || !name) return { ok: false, why: "Say which voice this is." };
+  if (key.startsWith("site:"))
+    return { ok: false, why: "An outlet gets a note to its newsroom, not a creator brief." };
+  const url = typeof v["url"] === "string" && v["url"] ? v["url"].trim() : null;
+  if (url !== null && !/^https:\/\/\S{1,480}$/.test(url))
+    return { ok: false, why: "The voice's address must be a secure link." };
+  const text = typeof r["invitation"] === "string" ? r["invitation"].trim() : "";
+  if (!text) return { ok: false, why: "Write the invitation first." };
+  if (text.length > 2000)
+    return { ok: false, why: "The invitation is limited to 2,000 characters." };
+  const channel = r["channel"];
+  if (channel !== "copied" && channel !== "pulse")
+    return { ok: false, why: "Say how the invitation went out: copied, or sent through Pulse." };
+  return { ok: true, approach: { voice: { key, platform, name, url }, invitation: text, channel } };
+}
+
+/** A voice and one of the four statuses, or what is missing. */
+export function checkStatus(
+  raw: unknown,
+): { ok: true; key: string; status: ApproachStatus } | { ok: false; why: string } {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const key = str(r["key"], 300);
+  const status = APPROACH_STATUSES.find((s) => s === r["status"]);
+  if (key.length < 3) return { ok: false, why: "Say which voice this is." };
+  if (!status) return { ok: false, why: "That is not a status." };
+  return { ok: true, key, status };
+}
+
 const NOUN: Record<string, string> = { facebook: "page", youtube: "channel" };
 
 /**

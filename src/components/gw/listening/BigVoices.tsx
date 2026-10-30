@@ -8,6 +8,7 @@ import type { BigVoice, Column, Level, Move } from "@/lib/big-voices";
 import type { BigVoicesData } from "@/lib/big-voices.functions";
 import { nf, shortDay, short } from "@/lib/format";
 import { sourceName } from "@/lib/listening-read";
+import { APPROACH_LABEL, type ApproachStatus } from "@/lib/outreach";
 
 const MOVE: Record<Move, { label: string; why: string; cls: string }> = {
   recruit: { label: "Recruit", why: "Mostly warm towards you, and active", cls: "pill--ok" },
@@ -28,13 +29,6 @@ const LEVEL_NOTE: Record<Level, string> = {
   seat: "Found by keywords about you, your rivals and local issues",
   county: "Found by your county news keywords",
   country: "Found by your national keywords",
-};
-
-const APPROACH: Record<string, string> = {
-  approached: "Approached",
-  invited: "Invited",
-  on_roster: "On roster",
-  declined: "Declined",
 };
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -128,7 +122,8 @@ function VoiceRow({
         )}
         {approach && (
           <span className="meta">
-            {APPROACH[approach.status] ?? "Approached"} {shortDay(approach.at)}
+            {APPROACH_LABEL[approach.status as ApproachStatus] ?? "Approached"}{" "}
+            {shortDay(approach.at)}
           </span>
         )}
       </div>
