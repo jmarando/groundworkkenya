@@ -20,7 +20,7 @@ import {
   geminiKeyRefused,
   geminiUrl,
 } from "./gemini";
-import { recent, storiesFor, titleKey } from "./news-feeds";
+import { recent, storyMatcher, titleKey } from "./news-feeds";
 import { googleNewsSearch, readOutletFeeds } from "./news-sources.server";
 import { takeCredits } from "./social-credits";
 import { OFF_TOPIC } from "./top-of-mind";
@@ -168,10 +168,12 @@ async function outletPass(
     .select("id, campaign_id, label, query, keywords, exclude_terms")
     .eq("active", true);
 
+  // Each story folded once, then set against every keyword.
+  const match = storyMatcher(fresh);
   let found = 0;
   let stored = 0;
   for (const topic of topics ?? []) {
-    const hits = storiesFor(topic, fresh).filter((s) => isNew(seen, topic.campaign_id, s.title));
+    const hits = match(topic).filter((s) => isNew(seen, topic.campaign_id, s.title));
     if (!hits.length) continue;
     found += hits.length;
     const rows = hits.map((h) => ({

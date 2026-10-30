@@ -111,12 +111,17 @@ const FILLER = new Set([
   "with",
 ]);
 
-/** Lower case, accents and apostrophes gone, anything else that isn't a letter or digit a space. */
+/**
+ * Lower case, accents and apostrophes gone, anything else that isn't a letter or digit a space. A
+ * possessive reads as the name itself ("Sakaja's" as "sakaja"), so headlines about someone's
+ * allies or plans still find them.
+ */
 export const fold = (s: string) =>
   s
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
+    .replace(/['’‘`´]s(?![\p{L}\p{N}])/gu, "")
     .replace(/['’‘`´]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
@@ -161,10 +166,30 @@ export function searchFor(topic: {
 
 /** Whether a story's headline and summary answer the search. A search with no words matches nothing. */
 export function matchesSearch(text: string, s: Search): boolean {
+  return answers(` ${fold(text)} `, s);
+}
+
+/** As matchesSearch, for text already folded with a space at each end. */
+function answers(hay: string, s: Search): boolean {
   if (!s.all.length && !s.any.length) return false;
-  const hay = ` ${fold(text)} `;
   const has = (w: string) => hay.includes(` ${w} `);
   return !s.none.some(has) && s.all.every((g) => g.some(has)) && (!s.any.length || s.any.some(has));
+}
+
+/**
+ * Every story folded once, then each keyword set against them all. The hourly pass sets every
+ * story against every keyword; folding a story again for each keyword was most of its CPU, and
+ * the host stops a sweep that uses too much (Cloudflare's error 1102, 30 October 2026).
+ */
+export function storyMatcher<T extends FeedStory>(stories: T[]) {
+  const folded = stories.map((s) => ({
+    s,
+    hay: ` ${fold(`${s.title ?? ""} ${s.snippet ?? ""}`)} `,
+  }));
+  return (topic: Parameters<typeof searchFor>[0]): T[] => {
+    const search = searchFor(topic);
+    return folded.filter((f) => answers(f.hay, search)).map((f) => f.s);
+  };
 }
 
 /** The stories that answer one keyword's search. */
@@ -172,8 +197,7 @@ export function storiesFor<T extends FeedStory>(
   topic: Parameters<typeof searchFor>[0],
   stories: T[],
 ): T[] {
-  const search = searchFor(topic);
-  return stories.filter((s) => matchesSearch(`${s.title ?? ""} ${s.snippet ?? ""}`, search));
+  return storyMatcher(stories)(topic);
 }
 
 /** Stories published in the last `days` days, and any that carry no date. */

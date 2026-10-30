@@ -117,7 +117,9 @@ export async function loadOverview(sb: Client): Promise<OverviewData> {
   const months: { label: string; value: number }[] = [];
   let running = 0;
   for (let i = 7; i >= 0; i--) {
+    // From the 1st: on the 31st, a month back would roll over into this month and count it twice.
     const d = new Date();
+    d.setDate(1);
     d.setMonth(d.getMonth() - i);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     running += buckets.get(key) ?? 0;
