@@ -65,6 +65,7 @@ export async function runXSweep(sb: AnyClient): Promise<XSweep> {
           author: h.author,
           reach: h.reach,
           shares: h.shares,
+          refers_to: h.refersTo,
         }));
         const { error } = await sb
           .from("listening_mentions")

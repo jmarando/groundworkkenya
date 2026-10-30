@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { runListeningScan } from "@/lib/listening.server";
 import { runProfileLookups } from "@/lib/profiles.server";
 import { recordSweepDays } from "@/lib/readings.server";
+import { runStories } from "@/lib/stories.server";
 import { runMorningStory } from "@/lib/morning-story.server";
 import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
@@ -43,6 +44,11 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
+        // Posts about one thing, followed from the first we found: grouped, saved and named.
+        const stories = await runStories(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
         // Each campaign's newest county or national story read for its seat (two a day at most).
         const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
           error: e.message,
@@ -79,6 +85,7 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ...result,
           x,
           profiles,
+          stories,
           wider,
           rivals,
           story,

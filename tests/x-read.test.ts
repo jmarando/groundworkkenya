@@ -102,5 +102,121 @@ eq(
   1,
 );
 
+// What a post answers: a quote or a reply, as the address of the post it points at.
+const answers = readXSearch({
+  tweets: [
+    {
+      id: "1848000000000000101",
+      text: "a reply",
+      author: { userName: "r1" },
+      inReplyToId: "1848000000000000001",
+      inReplyToUsername: "kiambu_voice",
+    },
+    {
+      id: "1848000000000000102",
+      text: "a quote",
+      author: { userName: "r2" },
+      quoted_tweet: { id: "1848000000000000002", author: { userName: "someone" } },
+    },
+    {
+      id: "1848000000000000103",
+      text: "a quote that is also a reply",
+      author: { userName: "r3" },
+      inReplyToId: "1848000000000000001",
+      quoted_tweet: { id: "1848000000000000002" },
+    },
+    {
+      id: "1848000000000000104",
+      text: "a reply from a user we are not told",
+      author: { userName: "r4" },
+      inReplyToId: "1848000000000000001",
+    },
+    { id: "1848000000000000105", text: "neither", author: { userName: "r5" } },
+    {
+      id: "1848000000000000106",
+      text: "a bad id",
+      author: { userName: "r6" },
+      inReplyToId: "not-a-number",
+    },
+    {
+      id: "1848000000000000107",
+      text: "a bad handle",
+      author: { userName: "r7" },
+      inReplyToId: "1848000000000000001",
+      inReplyToUsername: "javascript:alert(1)",
+    },
+  ],
+});
+eq(
+  "a reply points at the post it answers",
+  answers[0]!.refersTo,
+  "https://x.com/kiambu_voice/status/1848000000000000001",
+);
+eq(
+  "a quote points at the post it quotes",
+  answers[1]!.refersTo,
+  "https://x.com/someone/status/1848000000000000002",
+);
+eq(
+  "a quote wins over a reply, and an unnamed author is i",
+  answers[2]!.refersTo,
+  "https://x.com/i/status/1848000000000000002",
+);
+eq(
+  "a reply from an unnamed user is i",
+  answers[3]!.refersTo,
+  "https://x.com/i/status/1848000000000000001",
+);
+eq("a post that answers nothing says so", answers[4]!.refersTo, null);
+eq("an id that is not an id is nothing", answers[5]!.refersTo, null);
+eq(
+  "a handle that is not a handle is i",
+  answers[6]!.refersTo,
+  "https://x.com/i/status/1848000000000000001",
+);
+
+const scAnswers = readScXSearch({
+  tweets: [
+    {
+      rest_id: "1848000000000000201",
+      core: { user_results: { result: { legacy: { screen_name: "g1" } } } },
+      legacy: {
+        full_text: "graphql reply",
+        in_reply_to_status_id_str: "1848000000000000001",
+        in_reply_to_screen_name: "kiambu_voice",
+      },
+    },
+    {
+      rest_id: "1848000000000000202",
+      core: { user_results: { result: { legacy: { screen_name: "g2" } } } },
+      legacy: { full_text: "graphql quote", quoted_status_id_str: "1848000000000000002" },
+    },
+    {
+      id: "1848000000000000203",
+      text: "flat reply",
+      username: "g3",
+      in_reply_to_status_id: "1848000000000000001",
+    },
+    {
+      id: "1848000000000000204",
+      text: "flat quote",
+      username: "g4",
+      quoted_status_id: "1848000000000000002",
+    },
+    { id: "1848000000000000205", text: "flat none", username: "g5" },
+  ],
+});
+eq(
+  "graphql and flat shapes: replies and quotes",
+  scAnswers.map((h) => h.refersTo),
+  [
+    "https://x.com/kiambu_voice/status/1848000000000000001",
+    "https://x.com/i/status/1848000000000000002",
+    "https://x.com/i/status/1848000000000000001",
+    "https://x.com/i/status/1848000000000000002",
+    null,
+  ],
+);
+
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
