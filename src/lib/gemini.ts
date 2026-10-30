@@ -4,15 +4,23 @@
 
 import type { AiAnswer } from "./ai-answer";
 
-/** Reading posts in bulk (moods) uses the cheaper model; anything written for a person, the better one. */
+/**
+ * Each tier's models, best first. Reading posts in bulk (moods) uses the cheaper ones; anything
+ * written for a person, the better ones. When Google says a model is busy, the next is asked: a new
+ * model can be short of capacity for a day (3.8 Flash answered "high demand" on 30 October 2026).
+ */
 export const GEMINI_MODELS = {
-  read: "gemini-3.5-flash-lite",
-  write: "gemini-3.8-flash",
+  read: ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"],
+  write: ["gemini-3.8-flash", "gemini-3.6-flash"],
 } as const;
 export type AiTier = keyof typeof GEMINI_MODELS;
 
-export const geminiUrl = (tier: AiTier) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODELS[tier]}:generateContent`;
+export const geminiUrl = (model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+/** Whether Google failed on its side (busy or broken), so another model may answer. */
+export const geminiBusy = (status: number): boolean =>
+  status === 500 || status === 503 || status === 504;
 
 /** The request: the prompt, and the answer held to the schema as JSON. */
 export function geminiBody(prompt: string, schema: object) {
