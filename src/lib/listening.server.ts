@@ -1,8 +1,8 @@
 /**
  * Media listening engine (server only).
  *
- * Sweeps the watchlist through the Kenyan outlets' own news feeds, Google News's search feed and
- * each keyword's Google Alert, plus ScrapeCreators keyword searches (TikTok, Reddit, YouTube),
+ * Sweeps the watchlist through the Kenyan outlets' own news feeds, the keyword news search (Serper)
+ * and each keyword's Google Alert, plus ScrapeCreators keyword searches (TikTok, Reddit, YouTube),
  * stores anything new as a mention, has the AI (Gemini, on the campaign's own key) read the mood,
  * then fires any alert rule that matches. Used by the manual "Sweep now" button and by the hourly
  * cron route.
@@ -20,8 +20,14 @@ import {
   geminiKeyRefused,
   geminiUrl,
 } from "./gemini";
-import { recent, storiesFor, titleKey } from "./news-feeds";
-import { googleNewsSearch, readOutletFeeds } from "./news-sources.server";
+import { fairShare } from "./mood-queue";
+import { recent, storyMatcher, titleKey } from "./news-feeds";
+import {
+  newsSearch,
+  newsSearchConfigured,
+  NewsSearchRefused,
+  readOutletFeeds,
+} from "./news-sources.server";
 import { recordCounts } from "./readings.server";
 import { takeCredits } from "./social-credits";
 import { OFF_TOPIC } from "./top-of-mind";
@@ -169,10 +175,12 @@ async function outletPass(
     .select("id, campaign_id, label, query, keywords, exclude_terms")
     .eq("active", true);
 
+  // Each story folded once, then set against every keyword.
+  const match = storyMatcher(fresh);
   let found = 0;
   let stored = 0;
   for (const topic of topics ?? []) {
-    const hits = storiesFor(topic, fresh).filter((s) => isNew(seen, topic.campaign_id, s.title));
+    const hits = match(topic).filter((s) => isNew(seen, topic.campaign_id, s.title));
     if (!hits.length) continue;
     found += hits.length;
     const rows = hits.map((h) => ({
@@ -451,25 +459,39 @@ export async function runListeningScan(
       .order("last_scanned_at", { ascending: true, nullsFirst: true })
       .limit(topicLimit);
 
+    // The keyword news search (Serper) costs a prepaid credit a keyword; with no key it is left out.
+    if (!newsSearchConfigured()) say("Keyword news search is off: no Serper key (SERPER_API_KEY).");
+    let searchRefused = false;
+
     for (const topic of topics ?? []) {
-      const extra = (topic.keywords ?? []).slice(0, 3).join(" OR ");
+      // An extra keyword of two words or more is searched as a phrase: "githunguri dairy".
+      const phrase = (k: string) => (/\s/.test(k.trim()) ? `"${k.trim()}"` : k.trim());
+      const extra = (topic.keywords ?? []).slice(0, 3).map(phrase).join(" OR ");
       const exclude = (topic.exclude_terms ?? []).map((t: string) => `-${t}`).join(" ");
       const query = [topic.query, extra ? `(${extra})` : "", exclude]
         .filter(Boolean)
         .join(" ")
         .slice(0, 300);
 
-      // Google News's search feed for the keyword: free and not guaranteed, so a refusal is noted
-      // and the rest of the keyword (its Google Alert, the social searches) still runs.
+      // The news search for the keyword: a search that fails is noted and the rest of the keyword
+      // (its Google Alert, the social searches) still runs; a wrong key or used-up credits stops it
+      // for the rest of the sweep, said once.
       let hits: Found[] = [];
-      try {
-        const news = await googleNewsSearch(query);
-        hits = recent(news, 7)
-          .filter((h) => isNew(seen, topic.campaign_id, h.title))
-          .map((h) => ({ ...h, source: "news" }));
-      } catch (err) {
-        failed.searches++;
-        notes.push(`${topic.label}: ${(err as Error).message}`);
+      if (newsSearchConfigured() && !searchRefused) {
+        try {
+          const news = await newsSearch(query);
+          hits = recent(news, 7)
+            .filter((h) => isNew(seen, topic.campaign_id, h.title))
+            .map((h) => ({ ...h, source: "news" }));
+        } catch (err) {
+          if (err instanceof NewsSearchRefused) {
+            searchRefused = true;
+            say(`Keyword news search stopped: ${err.message}.`);
+          } else {
+            failed.searches++;
+            notes.push(`${topic.label}: ${(err as Error).message}`);
+          }
+        }
       }
       found += hits.length;
 
@@ -578,17 +600,25 @@ export async function runListeningScan(
         .eq("id", topic.id);
     }
 
-    // read the mood on anything not yet rated
-    const { data: pending } = await sb
+    // Read the mood on what isn't rated yet: up to two batches a sweep, each campaign's newest taken
+    // in turn (src/lib/mood-queue.ts), so one busy campaign never keeps another's posts unread.
+    const { data: unread } = await sb
       .from("listening_mentions")
       .select("id, title, snippet, campaign_id, topic_id")
       .is("sentiment", null)
       .order("found_at", { ascending: false })
-      .limit(classifyLimit);
+      .limit(400);
+    let left = (unread ?? []) as {
+      id: string;
+      title: string | null;
+      snippet: string | null;
+      campaign_id: string | null;
+      topic_id: string | null;
+    }[];
 
     // Each post is read against its own campaign and keyword, so a stray result can be set aside.
     const ids = (k: "campaign_id" | "topic_id") => [
-      ...new Set((pending ?? []).map((m: any) => m[k]).filter(Boolean)),
+      ...new Set(left.map((m) => m[k]).filter(Boolean)),
     ];
     const [{ data: camps }, { data: kws }] = await Promise.all([
       ids("campaign_id").length
@@ -604,14 +634,16 @@ export async function runListeningScan(
     const kwOf = new Map(
       (kws ?? []).map((t: any) => [t.id, t.query ? `${t.label} (${t.query})` : t.label]),
     );
-    const batch = (pending ?? []).map((m: any) => ({
-      id: m.id as string,
-      ...(campOf.get(m.campaign_id) ? { campaign: campOf.get(m.campaign_id) as string } : {}),
-      ...(kwOf.get(m.topic_id) ? { keyword: kwOf.get(m.topic_id) as string } : {}),
-      text: `${m.title ?? ""} — ${m.snippet ?? ""}`.slice(0, 600),
-    }));
-
-    if (batch.length) {
+    for (let round = 0; round < 2 && left.length; round++) {
+      const pending = fairShare(left, classifyLimit);
+      const taken = new Set(pending.map((m) => m.id));
+      left = left.filter((m) => !taken.has(m.id));
+      const batch = pending.map((m) => ({
+        id: m.id,
+        ...(campOf.get(m.campaign_id) ? { campaign: campOf.get(m.campaign_id) as string } : {}),
+        ...(kwOf.get(m.topic_id) ? { keyword: kwOf.get(m.topic_id) as string } : {}),
+        text: `${m.title ?? ""} — ${m.snippet ?? ""}`.slice(0, 600),
+      }));
       const verdicts = await readMoods(batch);
       const known = new Set(batch.map((b: { id: string }) => b.id));
       for (const v of verdicts) {

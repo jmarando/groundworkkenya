@@ -14,7 +14,7 @@ import { autoReadWiderNews } from "@/lib/roadmap.functions";
 /**
  * Hourly listening sweep. Called by the scheduler with the shared cron secret.
  * Bounded per run, single-flight via the listening_jobs lease, and pauses
- * itself if the search or AI service refuses work.
+ * itself if the AI refuses work (a refused news search only stops searching).
  */
 export const Route = createFileRoute("/api/public/listening/scan")({
   server: {
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/api/public/listening/scan")({
 
         const { supabaseAdmin: sb } = await import("@/integrations/supabase/client.server");
 
-        const result = await runListeningScan(sb as never, { topicLimit: 6, classifyLimit: 40 }).catch((e: Error) => ({
+        const result = await runListeningScan(sb as never, { topicLimit: 6, classifyLimit: 60 }).catch((e: Error) => ({
           ran: false,
           error: e.message,
         }));

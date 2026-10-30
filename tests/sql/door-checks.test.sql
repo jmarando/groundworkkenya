@@ -4,6 +4,10 @@
 
 \ir fixtures.sql
 
+-- "Today" is Nairobi's, as in the app: a visit counts on its Nairobi date, so between midnight and
+-- 03:00 in Nairobi a UTC current_date would ask about the wrong day.
+set timezone = 'Africa/Nairobi';
+
 -- Real plus codes, so the database can say where each house is: three doors on one Nairobi street.
 create or replace function pg_temp.real_doors() returns jsonb language sql as $$
   select jsonb_agg(jsonb_build_object('pc', pc, 'lat', -1.29, 'lng', 36.82,

@@ -56,18 +56,18 @@ function stubFetch(
   return calls;
 }
 
-/** Google News's search feed, with one story at each address. */
+/** The news search's answer (Serper), one story at each address. */
 const search = (urls: string[], title = (i: number) => `Story ${i + 1} about water in Nairobi`) =>
-  rss(
-    urls
-      .map(
-        (u, i) =>
-          `<item><title>${title(i)} - Test Courier</title><link>${u}</link>` +
-          `<pubDate>${new Date().toUTCString()}</pubDate>` +
-          `<source url="https://courier.test">Test Courier</source></item>`,
-      )
-      .join(""),
-  );
+  JSON.stringify({
+    news: urls.map((u, i) => ({
+      title: title(i),
+      link: u,
+      snippet: "Residents wait for tankers.",
+      date: "1 hour ago",
+      source: "Test Courier",
+      position: i + 1,
+    })),
+  });
 
 const TOPIC = {
   id: "t1",
@@ -100,12 +100,13 @@ function world(
 
 async function main() {
   process.env["GEMINI_API_KEY"] = "test-key";
+  process.env["SERPER_API_KEY"] = "test-key";
   delete process.env["SCRAPECREATORS_API_KEY"];
 
   {
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search(["https://news.test/a", "https://news.test/b"]) }
         : { body: NO_MOODS },
     );
@@ -134,7 +135,7 @@ async function main() {
       ],
     });
     stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search(["https://news.test/a"]) }
         : { body: NO_MOODS },
     );
@@ -147,7 +148,7 @@ async function main() {
     const calls = stubFetch((u) =>
       u === FEED
         ? { body: ALERT_XML }
-        : u.includes("news.google.com")
+        : u.includes("google.serper.dev")
           ? { body: search([]) }
           : { body: NO_MOODS },
     );
@@ -164,7 +165,7 @@ async function main() {
       listening_topics: [{ ...TOPIC, alert_feed_url: "https://evil.test/feed" }],
     });
     const calls = stubFetch((u) =>
-      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -183,7 +184,7 @@ async function main() {
     // Every campaign's team can read the sweep's job row, so it names no keyword.
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com") ? { status: 500, body: "try later" } : { body: NO_MOODS },
+      u.includes("google.serper.dev") ? { status: 500, body: "try later" } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -203,7 +204,7 @@ async function main() {
     const sb = world();
     const now = new Date().toUTCString();
     const calls = stubFetch(
-      (u) => (u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS }),
+      (u) => (u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS }),
       rss(
         "<item><title>Water shortage in Nairobi: tankers promised</title>" +
           `<link>https://outlet.test/water</link><pubDate>${now}</pubDate>` +
@@ -235,13 +236,13 @@ async function main() {
     );
   }
   {
-    // One story found by an outlet's feed and by Google News is kept once, under the outlet's address.
+    // One story found by an outlet's feed and by the news search is kept once, under the feed's address.
     const sb = world();
     const same = "Water shortage in Nairobi: tankers promised";
     stubFetch(
       (u) =>
-        u.includes("news.google.com")
-          ? { body: search(["https://news.google.com/rss/articles/CBMiExample?oc=5"], () => same) }
+        u.includes("google.serper.dev")
+          ? { body: search(["https://www.outlet.test/water?from=search"], () => same) }
           : { body: NO_MOODS },
       rss(
         `<item><title>${same}</title><link>https://outlet.test/water</link>` +
@@ -258,31 +259,31 @@ async function main() {
   {
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com")
-        ? { body: search(["https://news.google.com/rss/articles/CBMiOne"]) }
+      u.includes("google.serper.dev")
+        ? { body: search(["https://www.courier.test/story-1"]) }
         : { body: NO_MOODS },
     );
     await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
-      "a Google News story is kept as news, under the outlet's own site",
+      "a news-search story is kept as news, under its outlet's site",
       sb.tables["listening_mentions"]?.map((m) => [m["source"], m["domain"]]),
       [["news", "courier.test"]],
     );
   }
   {
-    // Google News is free and unguaranteed: refusing never stops the rest of the keyword.
+    // A news search that fails never stops the rest of the keyword.
     const FEED = "https://www.google.com/alerts/feeds/0123/4567";
     const sb = world({ listening_topics: [{ ...TOPIC, alert_feed_url: FEED }] });
     stubFetch((u) =>
       u === FEED
         ? { body: ALERT_XML }
-        : u.includes("news.google.com")
+        : u.includes("google.serper.dev")
           ? { status: 503, body: "later" }
           : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
-      "Google News refusing leaves the keyword's Google Alert read",
+      "a failed news search leaves the keyword's Google Alert read",
       sb.tables["listening_mentions"]?.map((m) => m["source"]),
       ["google_alerts"],
     );
@@ -295,7 +296,7 @@ async function main() {
     });
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search(["https://news.test/a"]) }
         : u.includes("generativelanguage")
           ? { status: 429, body: limit }
@@ -314,7 +315,7 @@ async function main() {
     });
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search(["https://news.test/a"]) }
         : u.includes("generativelanguage")
           ? { status: 400, body: badKey }
@@ -331,7 +332,7 @@ async function main() {
     delete process.env["GEMINI_API_KEY"];
     const sb = world();
     stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search(["https://news.test/a"]) }
         : { body: NO_MOODS },
     );
@@ -339,6 +340,129 @@ async function main() {
     eq("with no AI key the sweep pauses and says so", r.paused, "AI is not configured.");
     eq("the stories were still stored", r.stored, 1);
     process.env["GEMINI_API_KEY"] = "test-key";
+  }
+
+  {
+    // The news search costs a credit a keyword: with no key it is left out, and the sweep says so.
+    delete process.env["SERPER_API_KEY"];
+    const sb = world();
+    const calls = stubFetch((u) =>
+      u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "with no Serper key no search is made",
+      calls.some((c) => c.includes("google.serper.dev")),
+      false,
+    );
+    eq(
+      "and the shared note says it is off",
+      String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "").includes(
+        "Keyword news search is off",
+      ),
+      true,
+    );
+    process.env["SERPER_API_KEY"] = "test-key";
+  }
+  {
+    // A wrong key or used-up credits: asked once, then left alone for the rest of the sweep.
+    const sb = world({
+      listening_topics: [TOPIC, { ...TOPIC, id: "t2", label: "Roads", query: "Nairobi roads" }],
+    });
+    const calls = stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { status: 400, body: JSON.stringify({ message: "Not enough credits", statusCode: 400 }) }
+        : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a refused search is asked once",
+      calls.filter((c) => c.includes("google.serper.dev")).length,
+      1,
+    );
+    eq(
+      "the shared note says the search stopped, naming no keyword",
+      [
+        String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "").includes(
+          "Keyword news search stopped",
+        ),
+        String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "").includes("Water"),
+      ],
+      [true, false],
+    );
+    eq("and it does not pause the sweep", r.paused, undefined);
+  }
+  {
+    // An extra keyword of two words is searched as a phrase.
+    const sb = world({
+      listening_topics: [
+        { ...TOPIC, query: "Githunguri milk", keywords: ["fresha", "githunguri dairy"] },
+      ],
+    });
+    const asked: string[] = [];
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (OUTLET_URLS.has(u)) return new Response(OUTLET_QUIET);
+      if (u.includes("google.serper.dev")) {
+        asked.push(String(init?.body ?? ""));
+        return new Response(search([]));
+      }
+      return new Response(NO_MOODS);
+    }) as typeof fetch;
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "the search is Kenya's, the last week, the phrase in quotes",
+      asked
+        .map((b) => JSON.parse(b) as Record<string, unknown>)
+        .map((b) => [b["q"], b["gl"], b["tbs"]]),
+      [['Githunguri milk (fresha OR "githunguri dairy")', "ke", "qdr:w"]],
+    );
+  }
+  {
+    // Moods are read for each campaign in turn, so a busy campaign never keeps another's unread.
+    const at = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    const post = (id: string, campaign: string, hoursAgo: number) => ({
+      id,
+      campaign_id: campaign,
+      topic_id: "t1",
+      url: `https://posts.test/${id}`,
+      title: `Post ${id}`,
+      snippet: null,
+      sentiment: null,
+      found_at: at(hoursAgo),
+    });
+    const sb = world({
+      listening_mentions: [
+        post("busy-1", "c1", 1),
+        post("busy-2", "c1", 2),
+        post("busy-3", "c1", 3),
+        post("quiet-1", "c2", 9),
+      ],
+    });
+    const prompts: string[] = [];
+    globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
+      const u = String(url);
+      if (OUTLET_URLS.has(u)) return new Response(OUTLET_QUIET);
+      if (u.includes("google.serper.dev")) return new Response(search([]));
+      prompts.push(String(init?.body ?? ""));
+      return new Response(NO_MOODS);
+    }) as typeof fetch;
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 2 });
+    eq("two batches in a sweep", prompts.length, 2);
+    eq(
+      "the first batch takes the quiet campaign's post beside the busy one's newest",
+      [
+        prompts[0]?.includes("busy-1"),
+        prompts[0]?.includes("quiet-1"),
+        prompts[0]?.includes("busy-2"),
+      ],
+      [true, true, false],
+    );
+    eq(
+      "the second batch takes the rest",
+      [prompts[1]?.includes("busy-2"), prompts[1]?.includes("busy-3")],
+      [true, true],
+    );
   }
 
   // ScrapeCreators keyword search comes out of a daily budget.
@@ -355,7 +479,7 @@ async function main() {
       },
     );
     const calls = stubFetch((u) =>
-      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -373,7 +497,7 @@ async function main() {
   {
     const sb = world({}, { take_social_credits: () => true });
     const calls = stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search([]) }
         : u.includes("scrapecreators")
           ? { body: "{}" }
@@ -406,7 +530,7 @@ async function main() {
       },
     };
     const calls = stubFetch((u) =>
-      u.includes("news.google.com")
+      u.includes("google.serper.dev")
         ? { body: search([]) }
         : u.includes("scrapecreators")
           ? { body: "{}" }
@@ -422,7 +546,7 @@ async function main() {
   {
     const sb = world({}, { take_social_credits: () => true });
     const calls = stubFetch((u) =>
-      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS },
     );
     await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40, credits: null });
     eq(

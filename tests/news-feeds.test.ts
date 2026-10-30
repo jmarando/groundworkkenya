@@ -1,18 +1,20 @@
-// Checks for the free news sources: reading an outlet's feed or a Google News search into stories,
+// Checks for the news sources: reading an outlet's feed or a news search's answer into stories,
 // and which stories answer a keyword's search. Pure; nothing leaves this process. Invented stories
 // only. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/news-feeds.test.ts
 
 import {
   fold,
-  googleNewsStories,
   matchesSearch,
   OUTLET_FEEDS,
   parseFeed,
   recent,
   searchFor,
+  serperStories,
   storiesFor,
+  storyMatcher,
   titleKey,
+  whenSaid,
 } from "@/lib/news-feeds";
 
 let pass = 0;
@@ -98,6 +100,11 @@ eq(
 // --------------------------------------------------------------- the keywords
 
 eq("folding drops accents, apostrophes and case", fold("Matiang’i, Kiambu!"), "matiangi kiambu");
+eq(
+  "a possessive folds to the name itself, an apostrophe inside a name does not split it",
+  [fold("Sakaja's allies"), fold("Kenya’s budget"), fold("Thiong'o's rally"), fold("Thiong'o")],
+  ["sakaja allies", "kenya budget", "thiongo rally", "thiongo"],
+);
 
 const plainSearch = searchFor({ query: "Sakaja Nairobi governor" });
 eq("every word of a plain search is needed", plainSearch.all, [
@@ -171,6 +178,20 @@ eq(
   storiesFor({ query: "Sakaja water" }, pool).map((s) => s.url),
   ["u1"],
 );
+const match = storyMatcher([
+  ...pool,
+  { url: "u3", title: "Sakaja's water plan", snippet: null, publishedAt: null },
+]);
+eq(
+  "one matcher, the stories folded once, answers every keyword as storiesFor does",
+  [
+    match({ query: "Sakaja water" }).map((s) => s.url),
+    match({ query: "Mombasa" }).map((s) => s.url),
+    match({ query: "Sakaja", exclude_terms: ["plan"] }).map((s) => s.url),
+    match({ query: "Kisumu" }).map((s) => s.url),
+  ],
+  [["u1", "u3"], ["u2"], ["u1"], []],
+);
 
 // ------------------------------------------------------- dates and duplicates
 
@@ -192,36 +213,68 @@ eq(
 );
 eq("no headline has no key", titleKey(null), "");
 
-// ----------------------------------------------------------- Google News feed
+// ------------------------------------------------------------- the news search
 
-const GN = `<rss><channel>
-<item><title>Clinic opens in Kijiji ward - Kijiji Courier</title>
-<link>https://news.google.com/rss/articles/CBMiExample?oc=5</link>
-<pubDate>Thu, 29 Oct 2026 17:07:55 GMT</pubDate>
-<description>&lt;a href="https://news.google.com/rss/articles/CBMiExample?oc=5"&gt;Clinic opens in Kijiji ward&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;font color="#6f6f6f"&gt;Kijiji Courier&lt;/font&gt;</description>
-<source url="https://www.kijijicourier.test">Kijiji Courier</source></item>
-<item><title>Headline with no outlet tail</title>
-<link>https://news.google.com/rss/articles/CBMiOther</link><source url="not a url">Somewhere</source></item>
-<item><title>No link</title></item>
-</channel></rss>`;
-const gn = googleNewsStories(GN);
-eq("two Google News stories with links", gn.length, 2);
-eq("the outlet's tail is cut from the headline", gn[0]?.title, "Clinic opens in Kijiji ward");
-eq("the outlet is named", gn[0]?.outlet, "Kijiji Courier");
-eq("its own site gives the domain, without www", gn[0]?.domain, "kijijicourier.test");
+const AT = Date.parse("2026-10-30T12:00:00Z");
 eq(
-  "the link is Google's, kept whole",
-  gn[0]?.url,
-  "https://news.google.com/rss/articles/CBMiExample?oc=5",
+  "a search result's date, said several ways",
+  [
+    whenSaid("3 hours ago", AT),
+    whenSaid("an hour ago", AT),
+    whenSaid("1 day ago", AT),
+    whenSaid("2 weeks ago", AT),
+    whenSaid("yesterday", AT),
+    whenSaid("Oct 28, 2026", AT),
+    whenSaid("sometime", AT),
+    whenSaid(null, AT),
+  ],
+  [
+    "2026-10-30T09:00:00.000Z",
+    "2026-10-30T11:00:00.000Z",
+    "2026-10-29T12:00:00.000Z",
+    "2026-10-16T12:00:00.000Z",
+    "2026-10-29T12:00:00.000Z",
+    new Date("Oct 28, 2026").toISOString(),
+    null,
+    null,
+  ],
 );
-eq("there is no summary to keep", gn[0]?.snippet, null);
-eq("the date is an instant", gn[0]?.publishedAt, "2026-10-29T17:07:55.000Z");
+
+// A Serper news answer as it comes, invented stories only.
+const SERPER = {
+  searchParameters: { q: "Kijiji clinic", gl: "ke", type: "news" },
+  news: [
+    {
+      title: "Clinic opens in Kijiji ward",
+      link: "https://www.kijijicourier.test/news/clinic",
+      snippet: "Residents of Kijiji welcomed the new clinic &amp; its staff.",
+      date: "5 hours ago",
+      source: "Kijiji Courier",
+      position: 1,
+    },
+    { title: "No address", date: "1 hour ago", source: "Somewhere", position: 2 },
+    { title: "A bad address", link: "javascript:alert(1)", position: 3 },
+    { title: "Undated", link: "https://other.test/story", source: "Other", position: 4 },
+  ],
+  credits: 1,
+};
+const found = serperStories(SERPER, AT);
+eq("stories with a web address are kept, the rest left out", found.length, 2);
+eq("the article's own address", found[0]?.url, "https://www.kijijicourier.test/news/clinic");
+eq("its site, without www", found[0]?.domain, "kijijicourier.test");
+eq("the outlet is named", found[0]?.outlet, "Kijiji Courier");
 eq(
-  "a headline that does not end in the outlet is left alone",
-  gn[1]?.title,
-  "Headline with no outlet tail",
+  "the summary is kept, entities read",
+  found[0]?.snippet,
+  "Residents of Kijiji welcomed the new clinic & its staff.",
 );
-eq("a source address that is not one gives no domain", gn[1]?.domain, null);
+eq("the date is an instant", found[0]?.publishedAt, "2026-10-30T07:00:00.000Z");
+eq("a story with no date is undated", found[1]?.publishedAt, null);
+eq(
+  "an answer with no news list has no stories",
+  [serperStories({}), serperStories(null)],
+  [[], []],
+);
 
 // ------------------------------------------------------------ the feeds read
 
