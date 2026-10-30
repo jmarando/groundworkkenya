@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { runListeningScan } from "@/lib/listening.server";
+import { recordSweepDays } from "@/lib/readings.server";
 import { runMorningStory } from "@/lib/morning-story.server";
 import { runSearchInterest } from "@/lib/search-interest.server";
 import { runRivalSweep } from "@/lib/race-sweep.server";
@@ -56,6 +57,10 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
+        // History: a run that gathered records its day for every campaign with a keyword (the last
+        // week is recounted, so moods read late land on their own day). A paused run records
+        // nothing, which is what lets Replay tell a paused day from a quiet one.
+        const days = result.ran ? await recordSweepDays(sb as never) : { swept: 0 };
         // Yesterday's SMS charges onto the ledger, as each campaign's pending comms expense.
         const comms = await sb
           .rpc("comms_to_ledger")
@@ -64,7 +69,7 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         const pruned = await sb
           .rpc("prune_old_records")
           .then(({ data, error }) => (error ? { error: error.message } : data));
-        return Response.json({ ...result, x, wider, rivals, story, search, comms, pruned });
+        return Response.json({ ...result, x, wider, rivals, story, search, days, comms, pruned });
       },
     },
   },

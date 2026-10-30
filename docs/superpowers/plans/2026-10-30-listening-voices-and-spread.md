@@ -76,13 +76,13 @@ export function withCounts(rows: Counted[]): Counted[]; // drops rows with neith
 export async function recordCounts(sb: { rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }> }, rows: Counted[]): Promise<number>; // chunks of 200 → rpc("record_post_counts", { _rows }); returns readings saved; an rpc error is swallowed after being returned as 0 (a sweep never fails on history)
 ```
 
-- [ ] **Step 1: Write `tests/readings.test.ts`** (style of `tests/voices.test.ts`): `withCounts` drops a row with both counts null, merges two rows for one url keeping reach 150 and shares 7, keeps rows for two campaigns separate; `recordCounts` with 450 counted rows calls the fake rpc 3 times with `_rows` lengths 200, 200, 50; an rpc `error` returns 0 and does not throw; no rows means no call.
-- [ ] **Step 2: Run** `npx tsx --tsconfig tsconfig.json tests/readings.test.ts` — FAIL (module missing).
-- [ ] **Step 3: Implement** `src/lib/readings.server.ts`.
-- [ ] **Step 4: Run** the test — PASS.
-- [ ] **Step 5: Wire.** In `runListeningScan`'s social block replace the `.update({reach, shares}).lt("reach", …)` loop with `recordCounts(sb, rows.map(r => ({ campaign_id: topic.campaign_id, url: r.url, reach: r.reach, shares: r.shares })))`; in `runXSweep` replace its update loop the same way; in the rival sweep call `recordCounts` after the upsert (leave its upsert, and so `reach` overwriting, as it is). In the scan route, after `runListeningScan`, if `result.ran === true` call `sb.rpc("record_sweep_days")` and include its outcome as `days` in the JSON.
-- [ ] **Step 6: Run** `npx tsx --tsconfig tsconfig.json tests/listening.test.ts` and `tests/race-sweep.test.ts` (existing fakes may need an `rpc` stub; keep their assertions) — PASS; then `npm run typecheck`.
-- [ ] **Step 7: Commit** `Sweeps save a reading for every counted post and record their day`.
+- [x] **Step 1: Write `tests/readings.test.ts`** (style of `tests/voices.test.ts`): `withCounts` drops a row with both counts null, merges two rows for one url keeping reach 150 and shares 7, keeps rows for two campaigns separate; `recordCounts` with 450 counted rows calls the fake rpc 3 times with `_rows` lengths 200, 200, 50; an rpc `error` returns 0 and does not throw; no rows means no call.
+- [x] **Step 2: Run** `npx tsx --tsconfig tsconfig.json tests/readings.test.ts` — FAIL (module missing).
+- [x] **Step 3: Implement** `src/lib/readings.server.ts`.
+- [x] **Step 4: Run** the test — PASS.
+- [x] **Step 5: Wire.** In `runListeningScan`'s social block replace the `.update({reach, shares}).lt("reach", …)` loop with `recordCounts(sb, rows.map(r => ({ campaign_id: topic.campaign_id, url: r.url, reach: r.reach, shares: r.shares })))`; in `runXSweep` replace its update loop the same way; in the rival sweep call `recordCounts` after the upsert (leave its upsert, and so `reach` overwriting, as it is). In the scan route, after `runListeningScan`, if `result.ran === true` call `sb.rpc("record_sweep_days")` and include its outcome as `days` in the JSON.
+- [x] **Step 6: Run** `npx tsx --tsconfig tsconfig.json tests/listening.test.ts` and `tests/race-sweep.test.ts` (existing fakes may need an `rpc` stub; keep their assertions) — PASS; then `npm run typecheck`.
+- [x] **Step 7: Commit** `Sweeps save a reading for every counted post and record their day`.
 
 ### Task 3: Posts by date
 

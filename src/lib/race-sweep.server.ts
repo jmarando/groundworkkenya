@@ -12,6 +12,7 @@ import {
   scRivalPosts,
   ScrapeCreatorsCreditError,
 } from "@/lib/scrapecreators.server";
+import { recordCounts } from "@/lib/readings.server";
 import { takeCredits } from "@/lib/social-credits";
 
 type Client = {
@@ -226,6 +227,16 @@ export async function runRivalSweep(
         out.notes.push(`${r.name}: posts could not be stored (${error.message}).`);
       }
       out.posts += saved?.length ?? 0;
+      // The upsert above keeps each post's latest views; the reading keeps the series.
+      await recordCounts(
+        sb,
+        fresh.map((p) => ({
+          campaign_id: r.campaign_id,
+          url: p.url,
+          reach: p.reach,
+          shares: null,
+        })),
+      );
     }
 
     // How the rival's two most-engaged new posts landed (X replies can't be read).

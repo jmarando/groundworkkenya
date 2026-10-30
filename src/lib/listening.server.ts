@@ -22,6 +22,7 @@ import {
 } from "./gemini";
 import { recent, storiesFor, titleKey } from "./news-feeds";
 import { googleNewsSearch, readOutletFeeds } from "./news-sources.server";
+import { recordCounts } from "./readings.server";
 import { takeCredits } from "./social-credits";
 import { OFF_TOPIC } from "./top-of-mind";
 import {
@@ -557,15 +558,18 @@ export async function runListeningScan(
           notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
         }
         stored += ins?.length ?? 0;
-        // A post found again keeps its latest views and shares, so a spreading post shows it.
-        for (const r of rows.filter((x) => x.reach !== null && topic.campaign_id)) {
-          await sb
-            .from("listening_mentions")
-            .update({ reach: r.reach, shares: r.shares })
-            .eq("campaign_id", topic.campaign_id)
-            .eq("url", r.url)
-            .lt("reach", r.reach);
-        }
+        // A post found again keeps its highest views and shares, so a spreading post shows it, and
+        // each sighting is a reading, so how it spread can be drawn later.
+        if (topic.campaign_id)
+          await recordCounts(
+            sb,
+            rows.map((r) => ({
+              campaign_id: topic.campaign_id as string,
+              url: r.url,
+              reach: r.reach,
+              shares: r.shares,
+            })),
+          );
       }
 
       await sb
