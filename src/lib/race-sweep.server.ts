@@ -86,6 +86,8 @@ async function landing(texts: string[], rival: string) {
     prompt,
     "comment_moods",
     LANDING_SCHEMA,
+    90_000,
+    "read",
   );
   const seen = new Set<number>();
   const verdicts = (answer.results ?? []).filter((v) => {

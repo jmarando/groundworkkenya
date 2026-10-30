@@ -37,7 +37,14 @@ const ANSWER = {
   also: [{ item: 2, soWhat: "Floods next." }],
 };
 const aiSays = (answer: unknown) =>
-  `data: ${JSON.stringify({ type: "response.output_text.delta", delta: JSON.stringify(answer) })}\n\n`;
+  JSON.stringify({
+    candidates: [
+      {
+        content: { role: "model", parts: [{ text: JSON.stringify(answer) }] },
+        finishReason: "STOP",
+      },
+    ],
+  });
 
 function stubAi(status = 200, answer: unknown = ANSWER) {
   const prompts: string[] = [];
@@ -104,7 +111,7 @@ function world(now: Date, extra: Record<string, Record<string, unknown>[]> = {})
 const stories = (sb: ReturnType<typeof world>) => sb.tables["morning_stories"] ?? [];
 
 async function main() {
-  process.env["LOVABLE_API_KEY"] = "test-key";
+  process.env["GEMINI_API_KEY"] = "test-key";
 
   {
     const sb = world(at("05:59"));

@@ -96,19 +96,26 @@ export function aiTrouble(err: unknown): AiTrouble {
     return {
       kind: "credits",
       words:
-        "The AI has run out of credits. Groundwork's admin needs to top up the AI balance in Lovable; then try again.",
+        "The AI has run out of credit. Groundwork's admin needs to check the AI account's billing; then try again.",
       retry: false,
     };
   if (code === 429)
     return {
       kind: "busy",
-      words: "The AI is busy right now. Try again in a minute.",
+      words:
+        "The AI is busy, or this month's spending cap is reached. Try again in a minute; if it keeps happening, Groundwork's admin should check the cap in Google AI Studio.",
       retry: true,
     };
-  if (code === 401 || code === 403 || /not configured|refused:/i.test(message))
+  if (
+    (code === 400 && /API key/i.test(message)) ||
+    code === 401 ||
+    code === 403 ||
+    /not configured|refused:/i.test(message)
+  )
     return {
       kind: "refused",
-      words: "The AI turned the request down. Groundwork's admin needs to check the AI connection.",
+      words:
+        "The AI turned the request down. Groundwork's admin needs to check the AI key (GEMINI_API_KEY in Groundwork's secrets in Lovable).",
       retry: false,
     };
   if (e["name"] === "TimeoutError" || /took too long|timed? ?out|aborted/i.test(message))

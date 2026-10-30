@@ -119,6 +119,7 @@ eq(
     new Error("AI answer cut off (max_output_tokens)."),
     new SyntaxError("Unexpected end of JSON input"),
     new Error("AI request failed (500): upstream"),
+    new PauseLike("AI stopped (400): INVALID_ARGUMENT: API key not valid.", 400),
   ].map((e) => {
     const t = aiTrouble(e);
     return [t.kind, t.retry];
@@ -133,16 +134,21 @@ eq(
     ["cut", true],
     ["cut", true],
     ["broken", true],
+    ["refused", false],
   ],
 );
 eq(
-  "the words a campaign reads: credits name who tops up, nothing shows raw JSON",
+  "the words a campaign reads: each says who acts, nothing shows raw JSON",
   [
     aiTrouble(new Error('AI stopped (402): {"title":"Not enough credits"}')).words,
+    aiTrouble(new Error("AI stopped (429): RESOURCE_EXHAUSTED: Quota exceeded.")).words,
+    aiTrouble(new Error("AI stopped (400): INVALID_ARGUMENT: API key not valid.")).words,
     aiTrouble(new Error("AI request failed (500): upstream")).words,
   ],
   [
-    "The AI has run out of credits. Groundwork's admin needs to top up the AI balance in Lovable; then try again.",
+    "The AI has run out of credit. Groundwork's admin needs to check the AI account's billing; then try again.",
+    "The AI is busy, or this month's spending cap is reached. Try again in a minute; if it keeps happening, Groundwork's admin should check the cap in Google AI Studio.",
+    "The AI turned the request down. Groundwork's admin needs to check the AI key (GEMINI_API_KEY in Groundwork's secrets in Lovable).",
     "The AI couldn't answer (AI request failed (500): upstream). Try again; if it keeps happening, tell Groundwork.",
   ],
 );
