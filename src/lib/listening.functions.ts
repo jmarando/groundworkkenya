@@ -2,39 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
+import { toMention, type Mention } from "@/lib/listening-mention";
 import { OFF_TOPIC } from "@/lib/top-of-mind";
+
+export type { Mention };
 
 /** What a keyword follows: you, a rival, an issue, or news beyond the seat. */
 const TOPIC_KINDS = ["campaign", "rival", "issue", "county", "national"] as const;
-
-export type Mention = {
-  id: string;
-  topicId: string | null;
-  topic: string | null;
-  source: string;
-  domain: string | null;
-  title: string | null;
-  url: string;
-  snippet: string | null;
-  publishedAt: string | null;
-  foundAt: string;
-  sentiment: string | null;
-  sentimentScore: number | null;
-  issue: string | null;
-  status: string;
-  /** The keyword's kind (campaign, rival, issue); null for a candidate's own post. */
-  topicKind: string | null;
-  rivalId: string | null;
-  /** The candidate whose own account the post came from. */
-  rival: string | null;
-  rivalIsUs: boolean;
-  author: string | null;
-  reach: number | null;
-  shares: number | null;
-  commentsRead: number | null;
-  commentsPositive: number | null;
-  commentsNegative: number | null;
-};
 
 export type ListeningAlert = {
   id: string;
@@ -232,32 +206,7 @@ export const getListening = createServerFn({ method: "GET" })
         mentions: perTopic.get(t.id)?.n ?? 0,
         negative: perTopic.get(t.id)?.negative ?? 0,
       })),
-      mentions: rows.map((m) => ({
-        id: m.id,
-        topicId: m.topic_id,
-        topic: m.topic_id ? (topicById.get(m.topic_id)?.label ?? null) : null,
-        source: m.source,
-        domain: m.domain,
-        title: m.title,
-        url: m.url,
-        snippet: m.snippet,
-        publishedAt: m.published_at,
-        foundAt: m.found_at,
-        sentiment: m.sentiment,
-        sentimentScore: m.sentiment_score === null ? null : Number(m.sentiment_score),
-        issue: m.issue,
-        status: m.status,
-        topicKind: m.topic_id ? (topicById.get(m.topic_id)?.kind ?? null) : null,
-        rivalId: m.rival_id ?? null,
-        rival: m.rival_id ? (rivalById.get(m.rival_id)?.name ?? null) : null,
-        rivalIsUs: m.rival_id ? Boolean(rivalById.get(m.rival_id)?.is_us) : false,
-        author: m.author ?? null,
-        reach: m.reach === null || m.reach === undefined ? null : Number(m.reach),
-        shares: m.shares === null || m.shares === undefined ? null : Number(m.shares),
-        commentsRead: m.comments_read ?? null,
-        commentsPositive: m.comments_positive ?? null,
-        commentsNegative: m.comments_negative ?? null,
-      })),
+      mentions: rows.map((m) => toMention(m, topicById, rivalById)),
       alerts: (alerts ?? []).map((a) => ({
         id: a.id,
         name: a.name,

@@ -87,7 +87,8 @@ export async function recordCounts(sb: { rpc: (fn: string, args: Record<string, 
 ### Task 3: Posts by date
 
 **Files:**
-- Create: `src/lib/nairobi-days.ts`, `src/lib/listening-mention.ts`, `src/lib/listening-history.functions.ts`, `tests/nairobi-days.test.ts`, `tests/listening-mention.test.ts`
+- **As built:** the day helpers went into the existing `src/lib/nairobi-date.ts` (`nairobiDay`, `dayRange`, beside `nairobiToday` and `addDays`; the Monday is `mondayOf` in `field-plan.ts`), and the query validator and cursors into `src/lib/posts-query.ts` (`parsePostsQuery`, `encodeCursor`, `decodeCursor`) with `tests/posts-query.test.ts`. The first plan below names `nairobi-days.ts` and a `weekStart`; read those as these.
+- Create: `src/lib/listening-mention.ts`, `src/lib/listening-history.functions.ts`, `tests/nairobi-date.test.ts`, `tests/listening-mention.test.ts`
 - Modify: `src/lib/listening.functions.ts` (use `toMention`; no change in behaviour)
 
 **Interfaces — Produces:**
@@ -105,11 +106,11 @@ export type PostsPage = { posts: Mention[]; next: string | null };
 export const getListeningPosts; // createServerFn GET, requireSupabaseAuth; office roles only; ids ≤ 200; a range returns 300 a page, newest found first, cursor = `${found_at}|${id}`; leaves out issue = OFF_TOPIC like getListening
 ```
 
-- [ ] **Step 1: Write the two tests.** `nairobi-days`: `nairobiDay("2026-10-28T21:30:00Z") === "2026-10-29"`; `nairobiDay("2026-10-28T20:59:59Z") === "2026-10-28"`; `weekStart("2026-10-29") === "2026-10-26"` and `weekStart("2026-11-01") === "2026-10-26"`; `dayRange("2026-10-29","2026-10-29")` is `{ gte: "2026-10-28T21:00:00.000Z", lt: "2026-10-29T21:00:00.000Z" }`; `addDays("2026-10-31", 1) === "2026-11-01"`. `toMention`: numeric strings in `reach`/`sentiment_score` become numbers, null stays null, a rival row sets `rival`, `rivalIsUs`; an unknown topic id gives `topic: null, topicKind: null`.
-- [ ] **Step 2: Run both** — FAIL.
-- [ ] **Step 3: Implement** the helpers; move the inline mapping out of `getListening` into `toMention` and call it; add the server function.
-- [ ] **Step 4: Run** both tests, `tests/listening.test.ts`, `npm run typecheck` — PASS.
-- [ ] **Step 5: Commit** `Posts by date, and one place that turns a row into a post`.
+- [x] **Step 1: Write the two tests.** `nairobi-days`: `nairobiDay("2026-10-28T21:30:00Z") === "2026-10-29"`; `nairobiDay("2026-10-28T20:59:59Z") === "2026-10-28"`; `weekStart("2026-10-29") === "2026-10-26"` and `weekStart("2026-11-01") === "2026-10-26"`; `dayRange("2026-10-29","2026-10-29")` is `{ gte: "2026-10-28T21:00:00.000Z", lt: "2026-10-29T21:00:00.000Z" }`; `addDays("2026-10-31", 1) === "2026-11-01"`. `toMention`: numeric strings in `reach`/`sentiment_score` become numbers, null stays null, a rival row sets `rival`, `rivalIsUs`; an unknown topic id gives `topic: null, topicKind: null`.
+- [x] **Step 2: Run both** — FAIL.
+- [x] **Step 3: Implement** the helpers; move the inline mapping out of `getListening` into `toMention` and call it; add the server function.
+- [x] **Step 4: Run** both tests, `tests/listening.test.ts`, `npm run typecheck` — PASS.
+- [x] **Step 5: Commit** `Posts by date, and one place that turns a row into a post`.
 
 ---
 
