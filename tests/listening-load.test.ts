@@ -98,6 +98,23 @@ async function main() {
     true,
   );
 
+  const bounded = await loadWindow(sb as never, {
+    since,
+    until: new Date(Date.parse("2026-10-30T00:00:00Z") - 100 * 60_000).toISOString(),
+    campaignId: "c1",
+  });
+  // m00100 was found at exactly the bound, and "before" leaves it out; m00101 is the newest kept.
+  eq(
+    "an upper bound leaves out what is newer",
+    [bounded.rows.length, bounded.rows[0]!.id],
+    [2200, "m00101"],
+  );
+  eq(
+    "and the post found at the bound itself",
+    bounded.rows.some((r) => r.id === "m00100"),
+    false,
+  );
+
   const broken = {
     from: () => ({
       select: () => ({

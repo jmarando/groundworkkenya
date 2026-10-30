@@ -22,13 +22,25 @@ const COLUMNS =
  */
 export async function loadWindow(
   sb: Client,
-  opts: { since: string; campaignId?: string; cap?: number },
+  opts: {
+    since: string;
+    /** Posts found before this moment only: for a period in the past. */
+    until?: string;
+    campaignId?: string;
+    cap?: number;
+    /** More columns, for a job that needs them (they must exist: a column added by a later schema does not before it). */
+    extra?: string;
+  },
 ): Promise<{ rows: MentionRow[]; truncated: boolean }> {
   const cap = opts.cap ?? 4000;
   const rows: MentionRow[] = [];
   let full = false;
   for (let from = 0; ; from += PAGE) {
-    let q = sb.from("listening_mentions").select(COLUMNS).gte("found_at", opts.since);
+    let q = sb
+      .from("listening_mentions")
+      .select(opts.extra ? `${COLUMNS}, ${opts.extra}` : COLUMNS)
+      .gte("found_at", opts.since);
+    if (opts.until) q = q.lt("found_at", opts.until);
     if (opts.campaignId) q = q.eq("campaign_id", opts.campaignId);
     const { data, error } = await q
       .order("found_at", { ascending: false })
