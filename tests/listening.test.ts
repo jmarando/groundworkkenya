@@ -1,9 +1,10 @@
 // Checks for the listening sweep: what it stores, what it reads and what it
-// spends. Uses a stand-in database and stand-ins for web search, the AI and
-// ScrapeCreators; nothing leaves this process. Run from the repository root:
+// spends. Uses a stand-in database and stand-ins for the news feeds, Google News,
+// the AI (Gemini) and ScrapeCreators; nothing leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/listening.test.ts
 
 import { runListeningScan } from "@/lib/listening.server";
+import { OUTLET_FEEDS } from "@/lib/news-feeds";
 import { dailyCredits } from "@/lib/social-credits";
 
 import { ALERT_XML } from "./alert-feed-fixture";
@@ -22,30 +23,51 @@ function eq(name: string, got: unknown, want: unknown) {
   }
 }
 
-/** The AI, answering with no verdicts: moods aren't what these checks are about. */
-const NO_MOODS = `data: ${JSON.stringify({
-  type: "response.output_text.delta",
-  delta: JSON.stringify({ results: [] }),
-})}\n\n`;
+/** The AI (Gemini), answering with no verdicts: moods aren't what these checks are about. */
+const NO_MOODS = JSON.stringify({
+  candidates: [
+    {
+      content: { role: "model", parts: [{ text: JSON.stringify({ results: [] }) }] },
+      finishReason: "STOP",
+    },
+  ],
+});
 
-function stubFetch(route: (url: string) => { status?: number; body: string }) {
+const rss = (items: string) =>
+  `<?xml version="1.0"?><rss version="2.0"><channel>${items}</channel></rss>`;
+
+/** Every outlet feed answers with one story that no keyword here asks for, unless a check says otherwise. */
+const OUTLET_QUIET = rss(
+  "<item><title>Unrelated story</title><link>https://outlet.test/unrelated</link></item>",
+);
+const OUTLET_URLS = new Set(OUTLET_FEEDS.map((f) => f.url));
+
+function stubFetch(
+  route: (url: string) => { status?: number; body: string },
+  outlets: string = OUTLET_QUIET,
+) {
   const calls: string[] = [];
   globalThis.fetch = (async (url: string | URL) => {
     calls.push(String(url));
+    if (OUTLET_URLS.has(String(url))) return new Response(outlets, { status: 200 });
     const r = route(String(url));
     return new Response(r.body, { status: r.status ?? 200 });
   }) as typeof fetch;
   return calls;
 }
 
-const search = (urls: string[]) =>
-  JSON.stringify({
-    data: urls.map((u, i) => ({
-      url: u,
-      title: `Story ${i + 1}`,
-      description: "About water in Nairobi.",
-    })),
-  });
+/** Google News's search feed, with one story at each address. */
+const search = (urls: string[], title = (i: number) => `Story ${i + 1} about water in Nairobi`) =>
+  rss(
+    urls
+      .map(
+        (u, i) =>
+          `<item><title>${title(i)} - Test Courier</title><link>${u}</link>` +
+          `<pubDate>${new Date().toUTCString()}</pubDate>` +
+          `<source url="https://courier.test">Test Courier</source></item>`,
+      )
+      .join(""),
+  );
 
 const TOPIC = {
   id: "t1",
@@ -77,14 +99,13 @@ function world(
 }
 
 async function main() {
-  process.env["LOVABLE_API_KEY"] = "test-key";
-  process.env["FIRECRAWL_API_KEY"] = "test-key";
+  process.env["GEMINI_API_KEY"] = "test-key";
   delete process.env["SCRAPECREATORS_API_KEY"];
 
   {
     const sb = world();
     stubFetch((u) =>
-      u.includes("firecrawl")
+      u.includes("news.google.com")
         ? { body: search(["https://news.test/a", "https://news.test/b"]) }
         : { body: NO_MOODS },
     );
@@ -113,7 +134,9 @@ async function main() {
       ],
     });
     stubFetch((u) =>
-      u.includes("firecrawl") ? { body: search(["https://news.test/a"]) } : { body: NO_MOODS },
+      u.includes("news.google.com")
+        ? { body: search(["https://news.test/a"]) }
+        : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq("a story another campaign has is still stored for this one", r.stored, 1);
@@ -124,7 +147,7 @@ async function main() {
     const calls = stubFetch((u) =>
       u === FEED
         ? { body: ALERT_XML }
-        : u.includes("firecrawl")
+        : u.includes("news.google.com")
           ? { body: search([]) }
           : { body: NO_MOODS },
     );
@@ -141,7 +164,7 @@ async function main() {
       listening_topics: [{ ...TOPIC, alert_feed_url: "https://evil.test/feed" }],
     });
     const calls = stubFetch((u) =>
-      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -160,7 +183,7 @@ async function main() {
     // Every campaign's team can read the sweep's job row, so it names no keyword.
     const sb = world();
     stubFetch((u) =>
-      u.includes("firecrawl") ? { status: 500, body: "try later" } : { body: NO_MOODS },
+      u.includes("news.google.com") ? { status: 500, body: "try later" } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -173,6 +196,149 @@ async function main() {
       r.notes.some((n) => n.startsWith("Water:")),
       true,
     );
+  }
+
+  {
+    // The outlets' own feeds are read against every keyword, and cost nothing.
+    const sb = world();
+    const now = new Date().toUTCString();
+    const calls = stubFetch(
+      (u) => (u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS }),
+      rss(
+        "<item><title>Water shortage in Nairobi: tankers promised</title>" +
+          `<link>https://outlet.test/water</link><pubDate>${now}</pubDate>` +
+          "<description>Residents wait.</description></item>" +
+          "<item><title>Mombasa port fees rise</title><link>https://outlet.test/port</link></item>",
+      ),
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a story that answers the keyword is stored from the outlets' feeds",
+      sb.tables["listening_mentions"]?.map((m) => [
+        m["source"],
+        m["url"],
+        m["domain"],
+        m["campaign_id"],
+      ]),
+      [["news", "https://outlet.test/water", "outlet.test", "c1"]],
+    );
+    eq("and one that doesn't is left out", r.stored, 1);
+    eq(
+      "each outlet feed is read once",
+      OUTLET_FEEDS.every((f) => calls.filter((c) => c === f.url).length === 1),
+      true,
+    );
+    eq(
+      "the moods are read by the lighter Gemini model",
+      calls.some((c) => c.includes("/models/gemini-3.5-flash-lite:generateContent")),
+      true,
+    );
+  }
+  {
+    // One story found by an outlet's feed and by Google News is kept once, under the outlet's address.
+    const sb = world();
+    const same = "Water shortage in Nairobi: tankers promised";
+    stubFetch(
+      (u) =>
+        u.includes("news.google.com")
+          ? { body: search(["https://news.google.com/rss/articles/CBMiExample?oc=5"], () => same) }
+          : { body: NO_MOODS },
+      rss(
+        `<item><title>${same}</title><link>https://outlet.test/water</link>` +
+          `<pubDate>${new Date().toUTCString()}</pubDate></item>`,
+      ),
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "the same headline from two sources is stored once",
+      sb.tables["listening_mentions"]?.map((m) => m["url"]),
+      ["https://outlet.test/water"],
+    );
+  }
+  {
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("news.google.com")
+        ? { body: search(["https://news.google.com/rss/articles/CBMiOne"]) }
+        : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a Google News story is kept as news, under the outlet's own site",
+      sb.tables["listening_mentions"]?.map((m) => [m["source"], m["domain"]]),
+      [["news", "courier.test"]],
+    );
+  }
+  {
+    // Google News is free and unguaranteed: refusing never stops the rest of the keyword.
+    const FEED = "https://www.google.com/alerts/feeds/0123/4567";
+    const sb = world({ listening_topics: [{ ...TOPIC, alert_feed_url: FEED }] });
+    stubFetch((u) =>
+      u === FEED
+        ? { body: ALERT_XML }
+        : u.includes("news.google.com")
+          ? { status: 503, body: "later" }
+          : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "Google News refusing leaves the keyword's Google Alert read",
+      sb.tables["listening_mentions"]?.map((m) => m["source"]),
+      ["google_alerts"],
+    );
+    eq("and does not pause the sweep", r.paused, undefined);
+  }
+  {
+    // The AI is what can stop a sweep: a limit reached, a key turned away, or no key at all.
+    const limit = JSON.stringify({
+      error: { code: 429, status: "RESOURCE_EXHAUSTED", message: "Quota exceeded." },
+    });
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("news.google.com")
+        ? { body: search(["https://news.test/a"]) }
+        : u.includes("generativelanguage")
+          ? { status: 429, body: limit }
+          : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "when the AI's limit is reached the sweep pauses, and says why",
+      [r.paused, sb.tables["listening_jobs"]?.[0]?.["status"]],
+      ["AI stopped (429): RESOURCE_EXHAUSTED: Quota exceeded.", "paused"],
+    );
+  }
+  {
+    const badKey = JSON.stringify({
+      error: { code: 400, status: "INVALID_ARGUMENT", message: "API key not valid." },
+    });
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("news.google.com")
+        ? { body: search(["https://news.test/a"]) }
+        : u.includes("generativelanguage")
+          ? { status: 400, body: badKey }
+          : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a key the AI turns away pauses the sweep too",
+      r.paused,
+      "AI stopped (400): INVALID_ARGUMENT: API key not valid.",
+    );
+  }
+  {
+    delete process.env["GEMINI_API_KEY"];
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("news.google.com")
+        ? { body: search(["https://news.test/a"]) }
+        : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("with no AI key the sweep pauses and says so", r.paused, "AI is not configured.");
+    eq("the stories were still stored", r.stored, 1);
+    process.env["GEMINI_API_KEY"] = "test-key";
   }
 
   // ScrapeCreators keyword search comes out of a daily budget.
@@ -189,7 +355,7 @@ async function main() {
       },
     );
     const calls = stubFetch((u) =>
-      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
     );
     const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq(
@@ -207,7 +373,7 @@ async function main() {
   {
     const sb = world({}, { take_social_credits: () => true });
     const calls = stubFetch((u) =>
-      u.includes("firecrawl")
+      u.includes("news.google.com")
         ? { body: search([]) }
         : u.includes("scrapecreators")
           ? { body: "{}" }
@@ -240,7 +406,7 @@ async function main() {
       },
     };
     const calls = stubFetch((u) =>
-      u.includes("firecrawl")
+      u.includes("news.google.com")
         ? { body: search([]) }
         : u.includes("scrapecreators")
           ? { body: "{}" }
@@ -256,7 +422,7 @@ async function main() {
   {
     const sb = world({}, { take_social_credits: () => true });
     const calls = stubFetch((u) =>
-      u.includes("firecrawl") ? { body: search([]) } : { body: NO_MOODS },
+      u.includes("news.google.com") ? { body: search([]) } : { body: NO_MOODS },
     );
     await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40, credits: null });
     eq(

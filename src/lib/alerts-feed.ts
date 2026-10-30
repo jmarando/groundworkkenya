@@ -44,7 +44,7 @@ function decode(s: string): string {
 }
 
 /** Text from the feed's HTML: entities decoded (twice, as Google nests them) and tags dropped. */
-const plain = (html: string) =>
+export const plain = (html: string) =>
   decode(decode(html).replace(/<[^>]*>/g, ""))
     .replace(/\s+/g, " ")
     .trim();

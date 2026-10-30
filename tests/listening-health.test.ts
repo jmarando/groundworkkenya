@@ -63,6 +63,36 @@ eq("any other reason", keys(paused("Something odd")), ["search-stopped"]);
 eq("no reason recorded", keys(paused(null)), ["search-stopped"]);
 eq("no reason: no detail to show", sweepProblems(paused(null))[0]!.detail, null);
 
+// The AI is what stops a sweep now: a limit reached, a key turned away, or no key at all.
+eq(
+  "the AI's limit or spending cap",
+  keys(paused("AI stopped (429): RESOURCE_EXHAUSTED: Quota exceeded.")),
+  ["ai-limited"],
+);
+eq(
+  "a key the AI turns away",
+  keys(paused("AI stopped (400): INVALID_ARGUMENT: API key not valid.")),
+  ["ai-refused"],
+);
+eq(
+  "permission refused",
+  keys(paused("AI stopped (403): PERMISSION_DENIED: Billing is not enabled.")),
+  ["ai-refused"],
+);
+eq("no key", keys(paused("AI is not configured.")), ["ai-unconnected"]);
+eq("any other AI stop", keys(paused("AI stopped (500): upstream")), ["ai-stopped"]);
+const noKey = sweepProblems(paused("AI is not configured."))[0]!;
+eq(
+  "it says what to do about the key",
+  [noKey.why, noKey.fix, noKey.restart, noKey.detail],
+  [
+    "The AI isn't connected, so new posts can't be read.",
+    "Add the Gemini key (GEMINI_API_KEY) to Groundwork's secrets in Lovable, then restart sweeping.",
+    true,
+    "AI is not configured.",
+  ],
+);
+
 // ScrapeCreators running out is not a pause: the next sweep carries on once credits are back.
 const social = (job: string | null, rival: string | null) => ({
   job: { status: "idle", pausedReason: null, detail: job },

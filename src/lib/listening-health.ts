@@ -20,9 +20,42 @@ type Job = { status: string; pausedReason: string | null; detail: string | null 
 
 const OUT_OF_CREDITS = /scrapecreators is out of credits/i;
 
+/** The AI is what stops a sweep now ("AI stopped (429): …", "AI is not configured."). */
+function aiStopped(reason: string, code: string | undefined): Problem {
+  const base = { title: "Sweeping has stopped", detail: reason, restart: true };
+  if (/not configured/i.test(reason))
+    return {
+      ...base,
+      key: "ai-unconnected",
+      why: "The AI isn't connected, so new posts can't be read.",
+      fix: "Add the Gemini key (GEMINI_API_KEY) to Groundwork's secrets in Lovable, then restart sweeping.",
+    };
+  if (code === "429" || code === "402")
+    return {
+      ...base,
+      key: "ai-limited",
+      why: "The AI service's limit, or this month's spending cap, has been reached, so new posts can't be read.",
+      fix: "Check the usage and the cap in Google AI Studio, then restart sweeping.",
+    };
+  if (code === "400" || code === "401" || code === "403")
+    return {
+      ...base,
+      key: "ai-refused",
+      why: "Google's AI service turned the request down: the key may be wrong, expired or switched off.",
+      fix: "Check GEMINI_API_KEY in Groundwork's secrets in Lovable, then restart sweeping.",
+    };
+  return {
+    ...base,
+    key: "ai-stopped",
+    why: "Something went wrong with the AI, so new posts can't be read.",
+    fix: "Fix the cause, then restart sweeping.",
+  };
+}
+
 function stopped(reason: string | null): Problem {
   const base = { title: "Sweeping has stopped", detail: reason, restart: true };
   const code = /\((\d{3})\)/.exec(reason ?? "")?.[1];
+  if (/^AI (stopped|is not configured)/i.test(reason ?? "")) return aiStopped(reason ?? "", code);
   if (code === "402" || /payment_required|not enough credits/i.test(reason ?? ""))
     return {
       ...base,

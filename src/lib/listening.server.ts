@@ -1,14 +1,25 @@
 /**
  * Media listening engine (server only).
  *
- * Sweeps the watchlist through Firecrawl web search plus ScrapeCreators
- * keyword searches (TikTok, Reddit, YouTube), stores anything new as a
- * mention, has the AI read the mood, then fires any alert rule that matches.
- * Used by the manual "Sweep now" button and by the hourly cron route.
+ * Sweeps the watchlist through the Kenyan outlets' own news feeds, Google News's search feed and
+ * each keyword's Google Alert, plus ScrapeCreators keyword searches (TikTok, Reddit, YouTube),
+ * stores anything new as a mention, has the AI (Gemini, on the campaign's own key) read the mood,
+ * then fires any alert rule that matches. Used by the manual "Sweep now" button and by the hourly
+ * cron route.
  */
 
-import { aiStream, answerFault } from "./ai-answer";
+import { answerFault } from "./ai-answer";
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
+import {
+  type AiTier,
+  geminiAnswer,
+  geminiBody,
+  geminiError,
+  geminiKeyRefused,
+  geminiUrl,
+} from "./gemini";
+import { recent, storiesFor, titleKey } from "./news-feeds";
+import { googleNewsSearch, readOutletFeeds } from "./news-sources.server";
 import { takeCredits } from "./social-credits";
 import { OFF_TOPIC } from "./top-of-mind";
 import {
@@ -27,8 +38,6 @@ type AnyClient = {
   ) => PromiseLike<{ data: unknown; error: unknown }>;
 };
 
-const FIRECRAWL_GATEWAY = "https://connector-gateway.lovable.dev/firecrawl/v2";
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/responses";
 const JOB_KEY = "listening_scan";
 const LEASE_MINUTES = 10;
 
@@ -86,57 +95,106 @@ const sourceOf = (url: string) => {
   return "web";
 };
 
-/* ------------------------------------------------------------- firecrawl */
+/* ------------------------------------------------------------- free news */
 
 type Found = {
   url: string;
   title: string | null;
   snippet: string | null;
   publishedAt: string | null;
-  /** Set when the address doesn't say where it came from (Google Alerts). */
+  /** Set when the address doesn't say where it came from (Google Alerts, Google News). */
   source?: string;
+  /** The outlet's own site, when the address is Google's. */
+  domain?: string | null;
   author?: string | null;
   reach?: number | null;
   shares?: number | null;
 };
 
-async function firecrawlSearch(query: string, limit: number, tbs: string): Promise<Found[]> {
-  const lovableKey = process.env["LOVABLE_API_KEY"];
-  const connKey = process.env["FIRECRAWL_API_KEY"];
-  if (!lovableKey || !connKey) throw new PauseError("Web search is not connected.");
+/** The headlines each campaign already holds from the last week, so one story read twice is kept once. */
+type Seen = Map<string, Set<string>>;
 
-  const res = await fetch(`${FIRECRAWL_GATEWAY}/search`, {
-    signal: AbortSignal.timeout(45_000),
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": connKey,
-    },
-    body: JSON.stringify({ query, limit, tbs }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    if (isBlocking(res.status)) {
-      throw new PauseError(`Web search stopped (${res.status}): ${body.slice(0, 180)}`);
-    }
-    throw new Error(`Search failed (${res.status}): ${body.slice(0, 180)}`);
+async function recentTitles(sb: AnyClient, now: number): Promise<Seen> {
+  const { data } = await sb
+    .from("listening_mentions")
+    .select("campaign_id, title")
+    .in("source", ["news", "web", "google_alerts"])
+    .gte("found_at", new Date(now - 7 * 86_400_000).toISOString())
+    .limit(5000);
+  const seen: Seen = new Map();
+  for (const r of (data ?? []) as { campaign_id: string | null; title: string | null }[]) {
+    const key = titleKey(r.title);
+    if (!key || !r.campaign_id) continue;
+    const set = seen.get(r.campaign_id) ?? new Set<string>();
+    set.add(key);
+    seen.set(r.campaign_id, set);
   }
+  return seen;
+}
 
-  const json = (await res.json()) as any;
-  const raw: any[] = Array.isArray(json?.data)
-    ? json.data
-    : [...(json?.data?.web ?? []), ...(json?.data?.news ?? [])];
+/** True the first time a campaign meets a headline; it is then noted as met. */
+function isNew(seen: Seen, campaign: string | null | undefined, title: string | null): boolean {
+  const key = titleKey(title);
+  if (!key || !campaign) return true;
+  const set = seen.get(campaign) ?? new Set<string>();
+  seen.set(campaign, set);
+  if (set.has(key)) return false;
+  set.add(key);
+  return true;
+}
 
-  return raw
-    .filter((r) => typeof r?.url === "string")
-    .map((r) => ({
-      url: r.url as string,
-      title: (r.title as string) ?? null,
-      snippet: (r.description as string) ?? (r.snippet as string) ?? null,
-      publishedAt: typeof r.date === "string" ? r.date : null,
+/**
+ * The outlets' own feeds, read once and set against every active keyword, whichever the hour's
+ * rotation is on: matching costs nothing, so no keyword waits its turn. Nothing here is paid for.
+ */
+async function outletPass(
+  sb: AnyClient,
+  seen: Seen,
+  failed: { outlets: number; stored: number },
+  notes: string[],
+): Promise<{ found: number; stored: number }> {
+  const read = await readOutletFeeds();
+  if (read.failed.length) {
+    failed.outlets += read.failed.length;
+    notes.push(`News feeds that did not answer: ${read.failed.join(", ")}.`);
+  }
+  const fresh = recent(read.stories, 7);
+  if (!fresh.length) return { found: 0, stored: 0 };
+
+  const { data: topics } = await sb
+    .from("listening_topics")
+    .select("id, campaign_id, label, query, keywords, exclude_terms")
+    .eq("active", true);
+
+  let found = 0;
+  let stored = 0;
+  for (const topic of topics ?? []) {
+    const hits = storiesFor(topic, fresh).filter((s) => isNew(seen, topic.campaign_id, s.title));
+    if (!hits.length) continue;
+    found += hits.length;
+    const rows = hits.map((h) => ({
+      campaign_id: topic.campaign_id,
+      topic_id: topic.id,
+      source: "news",
+      domain: hostOf(h.url),
+      title: h.title?.slice(0, 300) ?? null,
+      url: h.url,
+      snippet: h.snippet?.slice(0, 1200) ?? null,
+      published_at: h.publishedAt,
     }));
+    const { data: ins, error } = await sb
+      .from("listening_mentions")
+      .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true })
+      .select("id");
+    if (error) {
+      failed.stored++;
+      notes.push(
+        `${topic.label}: what the news feeds found could not be stored (${error.message}).`,
+      );
+    }
+    stored += ins?.length ?? 0;
+  }
+  return { found, stored };
 }
 
 /* -------------------------------------------------------------- ai moods */
@@ -187,59 +245,54 @@ async function readMoods(
     "",
     JSON.stringify(items),
   ].join("\n");
-  const parsed = await askAiJson<{ results?: Verdict[] }>(prompt, "mood_batch", MOOD_SCHEMA);
+  const parsed = await askAiJson<{ results?: Verdict[] }>(
+    prompt,
+    "mood_batch",
+    MOOD_SCHEMA,
+    90_000,
+    "read",
+  );
   return parsed.results ?? [];
 }
 
 /**
- * One structured answer from the AI gateway, read from its stream and parsed. An answer that runs
- * past `timeoutMs`, is cut off or fails says so in its error ("AI took too long", "AI answer cut
- * off", "AI answer failed"); src/lib/ai-answer.ts puts those in plain words.
+ * One structured answer from Gemini (Google's AI, on the campaign's own key, GEMINI_API_KEY),
+ * parsed. `tier` picks the model: "read" for posts in bulk, "write" for anything written for a
+ * person. An answer that runs past `timeoutMs`, is cut off or fails says so in its error ("AI took
+ * too long", "AI answer cut off", "AI answer failed"); src/lib/ai-answer.ts puts those in plain
+ * words. The name each caller gives its schema is no longer needed and is kept for them.
  */
 export async function askAiJson<T>(
   prompt: string,
-  name: string,
+  _name: string,
   schema: object,
   timeoutMs = 90_000,
+  tier: AiTier = "write",
 ): Promise<T> {
-  const key = process.env["LOVABLE_API_KEY"];
+  const key = process.env["GEMINI_API_KEY"];
   if (!key) throw new PauseError("AI is not configured.");
 
-  const stream = aiStream();
+  let json: unknown;
   try {
-    const res = await fetch(AI_GATEWAY, {
+    const res = await fetch(geminiUrl(tier), {
       signal: AbortSignal.timeout(timeoutMs),
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-        "X-Lovable-AIG-SDK": "fetch",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-6-astra",
-        input: prompt,
-        stream: true,
-        reasoning: { effort: "low", summary: "auto" },
-        include: ["reasoning.encrypted_content"],
-        text: { format: { type: "json_schema", name, strict: true, schema } },
-      }),
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify(geminiBody(prompt, schema)),
     });
-
-    if (!res.ok || !res.body) {
-      const body = await res.text();
-      if (isBlocking(res.status))
-        throw new PauseError(`AI stopped (${res.status}): ${body.slice(0, 180)}`, res.status);
-      throw new Error(`AI request failed (${res.status}): ${body.slice(0, 180)}`);
+    const body = await res.text();
+    if (!res.ok) {
+      const why = geminiError(body);
+      // A limit reached, or the key itself turned away: stop the sweep rather than ask again.
+      if (isBlocking(res.status) || geminiKeyRefused(res.status, body))
+        throw new PauseError(`AI stopped (${res.status}): ${why}`, res.status);
+      throw new Error(`AI request failed (${res.status}): ${why}`);
     }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      stream.push(decoder.decode(value, { stream: true }));
+    try {
+      json = JSON.parse(body);
+    } catch {
+      throw new Error(`AI answer unreadable (${body.length} characters, not JSON).`);
     }
-    stream.push(decoder.decode());
   } catch (err) {
     const why = (err as { name?: unknown } | null)?.name;
     if (why === "TimeoutError" || why === "AbortError")
@@ -249,15 +302,13 @@ export async function askAiJson<T>(
     throw err;
   }
 
-  const answer = stream.finish();
+  const answer = geminiAnswer(json);
   const fault = answerFault(answer);
   if (fault) throw new Error(fault);
   try {
     return JSON.parse(answer.text) as T;
   } catch {
-    throw new Error(
-      `AI answer unreadable (${answer.text.length} characters${answer.end === "open" ? ", the stream ended early" : ""}).`,
-    );
+    throw new Error(`AI answer unreadable (${answer.text.length} characters).`);
   }
 }
 
@@ -279,7 +330,7 @@ export async function runListeningScan(
   // Every campaign's team can read the job row, so what it says names no keyword:
   // shared notes and counts only. The names go back to whoever swept in notes.
   const shared: string[] = [];
-  const failed = { searches: 0, feeds: 0, social: 0, stored: 0 };
+  const failed = { searches: 0, feeds: 0, social: 0, stored: 0, outlets: 0 };
   const say = (note: string) => {
     notes.push(note);
     shared.push(note);
@@ -292,11 +343,11 @@ export async function runListeningScan(
     .eq("key", JOB_KEY)
     .maybeSingle();
 
-  // Paused because the search service refused work (402/403/429): try one
-  // keyword six hours later. If it is still refused the pause stands, so no
-  // paid work is repeated; if credits are back, collection carries on by
-  // itself instead of waiting for someone to notice the mornings are empty.
-  const pausedOnCredits = /\((402|403|429)\)/.test(String(job?.paused_reason ?? ""));
+  // Paused because the AI refused work (a limit reached or the key turned away: 400/402/403/429):
+  // try one keyword six hours later. If it is still refused the pause stands, so no work is
+  // repeated; if the limit is lifted or the key mended, collection carries on by itself instead of
+  // waiting for someone to notice the mornings are empty.
+  const pausedOnCredits = /\((400|402|403|429)\)/.test(String(job?.paused_reason ?? ""));
   const pausedSince = job?.last_run_at ? Date.parse(job.last_run_at) : 0;
   const probe =
     job?.status === "paused" &&
@@ -353,6 +404,18 @@ export async function runListeningScan(
   let keywordsSpent = false;
 
   try {
+    const seen = await recentTitles(sb, now.getTime());
+
+    // The outlets' own feeds against every keyword: free, so it never waits for a keyword's turn.
+    try {
+      const outlets = await outletPass(sb, seen, failed, notes);
+      found += outlets.found;
+      stored += outlets.stored;
+    } catch (err) {
+      failed.outlets++;
+      notes.push(`The outlets' news feeds could not be read (${(err as Error).message}).`);
+    }
+
     const { data: topics } = await sb
       .from("listening_topics")
       .select("*")
@@ -368,14 +431,17 @@ export async function runListeningScan(
         .join(" ")
         .slice(0, 300);
 
+      // Google News's search feed for the keyword: free and not guaranteed, so a refusal is noted
+      // and the rest of the keyword (its Google Alert, the social searches) still runs.
       let hits: Found[] = [];
       try {
-        hits = await firecrawlSearch(query, 10, "qdr:w");
+        const news = await googleNewsSearch(query);
+        hits = recent(news, 7)
+          .filter((h) => isNew(seen, topic.campaign_id, h.title))
+          .map((h) => ({ ...h, source: "news" }));
       } catch (err) {
-        if (err instanceof PauseError) throw err;
         failed.searches++;
         notes.push(`${topic.label}: ${(err as Error).message}`);
-        continue;
       }
       found += hits.length;
 
@@ -443,7 +509,7 @@ export async function runListeningScan(
       const rows = hits.map((h) => ({
         topic_id: topic.id,
         source: h.source ?? sourceOf(h.url),
-        domain: hostOf(h.url),
+        domain: h.domain ?? hostOf(h.url),
         title: h.title?.slice(0, 300) ?? null,
         url: h.url,
         snippet: h.snippet?.slice(0, 1200) ?? null,
@@ -555,6 +621,7 @@ export async function runListeningScan(
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const counts = [
     failed.searches && `${count(failed.searches, "keyword", "keywords")} could not be searched.`,
+    failed.outlets && `${count(failed.outlets, "news feed", "news feeds")} did not answer.`,
     failed.feeds &&
       `${count(failed.feeds, "Google Alert feed", "Google Alert feeds")} could not be read.`,
     failed.social && `${count(failed.social, "social search", "social searches")} failed.`,

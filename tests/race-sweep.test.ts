@@ -64,15 +64,26 @@ const COMMENTS = {
   has_more: false,
   cursor: 20,
 };
-const MOODS = `data: ${JSON.stringify({
-  type: "response.output_text.delta",
-  delta: JSON.stringify({
-    results: [
-      { i: 0, sentiment: "negative", issue: "water" },
-      { i: 1, sentiment: "positive", issue: "general" },
-    ],
-  }),
-})}\n\n`;
+const MOODS = JSON.stringify({
+  candidates: [
+    {
+      content: {
+        role: "model",
+        parts: [
+          {
+            text: JSON.stringify({
+              results: [
+                { i: 0, sentiment: "negative", issue: "water" },
+                { i: 1, sentiment: "positive", issue: "general" },
+              ],
+            }),
+          },
+        ],
+      },
+      finishReason: "STOP",
+    },
+  ],
+});
 
 type Route = (url: string) => { status?: number; body: string } | null;
 function stubFetch(route: Route = () => null) {
@@ -88,7 +99,7 @@ function stubFetch(route: Route = () => null) {
           ? { body: JSON.stringify(u.includes("Other1") ? { tweets: [] } : TWEETS) }
           : u.includes("/v1/tiktok/video/comments")
             ? { body: JSON.stringify(COMMENTS) }
-            : u.includes("ai.gateway")
+            : u.includes("generativelanguage")
               ? { body: MOODS }
               : { status: 404, body: "not here" });
     return new Response(r.body, { status: r.status ?? 200 });
@@ -136,7 +147,7 @@ const mentions = (sb: ReturnType<typeof world>) => sb.tables["listening_mentions
 
 async function main() {
   process.env["SCRAPECREATORS_API_KEY"] = "test-key";
-  process.env["LOVABLE_API_KEY"] = "test-key";
+  process.env["GEMINI_API_KEY"] = "test-key";
 
   {
     const sb = world();

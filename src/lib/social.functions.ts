@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerFn } from "@tanstack/react-start";
 
+import { aiTrouble } from "@/lib/ai-answer";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { requireOffice } from "@/lib/require-role";
@@ -222,6 +223,28 @@ type Verdict = {
   score: number;
 };
 
+const SENTIMENT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["results"],
+  properties: {
+    results: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "sentiment", "issue", "score"],
+        properties: {
+          id: { type: "string" },
+          sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
+          issue: { type: "string" },
+          score: { type: "number" },
+        },
+      },
+    },
+  },
+};
+
 export const analyseSentiment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { limit?: number } | undefined) => ({
@@ -241,9 +264,6 @@ export const analyseSentiment = createServerFn({ method: "POST" })
       const rows = pending ?? [];
       if (rows.length === 0) return { analysed: 0, remaining: 0 };
 
-      const key = process.env["LOVABLE_API_KEY"];
-      if (!key) return { analysed: 0, remaining: rows.length, error: "AI is not configured." };
-
       const prompt = [
         "You read messages sent to a Kenyan political campaign. They mix English, Kiswahili and Sheng.",
         "For each message return the mood (positive, neutral or negative towards the campaign),",
@@ -256,94 +276,18 @@ export const analyseSentiment = createServerFn({ method: "POST" })
 
       let verdicts: Verdict[] = [];
       try {
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
-          signal: AbortSignal.timeout(60_000),
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Lovable-API-Key": key,
-            "X-Lovable-AIG-SDK": "fetch",
-          },
-          body: JSON.stringify({
-            model: "openai/gpt-6-astra",
-            input: prompt,
-            stream: true,
-            reasoning: { effort: "low", summary: "auto" },
-            include: ["reasoning.encrypted_content"],
-            text: {
-              format: {
-                type: "json_schema",
-                name: "sentiment_batch",
-                strict: true,
-                schema: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["results"],
-                  properties: {
-                    results: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        additionalProperties: false,
-                        required: ["id", "sentiment", "issue", "score"],
-                        properties: {
-                          id: { type: "string" },
-                          sentiment: { type: "string", enum: ["positive", "neutral", "negative"] },
-                          issue: { type: "string" },
-                          score: { type: "number" },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          }),
-        });
-
-        if (!res.ok || !res.body) {
-          const body = await res.text();
-          return {
-            analysed: 0,
-            remaining: rows.length,
-            error: `AI request failed (${res.status}): ${body.slice(0, 200)}`,
-          };
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let text = "";
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-          for (const part of parts) {
-            const line = part.split("\n").find((l) => l.startsWith("data:"));
-            if (!line) continue;
-            const payload = line.slice(5).trim();
-            if (!payload || payload === "[DONE]") continue;
-            try {
-              const evt = JSON.parse(payload) as { type?: string; delta?: string };
-              if (evt.type === "response.output_text.delta" && typeof evt.delta === "string") {
-                text += evt.delta;
-              }
-            } catch {
-              /* skip malformed frame */
-            }
-          }
-        }
-
-        const parsed = JSON.parse(text) as { results?: Verdict[] };
+        // The same AI door as Listening's moods: Gemini, on the campaign's own key.
+        const { askAiJson } = await import("@/lib/listening.server");
+        const parsed = await askAiJson<{ results?: Verdict[] }>(
+          prompt,
+          "sentiment_batch",
+          SENTIMENT_SCHEMA,
+          60_000,
+          "read",
+        );
         verdicts = parsed.results ?? [];
       } catch (err) {
-        return {
-          analysed: 0,
-          remaining: rows.length,
-          error: err instanceof Error ? err.message : "Analysis failed.",
-        };
+        return { analysed: 0, remaining: rows.length, error: aiTrouble(err).words };
       }
 
       const known = new Set(rows.map((r) => r.id));
