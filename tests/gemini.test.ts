@@ -176,8 +176,13 @@ async function main() {
   const ask = () => askAiJson<{ headline: string }>("Write it.", "story", schema);
 
   {
-    const asked = stubGemini({ [first]: { status: 503, body: BUSY }, [second]: { status: 200, body: OK } });
-    eq("a busy model hands the question to the next, which answers", await ask(), { headline: "x" });
+    const asked = stubGemini({
+      [first]: { status: 503, body: BUSY },
+      [second]: { status: 200, body: OK },
+    });
+    eq("a busy model hands the question to the next, which answers", await ask(), {
+      headline: "x",
+    });
     eq("both were asked, best first", asked, [first, second]);
   }
   {
@@ -195,12 +200,18 @@ async function main() {
     );
   }
   {
-    const asked = stubGemini({ [first]: { status: 429, body: "{}" }, [second]: { status: 200, body: OK } });
+    const asked = stubGemini({
+      [first]: { status: 429, body: "{}" },
+      [second]: { status: 200, body: OK },
+    });
     const err = await ask().catch((e: Error) => e);
     eq("a limit reached stops at once", [err instanceof PauseError, asked], [true, [first]]);
   }
   {
-    const asked = stubGemini({ [first]: { status: 400, body: "{}" }, [second]: { status: 200, body: OK } });
+    const asked = stubGemini({
+      [first]: { status: 400, body: "{}" },
+      [second]: { status: 200, body: OK },
+    });
     const err = await ask().catch((e: Error) => e);
     eq(
       "a request Google calls wrong is not asked again",
@@ -210,7 +221,10 @@ async function main() {
   }
   {
     const [lite, liteNext] = GEMINI_MODELS.read;
-    const asked = stubGemini({ [lite]: { status: 503, body: BUSY }, [liteNext]: { status: 200, body: OK } });
+    const asked = stubGemini({
+      [lite]: { status: 503, body: BUSY },
+      [liteNext]: { status: 200, body: OK },
+    });
     await askAiJson("Read these.", "moods", schema, 90_000, "read");
     eq("reading falls back within its own tier", asked, [lite, liteNext]);
   }
