@@ -12,6 +12,7 @@ import {
   recent,
   searchFor,
   storiesFor,
+  storyMatcher,
   titleKey,
 } from "@/lib/news-feeds";
 
@@ -98,6 +99,11 @@ eq(
 // --------------------------------------------------------------- the keywords
 
 eq("folding drops accents, apostrophes and case", fold("Matiang’i, Kiambu!"), "matiangi kiambu");
+eq(
+  "a possessive folds to the name itself, an apostrophe inside a name does not split it",
+  [fold("Sakaja's allies"), fold("Kenya’s budget"), fold("Thiong'o's rally"), fold("Thiong'o")],
+  ["sakaja allies", "kenya budget", "thiongo rally", "thiongo"],
+);
 
 const plainSearch = searchFor({ query: "Sakaja Nairobi governor" });
 eq("every word of a plain search is needed", plainSearch.all, [
@@ -170,6 +176,20 @@ eq(
   "storiesFor picks the stories that answer",
   storiesFor({ query: "Sakaja water" }, pool).map((s) => s.url),
   ["u1"],
+);
+const match = storyMatcher([
+  ...pool,
+  { url: "u3", title: "Sakaja's water plan", snippet: null, publishedAt: null },
+]);
+eq(
+  "one matcher, the stories folded once, answers every keyword as storiesFor does",
+  [
+    match({ query: "Sakaja water" }).map((s) => s.url),
+    match({ query: "Mombasa" }).map((s) => s.url),
+    match({ query: "Sakaja", exclude_terms: ["plan"] }).map((s) => s.url),
+    match({ query: "Kisumu" }).map((s) => s.url),
+  ],
+  [["u1", "u3"], ["u2"], ["u1"], []],
 );
 
 // ------------------------------------------------------- dates and duplicates
