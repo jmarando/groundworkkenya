@@ -445,3 +445,32 @@ records the approach. Send is greyed out with its note. Big voices shows the app
     is a change in Pulse's own repository and the user's call.
 13. **Building began before the user read this document**, on their instruction to finish. Each
     part is its own commit on a local branch, so any call above can change cheaply.
+
+Decided while building (each is easy to change):
+
+14. **The rival sweep keeps overwriting `reach`** with the latest count on every upsert, as it did.
+    Its readings still keep the series, so a rival's post still draws a curve.
+15. **The daily record leaves out the candidates' own posts and off-topic posts** (as the Voices tab
+    does), and **each hourly run rewrites the last seven days**, so a mood read late lands on the
+    right day.
+16. **Replay opens on last week** (Monday to Sunday). A week or month still running is set against
+    **the same days of the one before**, and says so, so a week three days old is not called "down
+    60%". Pick dates takes up to 93 days. Turning the comparison off also hides the so-what line,
+    which is only ever about the change.
+17. **Replay's bars and totals are exact** (the daily record). Its issues, loudest voices and stories
+    are worked out from the period's posts, newest 6,000 for each period; it says so when there are
+    more.
+18. **"Stories that spread" in Replay are the stories whose first post was found in the period.**
+    **Loudest voices** are the biggest listed accounts across the columns by views seen (a voice in
+    two columns has its views added), with outlets filling any spare places.
+19. **The invitation says "We have seen your account"**, not "we follow", because that is true: we
+    read their public posts. It greets the voice by name and names the issue only when there is one.
+20. **Approaching a voice again keeps its status.** The status is moved by hand until Pulse reports
+    it. An outlet is never briefed as a creator: the panel says to write to its newsroom.
+21. **Send to Daraja Pulse stays off** (`pulseConnected` is false in `getBigVoices`) until Pulse has a
+    door that takes a prospect. "Brief voices" on a story opens the Voices tab; the spec's filter to
+    Recruit voices on the story's issue is not built.
+22. **Follower lookups were not run against the live ScrapeCreators API.** The paths and fields come
+    from its index of 30 October, and only TikTok's was confirmed beyond the path. A wrong field is
+    read as "no count" and the lookup is retried after 7 days; nothing breaks. Counts that come with
+    X posts need no lookup.

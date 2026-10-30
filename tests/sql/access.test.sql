@@ -333,6 +333,8 @@ begin
                            'whatsapp_webhook_events', 'listening_jobs',
                            -- ScrapeCreators credits: one key, so one count for every campaign
                            'social_credits',
+                           -- Follower counts of public accounts, looked up once for every campaign: public facts only
+                           'listening_accounts',
                            -- The election atlas: public figures every campaign reads; only migrations write them
                            'atlas_sources', 'atlas_areas', 'atlas_elections', 'atlas_candidates',
                            'atlas_results', 'atlas_turnout', 'atlas_register', 'atlas_population',

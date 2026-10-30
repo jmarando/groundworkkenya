@@ -357,6 +357,6 @@ export function invitation(c: { candidate: string | null; seat: string }, v: Pic
 
 - [ ] **Step 1:** `bash tests/run.sh` — every TypeScript file and every SQL file passes (the baseline was green at origin/main 006b572).
 - [ ] **Step 2:** `npm run typecheck`, `npm run lint`, `npx prettier --check` on the files touched, `npm run build` — all clean.
-- [ ] **Step 3:** Update the spec's "Calls I made" with anything decided while building (the rival sweep keeps overwriting `reach`; the last seven days of the daily record are rewritten each run; the daily record leaves out rivals' own posts and off-topic posts), tick this plan, commit.
+- [x] **Step 3:** Update the spec's "Calls I made" with anything decided while building (the rival sweep keeps overwriting `reach`; the last seven days of the daily record are rewritten each run; the daily record leaves out rivals' own posts and off-topic posts), tick this plan, commit.
 - [ ] **Step 4:** Write the Groundwork memory note (what is built on which branch and commit, what is verified, what needs the user's OK: push, applying schemas 46 to 49 through the Lovable database tool, publishing, the Pulse side, the profile endpoints that were not run against the live API).
 - [ ] **Step 5:** Report to the user. Do not push, apply migrations or publish without their OK.
