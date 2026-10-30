@@ -134,7 +134,7 @@ export function rivalVoiceKeys(rivals: { x?: string | null; tiktok?: string | nu
 export function bigVoices(posts: VoicePost[], opts: BigVoicesOpts): Column[]; // defaults: 30 days, 10 accounts, 5 outlets, floor on
 ```
 
-- [ ] **Step 1: Write `tests/big-voices.test.ts`** (invented accounts; post factory as in `tests/voices.test.ts`):
+- [x] **Step 1: Write `tests/big-voices.test.ts`** (invented accounts; post factory as in `tests/voices.test.ts`):
   - `levelOf` for each kind and null.
   - a `county`-keyword post appears only in the county column; a voice with posts in two kinds appears in both columns; a post with no topic kind or with `rivalId` appears in none.
   - ranking: accounts rank by `seen ?? followers ?? 0`, ties by posts then name; outlets rank by posts.
@@ -144,10 +144,10 @@ export function bigVoices(posts: VoicePost[], opts: BigVoicesOpts): Column[]; //
   - `rivalKeys` removes a rival's own handle, and `rivalVoiceKeys([{x:"Rival_One"}])` contains `"x:@rival_one"`.
   - `angryPostId` is that voice's most-seen angry post; `topIssues` holds at most two and skips `general`, `campaign`, `off-topic`.
   - empty input returns no columns and does not throw; a campaign with posts only under `county` keywords returns one column.
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Implement.** Window and dating as `voices()` does (`publishedAt ?? foundAt`, `days` default 30).
-- [ ] **Step 4: Run** — PASS.
-- [ ] **Step 5: Commit** `Big voices by seat, county and country, as plain code`.
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Implement.** Window and dating as `voices()` does (`publishedAt ?? foundAt`, `days` default 30).
+- [x] **Step 4: Run** — PASS.
+- [x] **Step 5: Commit** `Big voices by seat, county and country, as plain code`.
 
 ### Task 5: The shared follower table and the lookup planner
 
