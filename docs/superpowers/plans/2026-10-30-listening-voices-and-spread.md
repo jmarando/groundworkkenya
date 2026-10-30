@@ -355,8 +355,10 @@ export function invitation(c: { candidate: string | null; seat: string }, v: Pic
 
 ### Task 17: The whole check, and the notes
 
-- [ ] **Step 1:** `bash tests/run.sh` — every TypeScript file and every SQL file passes (the baseline was green at origin/main 006b572).
-- [ ] **Step 2:** `npm run typecheck`, `npm run lint`, `npx prettier --check` on the files touched, `npm run build` — all clean.
+- [x] **Step 1:** `bash tests/run.sh` — every TypeScript file and every SQL file passes (the baseline was green at origin/main 006b572).
+- [x] **Step 2:** `npm run typecheck`, `npm run lint`, `npx prettier --check` on the files touched, `npm run build` — all clean.
 - [x] **Step 3:** Update the spec's "Calls I made" with anything decided while building (the rival sweep keeps overwriting `reach`; the last seven days of the daily record are rewritten each run; the daily record leaves out rivals' own posts and off-topic posts), tick this plan, commit.
-- [ ] **Step 4:** Write the Groundwork memory note (what is built on which branch and commit, what is verified, what needs the user's OK: push, applying schemas 46 to 49 through the Lovable database tool, publishing, the Pulse side, the profile endpoints that were not run against the live API).
-- [ ] **Step 5:** Report to the user. Do not push, apply migrations or publish without their OK.
+- [x] **Step 4:** Write the Groundwork memory note (what is built on which branch and commit, what is verified, what needs the user's OK: push, applying schemas 46 to 49 through the Lovable database tool, publishing, the Pulse side, the profile endpoints that were not run against the live API).
+- [x] **Step 5:** Report to the user. Do not push, apply migrations or publish without their OK.
+
+**Result (31 Oct 2026, branch merged with origin/main 42ef25b):** 144 of 144 TypeScript test files, 36 of 36 SQL files (72 migrations apply cleanly), typecheck, eslint (no errors in any file the branch touched; only the old `any` warnings), prettier and `npm run build` all clean.
