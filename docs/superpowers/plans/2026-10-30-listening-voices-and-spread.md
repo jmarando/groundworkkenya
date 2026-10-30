@@ -203,10 +203,10 @@ export type BigVoicesData = { columns: Column[]; days: number; canBrief: boolean
 export const getBigVoices; // GET; input { days: 7 | 30 | 90 }; requireSupabaseAuth; office roles only (requireRole OFFICE_ROLES); loads posts for the window via the same query as getListeningPosts (all pages), topics (kind), rivals (names and handles for rivalVoiceKeys), accounts; labels: seat = campaigns.seat, county = the atlas county name for the first part of campaigns.map_area else "County news", country = "Kenya"
 ```
 
-- [ ] **Step 1:** No pure logic is new here; cover it by typecheck and the render check in Task 8.
-- [ ] **Step 2: Implement.** A window is capped at 4,000 posts; if more exist, say so in `columns` via a `truncated` flag on the data.
-- [ ] **Step 3: Run** `npm run typecheck && npx eslint src/lib/big-voices.functions.ts`.
-- [ ] **Step 4: Commit** `Big voices: the data for a window`.
+- [x] **Step 1:** No pure logic is new here; cover it by typecheck and the render check in Task 8.
+- [x] **Step 2: Implement.** A window is capped at 4,000 posts; if more exist, say so in `columns` via a `truncated` flag on the data.
+- [x] **Step 3: Run** `npm run typecheck && npx eslint src/lib/big-voices.functions.ts`.
+- [x] **Step 4: Commit** `Big voices: the data for a window`.
 
 ### Task 8: The Big voices screen
 
