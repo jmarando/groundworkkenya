@@ -304,8 +304,8 @@ export function fiveLines(cur: PeriodStats, prev: PeriodStats | null): string[];
 export function replaySoWhat(cur: PeriodStats, prev: PeriodStats | null): string;    // the biggest change in mood or issue share; a second sentence when pausedDays > 0 in either period
 ```
 
-- [ ] **Step 1: Write the tests:** `periodFor("week","2026-10-29")` is 2026-10-26 to 2026-11-01; `periodFor("month","2026-02-10")` ends 2026-02-28; `stepPeriod` and `periodBefore` of a week; `bars` marks a missing day after the record began "paused", a missing day before it "nothing", a backfilled day "gathered"; `late` is passed through; `fiveLines` of a period with 200 posts against 152 says "up 32%"; with `prev` null or empty it prints no "was" figures and no `NaN`/`Infinity`; with zero posts it still returns five lines; `replaySoWhat` adds the paused sentence only when `pausedDays > 0`.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS. **Step 5: Commit** `Replay: periods, bars and the five lines, as plain code`.
+- [x] **Step 1: Write the tests:** `periodFor("week","2026-10-29")` is 2026-10-26 to 2026-11-01; `periodFor("month","2026-02-10")` ends 2026-02-28; `stepPeriod` and `periodBefore` of a week; `bars` marks a missing day after the record began "paused", a missing day before it "nothing", a backfilled day "gathered"; `late` is passed through; `fiveLines` of a period with 200 posts against 152 says "up 32%"; with `prev` null or empty it prints no "was" figures and no `NaN`/`Infinity`; with zero posts it still returns five lines; `replaySoWhat` adds the paused sentence only when `pausedDays > 0`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS. **Step 5: Commit** `Replay: periods, bars and the five lines, as plain code`.
 
 ### Task 14: The Replay tab
 
