@@ -139,24 +139,26 @@ builds from the day it starts.
 - Suggested mechanism (the builder decides): one database function, called by all three sweeps,
   that keeps the highest count on the post and adds the reading in a single round trip. It
   replaces the "update when higher" loops.
-- Three things the function must get right that the loops today do not: a post saved with no
+- Two things the function must get right that the loops today do not: a post saved with no
   count must still take its first count (the keyword scan's `.lt("reach", …)` update skips a null
-  `reach`); `shares` must rise with `reach` and on its own; and the rival sweep, which today
-  overwrites `reach` with the latest value on every upsert, keeps the highest like the others.
+  `reach`); and `shares` must rise with `reach` and on its own. The rival sweep, which today
+  overwrites `reach` with the latest value on every upsert, is left as it is; its readings still
+  capture the series.
 - Written by the service role, read by office roles. Kept for 180 days.
 
 **1b. A record of each day's gathering.** New table `listening_days`, one row per campaign and
 Kenyan day, with primary key `(campaign_id, day)`. Columns:
 
-- `posts`: posts found that day, counted by `found_at`.
+- `posts`: posts found that day, counted by `found_at`. Posts from the candidates' own accounts
+  (`rival_id` set) and off-topic posts are left out, as the Voices tab leaves them out.
 - `warm`, `neutral`, `angry`, `unread`: their moods.
 - `sweeps`: the hourly runs that day.
 - `last_sweep_at`, `backfilled`, `updated_at`.
 
 Every hourly run that gathers rewrites today's row for every campaign with an active keyword,
 even when nothing was found. A run that is paused, or that finds another run holding the lease,
-writes nothing. The same run also rewrites the rows for any day whose posts it just read the
-mood of, so moods read late still land on the right day. So after the record begins, a day with
+writes nothing. The same run recounts the last seven days' rows (older days are left as they were), so
+moods read late still land on the right day. So after the record begins, a day with
 no row means nothing ran: "Sweeping paused". On release, rows are backfilled once from the posts
 already kept, with `backfilled = true` and `sweeps = null`. A day before the record began that
 has no posts reads "Nothing gathered", not "paused", because we can't tell which it was.
