@@ -1645,6 +1645,36 @@ export type Database = {
           },
         ]
       }
+      listening_accounts: {
+        Row: {
+          checked_at: string | null
+          failed_at: string | null
+          followers: number | null
+          name: string
+          platform: string
+          url: string | null
+          voice_key: string
+        }
+        Insert: {
+          checked_at?: string | null
+          failed_at?: string | null
+          followers?: number | null
+          name: string
+          platform: string
+          url?: string | null
+          voice_key: string
+        }
+        Update: {
+          checked_at?: string | null
+          failed_at?: string | null
+          followers?: number | null
+          name?: string
+          platform?: string
+          url?: string | null
+          voice_key?: string
+        }
+        Relationships: []
+      }
       listening_alert_events: {
         Row: {
           alert_id: string | null
@@ -1778,6 +1808,56 @@ export type Database = {
           },
         ]
       }
+      listening_days: {
+        Row: {
+          angry: number
+          backfilled: boolean
+          campaign_id: string
+          day: string
+          last_sweep_at: string | null
+          neutral: number
+          posts: number
+          sweeps: number | null
+          unread: number
+          updated_at: string
+          warm: number
+        }
+        Insert: {
+          angry?: number
+          backfilled?: boolean
+          campaign_id: string
+          day: string
+          last_sweep_at?: string | null
+          neutral?: number
+          posts?: number
+          sweeps?: number | null
+          unread?: number
+          updated_at?: string
+          warm?: number
+        }
+        Update: {
+          angry?: number
+          backfilled?: boolean
+          campaign_id?: string
+          day?: string
+          last_sweep_at?: string | null
+          neutral?: number
+          posts?: number
+          sweeps?: number | null
+          unread?: number
+          updated_at?: string
+          warm?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_days_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listening_jobs: {
         Row: {
           detail: string | null
@@ -1823,6 +1903,7 @@ export type Database = {
           issue: string | null
           published_at: string | null
           reach: number | null
+          refers_to: string | null
           rival_id: string | null
           sentiment: string | null
           sentiment_score: number | null
@@ -1830,6 +1911,7 @@ export type Database = {
           snippet: string | null
           source: string
           status: string
+          story_id: string | null
           title: string | null
           topic_id: string | null
           url: string
@@ -1849,6 +1931,7 @@ export type Database = {
           issue?: string | null
           published_at?: string | null
           reach?: number | null
+          refers_to?: string | null
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
@@ -1856,6 +1939,7 @@ export type Database = {
           snippet?: string | null
           source?: string
           status?: string
+          story_id?: string | null
           title?: string | null
           topic_id?: string | null
           url: string
@@ -1875,6 +1959,7 @@ export type Database = {
           issue?: string | null
           published_at?: string | null
           reach?: number | null
+          refers_to?: string | null
           rival_id?: string | null
           sentiment?: string | null
           sentiment_score?: number | null
@@ -1882,6 +1967,7 @@ export type Database = {
           snippet?: string | null
           source?: string
           status?: string
+          story_id?: string | null
           title?: string | null
           topic_id?: string | null
           url?: string
@@ -1903,10 +1989,128 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "listening_mentions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "listening_stories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "listening_mentions_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "listening_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_readings: {
+        Row: {
+          at: string
+          campaign_id: string
+          id: string
+          mention_id: string
+          reach: number | null
+          shares: number | null
+        }
+        Insert: {
+          at?: string
+          campaign_id: string
+          id?: string
+          mention_id: string
+          reach?: number | null
+          shares?: number | null
+        }
+        Update: {
+          at?: string
+          campaign_id?: string
+          id?: string
+          mention_id?: string
+          reach?: number | null
+          shares?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_readings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listening_readings_mention_id_fkey"
+            columns: ["mention_id"]
+            isOneToOne: false
+            referencedRelation: "listening_mentions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listening_stories: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          first_mention_id: string | null
+          first_seen_at: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          issue: string | null
+          last_post_at: string
+          posts: number
+          status: string
+          title: string
+          updated_at: string
+          views: number | null
+          voices: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          first_mention_id?: string | null
+          first_seen_at: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          issue?: string | null
+          last_post_at: string
+          posts?: number
+          status?: string
+          title: string
+          updated_at?: string
+          views?: number | null
+          voices?: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          first_mention_id?: string | null
+          first_seen_at?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          issue?: string | null
+          last_post_at?: string
+          posts?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          views?: number | null
+          voices?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listening_stories_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listening_stories_first_mention_id_fkey"
+            columns: ["first_mention_id"]
+            isOneToOne: false
+            referencedRelation: "listening_mentions"
             referencedColumns: ["id"]
           },
         ]
@@ -3003,6 +3207,7 @@ export type Database = {
           reply: string
           respond_by: string | null
           status: string
+          story_id: string | null
           updated_at: string
           what_happened: string
         }
@@ -3024,6 +3229,7 @@ export type Database = {
           reply?: string
           respond_by?: string | null
           status?: string
+          story_id?: string | null
           updated_at?: string
           what_happened: string
         }
@@ -3045,6 +3251,7 @@ export type Database = {
           reply?: string
           respond_by?: string | null
           status?: string
+          story_id?: string | null
           updated_at?: string
           what_happened?: string
         }
@@ -3061,6 +3268,13 @@ export type Database = {
             columns: ["mention_id"]
             isOneToOne: false
             referencedRelation: "listening_mentions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rapid_responses_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "listening_stories"
             referencedColumns: ["id"]
           },
         ]
@@ -3603,6 +3817,62 @@ export type Database = {
           },
         ]
       }
+      voice_outreach: {
+        Row: {
+          campaign_id: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          invitation: string
+          name: string
+          platform: string
+          pulse_prospect_id: string | null
+          status: string
+          updated_at: string
+          url: string | null
+          voice_key: string
+        }
+        Insert: {
+          campaign_id?: string
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invitation: string
+          name: string
+          platform: string
+          pulse_prospect_id?: string | null
+          status?: string
+          updated_at?: string
+          url?: string | null
+          voice_key: string
+        }
+        Update: {
+          campaign_id?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invitation?: string
+          name?: string
+          platform?: string
+          pulse_prospect_id?: string | null
+          status?: string
+          updated_at?: string
+          url?: string | null
+          voice_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_outreach_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       walk_list_doors: {
         Row: {
           campaign_id: string
@@ -3860,6 +4130,7 @@ export type Database = {
       }
       audience_counts: { Args: never; Returns: Json }
       audience_estimate: { Args: { _audience: Json }; Returns: Json }
+      backfill_listening_days: { Args: never; Returns: number }
       begin_person_import: {
         Args: {
           _consent_source: string
@@ -4229,8 +4500,14 @@ export type Database = {
         }
         Returns: Json
       }
+      record_post_counts: { Args: { _rows: Json }; Returns: number }
       record_stipend_paid: {
         Args: { _id: string; _receipt: string }
+        Returns: undefined
+      }
+      record_sweep_days: { Args: never; Returns: number }
+      refresh_listening_days: {
+        Args: { _campaign: string; _from: string; _to: string }
         Returns: undefined
       }
       release_stipend_payment: { Args: { _id: string }; Returns: undefined }
@@ -4263,6 +4540,7 @@ export type Database = {
         Args: { _account: string; _token: string }
         Returns: undefined
       }
+      set_story_handled: { Args: { _story: string }; Returns: undefined }
       site_editor: { Args: never; Returns: string }
       station_here: {
         Args: {
