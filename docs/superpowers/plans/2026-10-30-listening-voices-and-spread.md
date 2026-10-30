@@ -169,11 +169,11 @@ export type Known = { followers: number | null; checkedAt: string | null; failed
 export function lookupCandidates(columns: Column[], known: Map<string, Known>, now: number, limit: number): string[]; // voice keys: per column the top 10 accounts by seen (from bigVoices with floor false) and the top 10 by posts among those with seen null; skips outlets, platforms with no endpoint, counts fresher than 7 days and failures newer than 7 days; unique; at most `limit`
 ```
 
-- [ ] **Step 1: Write the tests.** SQL: `authenticated` can select, cannot insert or update; negative followers rejected; `take_social_credits('profiles', 1, 20)` returns true; schema ≥ 47. TS: `profileRequest("tiktok:@some_creator")` → path `/v1/tiktok/profile`, `{handle:"some_creator"}`; `"x:@abc"` → `/v1/twitter/profile`; `"facebook:somepage"` → url param; `"reddit:u/x"` and `"site:nation.africa"` → null; `readFollowers` reads `{stats:{followerCount:4100000}}`, `{followers_count:"880000"}`, `{legacy:{followers_count:12}}`, returns null for `{}` and for a negative; `lookupCandidates` skips a count 6 days old, includes one 8 days old, skips a failure 3 days old, includes a missing one, respects `limit`, never returns an outlet.
-- [ ] **Step 2: Run** (`bash tests/sql/run.sh`, `npx tsx … tests/profiles.test.ts`) — FAIL.
-- [ ] **Step 3: Implement** the migration (schema 47, redefine the budget constraint to `('rivals','keywords','trends','x','profiles')`; extend `prune_old_records()` to drop accounts with `coalesce(checked_at, failed_at)` older than 180 days) and `profiles.ts`; add `profiles` to `Budget`, `ENV` (`SCRAPECREATORS_PROFILE_DAILY_CREDITS`) and `DEFAULTS` (20).
-- [ ] **Step 4: Run** — PASS.
-- [ ] **Step 5: Commit** `Follower counts: a shared public table and the planner for looking them up`.
+- [x] **Step 1: Write the tests.** SQL: `authenticated` can select, cannot insert or update; negative followers rejected; `take_social_credits('profiles', 1, 20)` returns true; schema ≥ 47. TS: `profileRequest("tiktok:@some_creator")` → path `/v1/tiktok/profile`, `{handle:"some_creator"}`; `"x:@abc"` → `/v1/twitter/profile`; `"facebook:somepage"` → url param; `"reddit:u/x"` and `"site:nation.africa"` → null; `readFollowers` reads `{stats:{followerCount:4100000}}`, `{followers_count:"880000"}`, `{legacy:{followers_count:12}}`, returns null for `{}` and for a negative; `lookupCandidates` skips a count 6 days old, includes one 8 days old, skips a failure 3 days old, includes a missing one, respects `limit`, never returns an outlet.
+- [x] **Step 2: Run** (`bash tests/sql/run.sh`, `npx tsx … tests/profiles.test.ts`) — FAIL.
+- [x] **Step 3: Implement** the migration (schema 47, redefine the budget constraint to `('rivals','keywords','trends','x','profiles')`; extend `prune_old_records()` to drop accounts with `coalesce(checked_at, failed_at)` older than 180 days) and `profiles.ts`; add `profiles` to `Budget`, `ENV` (`SCRAPECREATORS_PROFILE_DAILY_CREDITS`) and `DEFAULTS` (20).
+- [x] **Step 4: Run** — PASS.
+- [x] **Step 5: Commit** `Follower counts: a shared public table and the planner for looking them up`.
 
 ### Task 6: Looking followers up, and taking the free ones
 
