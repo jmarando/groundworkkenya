@@ -1,8 +1,10 @@
 # Listening: big voices, where a post started, Replay, and briefing voices through Daraja Pulse
 
 Status: designed with the user on 29–30 October 2026. They chose from the mockups (three levels
-side by side for big voices, a timeline for spread) and agreed the order of the parts. This spec
-awaits their review.
+side by side for big voices, a timeline for spread) and agreed the order of the parts. They then
+asked for it to be finished, so building starts in the order below, on a local branch off
+origin/main 006b572. Nothing is pushed, migrated or published without their OK. This spec awaits
+their review, and any call in it can still change.
 
 ## Why
 
@@ -41,11 +43,14 @@ pile of posts and answer questions a campaign team acts on:
 - The Listening page loads the latest 600 posts. On a busy campaign that reaches back two to three
   weeks, and there is no date picker. Posts are kept for three years (`prune_old_records`, 29 Oct
   version).
-- Sweeping has been off since 26 October. Another piece of work (local branch
-  `free-news-gemini`, not pushed) moves news gathering to Kenyan outlet feeds and Google Alerts,
-  and moves the AI to Gemini on the user's own key. It keeps the mood read's fields and meaning,
-  keeps `askAiJson`'s signature, leaves `x-sweep.server.ts` and the ScrapeCreators part of
-  `runListeningScan` alone, and adds no migration.
+- Sweeping was off from 26 October. The hourly job is switched back on separately, and history
+  starts the day it is. The news-gathering work is merged (PR #7, origin/main 006b572): Kenyan
+  outlet feeds and Google Alerts replace web search, and the AI reading runs on the user's own
+  Gemini key through the same `askAiJson`, which now takes a `tier` ("read" or "write"). The mood
+  read keeps its fields and meaning. Outlet posts are saved without view counts.
+- Every sweep keys a post by `(campaign_id, url)`: the keyword scan (outlets, Alerts, then
+  ScrapeCreators for TikTok, YouTube and Reddit), the X sweep, and the daily rival sweep. The
+  keyword scan's rows carry no `campaign_id`; the `stamp_campaign()` trigger fills it in.
 
 ## Goals
 
@@ -62,7 +67,9 @@ pile of posts and answer questions a campaign team acts on:
 
 - Proving who started a story. "First seen" is the first post we found, and the screens say so.
 - The family tree of who quoted whom (option B in the mockups, not chosen; only X has the data).
-- Changing how posts are gathered or how moods are read. That is the other piece of work.
+- Changing how posts are gathered or how moods are read. That work is merged and stays as it is.
+- Reading ward or constituency names out of posts for a finer split than seat, county and
+  country.
 - Changes to Daraja Pulse's own code. The contract it would need is written down here (Part 5).
   It gets built only if the user says so.
 - Private accounts, direct messages and closed groups. Listening sees only public posts that its
@@ -99,14 +106,14 @@ pile of posts and answer questions a campaign team acts on:
   default of 20 a day.
 - **Days are Kenyan days** (Africa/Nairobi).
 - **Schema.** Use the next free number (46, unless something lands first). Migrations are named
-  `YYYYMMDDHHMMSS_<name>.sql`. Bump `groundwork_schema_version`, and extend the latest
-  `prune_old_records`.
+  `YYYYMMDDHHMMSS_<name>.sql`. The newest is `20261104090000_door_checks.sql` (file names run
+  ahead of the calendar), so a new file must sort after it. Bump `groundwork_schema_version`, and
+  extend the latest `prune_old_records`.
 - **Tests.** Logic goes in pure modules under `src/lib` with tests in `tests/*.test.ts`. Policies
   and database functions get tests in `tests/sql/`. Everything runs with `bash tests/run.sh`.
   Fixtures use invented accounts and posts only, never claims about real politicians.
-- **Where to build.** Build on a fresh branch off origin/main. Rebase onto the news-gathering
-  work once it lands, since both touch `runListeningScan`. Never build in the working tree of
-  `~/Documents/groundworkkenya`: its local main is 31 commits behind.
+- **Where to build.** Build on a fresh branch off origin/main (006b572 or later). Never build in
+  the working tree of `~/Documents/groundworkkenya`: its local main is far behind.
 - **Release.** Push, apply migrations and publish only with the user's OK, one step at a time.
 
 ## The parts, in the agreed order
@@ -132,6 +139,10 @@ builds from the day it starts.
 - Suggested mechanism (the builder decides): one database function, called by all three sweeps,
   that keeps the highest count on the post and adds the reading in a single round trip. It
   replaces the "update when higher" loops.
+- Three things the function must get right that the loops today do not: a post saved with no
+  count must still take its first count (the keyword scan's `.lt("reach", …)` update skips a null
+  `reach`); `shares` must rise with `reach` and on its own; and the rival sweep, which today
+  overwrites `reach` with the latest value on every upsert, keeps the highest like the others.
 - Written by the service role, read by office roles. Kept for 180 days.
 
 **1b. A record of each day's gathering.** New table `listening_days`, one row per campaign and
@@ -189,7 +200,10 @@ and 5 outlets. Each row has:
 - "seen": views summed over its posts in the column, where the platform counts them;
 - its top one or two issues;
 - **towards you**: the share of its read posts that are warm and the share that are angry. This
-  answers "for and against";
+  answers "for and against". Only posts found by your own, issue, county and national keywords
+  count here. A post found by a rival's keyword counts towards "seen" but not towards the mood,
+  because the mood read asks how a post feels about you, and for a post about a rival that answer
+  is the least reliable;
 - its suggested move.
 
 Tapping a name opens a list of that voice's posts in the column. The list is read through 1c,
@@ -205,7 +219,7 @@ number known yet, is never named, not even under "See more". The column says how
 from smaller accounts ("and 41 posts from smaller accounts").
 
 **Suggested move.** Plain code, first match wins. "Read posts" are the voice's posts in the
-column whose mood was read.
+column whose mood was read, counted the same way as "towards you" (rival-keyword posts left out).
 
 1. **Press:** an outlet (a news site), not an account.
 2. **Respond:** at least 2 read posts, and at least half of them angry towards you. The button
@@ -224,9 +238,14 @@ Lookups come out of a new `profiles` budget in `src/lib/social-credits.ts`
 (`SCRAPECREATORS_PROFILE_DAILY_CREDITS`, default 20). The `social_credits_budget_check`
 constraint has to allow the new name, so this part needs a migration.
 
-- Providers: ScrapeCreators' profile endpoints for TikTok, X, Instagram, YouTube and Facebook,
-  and TwitterAPI.io's user info for X when that key is set. The builder confirms each endpoint
-  and the shape of its answer.
+- Providers: ScrapeCreators' profile endpoints, which its index lists for all five platforms
+  (checked 30 October): `/v1/tiktok/profile`, `/v1/twitter/profile`, `/v1/instagram/profile`,
+  `/v1/youtube/channel` and `/v1/facebook/profile`. Only TikTok's is confirmed beyond its path:
+  it takes `handle`, and the count is `stats.followerCount`. The builder confirms the other four
+  parameters and fields, and their credit cost.
+- **Free first.** Where a search answer already carries the author's follower count (X's author
+  object does in both X providers' answers; TikTok's may), keep it as the account's count and
+  skip the lookup. The builder confirms the fields.
 - Reddit accounts and news sites get no lookup.
 - A failed lookup sets `failed_at` and is tried again after 7 days.
 
@@ -345,8 +364,8 @@ voices on a story. It opens a panel with:
   - views seen;
   - the warm and angry shares towards you;
   - their top issues;
-  - when the campaign has a map area (`campaigns.map_area`, atlas places): "N of M posts name a
-    ward or constituency in your area".
+  - the column they were found in (your seat, your county or the country), which is how the panel
+    says whether they are local.
 - **Daraja Pulse's standing lines**, always shown and not removable:
   - every post is labelled as a paid partnership, with the campaign's "Paid for by" line;
   - no appeals to, or targeting of, anyone by tribe or community;
@@ -418,3 +437,9 @@ records the approach. Send is greyed out with its note. Big voices shows the app
    finds are flagged on the day they arrived.
 9. **Briefing and marking handled** are for principals only; organisers can look.
 10. **Rivals' own posts** are part of stories but are never big voices.
+11. **Mood shares leave out posts found by a rival's keyword**, because the mood read is least
+    reliable for them. Those posts still count towards "seen".
+12. **The Daraja Pulse side is not built.** Send stays greyed out until Pulse can receive. That
+    is a change in Pulse's own repository and the user's call.
+13. **Building began before the user read this document**, on their instruction to finish. Each
+    part is its own commit on a local branch, so any call above can change cheaply.
