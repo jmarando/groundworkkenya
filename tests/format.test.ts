@@ -2,7 +2,7 @@
 // Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/format.test.ts
 
-import { short } from "@/lib/format";
+import { dayTime, short } from "@/lib/format";
 
 let pass = 0;
 let fail = 0;
@@ -26,6 +26,9 @@ eq("just under a million does not read 1000k", short(999_700), "1M");
 eq("a million and a bit", short(1_400_000), "1.4M");
 eq("millions", short(6_800_000), "6.8M");
 eq("a fraction is rounded", short(949.6), "950");
+
+eq("the day and time in Nairobi", dayTime("2026-10-27T11:05:00Z"), "Tue 14:05");
+eq("a late hour crosses into the next Nairobi day", dayTime("2026-10-27T21:30:00Z"), "Wed 00:30");
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

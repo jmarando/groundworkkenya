@@ -28,6 +28,8 @@ export type Mention = {
   commentsRead: number | null;
   commentsPositive: number | null;
   commentsNegative: number | null;
+  /** The story the post belongs to, once the hourly job has found one. */
+  storyId: string | null;
 };
 
 /** The columns of `listening_mentions` a Mention is read from. */
@@ -52,6 +54,7 @@ export type MentionRow = {
   comments_read?: number | null;
   comments_positive?: number | null;
   comments_negative?: number | null;
+  story_id?: string | null;
 };
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
@@ -86,5 +89,6 @@ export function toMention(
     commentsRead: m.comments_read ?? null,
     commentsPositive: m.comments_positive ?? null,
     commentsNegative: m.comments_negative ?? null,
+    storyId: m.story_id ?? null,
   };
 }

@@ -396,6 +396,7 @@ const mention = (o: Partial<Mention> = {}): Mention => ({
   commentsRead: null,
   commentsPositive: null,
   commentsNegative: null,
+  storyId: null,
   ...o,
 });
 {

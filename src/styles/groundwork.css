@@ -11400,6 +11400,68 @@ table.fp-board {
   line-height: 1.6;
 }
 
+/* Listening: one story followed from the first post we found */
+.sv-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0;
+}
+.sv-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-top: 10px;
+}
+.sv-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.sv-lab {
+  font-size: 11px;
+  fill: var(--muted-foreground);
+}
+.sv-line {
+  stroke: var(--foreground);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.sv-dot {
+  fill: var(--foreground);
+}
+.sv-mark circle {
+  fill: var(--foreground);
+}
+.sv-mark text {
+  fill: var(--background);
+  font-size: 11px;
+  font-weight: 600;
+}
+.sv-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+.sv-sowhat {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--border);
+  background: var(--muted, transparent);
+  border-radius: 6px;
+}
+.sv-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 /* Road to election day: dates, phases, milestones, notes */
 .rm-dates {
   list-style: none;

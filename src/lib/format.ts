@@ -34,3 +34,12 @@ export function short(n: number): string {
   if (n >= 1_000) return `${tenth(n / 1000)}k`;
   return String(Math.round(n));
 }
+
+/** "Tue 14:05" in Nairobi: the day of the week and the time, for a moment in the last few days. */
+export const dayTime = (iso: string) =>
+  new Date(iso).toLocaleString("en-GB", {
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: NAIROBI,
+  });

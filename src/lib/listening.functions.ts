@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PRINCIPAL_ROLES, type MyRole } from "@/lib/access";
 import { cleanAlertFeed } from "@/lib/alerts-feed";
 import { toMention, type Mention } from "@/lib/listening-mention";
+import { loose } from "@/lib/loose-client";
 import { OFF_TOPIC } from "@/lib/top-of-mind";
 
 export type { Mention };
@@ -42,6 +43,8 @@ export type ListeningData = {
     negative: number;
   }[];
   mentions: Mention[];
+  /** The stories the posts belong to: just their names, for the links. */
+  stories: { id: string; title: string }[];
   alerts: ListeningAlert[];
   events: {
     id: string;
@@ -104,6 +107,7 @@ export const getListening = createServerFn({ method: "GET" })
       { data: rivalJob },
       { count: rivalPosts },
       { data: rivals },
+      { data: stories },
     ] = await Promise.all([
       sb.from("listening_topics").select("*").order("label"),
       // Posts the sweep found to be about somewhere or something else are left out.
@@ -132,6 +136,13 @@ export const getListening = createServerFn({ method: "GET" })
         .not("rival_id", "is", null)
         .gte("published_at", since30),
       sb.from("race_rivals").select("id, name, is_us"),
+      // Stories exist from schema 48; before it the read answers with an error and no rows.
+      loose(sb)
+        .from("listening_stories")
+        .select("id, title")
+        .gt("posts", 1)
+        .order("last_post_at", { ascending: false })
+        .limit(300) as Promise<{ data: { id: string; title: string }[] | null }>,
     ]);
     const rivalById = new Map((rivals ?? []).map((r) => [r.id, r]));
 
@@ -207,6 +218,7 @@ export const getListening = createServerFn({ method: "GET" })
         negative: perTopic.get(t.id)?.negative ?? 0,
       })),
       mentions: rows.map((m) => toMention(m, topicById, rivalById)),
+      stories: stories ?? [],
       alerts: (alerts ?? []).map((a) => ({
         id: a.id,
         name: a.name,

@@ -279,8 +279,8 @@ export function soWhat(s: { mood: "angry" | "warm" | "mixed"; place: "local" | "
 
 **Interfaces — Produces:** `getStory({ id })` → `{ story, posts: Mention[], readings: Reading[], canAct: boolean }` (office roles; the caller's campaign only); `markStoryHandled({ id })` (principals; calls `set_story_handled`); `StoryView({ data, now, react?, brief?, handle? })` presentational: header (name, issue, mood, trend), an SVG views-against-time chart with numbered pick-up marks, the pick-up list ("1 · First seen …"), platform split and top three amplifiers (rivals' own posts labelled "<Rival>'s own post"), the so-what paragraph, and React / Brief voices / Mark handled.
 
-- [ ] **Step 1: Write `tests/story-render.test.ts`:** renders the name, "First seen", the numbered pick-ups in time order, the caveat sentence, the platform split; with no readings at all it shows the list and "No view counts for these posts" and no chart; with one post it does not throw.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 5: Commit** `Stories: the screen, from first seen to how far it travelled`.
+- [x] **Step 1: Write `tests/story-render.test.ts`:** renders the name, "First seen", the numbered pick-ups in time order, the caveat sentence, the platform split; with no readings at all it shows the list and "No view counts for these posts" and no chart; with one post it does not throw.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 5: Commit** `Stories: the screen, from first seen to how far it travelled`.
 
 ---
 

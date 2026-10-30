@@ -44,6 +44,7 @@ const row = (o: Partial<MentionRow> = {}): MentionRow => ({
   comments_read: null,
   comments_positive: null,
   comments_negative: null,
+  story_id: null,
   ...o,
 });
 const mention = (o: Partial<MentionRow> = {}) => toMention(row(o), topics, rivals);
@@ -73,8 +74,10 @@ eq("the whole shape", mention(), {
   commentsRead: null,
   commentsPositive: null,
   commentsNegative: null,
+  storyId: null,
 });
 
+eq("a post in a story says which", mention({ story_id: "s1" }).storyId, "s1");
 eq("a numeric string for views becomes a number", mention({ reach: "1200" }).reach, 1200);
 eq("no views stays null", mention({ reach: null }).reach, null);
 // A column the select did not return is absent, not undefined.
