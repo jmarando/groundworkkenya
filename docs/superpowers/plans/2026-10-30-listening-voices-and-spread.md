@@ -216,8 +216,8 @@ export const getBigVoices; // GET; input { days: 7 | 30 | 90 }; requireSupabaseA
 
 **Interfaces — Produces:** `BigVoicesView({ data, setDays, open, brief? })` presentational (no hooks), and `BigVoicesPanel({ openVoice })` which does `useQuery(["big-voices", days])`.
 
-- [ ] **Step 1: Write `tests/big-voices-render.test.ts`** using `react-dom/server` `renderToStaticMarkup` on `BigVoicesView` with invented columns: renders one block per column with its label, the top 3 accounts and the top outlet, "See more" when there are more, followers as "38k", the move as a word, the sentence "and N posts from smaller accounts"; with no columns it renders the empty note, with no `NaN`.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement** (phone width: columns stack under 720px; each row tappable with `open(voice)`). **Step 4:** the Voices tab calls `getListeningPosts({ ids: voice.postIds })` to show a voice's posts through the existing `Drill`. **Step 5: Run** the render test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 6: Commit** `Big voices: three columns on the Voices tab`.
+- [x] **Step 1: Write `tests/big-voices-render.test.ts`** using `react-dom/server` `renderToStaticMarkup` on `BigVoicesView` with invented columns: renders one block per column with its label, the top 3 accounts and the top outlet, "See more" when there are more, followers as "38k", the move as a word, the sentence "and N posts from smaller accounts"; with no columns it renders the empty note, with no `NaN`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement** (phone width: columns stack under 720px; each row tappable with `open(voice)`). **Step 4:** the Voices tab calls `getListeningPosts({ ids: voice.postIds })` to show a voice's posts through the existing `Drill`. **Step 5: Run** the render test, `npm run typecheck`, `npx eslint` on touched files — PASS. **Step 6: Commit** `Big voices: three columns on the Voices tab`.
 
 ---
 

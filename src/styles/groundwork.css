@@ -11331,6 +11331,75 @@ table.fp-board {
   }
 }
 
+/* Listening: big voices by seat, county and country */
+.bv-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.bv-col {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  min-width: 0;
+}
+.bv-col h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+.bv-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bv-row {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.bv-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.bv-row p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.bv-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.bv-mood {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bv-mood .lsn-mood {
+  flex: 1 1 60px;
+  max-width: 120px;
+}
+.bv-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.bv-all > summary {
+  cursor: pointer;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
 /* Road to election day: dates, phases, milestones, notes */
 .rm-dates {
   list-style: none;
