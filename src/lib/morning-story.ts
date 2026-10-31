@@ -259,24 +259,70 @@ export function rivalsLately(own: StoryLink[], items: StoryItem[]): StoryLink[] 
   return [...own, ...items.filter((i) => i.scope === "rival").map(linkOf)].slice(0, 3);
 }
 
-/** When no story can be written: the morning's top five links. */
+/** What an item says beyond its title. */
+const bodyOf = (i: StoryItem): string =>
+  (i.text.startsWith(i.title) ? i.text.slice(i.title.length) : i.text).trim();
+
+/** An item with a sentence of its own beyond the title: what makes it worth leading with. */
+const hasBody = (i: StoryItem) => bodyOf(i).length >= 20;
+
+/**
+ * The item a morning leads with when no story can be written: the seat's own first, then the
+ * county's, the rivals' and the nation's, taking the first of each that has more than a bare title;
+ * failing that, the first item there is. Local first, but never local only: a quiet seat leads with
+ * the county or the nation, so the top of Home is never empty while there is any news at all.
+ */
+export function leadItem(items: StoryItem[]): StoryItem | null {
+  for (const scope of ["seat", "county", "rival", "national"] as Scope[]) {
+    const lead = items.find((i) => i.scope === scope && hasBody(i));
+    if (lead) return lead;
+  }
+  return items[0] ?? null;
+}
+
+/** The lead's own words after its title: its first two sentences, cut at a word if still long. */
+const leadSummary = (i: StoryItem): string | null => {
+  const body = bodyOf(i);
+  if (body.length < 20) return null;
+  // A sentence ends at . ! or ? followed by a space, so "1.1 million" stays whole.
+  let end = body.length;
+  let ends = 0;
+  for (const m of body.matchAll(/[.!?]["”’)]?\s+/g)) {
+    ends++;
+    if (ends === 2) {
+      end = (m.index ?? 0) + m[0].trimEnd().length;
+      break;
+    }
+  }
+  const text = body.slice(0, end).trim();
+  if (text.length <= 320) return text;
+  const cut = text.slice(0, 320);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 200)).trim()}…`;
+};
+
+/**
+ * When no story can be written (the AI is down, or has nothing it can stand behind): the morning's
+ * lead item as the headline, with its own words under it, and the other top links.
+ */
 export function headlinesStory(items: StoryItem[]): MorningStory {
+  const lead = leadItem(items);
+  const rest = items.filter((i) => i.n !== lead?.n);
   return {
     kind: "headlines",
-    headline: null,
-    summary: null,
+    headline: lead ? lead.title.slice(0, 160) : null,
+    summary: lead ? leadSummary(lead) : null,
     why: null,
     rivals: null,
     line: null,
     figures: [],
-    sources: [],
+    sources: lead ? [linkOf(lead)] : [],
     rivalSources: [],
     rivalsLately: [],
     // The top two of the seat's own, then the county's and the rest, so the county is never missing.
     also: [
-      ...items.filter((i) => i.scope !== "national").slice(0, 2),
-      ...items.filter((i) => i.scope === "county").slice(0, 2),
-      ...items,
+      ...rest.filter((i) => i.scope !== "national").slice(0, 2),
+      ...rest.filter((i) => i.scope === "county").slice(0, 2),
+      ...rest,
     ]
       .filter((i, k, all) => all.findIndex((x) => x.n === i.n) === k)
       .slice(0, 6)
@@ -462,5 +508,5 @@ export function noStoryLine(loading: boolean, time: string): string {
   if (loading) return "Reading this morning's story…";
   return time < "06:00"
     ? "This morning's story is written at 6:00 from the news Listening finds."
-    : "No news about the race in the last two days.";
+    : "No news about the race in the last week.";
 }

@@ -11,6 +11,7 @@ import {
   cleanTeamStory,
   headlinesStory,
   kicker,
+  leadItem,
   noStoryLine,
   storyFromRow,
   storyItems,
@@ -119,10 +120,94 @@ eq("an answer that isn't one", checkStory("nonsense", ITEMS), null);
 
 const top = headlinesStory(ITEMS);
 eq(
-  "no story: the morning's top links",
-  [top.kind, top.headline, top.also.length],
-  ["headlines", null, 3],
+  "no story: the lead, with its own words, and the morning's other links",
+  [top.kind, top.headline, top.summary, top.sources.map((l) => l.url), top.also.length],
+  [
+    "headlines",
+    "Rationing extended in 14 Eastlands wards",
+    "Supply cut to 1.1 million residents.",
+    ["https://nation.africa/rationing"],
+    2,
+  ],
 );
+eq(
+  "the lead is not listed again among the others",
+  top.also.some((a) => a.url === "https://nation.africa/rationing"),
+  false,
+);
+eq(
+  "no news at all: no lead, and nothing made up",
+  (() => {
+    const none = headlinesStory([]);
+    return [none.headline, none.summary, none.sources.length, none.also.length, none.from];
+  })(),
+  [null, null, 0, 0, 0],
+);
+
+// The lead: local first, but never local only, and never a bare link while a sentence exists.
+{
+  const item = (n: number, scope: "seat" | "county" | "rival" | "national", text: string) => ({
+    n,
+    title: `Title ${n}`,
+    url: `https://example.test/${n}`,
+    source: "news",
+    publishedAt: null,
+    scope,
+    text: `Title ${n} ${text}`.trim(),
+  });
+  const body = "A full sentence of what happened, with detail.";
+  eq(
+    "the seat's own, when it says something",
+    leadItem([item(1, "national", body), item(2, "seat", body)])?.n,
+    2,
+  );
+  eq(
+    "a quiet seat leads with the county, not a bare local link",
+    leadItem([item(1, "seat", ""), item(2, "county", body), item(3, "national", body)])?.n,
+    2,
+  );
+  eq(
+    "and with the nation when the county has nothing either",
+    leadItem([item(1, "seat", ""), item(2, "national", body)])?.n,
+    2,
+  );
+  eq(
+    "with no sentence anywhere, the first there is",
+    leadItem([item(1, "seat", ""), item(2, "county", "")])?.n,
+    1,
+  );
+  eq("no items, no lead", leadItem([]), null);
+
+  const two = headlinesStory([
+    item(1, "seat", "Supply cut to 1.1 million residents. Rains are due Friday. A third line."),
+  ]);
+  eq(
+    "the summary is the lead's first two sentences, and a decimal does not end one",
+    two.summary,
+    "Supply cut to 1.1 million residents. Rains are due Friday.",
+  );
+  const long = headlinesStory([item(1, "seat", `${"word ".repeat(120)}end.`)]);
+  eq(
+    "a long one is cut at a word",
+    [long.summary!.endsWith("…"), long.summary!.length <= 321, /word…$/.test(long.summary!)],
+    [true, true, true],
+  );
+  const stored = storyFromRow(
+    {
+      day: "2026-09-30",
+      story: two,
+      written_by: "groundwork",
+      created_at: "2026-09-30T03:04:00Z",
+      edited_at: null,
+    },
+    null,
+  );
+  eq(
+    "a headlines story with a lead survives being stored and read back",
+    [stored?.story.kind, stored?.story.headline, stored?.story.sources[0]?.url],
+    ["headlines", "Title 1", "https://example.test/1"],
+  );
+}
 
 const own = cleanTeamStory(
   {
@@ -208,7 +293,7 @@ eq(
   [
     "Reading this morning's story…",
     "This morning's story is written at 6:00 from the news Listening finds.",
-    "No news about the race in the last two days.",
+    "No news about the race in the last week.",
   ],
 );
 

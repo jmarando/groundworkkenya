@@ -64,12 +64,11 @@ export function spokenHome(o: {
     if (st.why) out.push(`Why it matters to your campaign: ${st.why}`);
     if (st.rivals) out.push(`What rivals are saying: ${st.rivals}`);
     if (st.line) out.push(`For your next conversation, a suggested line: ${st.line}`);
-  } else if (st?.kind === "headlines" && st.also.length) {
+  } else if (st?.kind === "headlines" && (st.headline || st.also.length)) {
+    // The lead first, then the others: the morning's headlines lead with what leads the page.
+    const spoken = [st.headline, ...st.also.map((a) => a.title)].filter(Boolean).slice(0, 3);
     out.push(
-      `${earlier ? `Today's headlines are not in yet. ${spokenDate(earlier)}'s` : "First, the headlines"}: ${st.also
-        .slice(0, 3)
-        .map((a) => a.title)
-        .join(". ")}.`,
+      `${earlier ? `Today's headlines are not in yet. ${spokenDate(earlier)}'s` : "First, the headlines"}: ${spoken.join(". ")}.`,
     );
   }
   if (o.verdict) out.push(`Now, the race. ${o.verdict}`);

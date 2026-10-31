@@ -1,5 +1,5 @@
 // This morning's story, written once a day for each campaign from the news
-// Listening found in the last two days (server only). It rides on the hourly call
+// Listening found in the last two days, or the last week when those were thin (server only). It rides on the hourly call
 // and keeps its own clock: its first run at or after 06:00 Nairobi time. A
 // story already there (the team's, or an earlier run's) is never replaced. The
 // shared job row says what happened in counts only.
@@ -32,6 +32,9 @@ const JOB_KEY = "morning_story";
 
 /** 06:00 on a Nairobi day, as a moment. */
 const sixOn = (day: string) => Date.parse(`${day}T06:00:00+03:00`);
+
+/** 20:00 on a Nairobi day: after it, a morning that fell back to headlines is left as it is. */
+const eveningOn = (day: string) => Date.parse(`${day}T20:00:00+03:00`);
 
 /** How long a provider pause keeps the AI off before it is tried again. */
 const PROBE_AFTER = 6 * 3600_000;
@@ -102,8 +105,13 @@ export const countyOf = (c: CampaignInfo): string | null => {
   return k ? k.charAt(0).toUpperCase() + k.slice(1) : null;
 };
 
+/** Fewer fresh items than this and the morning reaches back a week, so it is never left empty. */
+const THIN = 6;
+
 export type Gathered = {
   items: StoryItem[];
+  /** How far back the items reach: two days, or a week when the last two were thin. */
+  days: number;
   /** What rivals (not our candidate) posted in the last week, said in a line each. */
   said: string[];
   /** The same posts, as links, newest first. */
@@ -124,7 +132,7 @@ export async function gather(sb: Client, campaignId: string | null, now: Date): 
     campaignId
       ? (q as unknown as { eq: (c: string, v: string) => T }).eq("campaign_id", campaignId)
       : q;
-  const [{ data: rows }, { data: rivals }, { data: posts }] = await Promise.all([
+  const newsSince = (since: string) =>
     own(
       sb
         .from("listening_mentions")
@@ -132,10 +140,12 @@ export async function gather(sb: Client, campaignId: string | null, now: Date): 
           "title, snippet, url, source, domain, published_at, found_at, issue, listening_topics(kind, label)",
         )
         .is("rival_id", null)
-        .gte("found_at", since48),
+        .gte("found_at", since),
     )
       .order("found_at", { ascending: false })
-      .limit(240),
+      .limit(240);
+  const [{ data: rows }, { data: rivals }, { data: posts }] = await Promise.all([
+    newsSince(since48),
     own(sb.from("race_rivals").select("id, name, is_us")),
     own(
       sb
@@ -162,15 +172,29 @@ export async function gather(sb: Client, campaignId: string | null, now: Date): 
       published_at: string | null;
     }[]
   ).filter((p) => names.has(p.rival_id) && p.title && /^https?:\/\//i.test(p.url));
-  const mentions = (
-    (rows ?? []) as (MentionRow & { listening_topics: { kind: string; label: string } | null })[]
-  ).map(({ listening_topics: t, ...r }) => ({
-    ...r,
-    kind: t?.kind ?? null,
-    label: t?.label ?? null,
-  }));
+  const asMentions = (data: unknown) =>
+    (
+      (data ?? []) as (MentionRow & { listening_topics: { kind: string; label: string } | null })[]
+    ).map(({ listening_topics: t, ...r }) => ({
+      ...r,
+      kind: t?.kind ?? null,
+      label: t?.label ?? null,
+    }));
+  let items = storyItems(asMentions(rows));
+  let days = 2;
+  // A quiet seat (a ward with little coverage, a night with none) still gets a morning: reach back
+  // a week, newest first, and let the dates on the items say how old they are.
+  if (items.length < THIN) {
+    const { data: wider } = await newsSince(since7d);
+    const more = storyItems(asMentions(wider));
+    if (more.length > items.length) {
+      items = more;
+      days = 7;
+    }
+  }
   return {
-    items: storyItems(mentions),
+    items,
+    days,
     said: theirs.map(
       (p) =>
         `${names.get(p.rival_id)} on ${p.source}, ${p.published_at?.slice(0, 10) ?? "undated"}: "${p.title!.slice(0, 200)}"`,
@@ -199,11 +223,18 @@ function storyPrompt(c: CampaignInfo, g: Gathered, lead?: string): string {
         : SCOPE_NAMES[i.scope ?? "seat"];
   return [
     `You write the morning briefing for the campaign of ${who}, running for ${c.seat}.`,
-    "Below are the news and social posts found in the last two days, numbered, each marked with",
+    g.days > 2
+      ? "Below are the news and social posts found in the last week, newest first, numbered, each marked with"
+      : "Below are the news and social posts found in the last two days, numbered, each marked with",
     `where it comes from: the seat itself, ${county ? `${county} County` : "the county"}, a rival, or the national news. Use only these.`,
+    ...(g.days > 2
+      ? [
+          "The seat has been quiet, so some items are a few days old: prefer the newest, and say so when a story is not from today.",
+        ]
+      : []),
     leadItem
       ? `Write the story around item ${leadItem.n}.`
-      : `Pick the one story that most shapes ${who}'s race this morning: the seat first, then ${county ?? "the county"}'s politics and services, then national news only where it lands on the seat.`,
+      : `Pick the one story that most shapes ${who}'s race this morning. Lead with the seat's own news when something there matters, but do not fixate on it: when ${county ?? "the county"}'s politics and services, a rival's move or a national development shapes the race more, lead with that and say how it lands on the seat. A quiet seat is no reason for no story: the county and the nation still make one.`,
     "Ignore adverts, job listings, items for sale and posts about other counties or constituencies.",
     "Give: a plain headline under 12 words; a summary of two or three sentences of what happened,",
     "naming the outlet or account that reported it (never 'item 6');",
@@ -214,7 +245,7 @@ function storyPrompt(c: CampaignInfo, g: Gathered, lead?: string): string {
     `one line ${who} could say; up to three figures copied exactly from an item's text, each with`,
     "that item's number; the numbers of the items the story rests on; and four to six other items",
     `worth knowing, each with one line on why it matters, including ${county ? `${county} County` : "county"} stories whenever any bear on residents.`,
-    "If nothing bears on the race or the county, set noStory to true and leave the rest empty.",
+    "Set noStory to true only when no item at all bears on the race, the county or the nation, and leave the rest empty.",
     "Plain English. Invent no facts, figures or quotes.",
     "",
     `Rivals in the race: ${g.rivals.join(", ") || "none on record"}.`,
@@ -249,7 +280,7 @@ export type MorningRun = {
   ran: boolean;
   written: number;
   headlines: number;
-  /** Campaigns with no news in the last two days. */
+  /** Campaigns with no news in the last week. */
   quiet: number;
   /** Campaigns whose story was already there. */
   kept: number;
@@ -328,10 +359,16 @@ export async function runMorningStory(
       .eq("campaign_id", c.id)
       .eq("day", day)
       .maybeSingle();
-    if (
-      have &&
-      (have.written_by === "team" || have.story?.kind === "written" || Number(have.story?.from) > 0)
-    ) {
+    const settled = have && (have.written_by === "team" || have.story?.kind === "written");
+    // Headlines saved because the AI failed that morning are not the day's last word: each run
+    // tries the AI again until the evening, and the story replaces them the moment one holds up.
+    const retrying =
+      Boolean(have) &&
+      !settled &&
+      Number(have.story?.from) > 0 &&
+      !paused &&
+      now.getTime() < eveningOn(day);
+    if (settled || (have && Number(have.story?.from) > 0 && !retrying)) {
       out.kept++;
       continue;
     }
@@ -357,7 +394,7 @@ export async function runMorningStory(
               .update(quietRow)
               .eq("id", have.id)
               .eq("written_by", "groundwork")
-              .eq("story->>from", "0")
+              .eq("story->>kind", "headlines")
           : await sb
               .from("morning_stories")
               .upsert(quietRow, { onConflict: "campaign_id,day", ignoreDuplicates: true });
@@ -388,7 +425,7 @@ export async function runMorningStory(
           .update(row)
           .eq("id", have.id)
           .eq("written_by", "groundwork")
-          .eq("story->>from", "0")
+          .eq("story->>kind", "headlines")
       : await sb
           .from("morning_stories")
           .upsert(
@@ -403,7 +440,7 @@ export async function runMorningStory(
       out.written && `Wrote ${count(out.written, "story", "stories")}.`,
       out.headlines &&
         `${count(out.headlines, "campaign", "campaigns")} got the top headlines instead.`,
-      out.quiet && `${count(out.quiet, "campaign", "campaigns")} had no news in the last two days.`,
+      out.quiet && `${count(out.quiet, "campaign", "campaigns")} had no news in the last week.`,
       ...out.notes,
     ]
       .filter(Boolean)

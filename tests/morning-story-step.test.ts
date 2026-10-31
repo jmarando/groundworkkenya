@@ -80,6 +80,7 @@ function world(now: Date, extra: Record<string, Record<string, unknown>[]> = {})
     campaigns: [
       { id: "c2", name: "Sakaja 2027", candidate: "Johnson Sakaja", seat: "Governor · Nairobi" },
       { id: "c3", name: "Waruru Gikandi", candidate: "Waruru Gikandi", seat: "MP · Mathira" },
+      { id: "c4", name: "Quiet Place", candidate: "A. Candidate", seat: "MCA · Quiet Ward" },
     ],
     listening_mentions: [
       mention(
@@ -98,6 +99,7 @@ function world(now: Date, extra: Record<string, Record<string, unknown>[]> = {})
       ),
       mention("c2", "https://www.tiktok.com/@sakaja/video/2", "Our own post", 10, "r-us"),
       mention("c3", "https://mathira.test/tea", "Mathira tea prices", 50),
+      mention("c4", "https://quiet.test/old", "Old news from a quiet place", 200),
     ],
     race_rivals: [
       { id: "r-babu", campaign_id: "c2", name: "Babu Owino", is_us: false },
@@ -128,7 +130,7 @@ async function main() {
     eq(
       "a story for the campaign with news",
       [stories(sb).length, s?.["campaign_id"], s?.["day"], s?.["written_by"]],
-      [2, "c2", "2026-09-30", "groundwork"],
+      [3, "c2", "2026-09-30", "groundwork"],
     );
     const story = s?.["story"] as {
       headline: string;
@@ -147,27 +149,36 @@ async function main() {
     );
     eq(
       "nor another campaign's news",
-      prompts.some((p) => p.includes("Mathira tea prices")),
-      false,
+      [prompts[0]?.includes("Mathira tea prices"), prompts[0]?.includes("Quiet place")],
+      [false, false],
     );
-    eq("a campaign with no news that day gets none", [r.written, r.quiet], [1, 1]);
+    eq(
+      "a quiet seat reaches back a week rather than going without",
+      [
+        prompts[1]?.includes("Mathira tea prices"),
+        prompts[1]?.includes("found in the last week"),
+        prompts[0]?.includes("found in the last two days"),
+      ],
+      [true, true, true],
+    );
+    eq("a campaign with nothing even in a week gets none", [r.written, r.quiet], [2, 1]);
     const detail = String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "");
     eq(
       "the shared note names no campaign",
       [detail, /Sakaja|Mathira/.test(detail)],
-      ["Wrote 1 story. · 1 campaign had no news in the last two days.", false],
+      ["Wrote 2 stories. · 1 campaign had no news in the last week.", false],
     );
 
     const again = await runMorningStory(sb as never, { now: at("07:05") });
     eq(
       "a second call only checks missing-source campaigns without AI",
       [again.ran, prompts.length],
-      [true, 1],
+      [true, 2],
     );
 
     const tomorrow = at("06:10", "2026-10-01");
     const next = await runMorningStory(sb as never, { now: tomorrow });
-    eq("the next morning writes again", [next.ran, stories(sb).length], [true, 4]);
+    eq("the next morning writes again", [next.ran, stories(sb).length], [true, 6]);
   }
   {
     const now = at("06:05");
@@ -192,7 +203,7 @@ async function main() {
         r.kept,
         prompts.length,
       ],
-      [2, "Ours", 1, 0],
+      [3, "Ours", 1, 1],
     );
   }
   {
@@ -201,10 +212,11 @@ async function main() {
     stubAi(500);
     const r = await runMorningStory(sb as never, { now });
     const story = stories(sb)[0]?.["story"] as { kind: string; also: unknown[] };
+    const lead = story as unknown as { headline: string; summary: string };
     eq(
-      "the AI down: the morning's headlines instead",
-      [r.headlines, story.kind, story.also.length],
-      [1, "headlines", 2],
+      "the AI down: the morning's headlines instead, with the lead's own words on top",
+      [r.headlines, story.kind, story.also.length, lead.headline, lead.summary],
+      [2, "headlines", 1, "Rationing extended in 14 Eastlands wards", "Supply cut to 1.1 million."],
     );
   }
   {
@@ -286,7 +298,60 @@ async function main() {
     eq(
       "an old pause is tried again and lifts when the AI answers",
       [r.written, prompts.length, job?.["status"]],
-      [1, 1, "idle"],
+      [2, 2, "idle"],
+    );
+  }
+  {
+    // The AI fails at six: the morning holds headlines. When it answers later, the story replaces them.
+    const sb = world(at("06:05"));
+    stubAi(500);
+    await runMorningStory(sb as never, { now: at("06:05") });
+    const kindOf = (campaign: string) =>
+      (stories(sb).find((x) => x["campaign_id"] === campaign)?.["story"] as { kind: string })?.kind;
+    eq("the AI down at six: headlines", [kindOf("c2"), kindOf("c3")], ["headlines", "headlines"]);
+    const prompts = stubAi();
+    const later = await runMorningStory(sb as never, { now: at("07:05") });
+    eq(
+      "answering an hour later, it writes the story over the headlines",
+      [later.written, kindOf("c2"), kindOf("c3"), stories(sb).length],
+      [2, "written", "written", 3],
+    );
+    eq("and asked once for each campaign", prompts.length, 2);
+    const noMore = await runMorningStory(sb as never, { now: at("08:05") });
+    eq("a written story is not written again", [noMore.kept, prompts.length], [2, 2]);
+  }
+  {
+    // Not in the evening: after 20:00 a morning that fell back to headlines is left as it is.
+    const sb = world(at("06:05"));
+    stubAi(500);
+    await runMorningStory(sb as never, { now: at("06:05") });
+    const prompts = stubAi();
+    const evening = await runMorningStory(sb as never, { now: at("20:05") });
+    eq("no retry in the evening", [evening.kept, evening.written, prompts.length], [2, 0, 0]);
+  }
+  {
+    // What the AI is told: lead with the seat, but do not fixate on it.
+    const sb = world(at("06:05"));
+    const prompts = stubAi();
+    await runMorningStory(sb as never, { now: at("06:05") });
+    const told = prompts[0] ?? "";
+    eq(
+      "lead with local without fixating on it",
+      [
+        told.includes("Lead with the seat's own news when something there matters"),
+        told.includes("do not fixate on it"),
+        told.includes("a national development shapes the race more"),
+        told.includes("national news only where it lands on the seat"),
+      ],
+      [true, true, true, false],
+    );
+    eq(
+      "a quiet seat is no reason for no story",
+      [
+        told.includes("A quiet seat is no reason for no story"),
+        told.includes("only when no item at all"),
+      ],
+      [true, true],
     );
   }
   console.log(`${pass} passed, ${fail} failed`);
