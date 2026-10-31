@@ -3,7 +3,7 @@
 // the AI (Gemini) and ScrapeCreators; nothing leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/listening.test.ts
 
-import { runListeningScan } from "@/lib/listening.server";
+import { runListeningScan, takeBackupNote } from "@/lib/listening.server";
 import { OUTLET_FEEDS } from "@/lib/news-feeds";
 import { dailyCredits } from "@/lib/social-credits";
 
@@ -338,6 +338,55 @@ async function main() {
       [r.paused, sb.tables["listening_jobs"]?.[0]?.["status"]],
       [undefined, "idle"],
     );
+  }
+  {
+    // With a key for Claude, a Gemini that cannot answer pauses nothing: Haiku reads, and the job says so.
+    process.env["ANTHROPIC_API_KEY"] = "claude-key";
+    takeBackupNote();
+    const dayUsed = JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded.",
+        details: [
+          {
+            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+            violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }],
+          },
+        ],
+      },
+    });
+    const claudeNoMoods = JSON.stringify({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      stop_reason: "tool_use",
+      content: [{ type: "tool_use", id: "toolu_1", name: "answer", input: { results: [] } }],
+    });
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search(["https://news.test/a"]) }
+        : u.includes("generativelanguage")
+          ? { status: 429, body: dayUsed }
+          : u.includes("api.anthropic.com")
+            ? { body: claudeNoMoods }
+            : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "with Claude as the backup a used-up Gemini day does not pause the sweep",
+      [r.paused, sb.tables["listening_jobs"]?.[0]?.["status"]],
+      [undefined, "idle"],
+    );
+    eq(
+      "and the job says the backup AI read the posts",
+      String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "").includes(
+        "Gemini could not answer (its limit was reached), so Claude Haiku, the backup AI, gave 1 answer.",
+      ),
+      true,
+    );
+    delete process.env["ANTHROPIC_API_KEY"];
   }
   {
     const badKey = JSON.stringify({

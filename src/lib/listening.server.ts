@@ -8,8 +8,16 @@
  * cron route.
  */
 
-import { answerFault } from "./ai-answer";
+import { type AiAnswer, answerFault } from "./ai-answer";
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
+import {
+  CLAUDE_MODELS,
+  CLAUDE_URL,
+  CLAUDE_VERSION,
+  claudeAnswer,
+  claudeBody,
+  claudeError,
+} from "./claude";
 import {
   type AiTier,
   GEMINI_MODELS,
@@ -318,24 +326,14 @@ async function askGemini(
   }
 }
 
-/**
- * One structured answer from Gemini (Google's AI, on the campaign's own key, GEMINI_API_KEY),
- * parsed. `tier` picks the models: "read" for posts in bulk, "write" for anything written for a
- * person; when Google says one is busy, the tier's next model is asked. An answer that runs past
- * `timeoutMs`, is cut off or fails says so in its error ("AI took too long", "AI answer cut off",
- * "AI answer failed"); src/lib/ai-answer.ts puts those in plain words. The name each caller gives
- * its schema is no longer needed and is kept for them.
- */
-export async function askAiJson<T>(
+/** The tier's Gemini models asked in turn: the next when one is busy or out of its minute. */
+async function askGeminiTier(
+  tier: AiTier,
+  key: string,
   prompt: string,
-  _name: string,
   schema: object,
-  timeoutMs = 90_000,
-  tier: AiTier = "write",
-): Promise<T> {
-  const key = process.env["GEMINI_API_KEY"];
-  if (!key) throw new PauseError("AI is not configured.");
-
+  timeoutMs: number,
+): Promise<unknown> {
   const models = GEMINI_MODELS[tier];
   let json: unknown;
   for (const [i, model] of models.entries()) {
@@ -347,8 +345,125 @@ export async function askAiJson<T>(
       throw err;
     }
   }
+  return json;
+}
 
-  const answer = geminiAnswer(json);
+/** Claude (Anthropic's AI, on ANTHROPIC_API_KEY) asked once: its reply as JSON, or an error that says what went wrong. */
+async function askClaude(
+  tier: AiTier,
+  key: string,
+  prompt: string,
+  schema: object,
+  timeoutMs: number,
+): Promise<unknown> {
+  try {
+    const res = await fetch(CLAUDE_URL, {
+      signal: AbortSignal.timeout(timeoutMs),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": CLAUDE_VERSION,
+      },
+      body: JSON.stringify(claudeBody(CLAUDE_MODELS[tier], prompt, schema)),
+    });
+    const body = await res.text();
+    if (!res.ok) throw new Error(`Claude request failed (${res.status}): ${claudeError(body)}`);
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new Error(`Claude answer unreadable (${body.length} characters, not JSON).`);
+    }
+  } catch (err) {
+    const why = (err as { name?: unknown } | null)?.name;
+    if (why === "TimeoutError" || why === "AbortError")
+      throw new Error(
+        `Claude took too long (no full answer within ${Math.round(timeoutMs / 1000)} s).`,
+      );
+    throw err;
+  }
+}
+
+/** Whether Gemini's failure is one Claude may cover: a limit, a key or plan turned away, busy or too slow. */
+const geminiGaveWay = (err: unknown): boolean =>
+  err instanceof PauseError ||
+  err instanceof BusyError ||
+  (err instanceof Error && err.message.startsWith("AI took too long"));
+
+/** Why Gemini gave way, in a few words for the sweep's note. */
+const gaveWayBecause = (err: unknown): string =>
+  err instanceof PauseError
+    ? err.status === 429
+      ? "its limit was reached"
+      : "its key or plan was refused"
+    : err instanceof BusyError
+      ? "it was busy"
+      : "it was too slow";
+
+/** What the backup AI has answered since the sweep last said so, and the first reason Gemini gave way. */
+const backupUse = { answers: 0, why: "" };
+
+/**
+ * Said once to the sweep: Gemini could not answer, and Claude Haiku, the backup AI, did (that costs
+ * money on the Anthropic account, so it is never silent). Null when the backup was not used.
+ */
+export function takeBackupNote(): string | null {
+  const { answers, why } = backupUse;
+  backupUse.answers = 0;
+  backupUse.why = "";
+  return answers
+    ? `Gemini could not answer (${why}), so Claude Haiku, the backup AI, gave ${answers} ${answers === 1 ? "answer" : "answers"}.`
+    : null;
+}
+
+/** Gemini's failure with the backup's own failure added, as the same kind of error. */
+function bothFailed(err: unknown, backupErr: unknown): Error {
+  const also = `The backup AI also failed: ${(backupErr as Error).message}`;
+  return err instanceof PauseError
+    ? new PauseError(`${err.reason} · ${also}`, err.status)
+    : new Error(`${(err as Error).message} · ${also}`);
+}
+
+/**
+ * One structured answer from Gemini (Google's AI, on the campaign's own key, GEMINI_API_KEY),
+ * parsed. `tier` picks the models: "read" for posts in bulk, "write" for anything written for a
+ * person; when Google says one is busy, the tier's next model is asked. When Gemini cannot answer at
+ * all (a limit reached, the key or plan turned away, every model busy, too slow) and there is a key
+ * for Claude (ANTHROPIC_API_KEY), Haiku is asked instead and the sweep is told (takeBackupNote); with
+ * no Gemini key Claude is the AI. An answer that runs past `timeoutMs`, is cut off or fails says so
+ * in its error ("AI took too long", "AI answer cut off", "AI answer failed"); src/lib/ai-answer.ts
+ * puts those in plain words. The name each caller gives its schema is no longer needed and is kept
+ * for them.
+ */
+export async function askAiJson<T>(
+  prompt: string,
+  _name: string,
+  schema: object,
+  timeoutMs = 90_000,
+  tier: AiTier = "write",
+): Promise<T> {
+  const key = process.env["GEMINI_API_KEY"];
+  const backup = process.env["ANTHROPIC_API_KEY"];
+  if (!key && !backup) throw new PauseError("AI is not configured.");
+
+  let answer: AiAnswer;
+  if (key) {
+    try {
+      answer = geminiAnswer(await askGeminiTier(tier, key, prompt, schema, timeoutMs));
+    } catch (err) {
+      if (!backup || !geminiGaveWay(err)) throw err;
+      try {
+        answer = claudeAnswer(await askClaude(tier, backup, prompt, schema, timeoutMs));
+      } catch (backupErr) {
+        throw bothFailed(err, backupErr);
+      }
+      backupUse.answers += 1;
+      backupUse.why ||= gaveWayBecause(err);
+    }
+  } else {
+    answer = claudeAnswer(await askClaude(tier, backup as string, prompt, schema, timeoutMs));
+  }
+
   const fault = answerFault(answer);
   if (fault) throw new Error(fault);
   try {
@@ -724,6 +839,10 @@ export async function runListeningScan(
     notes.push((err as Error).message);
     shared.push("The sweep stopped early on an error.");
   }
+
+  // The backup AI costs money on its own account, so a sweep it helped says so.
+  const backupNote = takeBackupNote();
+  if (backupNote) shared.push(backupNote);
 
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const counts = [
