@@ -355,6 +355,11 @@ async function main() {
       [true, true],
     );
     eq(
+      "a field with nothing to say is left empty, not filled with a placeholder",
+      told.includes("never write 'placeholder'"),
+      true,
+    );
+    eq(
       "reports lead and posts show the mood",
       [
         told.includes("Reports by news outlets say what happened"),

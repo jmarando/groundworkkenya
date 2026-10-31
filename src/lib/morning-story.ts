@@ -69,6 +69,15 @@ const clip = (v: unknown, max: number): string | null => {
   return s ? s.slice(0, max) : null;
 };
 
+/** What a model writes when it has nothing to say: not a sentence, so not shown. */
+const NOTHING = /^\W*(placeholder|n\/?a|none|nil|null|tbd|unknown|nothing)\W*$/i;
+
+/** `clip`, but "placeholder", "n/a" and the like count as nothing. */
+const said = (v: unknown, max: number): string | null => {
+  const s = clip(v, max);
+  return s && !NOTHING.test(s) ? s : null;
+};
+
 const linkOf = (i: StoryItem): StoryLink => ({
   title: i.title,
   url: i.url,
@@ -229,8 +238,8 @@ export function checkStory(answer: unknown, items: StoryItem[]): MorningStory | 
   const lead = [...new Set(Array.isArray(a.items) ? a.items.map(Number) : [])]
     .map((n) => byN.get(n))
     .filter((i): i is StoryItem => Boolean(i));
-  const headline = clip(a.headline, 160);
-  const summary = clip(a.summary, 800);
+  const headline = said(a.headline, 160);
+  const summary = said(a.summary, 800);
   if (!lead.length || !headline || !summary) return null;
 
   const figures = list(a.figures)
@@ -250,7 +259,7 @@ export function checkStory(answer: unknown, items: StoryItem[]): MorningStory | 
       const i = byN.get(Number(x["item"]));
       if (!i || used.has(i.n)) return [];
       used.add(i.n);
-      return [{ ...linkOf(i), soWhat: clip(x["soWhat"], 200) }];
+      return [{ ...linkOf(i), soWhat: said(x["soWhat"], 200) }];
     })
     .slice(0, 5);
 
@@ -259,16 +268,16 @@ export function checkStory(answer: unknown, items: StoryItem[]): MorningStory | 
     .filter((i): i is StoryItem => Boolean(i))
     .slice(0, 3)
     .map(linkOf);
-  const rivals = clip(a.rivals, 400);
+  const rivals = said(a.rivals, 400);
 
   return {
     kind: "written",
     headline,
     summary,
-    why: clip(a.why, 400),
+    why: said(a.why, 400),
     // "Nothing from the rivals" is said by leaving the line out, not by printing it.
     rivals: rivals && !NO_RIVALS.test(rivals) ? rivals : null,
-    line: clip(a.line, 300),
+    line: said(a.line, 300),
     figures,
     sources: lead.slice(0, 5).map(linkOf),
     rivalSources: rivals && !NO_RIVALS.test(rivals) ? rivalSources : [],
