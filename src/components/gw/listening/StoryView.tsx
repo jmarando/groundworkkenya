@@ -2,6 +2,7 @@
 // carried it, and what to do. Plain code decides every line (src/lib/stories.ts); this only shows
 // it. "First seen" is the first post we found, not proof of who started it, and the screen says so.
 // Pure; the data comes from StoryPanel.
+import type { BriefFocus } from "@/lib/big-voices";
 import { dayTime, nf, short } from "@/lib/format";
 import { sourceName } from "@/lib/listening-read";
 import {
@@ -11,6 +12,7 @@ import {
   placeOf,
   platformSplit,
   soWhat,
+  storyFocus,
   storyMood,
   trendOf,
   viewsCurve,
@@ -114,8 +116,8 @@ export function StoryView({
   back: () => void;
   /** Drafts a reaction to the story's most-seen post. */
   react?: (mentionId: string, storyId?: string) => void;
-  /** Opens the big voices to brief. */
-  brief?: () => void;
+  /** Opens the big voices to brief: this story's column, its issue. */
+  brief?: (focus: BriefFocus) => void;
   /** Marks the story handled. */
   handle?: () => void;
   busy?: boolean;
@@ -244,7 +246,11 @@ export function StoryView({
             </button>
           )}
           {brief && (
-            <button type="button" className="btn btn--sm" onClick={brief}>
+            <button
+              type="button"
+              className="btn btn--sm"
+              onClick={() => brief(storyFocus(posts, story.issue))}
+            >
               Brief voices →
             </button>
           )}

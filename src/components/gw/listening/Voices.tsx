@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 
 import { BigVoicesPanel } from "@/components/gw/listening/BigVoicesPanel";
 import { Drill, type React } from "@/components/gw/listening/Overview";
-import type { BigVoice } from "@/lib/big-voices";
+import type { BigVoice, BriefFocus } from "@/lib/big-voices";
 import { getListeningPosts } from "@/lib/listening-history.functions";
 import { nf } from "@/lib/format";
 import type { Mention } from "@/lib/listening.functions";
@@ -33,11 +33,16 @@ export function Voices({
   busy,
   mark,
   react,
+  briefFocus,
+  clearBriefFocus,
 }: {
   mentions: Mention[];
   busy: boolean;
   mark: Mark;
   react?: React;
+  /** Set when a story's Brief voices opened this tab: its level, and its issue. */
+  briefFocus?: BriefFocus | null;
+  clearBriefFocus?: () => void;
 }) {
   const [days, setDays] = useState(30);
   const [focus, setFocus] = useState<Focus | null>(null);
@@ -119,7 +124,13 @@ export function Voices({
         ))}
       </div>
 
-      <BigVoicesPanel days={days} open={(v) => void openBig(v)} react={react} />
+      <BigVoicesPanel
+        days={days}
+        open={(v) => void openBig(v)}
+        react={react}
+        focus={briefFocus ?? undefined}
+        clearFocus={clearBriefFocus}
+      />
       {opening && <p className="f-note">Opening posts…</p>}
       {openError && (
         <p className="f-note" role="alert">

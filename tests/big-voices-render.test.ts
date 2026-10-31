@@ -32,6 +32,7 @@ const voice = (name: string, o: Partial<BigVoice> = {}): BigVoice => ({
   posts: 3,
   seen: null,
   topIssues: [],
+  issues: [],
   read: 0,
   warm: 0,
   angry: 0,
@@ -248,6 +249,68 @@ const render = (d: BigVoicesData, props: Record<string, unknown> = {}) =>
     { brief: () => undefined, react: () => undefined },
   );
   ok("someone who cannot brief sees no Brief", !/Brief/.test(cannot), cannot);
+}
+
+// ---- a story's Brief voices: the focus
+{
+  const recruit = (name: string, issues: string[]) =>
+    voice(name, { move: "recruit", read: 3, warm: 3, towardsWarm: 1, towardsAngry: 0, issues });
+  const d = data(
+    [
+      column({
+        level: "seat",
+        label: "Githunguri",
+        accounts: [recruit("@wet", ["water"]), recruit("@dry", ["roads"])],
+      }),
+      column({ level: "county", label: "Kiambu", accounts: [recruit("@far", ["water"])] }),
+    ],
+    { canBrief: true },
+  );
+  const focused = render(d, {
+    focus: { level: "seat", issue: "water" },
+    clearFocus: () => undefined,
+    brief: () => undefined,
+  });
+  ok(
+    "it says what it is showing",
+    /Showing recruit voices in your seat who posted about water/.test(focused),
+    focused,
+  );
+  ok("only that level is shown", /Githunguri/.test(focused) && !/Kiambu/.test(focused), focused);
+  ok(
+    "only the recruit voice on the issue is listed",
+    /@wet/.test(focused) && !/@dry|@far/.test(focused),
+    focused,
+  );
+  ok("the whole list is one tap away", /Show all voices/.test(focused), focused);
+  ok("the voice can still be briefed", />Brief</.test(focused), focused);
+  const noClear = render(d, { focus: { level: "seat", issue: "water" } });
+  ok("without a way back there is no button for it", !/Show all voices/.test(noClear), noClear);
+
+  const none = render(d, {
+    focus: { level: "seat", issue: "schools" },
+    clearFocus: () => undefined,
+  });
+  ok(
+    "when nobody fits it says so, with the days",
+    /No recruit voice in your seat has posted about schools in the last 30 days/.test(none),
+    none,
+  );
+  const country = render(d, {
+    focus: { level: "country", issue: null },
+    clearFocus: () => undefined,
+  });
+  ok(
+    "a level with no column says so too, without an issue",
+    /No recruit voice in the country in the last 30 days/.test(country),
+    country,
+  );
+  const plain = render(d);
+  ok(
+    "with no focus both columns are shown, as before",
+    /Githunguri/.test(plain) && /Kiambu/.test(plain) && !/Showing recruit voices/.test(plain),
+    plain,
+  );
 }
 
 console.log(`${pass} passed, ${fail} failed`);

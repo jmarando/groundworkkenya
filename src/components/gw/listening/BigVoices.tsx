@@ -4,7 +4,14 @@
 // what it published. Pure; the data comes from BigVoicesPanel.
 import { useState } from "react";
 
-import type { BigVoice, Column, Level, Move } from "@/lib/big-voices";
+import {
+  focusColumns,
+  type BigVoice,
+  type BriefFocus,
+  type Column,
+  type Level,
+  type Move,
+} from "@/lib/big-voices";
 import type { BigVoicesData } from "@/lib/big-voices.functions";
 import { nf, shortDay, short } from "@/lib/format";
 import { sourceName } from "@/lib/listening-read";
@@ -29,6 +36,13 @@ const LEVEL_NOTE: Record<Level, string> = {
   seat: "Found by keywords about you, your rivals and local issues",
   county: "Found by your county news keywords",
   country: "Found by your national keywords",
+};
+
+/** Where a level is, in the words of a sentence about it. */
+const LEVEL_WORD: Record<Level, string> = {
+  seat: "your seat",
+  county: "your county",
+  country: "the country",
 };
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -189,6 +203,8 @@ export function BigVoicesView({
   open,
   brief,
   react,
+  focus,
+  clearFocus,
 }: {
   data: BigVoicesData;
   open: (v: BigVoice) => void;
@@ -196,7 +212,15 @@ export function BigVoicesView({
   brief?: (v: BigVoice, level: Level) => void;
   /** Drafts a reaction to a post. */
   react?: (mentionId: string) => void;
+  /** A story's Brief voices: one column, its recruit voices on the story's issue. */
+  focus?: BriefFocus;
+  /** Back to every column. */
+  clearFocus?: () => void;
 }) {
+  // With a focus a column shows only if someone fits it; otherwise the screen says none does.
+  const columns = focus
+    ? focusColumns(data.columns, focus).filter((c) => c.accounts.length > 0)
+    : data.columns;
   return (
     <div className="card" style={{ marginTop: 14 }}>
       <div className="card-head">
@@ -209,14 +233,30 @@ export function BigVoicesView({
           </p>
         </div>
       </div>
-      {data.columns.length === 0 ? (
+      {focus && (
+        <p className="f-note" role="status">
+          <span>
+            {`Showing recruit voices in ${LEVEL_WORD[focus.level]}${focus.issue ? ` who posted about ${focus.issue}` : ""}.`}
+          </span>{" "}
+          {clearFocus && (
+            <button type="button" className="linklike" onClick={clearFocus}>
+              Show all voices
+            </button>
+          )}
+        </p>
+      )}
+      {focus && columns.length === 0 ? (
+        <p className="f-note">
+          {`No recruit voice in ${LEVEL_WORD[focus.level]} ${focus.issue ? `has posted about ${focus.issue} ` : ""}in the last ${data.days} days.`}
+        </p>
+      ) : columns.length === 0 ? (
         <p className="f-note">
           No big voices yet. They appear as the sweeps find posts from accounts and outlets with a
           real audience, and as follower counts are looked up.
         </p>
       ) : (
         <div className="bv-cols">
-          {data.columns.map((c) => (
+          {columns.map((c) => (
             <ColumnView
               key={c.level}
               col={c}

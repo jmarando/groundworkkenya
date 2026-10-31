@@ -16,6 +16,7 @@ import {
   toggleAlert,
   toggleTopic,
 } from "@/lib/listening.functions";
+import type { BriefFocus } from "@/lib/big-voices";
 import { downloadCSV, stampName } from "@/lib/csv";
 import { filterMentions } from "@/lib/listening-filter";
 import { sweepProblems } from "@/lib/listening-health";
@@ -109,6 +110,8 @@ function Listening() {
     setOpenStory(id);
     void navigate({ search: id ? { story: id } : {}, replace: true });
   };
+  // A story's Brief voices opens the Voices tab on its level and issue until cleared or left.
+  const [briefFocus, setBriefFocus] = useState<BriefFocus | null>(null);
   const view = openStory ? null : tab;
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -278,6 +281,7 @@ function Listening() {
               aria-pressed={tab === x.key}
               onClick={() => {
                 if (openStory) showStory(null);
+                setBriefFocus(null);
                 setTab(x.key);
               }}
             >
@@ -291,8 +295,9 @@ function Listening() {
             id={openStory}
             back={() => showStory(null)}
             react={react}
-            brief={() => {
+            brief={(focus) => {
               showStory(null);
+              setBriefFocus(focus);
               setTab("voices");
             }}
           />
@@ -311,7 +316,14 @@ function Listening() {
         )}
 
         {view === "voices" && (
-          <Voices mentions={data?.mentions ?? []} busy={busy} mark={mark} react={react} />
+          <Voices
+            mentions={data?.mentions ?? []}
+            busy={busy}
+            mark={mark}
+            react={react}
+            briefFocus={briefFocus}
+            clearBriefFocus={() => setBriefFocus(null)}
+          />
         )}
 
         {view === "reactions" && <Reactions openId={openReaction} />}
