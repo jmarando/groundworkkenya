@@ -5,7 +5,7 @@
 // shared job row says what happened in counts only.
 
 import { nairobiToday } from "@/lib/nairobi-date";
-import { askAiJson, PauseError } from "@/lib/listening.server";
+import { askAiJson, PauseError, takeBackupNote } from "@/lib/listening.server";
 import {
   checkStory,
   headlinesStory,
@@ -443,6 +443,7 @@ export async function runMorningStory(
         `${count(out.headlines, "campaign", "campaigns")} got the top headlines instead.`,
       out.quiet && `${count(out.quiet, "campaign", "campaigns")} had no news in the last week.`,
       ...out.notes,
+      takeBackupNote(),
     ]
       .filter(Boolean)
       .join(" · ") || null;

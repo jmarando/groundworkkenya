@@ -4,6 +4,7 @@
 // the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/morning-story-step.test.ts
 
+import { takeBackupNote } from "@/lib/listening.server";
 import { runMorningStory } from "@/lib/morning-story.server";
 
 import { fakeSupabase } from "./fake-supabase";
@@ -361,6 +362,52 @@ async function main() {
       ],
       [true, true],
     );
+  }
+  {
+    // Gemini's day used up, and a key for Claude: Claude writes the stories, nothing pauses, the job says so.
+    process.env["ANTHROPIC_API_KEY"] = "claude-key";
+    takeBackupNote();
+    const now = at("06:05");
+    const sb = world(now);
+    const dayUsed = JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded.",
+        details: [
+          {
+            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+            violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }],
+          },
+        ],
+      },
+    });
+    const byClaude = JSON.stringify({
+      id: "msg_1",
+      type: "message",
+      role: "assistant",
+      stop_reason: "tool_use",
+      content: [{ type: "tool_use", id: "toolu_1", name: "answer", input: ANSWER }],
+    });
+    globalThis.fetch = (async (url: string | URL) =>
+      String(url).includes("api.anthropic.com")
+        ? new Response(byClaude, { status: 200 })
+        : new Response(dayUsed, { status: 429 })) as typeof fetch;
+    const r = await runMorningStory(sb as never, { now });
+    const job = (sb.tables["listening_jobs"] ?? []).find((j) => j["key"] === "morning_story");
+    eq(
+      "Gemini's day used up: Claude writes the stories and the AI is not paused",
+      [r.written, r.headlines, job?.["status"]],
+      [2, 0, "idle"],
+    );
+    eq(
+      "and the job says so",
+      String(job?.["detail"] ?? "").includes(
+        "Gemini could not answer (its limit was reached), so Claude Haiku, the backup AI, gave 2 answers.",
+      ),
+      true,
+    );
+    delete process.env["ANTHROPIC_API_KEY"];
   }
   {
     // The AI down: a report leads the morning, not a tweet found after it.
