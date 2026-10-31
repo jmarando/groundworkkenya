@@ -44,6 +44,7 @@ const voice = (o: Partial<BigVoice> = {}): BigVoice => ({
   posts: 12,
   seen: 41_000,
   topIssues: ["water", "roads"],
+  issues: ["water", "roads"],
   read: 6,
   warm: 3,
   angry: 1,

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { StoryView } from "@/components/gw/listening/StoryView";
 import { QueryState } from "@/components/gw/QueryState";
+import type { BriefFocus } from "@/lib/big-voices";
 import { getStory, markStoryHandled } from "@/lib/stories.functions";
 
 export function StoryPanel({
@@ -17,7 +18,7 @@ export function StoryPanel({
   id: string;
   back: () => void;
   react?: ((mentionId: string, storyId?: string) => void) | undefined;
-  brief?: () => void;
+  brief?: (focus: BriefFocus) => void;
 }) {
   const fetchStory = useServerFn(getStory);
   const mark = useServerFn(markStoryHandled);

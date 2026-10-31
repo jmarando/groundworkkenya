@@ -11,6 +11,7 @@ import {
   linksOf,
   pickups,
   placeOf,
+  storyFocus,
   platformSplit,
   sameStory,
   soWhat,
@@ -586,6 +587,33 @@ eq(
     true,
   );
 }
+
+// ---- Brief voices from a story: which column, and which issue
+eq(
+  "a local story opens the seat column, on its issue",
+  storyFocus([mention({ topicKind: "campaign" }), mention({ topicKind: "issue" })], "water"),
+  { level: "seat", issue: "water" },
+);
+eq(
+  "a county story opens the county",
+  storyFocus([mention({ topicKind: "county" }), mention({ topicKind: "county" })], "roads"),
+  { level: "county", issue: "roads" },
+);
+eq("a national story opens the country", storyFocus([mention({ topicKind: "national" })], "jobs"), {
+  level: "country",
+  issue: "jobs",
+});
+eq(
+  "a vague issue, or none, asks for no issue",
+  [
+    storyFocus([mention({ topicKind: "campaign" })], "general"),
+    storyFocus([mention({ topicKind: "campaign" })], null),
+  ],
+  [
+    { level: "seat", issue: null },
+    { level: "seat", issue: null },
+  ],
+);
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

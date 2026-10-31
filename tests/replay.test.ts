@@ -542,6 +542,7 @@ eq(
     posts: 3,
     seen: null,
     topIssues: [],
+    issues: [],
     read: 0,
     warm: 0,
     angry: 0,

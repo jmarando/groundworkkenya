@@ -6,7 +6,7 @@
 // it says so. Places, never people: a voice is a public account or an outlet, and nothing here
 // guesses anyone's community.
 
-import { levelOf } from "@/lib/big-voices";
+import { levelOf, NO_ISSUE, type BriefFocus } from "@/lib/big-voices";
 import { nf } from "@/lib/format";
 import type { Mention } from "@/lib/listening-mention";
 import { sourceName } from "@/lib/listening-read";
@@ -410,6 +410,18 @@ const TREND_WORD = {
   settled: "settled",
   unchecked: "not checked lately",
 } as const;
+
+/**
+ * What Brief voices opens for a story: the column of its place (local is the seat, national the
+ * country) and its issue, or none when the issue says nothing.
+ */
+export function storyFocus(posts: Mention[], issue: string | null): BriefFocus {
+  const place = placeOf(posts);
+  return {
+    level: place === "local" ? "seat" : place === "county" ? "county" : "country",
+    issue: issue && !NO_ISSUE.has(issue) ? issue : null,
+  };
+}
 
 /** The so-what line, in plain words, ending with what "first seen" does and does not mean. */
 export function soWhat(s: {

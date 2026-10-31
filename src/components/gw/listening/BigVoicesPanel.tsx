@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { BigVoicesView } from "@/components/gw/listening/BigVoices";
 import { BriefVoice } from "@/components/gw/listening/BriefVoice";
 import { QueryState } from "@/components/gw/QueryState";
-import type { BigVoice, Level } from "@/lib/big-voices";
+import type { BigVoice, BriefFocus, Level } from "@/lib/big-voices";
 import { getBigVoices } from "@/lib/big-voices.functions";
 import { saveApproach, setApproachStatus } from "@/lib/outreach.functions";
 
@@ -17,10 +17,15 @@ export function BigVoicesPanel({
   days,
   open,
   react,
+  focus,
+  clearFocus,
 }: {
   days: number;
   open: (v: BigVoice) => void;
   react?: ((mentionId: string) => void) | undefined;
+  /** A story's Brief voices, when the Voices tab was opened from one. */
+  focus?: BriefFocus | undefined;
+  clearFocus?: (() => void) | undefined;
 }) {
   const fetchData = useServerFn(getBigVoices);
   const save = useServerFn(saveApproach);
@@ -84,6 +89,8 @@ export function BigVoicesPanel({
           open={open}
           brief={(voice, level) => setBriefing({ voice, level })}
           {...(react ? { react } : {})}
+          {...(focus ? { focus } : {})}
+          {...(focus && clearFocus ? { clearFocus } : {})}
         />
       )}
     </>

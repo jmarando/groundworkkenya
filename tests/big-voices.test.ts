@@ -7,10 +7,12 @@
 import {
   FLOOR,
   bigVoices,
+  focusColumns,
   levelOf,
   moveFor,
   rivalVoiceKeys,
   type BigVoicesOpts,
+  type Level,
 } from "@/lib/big-voices";
 import type { VoicePost } from "@/lib/voices";
 
@@ -381,6 +383,82 @@ eq(
   );
   const wide = bigVoices([...many, ...outlets], opts({ accounts: 3, outlets: 2 }))[0]!;
   eq("the limits can change", [wide.accounts.length, wide.outlets.length], [3, 2]);
+}
+
+// ---- every issue a voice posted about
+{
+  const col = bigVoices(
+    [
+      x("a", { reach: 6000, issue: "water" }),
+      x("a", { reach: 6000, issue: "water" }),
+      x("a", { reach: 6000, issue: "water" }),
+      x("a", { reach: 6000, issue: "roads" }),
+      x("a", { reach: 6000, issue: "roads" }),
+      x("a", { reach: 6000, issue: "schools" }),
+      x("a", { reach: 6000, issue: "general" }),
+    ],
+    opts(),
+  )[0]!;
+  const a = col.accounts[0]!;
+  eq("every issue it posted about, most often first, none of the vague ones", a.issues, [
+    "water",
+    "roads",
+    "schools",
+  ]);
+  eq("the top two are still the top two", a.topIssues, ["water", "roads"]);
+}
+
+// ---- a story's Brief voices: recruit voices on its issue, at its level
+{
+  const warm = (handle: string, issue: string, o: Partial<VoicePost> = {}) => [
+    x(handle, { reach: 8000, issue, sentiment: "positive", ...o }),
+    x(handle, { reach: 8000, issue, sentiment: "positive", ...o }),
+  ];
+  const cols = bigVoices(
+    [
+      ...warm("a", "water"),
+      ...warm("b", "roads"),
+      x("c", { reach: 8000, issue: "water", sentiment: "negative" }),
+      x("c", { reach: 8000, issue: "water", sentiment: "negative" }),
+      x("e", { reach: 8000, issue: "water" }),
+      site("paper.example.test", { issue: "water" }),
+      ...warm("d", "water", { topicKind: "county" }),
+    ],
+    opts(),
+  );
+  const keys = (xs: { key: string }[]) => xs.map((v) => v.key);
+  const focus = (level: Level, issue: string | null) => focusColumns(cols, { level, issue });
+  eq(
+    "its level only, its recruit voices on its issue only, no outlets",
+    focus("seat", "water").map((c) => [c.level, keys(c.accounts), c.outlets.length, c.smaller]),
+    [["seat", ["x:@a"], 0, 0]],
+  );
+  eq(
+    "a story with no issue asks only for recruit voices",
+    focus("seat", null).map((c) => keys(c.accounts)),
+    [["x:@a", "x:@b"]],
+  );
+  eq(
+    "another issue, another voice",
+    focus("seat", "roads").map((c) => keys(c.accounts)),
+    [["x:@b"]],
+  );
+  eq(
+    "another level, another column",
+    focus("county", "water").map((c) => [c.level, c.label, keys(c.accounts)]),
+    [["county", "Kiambu", ["x:@d"]]],
+  );
+  eq(
+    "an issue nobody recruitable posted about leaves the column, empty",
+    focus("seat", "schools").map((c) => [c.level, c.accounts.length]),
+    [["seat", 0]],
+  );
+  eq("a level with no posts has no column", focus("country", "water"), []);
+  eq(
+    "the columns given are not changed",
+    cols.map((c) => c.accounts.length),
+    [4, 1],
+  );
 }
 
 console.log(`${pass} passed, ${fail} failed`);

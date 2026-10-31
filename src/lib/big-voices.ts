@@ -34,6 +34,8 @@ export type BigVoice = {
   /** Views summed over those posts, where the platform counts them; null when none did. */
   seen: number | null;
   topIssues: string[];
+  /** Every issue its posts in the column were about, most often first (not the vague ones). */
+  issues: string[];
   /** Posts whose mood was read and that count towards it (not those found by a rival's keyword). */
   read: number;
   warm: number;
@@ -120,13 +122,12 @@ const when = (p: VoicePost) => new Date(p.publishedAt ?? p.foundAt).getTime();
 const byViews = (a: VoicePost, b: VoicePost) =>
   (b.reach ?? 0) - (a.reach ?? 0) || when(b) - when(a);
 
-function topIssues(rows: VoicePost[]): string[] {
+function issuesOf(rows: VoicePost[]): string[] {
   const n = new Map<string, number>();
   for (const r of rows)
     if (r.issue && !NO_ISSUE.has(r.issue)) n.set(r.issue, (n.get(r.issue) ?? 0) + 1);
   return [...n.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 2)
     .map(([issue]) => issue);
 }
 
@@ -141,6 +142,7 @@ function build(acc: Acc, followers: Map<string, number | null>): BigVoice {
   const warm = mood.filter((r) => r.sentiment === "positive").length;
   const angry = mood.filter((r) => r.sentiment === "negative").length;
   const read = mood.length;
+  const issues = issuesOf(rows);
   return {
     key: acc.key,
     platform: rows[0]!.source,
@@ -150,7 +152,8 @@ function build(acc: Acc, followers: Map<string, number | null>): BigVoice {
     followers: followers.get(acc.key) ?? null,
     posts: rows.length,
     seen: counted.length ? counted.reduce((t, r) => t + (r.reach ?? 0), 0) : null,
-    topIssues: topIssues(rows),
+    topIssues: issues.slice(0, 2),
+    issues,
     read,
     warm,
     angry,
@@ -214,4 +217,27 @@ export function bigVoices(posts: VoicePost[], opts: BigVoicesOpts): Column[] {
     });
   }
   return out;
+}
+
+/** What a story's Brief voices asks to see: one column, its recruit voices, on the story's issue. */
+export type BriefFocus = { level: Level; issue: string | null };
+
+/**
+ * A story's Brief voices: the story's column only, with the accounts to recruit that posted about
+ * its issue (any, when the story has none) and no outlets, which are pressed, not briefed. The
+ * column is empty when no one fits, and absent when the level has no posts.
+ */
+export function focusColumns(columns: Column[], focus: BriefFocus): Column[] {
+  const col = columns.find((c) => c.level === focus.level);
+  if (!col) return [];
+  return [
+    {
+      ...col,
+      accounts: col.accounts.filter(
+        (v) => v.move === "recruit" && (focus.issue === null || v.issues.includes(focus.issue)),
+      ),
+      outlets: [],
+      smaller: 0,
+    },
+  ];
 }
