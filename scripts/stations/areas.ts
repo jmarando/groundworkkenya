@@ -42,6 +42,14 @@ export const STATION_AREAS: StationArea[] = [
     migration: "20261019090300_polling_centres_githunguri_athwana.sql",
   },
   {
+    id: "kuria-east",
+    mapArea: "migori/kuria-east",
+    prefix: "044260",
+    wards: "public/geo/kuria-east-wards.json",
+    atlas: "data/atlas/migori/register.csv",
+    migration: "20261109090300_polling_centres_kuria_east.sql",
+  },
+  {
     // A ward campaign: the ward's own 10 digits (county, constituency, ward).
     id: "athwana",
     mapArea: "meru/tigania-west/athwana",

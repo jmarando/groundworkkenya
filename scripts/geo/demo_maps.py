@@ -1,5 +1,5 @@
 """Maps for the demo scenarios and the campaign map areas: Kenya's 47 counties, and the wards
-of Mathira (6), Githunguri (5) and Athwana (the ward alone).
+of Mathira (6), Githunguri (5), Kuria East (5) and Athwana (the ward alone).
 
 Usage (run in a folder holding the two inputs):
   python3 demo_maps.py public/geo
@@ -25,6 +25,10 @@ OUT = sys.argv[1] if len(sys.argv) > 1 else "."
 AREAS = {
     "mathira": ("Nyeri", ["Ruguru", "Magutu", "Iriaini", "Konyu", "Kirimukuyu", "Karatina Town"]),
     "githunguri": ("Kiambu", ["Githunguri", "Githiga", "Ikinu", "Ngewa", "Komothai"]),
+    "kuria-east": (
+        "Migori",
+        ["Gokeharaka/Getambwega", "Ntimaru East", "Ntimaru West", "Nyabasi East", "Nyabasi West"],
+    ),
     "athwana": ("Meru", ["Athwana"]),
 }
 # geoBoundaries names that differ from the official county name.

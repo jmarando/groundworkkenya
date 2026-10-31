@@ -42,7 +42,7 @@ function slugsOf(file: string): Set<string> {
 
 // ---- scenarios
 eq(
-  "one scenario per office, and Githunguri's and Athwana's own",
+  "one scenario per office, and Githunguri's, Kuria East's and Athwana's own",
   SCENARIOS.map((s) => `${s.key}:${s.office}`),
   [
     "kalonzo:president",
@@ -50,6 +50,7 @@ eq(
     "mathira:mp",
     "roysambu:mca",
     "githunguri:mp",
+    "kuria-east:mp",
     "athwana:mca",
   ],
 );
@@ -61,7 +62,7 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6, 5, 5, 14],
+  [47, 85, 6, 5, 5, 5, 14],
 );
 
 for (const s of SCENARIOS) {
@@ -126,7 +127,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false, true, true, true],
+  [true, true, false, true, true, true, true],
 );
 
 // ---- insights
@@ -325,13 +326,26 @@ for (const s of SCENARIOS) {
     "a campaign's own demo where it has one, else its office's",
     [
       scenarioFor({ slug: "githunguri", level: "mp" }),
+      scenarioFor({ slug: "kuria-east", level: "mp" }),
       scenarioFor({ slug: "roysambu", level: "mca" }),
       scenarioFor({ slug: "athwana", level: "mca" }),
       scenarioFor({ slug: "mathira", level: "mp" }),
       scenarioFor({ slug: "githunguri", level: "governor" }),
+      scenarioFor({ slug: "kuria-east", level: "governor" }),
       scenarioFor(null),
     ],
-    ["githunguri", "roysambu", "athwana", "mathira", "sakaja", "sakaja"],
+    ["githunguri", "kuria-east", "roysambu", "athwana", "mathira", "sakaja", "sakaja", "sakaja"],
+  );
+  eq(
+    "Kuria East's demo carries its candidate",
+    forCampaign(getScenario("kuria-east"), { candidate: "Monica Keriario", level: "mp" }).candidate
+      .name,
+    "Monica Keriario",
+  );
+  eq(
+    "Kuria East's wards add up to IEBC's 2022 register for the constituency",
+    getScenario("kuria-east").areas.reduce((t, a) => t + a.registered, 0),
+    41_976,
   );
   eq(
     "Githunguri's demo carries its candidate",

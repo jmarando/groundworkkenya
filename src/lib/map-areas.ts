@@ -63,6 +63,16 @@ export const MAP_AREAS: MapArea[] = [
     bounds: [36.67, -1.13, 36.9, -0.97],
   },
   {
+    key: "migori/kuria-east",
+    id: "kuria-east",
+    name: "Kuria East",
+    top: "constituency",
+    wards: "/geo/kuria-east-wards.json",
+    houses: "/tiles/houses-kuria-east.pmtiles",
+    counts: "/tiles/houses-kuria-east.json",
+    bounds: [34.51, -1.39, 34.74, -1.16],
+  },
+  {
     key: "meru/tigania-west/athwana",
     id: "athwana",
     name: "Athwana Ward",

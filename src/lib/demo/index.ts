@@ -3,12 +3,21 @@
 import { athwana } from "@/lib/demo/scenarios/athwana";
 import { githunguri } from "@/lib/demo/scenarios/githunguri";
 import { kalonzo } from "@/lib/demo/scenarios/kalonzo";
+import { kuriaEast } from "@/lib/demo/scenarios/kuria-east";
 import { mathira } from "@/lib/demo/scenarios/mathira";
 import { roysambu } from "@/lib/demo/scenarios/roysambu";
 import { sakaja } from "@/lib/demo/scenarios/sakaja";
 import type { Contender, Scenario, ScenarioKey } from "@/lib/demo/types";
 
-export const SCENARIOS: Scenario[] = [kalonzo, sakaja, mathira, roysambu, githunguri, athwana];
+export const SCENARIOS: Scenario[] = [
+  kalonzo,
+  sakaja,
+  mathira,
+  roysambu,
+  githunguri,
+  kuriaEast,
+  athwana,
+];
 
 /** Nairobi's governor race is this workspace's own campaign, so it comes first. */
 export const DEFAULT_SCENARIO: ScenarioKey = "sakaja";

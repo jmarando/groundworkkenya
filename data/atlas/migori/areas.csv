@@ -1,0 +1,8 @@
+key,level,name,parent,iebc_code
+migori,county,Migori,kenya,044
+migori/kuria-east,constituency,Kuria East,migori,
+migori/kuria-east/gokeharaka-getambwega,ward,Gokeharaka/Getambwega,migori/kuria-east,
+migori/kuria-east/ntimaru-east,ward,Ntimaru East,migori/kuria-east,
+migori/kuria-east/ntimaru-west,ward,Ntimaru West,migori/kuria-east,
+migori/kuria-east/nyabasi-east,ward,Nyabasi East,migori/kuria-east,
+migori/kuria-east/nyabasi-west,ward,Nyabasi West,migori/kuria-east,

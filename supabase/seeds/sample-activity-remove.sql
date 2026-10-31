@@ -1,5 +1,5 @@
--- Removes the sample activity scripts/demo/sample-activity.ts wrote for Githunguri, Roysambu and
--- Athwana: every row it writes carries a mark this finds (the tag "sample", a SAMPLE- reference
+-- Removes the sample activity scripts/demo/sample-activity.ts wrote for Githunguri, Kuria East,
+-- Roysambu and Athwana: every row it writes carries a mark this finds (the tag "sample", a SAMPLE- reference
 -- or code, a "(sample)" diary note, incident, pollster, walk list or ad buy (with its expense), a sample-msg- message, the
 -- "<ward> town centre/market road/feeder roads" canvass streets, or a door visit's client id
 -- from md5('sample-visit:…')).
@@ -8,7 +8,7 @@
 begin;
 
 create temporary table sample_campaigns on commit drop as
-  select id, slug from public.campaigns where slug in ('githunguri', 'roysambu', 'athwana');
+  select id, slug from public.campaigns where slug in ('githunguri', 'kuria-east', 'roysambu', 'athwana');
 
 delete from public.poll_responses r
  using public.polls p, sample_campaigns c
