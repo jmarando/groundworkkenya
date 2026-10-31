@@ -31,10 +31,14 @@ eq("instagram", profileRequest("instagram:some.page"), {
   path: "/v1/instagram/profile",
   params: { handle: "some.page" },
 });
-eq("youtube by its handle", profileRequest("youtube:@mamanjeri"), {
-  path: "/v1/youtube/channel",
-  params: { handle: "@mamanjeri" },
-});
+eq(
+  "youtube by its channel address, as the documentation's own example is",
+  profileRequest("youtube:@mamanjeri"),
+  {
+    path: "/v1/youtube/channel",
+    params: { url: "https://www.youtube.com/@mamanjeri" },
+  },
+);
 eq(
   "youtube by a channel title cannot be asked for",
   profileRequest("youtube:mama njeri talks"),
@@ -58,6 +62,47 @@ eq("x's own shape", readFollowers({ legacy: { followers_count: 12 } }), 12);
 eq("wrapped in data", readFollowers({ data: { stats: { followerCount: 77 } } }), 77);
 eq("a channel's subscribers", readFollowers({ subscriberCount: "22000" }), 22_000);
 eq("instagram's shape", readFollowers({ edge_followed_by: { count: 64_000 } }), 64_000);
+// The shapes in ScrapeCreators' API description, with invented numbers.
+eq(
+  "tiktok, as documented: stats is beside user",
+  readFollowers({
+    user: { id: "1", uniqueId: "x" },
+    stats: { followerCount: 120_000, heartCount: 5 },
+  }),
+  120_000,
+);
+eq(
+  "instagram, as documented: data.user.edge_followed_by.count",
+  readFollowers({
+    success: true,
+    credits_charged: 1,
+    data: {
+      user: { full_name: "A Page", edge_followed_by: { count: 8_800 }, edge_follow: { count: 90 } },
+    },
+  }),
+  8_800,
+);
+eq(
+  "youtube, as documented: subscriberCount beside its text",
+  readFollowers({
+    channelId: "UC1",
+    subscriberCount: 15_000,
+    subscriberCountText: "15K subscribers",
+  }),
+  15_000,
+);
+eq(
+  "facebook, as documented: followerCount",
+  readFollowers({ name: "A Page", followerCount: 3_200 }),
+  3_200,
+);
+eq(
+  "x, as documented: legacy.followers_count, not the fast or normal ones",
+  readFollowers({
+    legacy: { fast_followers_count: 0, followers_count: 377_608, normal_followers_count: 3 },
+  }),
+  377_608,
+);
 eq("nothing in it", readFollowers({}), null);
 eq("not an object", readFollowers("oops"), null);
 eq("a negative count is no count", readFollowers({ followers: -4 }), null);
