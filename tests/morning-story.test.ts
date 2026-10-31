@@ -119,6 +119,38 @@ eq("no headline: no story", checkStory({ ...ANSWER, headline: " " }, ITEMS), nul
 eq("the AI says there's no story", checkStory({ ...ANSWER, noStory: true }, ITEMS), null);
 eq("an answer that isn't one", checkStory("nonsense", ITEMS), null);
 
+// What a model writes when it has nothing to say is not text: shown as nothing, never as a line.
+{
+  const nothing = checkStory(
+    {
+      ...ANSWER,
+      why: "N/A",
+      rivals: "Placeholder.",
+      line: "placeholder",
+      also: [{ item: 2, soWhat: "none" }],
+    },
+    ITEMS,
+  );
+  eq(
+    "placeholder words where a field has nothing to say show as nothing",
+    [nothing?.why, nothing?.rivals, nothing?.line, nothing?.also[0]?.soWhat],
+    [null, null, null, null],
+  );
+  eq(
+    "real words are kept",
+    [story?.why, story?.line],
+    ["Water is the race's loudest issue.", "Tankers to every ward this week."],
+  );
+  eq(
+    "a headline or a summary of placeholder words is no story",
+    [
+      checkStory({ ...ANSWER, headline: "placeholder" }, ITEMS),
+      checkStory({ ...ANSWER, summary: "N/A" }, ITEMS),
+    ],
+    [null, null],
+  );
+}
+
 const top = headlinesStory(ITEMS);
 eq(
   "no story: the lead, with its own words, and the morning's other links",

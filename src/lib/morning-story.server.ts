@@ -247,6 +247,7 @@ function storyPrompt(c: CampaignInfo, g: Gathered, lead?: string): string {
     "that item's number; the numbers of the items the story rests on; and four to six other items",
     `worth knowing, each with one line on why it matters, including ${county ? `${county} County` : "county"} stories whenever any bear on residents.`,
     "Set noStory to true only when no item at all bears on the race, the county or the nation, and leave the rest empty.",
+    "Where you have nothing to say for a field, leave it as an empty string; never write 'placeholder', 'n/a' or 'none'.",
     "Plain English. Invent no facts, figures or quotes.",
     "",
     `Rivals in the race: ${g.rivals.join(", ") || "none on record"}.`,
