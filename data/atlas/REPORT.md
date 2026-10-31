@@ -89,6 +89,47 @@ Missing:
 - 2022 mca: results for 1 of 1 constituencies
 - 2022 mca: the county total
 
+## Migori
+
+| Election | Constituencies with results | Turnout | County total |
+|---|---|---|---|
+| 2013 president | 0 of 1 | 0 of 1 | no |
+| 2013 governor | 0 of 1 | 0 of 1 | no |
+| 2013 mp | 0 of 1 | 0 of 1 | n/a |
+| 2013 mca | 0 of 1 | 0 of 1 | no |
+| 2017 president | 0 of 1 | 0 of 1 | no |
+| 2017 governor | 0 of 1 | 0 of 1 | no |
+| 2017 mp | 1 of 1 | 1 of 1 | n/a |
+| 2017 mca | 0 of 1 | 0 of 1 | no |
+| 2022 president | 1 of 1 | 0 of 1 | no |
+| 2022 governor | 0 of 1 | 0 of 1 | no |
+| 2022 mp | 1 of 1 | 0 of 1 | n/a |
+| 2022 mca | 0 of 1 | 0 of 1 | no |
+
+Registered voters by ward: 2013: 0 of 5 · 2017: 0 of 5 · 2022: 5 of 5.
+Population estimates: 0 of 5 wards.
+Buildings measured: 5 of 5 wards.
+
+Missing:
+- 2013 president: results for 1 of 1 constituencies
+- 2013 president: the county total
+- 2013 governor: results for 1 of 1 constituencies
+- 2013 governor: the county total
+- 2013 mp: results for 1 of 1 constituencies
+- 2013 mca: results for 1 of 1 constituencies
+- 2013 mca: the county total
+- 2017 president: results for 1 of 1 constituencies
+- 2017 president: the county total
+- 2017 governor: results for 1 of 1 constituencies
+- 2017 governor: the county total
+- 2017 mca: results for 1 of 1 constituencies
+- 2017 mca: the county total
+- 2022 president: the county total
+- 2022 governor: results for 1 of 1 constituencies
+- 2022 governor: the county total
+- 2022 mca: results for 1 of 1 constituencies
+- 2022 mca: the county total
+
 ## Nairobi
 
 | Election | Constituencies with results | Turnout | County total |
@@ -186,6 +227,7 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 
 - `ballotwinners-athwana-ward`: ATHWANA Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/0266. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 6,177 valid votes, which the six candidates add up to. 2022 lists the winner only (Dionisio Jim Muchui, UDA, 3,864, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
 - `ballotwinners-githunguri`: GITHUNGURI Constituency: MP, Wards and Results, BallotWinners, https://ballotwinners.com/geography/constituency/116. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 86,306 valid votes, which the eight candidates add up to. 2013 gives no parties, so it isn't entered. Read 19 October 2026.
+- `ballotwinners-kuria-east`: KURIA EAST Constituency: MP, Wards and Results, BallotWinners, https://ballotwinners.com/geography/constituency/260. A third-party site carrying IEBC's declared results. 2017: all eight candidates as printed (surname first) and 26,771 valid votes, which they add up to. 2022 lists the winner only, so the 2022 race is entered from Mzalendo's copy of the Gazette instead. 2013 gives no parties, so it isn't entered. Its 36,301 registered voters is an earlier register than IEBC's 2022 one, so it isn't entered. Read 1 November 2026.
 - `ballotwinners-roysambu-ward`: ROYSAMBU Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/1394. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 23,195 valid votes, which the eight candidates add up to. 2022 lists the winner only (Mumbi Sospeter Gathahu, independent, 6,317, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
 - `citizen-2022-dagoretti-north-mp`: Beatrice Elachi wins Dagoretti North MP race, Citizen Digital, https://citizen.digital/article/beatrice-elachi-wins-dagoretti-north-mp-race-n303832. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `citizen-2022-dagoretti-south-mp`: John 'KJ' Kiarie retains Dagoretti South MP seat, Citizen Digital, https://citizen.digital/article/john-kj-kiarie-retains-dagoretti-south-mp-seat-n303794. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
@@ -199,10 +241,12 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 - `geoboundaries-ken-adm3`: geoBoundaries Kenya ADM3 (wards), geoBoundaries, https://www.geoboundaries.org/. Ward boundaries (Omare & Omare 2020, CC BY 4.0), simplified to about 3 m for the ward maps; areas are measured from them.
 - `google-open-buildings-v3`: Open Buildings v3: building footprints, Google Open Buildings, https://sites.research.google/gr/open-buildings/. Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map's house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more.
 - `iebc-2022-form-34c`: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022, IEBC, https://www.iebc.or.ke/uploads/resources/QLTlLJx0Vr.pdf. County and national totals as printed. Votes cast is valid plus rejected. The national valid total (14,213,137) is 110 more than the four candidates' votes added up (14,213,027), as printed.
+- `iebc-2022-rov-per-constituency`: Registered voters per constituency for the 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_constituency.pdf. Kuria East: 41,976 registered voters. Its five wards, from IEBC's register by polling station, add up to the same. Read 1 November 2026.
 - `iebc-2022-rov-per-polling-station`: Register of voters per polling station, 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_polling_station.pdf. 712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri's wards add up to 104,592 and Tigania West's to 70,283, the constituency registers Mzalendo gives.
 - `kna-2022-nyeri-mps`: Political newcomers dominate Nyeri MP seats, Kenya News Agency, https://www.kenyanews.go.ke/political-newcomers-dominate-nyeri-mp-seats/1000/. The government news agency's report of five of Nyeri's six MP races, the leading candidates as printed. Its '58,534 votes cast' in Mukurweini is that constituency's register, so it isn't entered as votes cast; Othaya's '44,676 votes' is entered as votes cast.
 - `mzalendo-2022-kiambu`: Kiambu County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/kiambu/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered (99,384 in 2017; its wards as IEBC's register adds them up); Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.
 - `mzalendo-2022-meru`: Meru County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/meru/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC's register adds them up). Read 19 October 2026.
+- `mzalendo-2022-migori`: Migori County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/migori/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Kuria East: 41,976 registered; Kemero Maisori Marwa Kitayama, UDA, 15,362 votes, which agrees with BallotWinners. No source read gives the 2022 runner-up's votes, so the 2022 MP race holds the winner alone. Read 1 November 2026.
 - `nairobileo-2025-wamuchomba`: Woman MP Who Holds Record for Receiving Highest Number of Votes in Kenya, Nairobi Leo, https://www.nairobileo.co.ke/features/article/18973/woman-mp-who-holds-record-for-receiving-highest-number-of-votes-in-kenya. 25 January 2025. Githunguri's 2022 MP race, the top two as printed: Wamuchomba 34,646 and Jubilee's Gabriel Kago 31,127. The winner's figure agrees with the Gazette as Mzalendo gives it. No valid total, so shares are of the candidates listed.
 - `provisional-2017-governor-nairobi`: 2017 Governor result, Nairobi City County, Provisional results. Public provisional figures for the county, eight candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.
 - `provisional-2017-governor-nyeri`: 2017 Governor result, Nyeri County, Provisional results. Public provisional figures for the county, three candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.
@@ -214,6 +258,7 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 - `provisional-2022-mp-nyeri`: 2022 Member of National Assembly results, Nyeri, Provisional results. Loaded for Tetu only: public provisional figures whose nine candidates match IEBC's list and add up to 38,066, which fits the Kenya News Agency's 38,314 votes cast; not yet checked against IEBC's Form 35B. Not loaded for Othaya, where the list lacks the Jubilee incumbent and gives Chama Cha Kazi's candidate 523 where the agency printed 7,152.
 - `star-2022-embakasi-central-mp`: Benjamin Gathiru re-elected as Embakasi Central MP, The Star, https://www.the-star.co.ke/news/2022-08-11-benjamin-gathiru-re-elected-as-embakasi-central-mp. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `star-2022-embakasi-west-history`: MP Theuri accepts defeat in Embakasi West race, The Star, https://www.the-star.co.ke/news/2022-08-10-theuri-accepts-defeat-in-embakasi-west-race. Theuri's 2013 win, the top two; his 2013 party (TNA) is from his widely reported ticket. Its 2017 figures (47,848 to 30,983) differ from the provisional results' (55,819 to 35,358), which are loaded.
+- `star-2022-kuria-president`: Ruto wins Kuria vote as Raila falters again, The Star, https://www.the-star.co.ke/counties/nyanza/2022-08-13-ruto-wins-kuria-vote-as-raila-falters-again. 13 August 2022. Kuria East's presidential result as printed: Ruto 16,795, Raila 12,031, Wajackoyah 144 and Mwaure 62, all four candidates. It gives no valid or rejected total, so none is entered.
 - `star-2022-mathare-mp`: Bahati floored in hotly contested Mathare MP race, The Star, https://www.the-star.co.ke/news/2022-08-12-bahati-floored-in-hotly-contested-mathare-mp-race/. The top three, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `star-2022-mathira-president`: Mathira gives Ruto massive win over Raila, The Star, https://www.the-star.co.ke/news/2022-08-14-mathira-gives-ruto-massive-win-over-raila. Mathira's presidential result as printed. Its 'votes cast' (73,439) equals the four candidates' votes added up, so it is probably the valid total; entered as printed.
 - `star-2022-nairobi-governor`: Sakaja declared winner in Nairobi governor race, The Star, https://www.the-star.co.ke/counties/central/2022-08-14-sakaja-declared-winner-in-nairobi-governor-race. Sakaja's and Igathe's votes in each constituency, as printed (the top two only). Its county-wide figures (699,392 and 573,518) were checked against the provisional results, which list every candidate and are loaded for the county instead. Three rows labelled only 'Embakasi' can't be placed and Embakasi South's Igathe figure is misprinted ('3,7647'), so the four Embakasi North, Central, East and South rows are left out.

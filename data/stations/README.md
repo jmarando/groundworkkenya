@@ -16,7 +16,8 @@ Election (`https://www.iebc.or.ke/docs/rov_per_polling_station.pdf`, 712 pages, 
 
 Every ward's centres add up to the registered voters the atlas holds for it
 (`data/atlas/<county>/register.csv`): Nairobi 378 centres, 3,643 streams and 2,415,310 voters;
-Mathira 109 centres, 201 streams and 104,492 voters.
+Mathira 109 centres, 201 streams and 104,492 voters; Kuria East 75 centres, 92 streams and 41,976
+voters.
 
 To read the register again:
 
@@ -24,6 +25,9 @@ To read the register again:
 pdftotext -tsv rov_per_polling_station.pdf /tmp/rov.tsv
 npx tsx --tsconfig tsconfig.json scripts/stations/register.ts /tmp/rov.tsv
 ```
+
+`AREAS=kuria-east,…` before either `register.ts` or `positions.ts` reads or finds only those
+areas and leaves the other files as they are.
 
 The reader (`src/lib/stations/register.ts`) goes by where each word is on the page, because
 long names run into the next column: a stream's code is the 15 digits a word ends with, and its
@@ -40,7 +44,7 @@ kept as a hollow pin until someone confirms it), and the school's `osm_id` and `
 These positions are a database derived from OpenStreetMap, and are published under the ODbL
 too. The rules are in `src/lib/stations/match.ts`. On 14 October 2026 they placed 164 of
 Nairobi's 378 centres, with 27 close names, and 8 of Mathira's 109: Mathira's rural schools are
-mostly not on OpenStreetMap. Organisers place the rest on the Voters map ("Place it"), and agents
+mostly not on OpenStreetMap; on 1 November 2026 none of Kuria East's 75 was placed. Organisers place the rest on the Voters map ("Place it"), and agents
 confirm them at the centre ("I'm here").
 
 To find them again:
