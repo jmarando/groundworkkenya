@@ -95,7 +95,9 @@ const sameStory = (t: string) =>
 /**
  * The morning's items: titled web links, each once, no adverts or posts the sweep found to be
  * about somewhere else, the seat's own first, then the county's, the rivals' and the national
- * news, each to its share, then whatever fills the rest; numbered from 1.
+ * news, each to its share, then whatever fills the rest; numbered from 1. Within each, reports from
+ * outlets we know come first, then other sites' reports, then posts on platforms, so a stream of
+ * tweets never crowds out the news.
  */
 export function storyItems(rows: MentionRow[], max = 40): StoryItem[] {
   const seen = new Set<string>();
@@ -119,8 +121,9 @@ export function storyItems(rows: MentionRow[], max = 40): StoryItem[] {
     });
   }
   const order: Scope[] = ["seat", "county", "rival", "national"];
-  const first = order.flatMap((k) => pools[k].slice(0, SHARE[k]));
-  const rest = order.flatMap((k) => pools[k].slice(SHARE[k]));
+  const pool = (k: Scope) => [...pools[k]].sort((a, b) => rank(a) - rank(b));
+  const first = order.flatMap((k) => pool(k).slice(0, SHARE[k]));
+  const rest = order.flatMap((k) => pool(k).slice(SHARE[k]));
   return [...first, ...rest].slice(0, max).map((i, k) => ({ ...i, n: k + 1 }));
 }
 
@@ -141,6 +144,21 @@ const PLATFORM_NAMES: Record<string, string> = {
   youtube: "YouTube",
   reddit: "Reddit",
 };
+
+const hostname = (u: string): string | null => {
+  try {
+    return new URL(u).hostname.replace(/^(www|m|mobile|web)\./, "");
+  } catch {
+    return null;
+  }
+};
+
+/** A post on a platform (X, Facebook, Reddit…), as against a report by an outlet. */
+export function isPost(l: Pick<StoryLink, "url">): boolean {
+  const host = hostname(l.url);
+  return host !== null && Object.hasOwn(PLATFORMS, host);
+}
+
 const OUTLETS: Record<string, string> = {
   "the-star.co.ke": "The Star",
   "nation.africa": "Nation",
@@ -157,16 +175,25 @@ const OUTLETS: Record<string, string> = {
   "kahawatungu.com": "Kahawa Tungu",
   "mwakilishi.com": "Mwakilishi",
   "kiambu.go.ke": "Kiambu County",
+  "eastleighvoice.co.ke": "Eastleigh Voice",
+  "nairobileo.co.ke": "Nairobi Leo",
+  "thekenyatimes.com": "The Kenya Times",
+};
+
+/**
+ * How far a link can be trusted to say what happened: 0 a report from an outlet we know by name,
+ * 1 a report from any other site, 2 a post on a platform.
+ */
+const rank = (l: Pick<StoryLink, "url">): 0 | 1 | 2 => {
+  if (isPost(l)) return 2;
+  const host = hostname(l.url);
+  return host !== null && Object.hasOwn(OUTLETS, host) ? 0 : 1;
 };
 
 /** Who published a link, in words: "The Star", "@TheStarKenya on X", "Facebook". */
 export function outletOf(l: Pick<StoryLink, "url" | "source">): string {
-  let host = "";
-  try {
-    host = new URL(l.url).hostname.replace(/^(www|m|mobile|web)\./, "");
-  } catch {
-    return l.source;
-  }
+  const host = hostname(l.url);
+  if (host === null) return l.source;
   const platform = PLATFORMS[host];
   if (!platform) return OUTLETS[host] ?? host;
   const v = voiceOf({ source: platform, url: l.url, author: null, domain: host });
@@ -271,13 +298,23 @@ const hasBody = (i: StoryItem) => bodyOf(i).length >= 20;
  * county's, the rivals' and the nation's, taking the first of each that has more than a bare title;
  * failing that, the first item there is. Local first, but never local only: a quiet seat leads with
  * the county or the nation, so the top of Home is never empty while there is any news at all.
+ * What leads is trusted in this order: a report from an outlet we know by name, then one from any
+ * other site, then (even a bare headline) before any post on a platform, which says what people are
+ * saying, not what happened. So a ward keyword that matched a market-research page does not lead the
+ * morning ahead of the county's story in the Standard.
  */
 export function leadItem(items: StoryItem[]): StoryItem | null {
-  for (const scope of ["seat", "county", "rival", "national"] as Scope[]) {
-    const lead = items.find((i) => i.scope === scope && hasBody(i));
-    if (lead) return lead;
-  }
-  return items[0] ?? null;
+  const upTo = (r: 0 | 1 | 2) => items.filter((i) => rank(i) <= r);
+  const withBody = (pool: StoryItem[]) => {
+    for (const scope of ["seat", "county", "rival", "national"] as Scope[]) {
+      const lead = pool.find((i) => i.scope === scope && hasBody(i));
+      if (lead) return lead;
+    }
+    return undefined;
+  };
+  return (
+    withBody(upTo(0)) ?? withBody(upTo(1)) ?? upTo(1)[0] ?? withBody(items) ?? items[0] ?? null
+  );
 }
 
 /** The lead's own words after its title: its first two sentences, cut at a word if still long. */
@@ -306,7 +343,13 @@ const leadSummary = (i: StoryItem): string | null => {
  */
 export function headlinesStory(items: StoryItem[]): MorningStory {
   const lead = leadItem(items);
-  const rest = items.filter((i) => i.n !== lead?.n);
+  const others = items.filter((i) => i.n !== lead?.n);
+  // The top two of the seat's own, then the county's and the rest, so the county is never missing.
+  const arranged = (pool: StoryItem[]) => [
+    ...pool.filter((i) => i.scope !== "national").slice(0, 2),
+    ...pool.filter((i) => i.scope === "county").slice(0, 2),
+    ...pool,
+  ];
   return {
     kind: "headlines",
     headline: lead ? lead.title.slice(0, 160) : null,
@@ -318,12 +361,8 @@ export function headlinesStory(items: StoryItem[]): MorningStory {
     sources: lead ? [linkOf(lead)] : [],
     rivalSources: [],
     rivalsLately: [],
-    // The top two of the seat's own, then the county's and the rest, so the county is never missing.
-    also: [
-      ...rest.filter((i) => i.scope !== "national").slice(0, 2),
-      ...rest.filter((i) => i.scope === "county").slice(0, 2),
-      ...rest,
-    ]
+    // Outlets' reports first, posts after: a quiet morning may still show a post, never ahead of the news.
+    also: [...arranged(others.filter((i) => !isPost(i))), ...arranged(others.filter(isPost))]
       .filter((i, k, all) => all.findIndex((x) => x.n === i.n) === k)
       .slice(0, 6)
       .map((i) => ({ ...linkOf(i), soWhat: null })),
