@@ -4,6 +4,7 @@
 
 import athwana from "../../public/tiles/houses-athwana.json";
 import githunguri from "../../public/tiles/houses-githunguri.json";
+import kuriaEast from "../../public/tiles/houses-kuria-east.json";
 import mathira from "../../public/tiles/houses-mathira.json";
 import nairobi from "../../public/tiles/houses-nairobi.json";
 import roysambu from "../../public/tiles/houses-roysambu.json";
@@ -15,6 +16,7 @@ export const HOUSE_TOTALS: Record<string, HouseCounts> = {
   "nyeri/mathira": mathira as HouseCounts,
   "nairobi/roysambu/roysambu": roysambu as HouseCounts,
   "kiambu/githunguri": githunguri as HouseCounts,
+  "migori/kuria-east": kuriaEast as HouseCounts,
   "meru/tigania-west/athwana": athwana as HouseCounts,
 };
 

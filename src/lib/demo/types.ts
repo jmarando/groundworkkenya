@@ -3,7 +3,8 @@
 // `official: true`. Rivals are placeholders, never named people.
 
 export type Office = "president" | "governor" | "mp" | "mca";
-export type ScenarioKey = "kalonzo" | "sakaja" | "mathira" | "roysambu" | "githunguri" | "athwana";
+export type ScenarioKey =
+  "kalonzo" | "sakaja" | "mathira" | "roysambu" | "githunguri" | "kuria-east" | "athwana";
 
 export type NewsTag =
   "Local" | "County" | "National" | "Party" | "Opponent" | "Economy" | "Security";

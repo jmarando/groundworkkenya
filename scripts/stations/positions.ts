@@ -4,6 +4,7 @@
 // repository root, after scripts/stations/register.ts:
 //   npx tsx --tsconfig tsconfig.json scripts/stations/positions.ts              asks Overpass
 //   npx tsx --tsconfig tsconfig.json scripts/stations/positions.ts <reply.json> a saved reply
+// AREAS=kuria-east,… asks about and writes only those areas and leaves the other files as they are.
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { toCSV } from "@/lib/csv";
@@ -16,8 +17,11 @@ import { readCentres } from "./read";
 /** About 2 km at the equator: a school that far outside a ward still counts. */
 const MARGIN = 0.02;
 
+const only = process.env["AREAS"]?.split(",");
+const AREAS = STATION_AREAS.filter((a) => !only || only.includes(a.id));
+
 function query(): string {
-  const boxes = STATION_AREAS.map((a) => {
+  const boxes = AREAS.map((a) => {
     const [w, s, e, n] = MAP_AREAS.find((m) => m.id === a.id)!.bounds;
     return `(${s - MARGIN},${w - MARGIN},${n + MARGIN},${e + MARGIN})`;
   });
@@ -45,7 +49,7 @@ if (!schools.length) {
   process.exit(1);
 }
 const round = (x: number) => Math.round(x * 1e6) / 1e6;
-for (const area of STATION_AREAS) {
+for (const area of AREAS) {
   const shapes = new Map(areaShapes(area).map((s) => [s.slug, s.polygons]));
   const rows: unknown[][] = [];
   for (const c of readCentres(area)) {
