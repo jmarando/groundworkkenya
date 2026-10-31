@@ -15,8 +15,9 @@ export type ProfileRequest = { path: string; params: Record<string, string> };
 /**
  * The request that asks ScrapeCreators about the account behind a voice key ("x:@name"), or null
  * when the key is an outlet, a platform with no profile endpoint, or not a handle we would send.
- * Only TikTok's path and parameter are confirmed against its documentation; check the others
- * before relying on them (see the design's note on the profile endpoints).
+ * The paths and parameters are those in ScrapeCreators' own API description (checked 31 October
+ * 2026): TikTok and X and Instagram take `handle`, YouTube the channel's `url`, Facebook the page's
+ * `url`. X was also proved on the live API (six accounts). Each lookup costs one credit.
  */
 export function profileRequest(voiceKey: string): ProfileRequest | null {
   const i = voiceKey.indexOf(":");
@@ -38,8 +39,9 @@ export function profileRequest(voiceKey: string): ProfileRequest | null {
         ? { path: "/v1/instagram/profile", params: { handle: bare } }
         : null;
     case "youtube":
+      // The documented example for this endpoint is the channel's address, "@" and all.
       return /^@[\w.-]{3,60}$/.test(name)
-        ? { path: "/v1/youtube/channel", params: { handle: name } }
+        ? { path: "/v1/youtube/channel", params: { url: `https://www.youtube.com/${name}` } }
         : null;
     case "facebook":
       return /^[\w.-]{2,100}$/.test(name)

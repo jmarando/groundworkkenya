@@ -97,7 +97,7 @@ async function main() {
   // "Use this one" costs an AI request: who may change the story is checked first.
   const rewritten = { ...GROUNDWORK, headline: "Drains before the rains" };
   const server = (asked: string[]) => ({
-    gather: async () => ({ items: [], said: [], saidLinks: [], rivals: [] }),
+    gather: async () => ({ items: [], days: 2, said: [], saidLinks: [], rivals: [] }),
     writeStory: async (_c: unknown, _g: unknown, lead?: string) => {
       asked.push(String(lead));
       return rewritten as never;

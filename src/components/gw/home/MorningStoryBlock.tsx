@@ -114,10 +114,22 @@ export function MorningStoryBlock({
         </>
       ) : (
         <>
+          {/* Headlines with a lead lead with it: the top item's own words, never an empty top. */}
           <h2 id="mb-story-h" className="mb-story-h">
-            {st.from ? "This morning’s top stories" : "This morning’s check"}
+            {st.headline ?? (st.from ? "This morning’s top stories" : "This morning’s check")}
           </h2>
-          {st.summary && <p className="mb-story-sum morning-status">{st.summary}</p>}
+          {st.summary && (
+            <p className={st.headline ? "mb-story-sum" : "mb-story-sum morning-status"}>
+              {st.summary}
+            </p>
+          )}
+          {st.headline && st.sources[0] ? (
+            <p className="mb-source">
+              <a href={st.sources[0].url} target="_blank" rel="noopener noreferrer">
+                {outletOf(st.sources[0])} ↗
+              </a>
+            </p>
+          ) : null}
         </>
       )}
     </article>
