@@ -29,7 +29,8 @@ import {
   readOutletFeeds,
 } from "./news-sources.server";
 import { recordCounts } from "./readings.server";
-import { takeCredits } from "./social-credits";
+import { dailyCredits, takeCredits } from "./social-credits";
+import { socialPlan } from "./social-schedule";
 import { OFF_TOPIC } from "./top-of-mind";
 import {
   ScrapeCreatorsCreditError,
@@ -48,6 +49,8 @@ type AnyClient = {
 };
 
 const JOB_KEY = "listening_scan";
+/** The paid social keyword search keeps its own clock here: it runs every six hours, not every hour. */
+const SOCIAL_KEY = "listening_social";
 const LEASE_MINUTES = 10;
 
 export type ScanResult = {
@@ -463,6 +466,22 @@ export async function runListeningScan(
     if (!newsSearchConfigured()) say("Keyword news search is off: no Serper key (SERPER_API_KEY).");
     let searchRefused = false;
 
+    // The social keyword search (ScrapeCreators) is paid by the day and runs every six hours, each
+    // run with its share of the day's budget, so the credits last the day. "Sweep now" skips the wait.
+    const { data: socialJob } = await sb
+      .from("listening_jobs")
+      .select("last_run_at")
+      .eq("key", SOCIAL_KEY)
+      .maybeSingle();
+    let socialLeft = socialPlan({
+      lastRunAt: socialJob?.last_run_at ?? null,
+      now: now.getTime(),
+      dailyCredits: dailyCredits("keywords"),
+      topics: (topics ?? []).length,
+      force: opts.force === true,
+    }).topics;
+    let socialSearched = 0;
+
     for (const topic of topics ?? []) {
       // An extra keyword of two words or more is searched as a phrase: "githunguri dairy".
       const phrase = (k: string) => (/\s/.test(k.trim()) ? `"${k.trim()}"` : k.trim());
@@ -521,7 +540,7 @@ export async function runListeningScan(
       // social platforms via ScrapeCreators — best effort, never pauses the sweep
       let socialFound = 0;
       const counter = opts.credits === undefined ? sb : opts.credits;
-      if (scConfigured() && counter) {
+      if (scConfigured() && counter && socialLeft > 0) {
         const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
         // Three searches, three credits, from the day's keyword budget.
         if (kw && !keywordsSpent && !(await takeCredits(counter, "keywords", 3))) {
@@ -529,6 +548,8 @@ export async function runListeningScan(
           say("Social keyword search stopped: today's ScrapeCreators credits for it are used.");
         }
         if (kw && !keywordsSpent) {
+          socialLeft--;
+          socialSearched++;
           const social = await Promise.allSettled([
             scSearchTikTok(kw, 8),
             scSearchReddit(kw, 8),
@@ -599,6 +620,22 @@ export async function runListeningScan(
         .update({ last_scanned_at: new Date().toISOString() })
         .eq("id", topic.id);
     }
+
+    // The paid search ran: its six hours start now. A run that searched nothing (no key, no
+    // credits left) leaves it due, so the next sweep tries again.
+    if (socialSearched > 0)
+      await sb.from("listening_jobs").upsert(
+        {
+          key: SOCIAL_KEY,
+          status: "idle",
+          paused_reason: null,
+          locked_until: null,
+          last_run_at: now.toISOString(),
+          detail: `${socialSearched} ${socialSearched === 1 ? "keyword" : "keywords"} searched on social platforms.`,
+          updated_at: now.toISOString(),
+        },
+        { onConflict: "key" },
+      );
 
     // Read the mood on what isn't rated yet: up to two batches a sweep, each campaign's newest taken
     // in turn (src/lib/mood-queue.ts), so one busy campaign never keeps another's posts unread.

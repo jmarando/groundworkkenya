@@ -555,6 +555,72 @@ async function main() {
       false,
     );
   }
+  {
+    // The paid social search runs every six hours, not every hour, and keeps its own clock.
+    const social = (calls: string[]) => calls.filter((c) => c.includes("scrapecreators")).length;
+    const answer = (u: string) =>
+      u.includes("google.serper.dev")
+        ? { body: search([]) }
+        : u.includes("scrapecreators")
+          ? { body: "{}" }
+          : { body: NO_MOODS };
+    const sb = world({}, { take_social_credits: () => true });
+    const calls = stubFetch(answer);
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("the first sweep searches the social platforms", social(calls), 3);
+    const record = () => sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_social");
+    eq(
+      "and writes down when",
+      [typeof record()?.["last_run_at"], record()?.["detail"]],
+      ["string", "1 keyword searched on social platforms."],
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("the next sweep, soon after, leaves the paid search alone", social(calls), 3);
+    record()!["last_run_at"] = new Date(Date.now() - 6 * 3_600_000).toISOString();
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("six hours on, it searches again", social(calls), 6);
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40, force: true });
+    eq("Sweep now does not wait for the six hours", social(calls), 9);
+  }
+  {
+    // A run that could not search (no credits left) is not written down, so the next sweep tries.
+    const sb = world({}, { take_social_credits: () => false });
+    stubFetch((u) => (u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS }));
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "no credits: the clock does not start",
+      sb.tables["listening_jobs"]?.some((j) => j["key"] === "listening_social"),
+      false,
+    );
+  }
+  {
+    // A run spends its share of the day, not the day: 12 credits is a keyword a run.
+    process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "12";
+    const topic = (id: string, label: string) => ({
+      ...TOPIC,
+      id,
+      label,
+      query: `Nairobi ${label}`,
+    });
+    const sb = world(
+      { listening_topics: [TOPIC, topic("t2", "roads"), topic("t3", "health")] },
+      { take_social_credits: () => true },
+    );
+    const calls = stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search([]) }
+        : u.includes("scrapecreators")
+          ? { body: "{}" }
+          : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "three keywords in the sweep, one searched socially",
+      calls.filter((c) => c.includes("scrapecreators")).length,
+      3,
+    );
+    delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
   delete process.env["SCRAPECREATORS_API_KEY"];
   process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
   eq("the limit comes from the environment", dailyCredits("keywords"), 25);
