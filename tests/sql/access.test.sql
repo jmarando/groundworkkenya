@@ -160,7 +160,7 @@ begin
   perform public.focus_campaign('ca000000-0000-4000-8000-000000000003');
   select count(*) into n from public.wards;
   assert n = 6, 'after switching, Mathira''s six: ' || n;
-  assert (select count(*) from public.campaigns) = 6, 'the super admin sees every campaign';
+  assert (select count(*) from public.campaigns) = 7, 'the super admin sees every campaign';
 end $$;
 rollback;
 

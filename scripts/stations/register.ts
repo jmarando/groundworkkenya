@@ -4,6 +4,7 @@
 // https://www.iebc.or.ke/docs/rov_per_polling_station.pdf:
 //   pdftotext -tsv rov_per_polling_station.pdf /tmp/rov.tsv
 //   npx tsx --tsconfig tsconfig.json scripts/stations/register.ts /tmp/rov.tsv
+// AREAS=kuria-east,… reads only those areas and leaves the other files as they are.
 import { readFileSync, writeFileSync } from "node:fs";
 
 import { toCSV } from "@/lib/csv";
@@ -17,8 +18,9 @@ if (!tsvPath) {
   process.exit(2);
 }
 const tsv = readFileSync(tsvPath, "utf8");
+const only = process.env["AREAS"]?.split(",");
 let failed = false;
-for (const area of STATION_AREAS) {
+for (const area of STATION_AREAS.filter((a) => !only || only.includes(a.id))) {
   const ours = new Set(areaShapes(area).map((s) => s.slug));
   const streams = registerStreams(tsv, area.prefix);
   const { centres, problems } = registerCentres(streams, ours);

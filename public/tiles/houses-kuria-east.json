@@ -1,0 +1,14 @@
+{
+  "area": "migori/kuria-east",
+  "source": "Google Open Buildings v3 (CC BY 4.0)",
+  "minConfidence": 0.65,
+  "built": "2026-10-31",
+  "total": 78899,
+  "wards": {
+    "gokeharaka-getambwega": 13985,
+    "ntimaru-east": 10524,
+    "ntimaru-west": 16461,
+    "nyabasi-east": 16020,
+    "nyabasi-west": 21909
+  }
+}
