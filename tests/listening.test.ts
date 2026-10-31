@@ -310,6 +310,36 @@ async function main() {
     );
   }
   {
+    // A model's minute used up is not a stopped sweep: that read waits for the next run.
+    const minute = JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded.",
+        details: [
+          {
+            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+            violations: [{ quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier" }],
+          },
+        ],
+      },
+    });
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search(["https://news.test/a"]) }
+        : u.includes("generativelanguage")
+          ? { status: 429, body: minute }
+          : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a minute's allowance used up does not pause the sweep",
+      [r.paused, sb.tables["listening_jobs"]?.[0]?.["status"]],
+      [undefined, "idle"],
+    );
+  }
+  {
     const badKey = JSON.stringify({
       error: { code: 400, status: "INVALID_ARGUMENT", message: "API key not valid." },
     });

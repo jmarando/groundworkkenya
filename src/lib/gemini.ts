@@ -75,6 +75,30 @@ export function geminiError(body: string): string {
   return body.slice(0, 180);
 }
 
+/** What a 429 says about the limit it hit. */
+export type GeminiLimit = {
+  /** Google's name for the quota, e.g. "GenerateRequestsPerMinutePerProjectPerModel-FreeTier". */
+  quota: string | null;
+  /** A minute's allowance: kept per model, and clear again within the minute. */
+  perMinute: boolean;
+};
+
+/** The quota a 429 names, and whether it is one that clears within the minute. */
+export function geminiLimit(body: string): GeminiLimit {
+  let quota: string | null = null;
+  try {
+    const details = rec(rec(JSON.parse(body))["error"])["details"];
+    for (const d of Array.isArray(details) ? details.map(rec) : []) {
+      if (!String(d["@type"] ?? "").endsWith("QuotaFailure")) continue;
+      const first = rec(Array.isArray(d["violations"]) ? d["violations"][0] : null);
+      quota = words(first["quotaId"]) ?? words(first["quotaMetric"]);
+    }
+  } catch {
+    /* not JSON */
+  }
+  return { quota, perMinute: /PerMinute/i.test(quota ?? "") };
+}
+
 /** Whether the key itself was turned away (wrong, expired or switched off), rather than a limit reached. */
 export const geminiKeyRefused = (status: number, body: string): boolean =>
   status === 401 || (status === 400 && /API[ _]KEY[ _](NOT[ _]VALID|INVALID|EXPIRED)/i.test(body));

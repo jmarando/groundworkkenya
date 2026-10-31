@@ -10,6 +10,7 @@ import {
   geminiBusy,
   geminiError,
   geminiKeyRefused,
+  geminiLimit,
   geminiUrl,
 } from "@/lib/gemini";
 import { askAiJson, PauseError } from "@/lib/listening.server";
@@ -147,6 +148,54 @@ eq(
   false,
 );
 
+// ------------------------------------------------------- which limit was hit
+
+/** Google's 429, naming the quota it hit as it does. */
+const limitBody = (quotaId: string) =>
+  JSON.stringify({
+    error: {
+      code: 429,
+      status: "RESOURCE_EXHAUSTED",
+      message: "You exceeded your current quota, please check your plan and billing details.",
+      details: [
+        { "@type": "type.googleapis.com/google.rpc.Help", links: [] },
+        {
+          "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+          violations: [
+            {
+              quotaMetric: "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+              quotaId,
+            },
+          ],
+        },
+        { "@type": "type.googleapis.com/google.rpc.RetryInfo", retryDelay: "38s" },
+      ],
+    },
+  });
+const MINUTE = limitBody("GenerateRequestsPerMinutePerProjectPerModel-FreeTier");
+const DAY = limitBody("GenerateRequestsPerDayPerProjectPerModel-FreeTier");
+eq("a minute's allowance, by Google's name for it", geminiLimit(MINUTE), {
+  quota: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier",
+  perMinute: true,
+});
+eq(
+  "tokens per minute is a minute's allowance too",
+  geminiLimit(limitBody("GenerateContentInputTokensPerModelPerMinute-FreeTier")).perMinute,
+  true,
+);
+eq("a day's allowance is not", geminiLimit(DAY), {
+  quota: "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+  perMinute: false,
+});
+eq(
+  "a 429 that names no quota is not taken for a minute's",
+  [geminiLimit("{}"), geminiLimit("not json at all")],
+  [
+    { quota: null, perMinute: false },
+    { quota: null, perMinute: false },
+  ],
+);
+
 // ------------------------------------------------------- a busy model, the next
 
 const BUSY = JSON.stringify({
@@ -206,6 +255,54 @@ async function main() {
     });
     const err = await ask().catch((e: Error) => e);
     eq("a limit reached stops at once", [err instanceof PauseError, asked], [true, [first]]);
+  }
+  {
+    // A minute's allowance is kept per model: the next model has its own.
+    const asked = stubGemini({
+      [first]: { status: 429, body: MINUTE },
+      [second]: { status: 200, body: OK },
+    });
+    eq(
+      "a model's minute used up: the next model answers",
+      [await ask(), asked],
+      [{ headline: "x" }, [first, second]],
+    );
+  }
+  {
+    const asked = stubGemini({
+      [first]: { status: 429, body: MINUTE },
+      [second]: { status: 429, body: MINUTE },
+    });
+    const err = await ask().catch((e: Error) => e);
+    const said = String((err as Error).message);
+    eq(
+      "both models out of their minute: this question fails, the sweep is not stopped",
+      [
+        err instanceof PauseError,
+        said.startsWith("AI request limited (429)"),
+        said.endsWith("[GenerateRequestsPerMinutePerProjectPerModel-FreeTier]"),
+        asked,
+      ],
+      [false, true, true, [first, second]],
+    );
+  }
+  {
+    const asked = stubGemini({
+      [first]: { status: 429, body: DAY },
+      [second]: { status: 200, body: OK },
+    });
+    const err = await ask().catch((e: Error) => e);
+    eq(
+      "a day's allowance used stops at once, and names the quota",
+      [
+        err instanceof PauseError,
+        String((err as Error).message).endsWith(
+          "[GenerateRequestsPerDayPerProjectPerModel-FreeTier]",
+        ),
+        asked,
+      ],
+      [true, true, [first]],
+    );
   }
   {
     const asked = stubGemini({
