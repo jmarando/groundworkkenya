@@ -353,6 +353,70 @@ async function main() {
       ],
       [true, true],
     );
+    eq(
+      "reports lead and posts show the mood",
+      [
+        told.includes("Reports by news outlets say what happened"),
+        told.includes("use posts for the mood"),
+      ],
+      [true, true],
+    );
+  }
+  {
+    // The AI down: a report leads the morning, not a tweet found after it.
+    const now = at("06:05");
+    const row = (
+      url: string,
+      title: string,
+      snippet: string,
+      hoursAgo: number,
+      source: string,
+      domain: string,
+    ) => ({
+      id: url,
+      campaign_id: "c2",
+      url,
+      title,
+      snippet,
+      source,
+      domain,
+      published_at: hoursBefore(now, hoursAgo),
+      found_at: hoursBefore(now, hoursAgo),
+      rival_id: null,
+      reach: null,
+    });
+    const sb = world(now, {
+      listening_mentions: [
+        row(
+          "https://x.com/sakaja/status/1",
+          "Thank you Nairobi, more to come",
+          "We are only getting started and the work continues.",
+          1,
+          "x",
+          "x.com",
+        ),
+        row(
+          "https://the-star.co.ke/water",
+          "Water rationing ends in Eastlands",
+          "The utility says supply is back to normal in all wards.",
+          6,
+          "news",
+          "the-star.co.ke",
+        ),
+      ],
+    });
+    stubAi(500);
+    await runMorningStory(sb as never, { now });
+    const s = stories(sb).find((r) => r["campaign_id"] === "c2")?.["story"] as {
+      kind: string;
+      headline: string;
+      also: { url: string }[];
+    };
+    eq(
+      "the AI down: the report leads and the tweet follows it",
+      [s.kind, s.headline, s.also.map((a) => a.url)],
+      ["headlines", "Water rationing ends in Eastlands", ["https://x.com/sakaja/status/1"]],
+    );
   }
   console.log(`${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

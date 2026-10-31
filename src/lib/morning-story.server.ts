@@ -236,6 +236,7 @@ function storyPrompt(c: CampaignInfo, g: Gathered, lead?: string): string {
       ? `Write the story around item ${leadItem.n}.`
       : `Pick the one story that most shapes ${who}'s race this morning. Lead with the seat's own news when something there matters, but do not fixate on it: when ${county ?? "the county"}'s politics and services, a rival's move or a national development shapes the race more, lead with that and say how it lands on the seat. A quiet seat is no reason for no story: the county and the nation still make one.`,
     "Ignore adverts, job listings, items for sale and posts about other counties or constituencies.",
+    "Reports by news outlets say what happened; posts on X, Facebook, Reddit and the like show what people are saying. Lead with a report when one bears on the race, and use posts for the mood.",
     "Give: a plain headline under 12 words; a summary of two or three sentences of what happened,",
     "naming the outlet or account that reported it (never 'item 6');",
     `why it matters for ${who}'s race;`,

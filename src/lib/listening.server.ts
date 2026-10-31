@@ -18,6 +18,7 @@ import {
   geminiBusy,
   geminiError,
   geminiKeyRefused,
+  geminiLimit,
   geminiUrl,
 } from "./gemini";
 import { fairShare } from "./mood-queue";
@@ -269,7 +270,7 @@ async function readMoods(
   return parsed.results ?? [];
 }
 
-/** Google failed on its side (busy or broken), so the tier's next model may answer. */
+/** Google failed on its side (busy or broken), or a model's minute is used up: the tier's next may answer. */
 class BusyError extends Error {}
 
 /** One model asked once: Gemini's reply as JSON, or an error that says what went wrong. */
@@ -290,9 +291,15 @@ async function askGemini(
     const body = await res.text();
     if (!res.ok) {
       const why = geminiError(body);
-      // A limit reached, or the key itself turned away: stop the sweep rather than ask again.
+      const limit = res.status === 429 ? geminiLimit(body) : null;
+      // Google's name for the quota that was hit, so a free plan or a day's allowance shows.
+      const named = limit?.quota ? ` [${limit.quota}]` : "";
+      // A minute's allowance is kept per model and clears within the minute: the tier's next model
+      // may answer, and the sweep goes on.
+      if (limit?.perMinute) throw new BusyError(`AI request limited (429): ${why}${named}`);
+      // A day's allowance reached, or the key itself turned away: stop the sweep rather than ask again.
       if (isBlocking(res.status) || geminiKeyRefused(res.status, body))
-        throw new PauseError(`AI stopped (${res.status}): ${why}`, res.status);
+        throw new PauseError(`AI stopped (${res.status}): ${why}${named}`, res.status);
       const failed = `AI request failed (${res.status}): ${why}`;
       throw geminiBusy(res.status) ? new BusyError(failed) : new Error(failed);
     }

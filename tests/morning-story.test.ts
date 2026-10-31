@@ -10,6 +10,7 @@ import {
   checkStory,
   cleanTeamStory,
   headlinesStory,
+  isPost,
   kicker,
   leadItem,
   noStoryLine,
@@ -177,6 +178,119 @@ eq(
     1,
   );
   eq("no items, no lead", leadItem([]), null);
+
+  // An outlet's report before a post on a platform: a post is what people say, not what happened.
+  const tweet = (n: number, scope: "seat" | "county" | "rival" | "national", text: string) => ({
+    ...item(n, scope, text),
+    url: `https://x.com/someone/status/${n}`,
+    source: "x.com",
+  });
+  eq(
+    "a platform's posts are told from an outlet's reports",
+    [
+      "https://x.com/a/status/1",
+      "https://twitter.com/a/status/1",
+      "https://www.facebook.com/p/1",
+      "https://m.facebook.com/p/1",
+      "https://www.reddit.com/r/Kenya/comments/1",
+      "https://www.youtube.com/watch?v=1",
+      "https://www.tiktok.com/@a/video/1",
+      "https://www.instagram.com/p/1",
+      "https://www.the-star.co.ke/story",
+      "https://nation.africa/story",
+      "not a link",
+    ].map((url) => isPost({ url })),
+    [true, true, true, true, true, true, true, true, false, false, false],
+  );
+  eq(
+    "the seat's own tweet does not lead while the county has a report",
+    leadItem([tweet(1, "seat", body), item(2, "county", body)])?.n,
+    2,
+  );
+  eq(
+    "a bare headline from an outlet leads before a tweet with a sentence",
+    leadItem([tweet(1, "seat", body), item(2, "national", "")])?.n,
+    2,
+  );
+  eq(
+    "with only posts, the seat's own still leads: never empty",
+    leadItem([tweet(1, "national", body), tweet(2, "seat", body)])?.n,
+    2,
+  );
+  const mixed = headlinesStory([
+    tweet(1, "seat", body),
+    item(2, "county", body),
+    tweet(3, "county", body),
+    item(4, "seat", ""),
+    item(5, "national", body),
+  ]);
+  eq(
+    "headlines: a report leads, and the other reports come before any post",
+    [mixed.sources.map((l) => l.url), mixed.also.map((a) => a.url)],
+    [
+      ["https://example.test/2"],
+      [
+        "https://example.test/4",
+        "https://example.test/5",
+        "https://x.com/someone/status/1",
+        "https://x.com/someone/status/3",
+      ],
+    ],
+  );
+  // Trust before place: an outlet we know leads before a site we do not, the seat's own among equals.
+  const known = (n: number, scope: "seat" | "county" | "rival" | "national", text: string) => ({
+    ...item(n, scope, text),
+    url: `https://www.standardmedia.co.ke/story-${n}`,
+    source: "standardmedia.co.ke",
+  });
+  eq(
+    "an outlet we know leads before the seat's own from a site we do not",
+    leadItem([item(1, "seat", body), known(2, "county", body)])?.n,
+    2,
+  );
+  eq(
+    "among outlets we know, the seat's own comes first",
+    leadItem([known(1, "national", body), known(2, "seat", body), item(3, "seat", body)])?.n,
+    2,
+  );
+  eq(
+    "with no outlet we know, the seat's own site leads as before",
+    leadItem([item(1, "county", body), item(2, "seat", body)])?.n,
+    2,
+  );
+  eq(
+    "in one place: an outlet we know, then another site, then a post",
+    storyItems([
+      mention("https://x.com/a/status/9", "A tweet found a minute ago"),
+      mention("https://some-blog.example/post", "A blog found ten minutes ago"),
+      mention("https://www.the-star.co.ke/report", "A report found an hour ago"),
+    ]).map((i) => i.url),
+    [
+      "https://www.the-star.co.ke/report",
+      "https://some-blog.example/post",
+      "https://x.com/a/status/9",
+    ],
+  );
+  eq(
+    "the outlets the sweep reads are named",
+    [
+      "https://eastleighvoice.co.ke/a",
+      "https://nairobileo.co.ke/a",
+      "https://thekenyatimes.com/a",
+    ].map((url) => outletOf({ url, source: "web" })),
+    ["Eastleigh Voice", "Nairobi Leo", "The Kenya Times"],
+  );
+  eq(
+    "the morning's items put a report ahead of a newer tweet in the same place",
+    storyItems([
+      mention("https://x.com/a/status/9", "A tweet found a minute ago"),
+      mention("https://the-star.co.ke/report", "A report found an hour ago"),
+    ]).map((i) => [i.n, i.url]),
+    [
+      [1, "https://the-star.co.ke/report"],
+      [2, "https://x.com/a/status/9"],
+    ],
+  );
 
   const two = headlinesStory([
     item(1, "seat", "Supply cut to 1.1 million residents. Rains are due Friday. A third line."),
