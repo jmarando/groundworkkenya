@@ -88,7 +88,9 @@ async function scGet(path: string, params: Record<string, string>): Promise<any>
 export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]> {
   const json = await scGet("/v1/tiktok/search/keyword", { query });
   const items: any[] = json?.search_item_list ?? [];
-  return items
+  // Each result comes wrapped as { aweme_info: {...} }; a bare video is read too.
+  const videos = items.map((item) => item?.aweme_info ?? item);
+  return videos
     .map((it: any): Found => {
       const id = typeof it?.aweme_id === "string" ? it.aweme_id : "";
       const handle = it?.author?.unique_id || "-";
