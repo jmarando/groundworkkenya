@@ -741,6 +741,23 @@ async function main() {
       ],
     );
   }
+  {
+    // Results TikTok sends that cannot be read are said so, not passed off as nothing found.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch(tiktokSearch([{ aweme_info: { desc: "No id, no link" } }]));
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "TikTok results that cannot be read are noted",
+      r.notes.filter((n) => n.includes("TikTok")),
+      ["Water social: TikTok search returned results that could not be read (first result: desc)."],
+    );
+    const job = sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_scan");
+    eq(
+      "counted as a failed social search, without pausing the sweep",
+      [String(job?.["detail"] ?? "").includes("1 social search failed."), r.ran, r.paused ?? null],
+      [true, true, null],
+    );
+  }
   delete process.env["SCRAPECREATORS_API_KEY"];
   process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
   eq("the limit comes from the environment", dailyCredits("keywords"), 25);

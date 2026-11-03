@@ -24,6 +24,15 @@ function answer(body: unknown) {
     new Response(JSON.stringify(body), { status: 200 })) as typeof fetch;
 }
 
+/** What a search gives back, or what it fails with. */
+async function outcome(search: Promise<unknown>): Promise<unknown> {
+  try {
+    return await search;
+  } catch (e) {
+    return `threw: ${(e as Error).message}`;
+  }
+}
+
 const id = (n: number) => `750000000000000000${n}`;
 
 // ScrapeCreators documents /v1/tiktok/search/keyword as one { aweme_info: {...} } per video. The
@@ -92,6 +101,32 @@ async function main() {
     "results that cannot be read do not use up the limit",
     (await scSearchTikTok("water", 2)).map((h) => h.url.slice(-1)),
     ["1", "2"],
+  );
+
+  // Results that all fail to read mean the answer's shape changed, not that nobody posted.
+  answer({
+    success: true,
+    search_item_list: [wrapped({ desc: "No id, no link" }), { unexpected: true }],
+  });
+  eq(
+    "results that all fail to read are said so, with what the first one held",
+    await outcome(scSearchTikTok("water")),
+    "threw: TikTok search returned results that could not be read (first result: desc).",
+  );
+  answer({ success: true, search_item_list: [null] });
+  eq(
+    "and when the first holds nothing to name, only that they could not be read",
+    await outcome(scSearchTikTok("water")),
+    "threw: TikTok search returned results that could not be read.",
+  );
+  answer({
+    success: true,
+    search_item_list: [wrapped({ desc: "No id, no link" }), wrapped(video(id(1)))],
+  });
+  eq(
+    "one readable result is enough: the others are dropped quietly",
+    await outcome(scSearchTikTok("water")),
+    [found(id(1))],
   );
 
   answer({ success: true, search_item_list: [] });
