@@ -17,6 +17,7 @@ import {
   type Platform,
   type SocialPost,
 } from "./rival-posts";
+import { answerKeys } from "./x-read";
 
 export type Found = {
   url: string;
@@ -88,7 +89,9 @@ async function scGet(path: string, params: Record<string, string>): Promise<any>
 export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]> {
   const json = await scGet("/v1/tiktok/search/keyword", { query });
   const items: any[] = json?.search_item_list ?? [];
-  return items
+  // Each result comes wrapped as { aweme_info: {...} }; a bare video is read too.
+  const videos = items.map((item) => item?.aweme_info ?? item);
+  const hits = videos
     .map((it: any): Found => {
       const id = typeof it?.aweme_id === "string" ? it.aweme_id : "";
       const handle = it?.author?.unique_id || "-";
@@ -104,8 +107,15 @@ export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]>
         shares: count(it?.statistics?.share_count),
       };
     })
-    .filter((h) => Boolean(h.url))
-    .slice(0, limit);
+    .filter((h) => Boolean(h.url));
+  // Results that all fail to read mean the answer's shape changed, not that nobody posted: say so.
+  if (videos.length && !hits.length) {
+    const seen = answerKeys(videos[0]);
+    throw new Error(
+      `TikTok search returned results that could not be read${seen ? ` (first result: ${seen})` : ""}.`,
+    );
+  }
+  return hits.slice(0, limit);
 }
 
 /* --------------------------------------------------------------- reddit */

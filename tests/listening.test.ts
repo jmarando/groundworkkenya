@@ -69,6 +69,16 @@ const search = (urls: string[], title = (i: number) => `Story ${i + 1} about wat
     })),
   });
 
+/** ScrapeCreators' TikTok keyword search answering with these results; its other searches find nothing. */
+const tiktokSearch = (results: unknown[]) => (u: string) =>
+  u.includes("google.serper.dev")
+    ? { body: search([]) }
+    : u.includes("/v1/tiktok/search/keyword")
+      ? { body: JSON.stringify({ success: true, search_item_list: results }) }
+      : u.includes("scrapecreators")
+        ? { body: "{}" }
+        : { body: NO_MOODS };
+
 const TOPIC = {
   id: "t1",
   campaign_id: "c1",
@@ -699,6 +709,54 @@ async function main() {
       3,
     );
     delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
+  {
+    // TikTok's keyword search answers with each video wrapped in aweme_info.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch(
+      tiktokSearch([
+        {
+          aweme_info: {
+            aweme_id: "7500000000000000001",
+            desc: "Tankers are late again on our street",
+            create_time: 1790640000,
+            author: { unique_id: "maji.watch254" },
+            statistics: { play_count: 31677, share_count: 22 },
+          },
+        },
+      ]),
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    const row = sb.tables["listening_mentions"]?.[0];
+    eq(
+      "a wrapped TikTok video is stored, with who posted it and how far it went",
+      [r.stored, row?.["url"], row?.["source"], row?.["author"], row?.["reach"], row?.["shares"]],
+      [
+        1,
+        "https://www.tiktok.com/@maji.watch254/video/7500000000000000001",
+        "tiktok",
+        "@maji.watch254",
+        31677,
+        22,
+      ],
+    );
+  }
+  {
+    // Results TikTok sends that cannot be read are said so, not passed off as nothing found.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch(tiktokSearch([{ aweme_info: { desc: "No id, no link" } }]));
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "TikTok results that cannot be read are noted",
+      r.notes.filter((n) => n.includes("TikTok")),
+      ["Water social: TikTok search returned results that could not be read (first result: desc)."],
+    );
+    const job = sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_scan");
+    eq(
+      "counted as a failed social search, without pausing the sweep",
+      [String(job?.["detail"] ?? "").includes("1 social search failed."), r.ran, r.paused ?? null],
+      [true, true, null],
+    );
   }
   delete process.env["SCRAPECREATORS_API_KEY"];
   process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
