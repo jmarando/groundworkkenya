@@ -5,6 +5,7 @@
 // latest counts. Moods are read by the main sweep. It searches through ScrapeCreators, or
 // TwitterAPI.io when that key is set (src/lib/x-search.server.ts); with neither it does nothing.
 
+import { storeMentions } from "@/lib/listening-store.server";
 import { saveAccounts } from "@/lib/profiles.server";
 import { recordCounts } from "@/lib/readings.server";
 import { takeCredits } from "@/lib/social-credits";
@@ -67,10 +68,11 @@ export async function runXSweep(sb: AnyClient): Promise<XSweep> {
           shares: h.shares,
           refers_to: h.refersTo,
         }));
-        const { error } = await sb
-          .from("listening_mentions")
-          .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true });
-        if (error) notes.push(`${t.label}: X posts could not be stored.`);
+        const saved = await storeMentions(sb, rows);
+        if (saved.skipped)
+          notes.push(
+            `${t.label}: ${saved.skipped} of ${rows.length} X posts could not be stored (${saved.reason}).`,
+          );
         // A post found again keeps its highest counts, and each sighting is a reading.
         await recordCounts(sb, rows);
         // The author's follower count comes with the post, so the account needs no lookup.

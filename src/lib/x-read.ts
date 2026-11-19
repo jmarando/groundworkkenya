@@ -1,6 +1,8 @@
 // TwitterAPI.io's advanced-search answer read into posts, without trust: a post with no id or
 // author is dropped, links are built from the id, counts are numbers or nothing. Pure.
 
+import { clip } from "./clip";
+
 export type XHit = {
   url: string;
   title: string | null;
@@ -55,8 +57,8 @@ export function readXSearch(raw: unknown): XHit[] {
     return [
       {
         url: `https://x.com/${user}/status/${id}`,
-        title: text.split("\n")[0]!.slice(0, 300) || null,
-        snippet: text.slice(0, 1200) || null,
+        title: clip(text.split("\n")[0], 300),
+        snippet: clip(text, 1200),
         publishedAt: Number.isNaN(at) ? null : new Date(at).toISOString(),
         author: `@${user}`,
         reach: num(o["viewCount"]),
@@ -145,8 +147,8 @@ export function readScXSearch(raw: unknown): XHit[] {
     return [
       {
         url: `https://x.com/${handle}/status/${id}`,
-        title: text.split("\n")[0]!.slice(0, 300) || null,
-        snippet: text.slice(0, 1200) || null,
+        title: clip(text.split("\n")[0], 300),
+        snippet: clip(text, 1200),
         publishedAt: Number.isNaN(when) ? null : new Date(when).toISOString(),
         author: `@${handle}`,
         reach: count(o(t["views"])["count"] ?? t["view_count"] ?? t["views"] ?? t["viewCount"]),

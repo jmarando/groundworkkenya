@@ -9,6 +9,7 @@
  * Docs: https://docs.scrapecreators.com — auth via the `x-api-key` header.
  */
 
+import { clip } from "./clip";
 import {
   commentTexts,
   facebookPosts,
@@ -99,8 +100,8 @@ export async function scSearchTikTok(query: string, limit = 8): Promise<Found[]>
       const url = id ? `https://www.tiktok.com/@${handle}/video/${id}` : (it?.share_url ?? "");
       return {
         url,
-        title: desc.slice(0, 300) || null,
-        snippet: desc.slice(0, 1200) || null,
+        title: clip(desc, 300),
+        snippet: clip(desc, 1200),
         publishedAt: it?.create_time ? new Date(Number(it.create_time) * 1000).toISOString() : null,
         author: handle !== "-" ? `@${handle}` : null,
         reach: count(it?.statistics?.play_count),
@@ -133,8 +134,8 @@ export async function scSearchReddit(query: string, limit = 8): Promise<Found[]>
       const self = typeof p?.selftext === "string" ? p.selftext : "";
       return {
         url: p?.permalink ? `https://www.reddit.com${p.permalink}` : (p?.url ?? ""),
-        title: (p?.title ?? "").slice(0, 300) || null,
-        snippet: (self || p?.title || "").slice(0, 1200) || null,
+        title: clip(p?.title, 300),
+        snippet: clip(self || p?.title, 1200),
         publishedAt: p?.created_utc ? new Date(Number(p.created_utc) * 1000).toISOString() : null,
         author: typeof p?.author === "string" && p.author ? `u/${p.author}` : null,
         reach: null,
@@ -153,7 +154,7 @@ export async function scSearchYouTube(query: string, limit = 8): Promise<Found[]
   return items
     .map((v: any): Found => ({
       url: v?.url ?? "",
-      title: (v?.title ?? "").slice(0, 300) || null,
+      title: clip(v?.title, 300),
       snippet: null,
       publishedAt: typeof v?.publishedTime === "string" ? v.publishedTime : null,
       author:

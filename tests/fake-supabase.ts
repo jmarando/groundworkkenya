@@ -4,7 +4,8 @@
 // stamp_campaign trigger gives them one: from the row itself, else from its
 // person, conversation, poll, ward or topic, else the campaign that owns the
 // channels. An upsert must name a unique key the table has, as Postgres
-// insists. Nothing leaves this process.
+// insists, and a statement with text Postgres can't hold (half an emoji, or
+// NUL) is refused whole, as Postgres refuses it. Nothing leaves this process.
 
 type Row = Record<string, unknown>;
 type Filter = (r: Row) => boolean;
@@ -40,9 +41,30 @@ const PARENTS: [string, string][] = [
 
 let seq = 0;
 
+/**
+ * Why Postgres refuses this value, or null when it takes it. supabase-js sends half an emoji (a
+ * lone UTF-16 surrogate) as "\ud83d", which Postgres can't turn into text, and it can't hold NUL.
+ * Judged by V8's own check, not by the code under test.
+ */
+function badText(v: unknown): string | null {
+  if (typeof v === "string") {
+    if (!(v as unknown as { isWellFormed(): boolean }).isWellFormed())
+      return "invalid input syntax for type json";
+    return v.includes("\u0000") ? "unsupported Unicode escape sequence" : null;
+  }
+  if (v && typeof v === "object")
+    for (const x of Object.values(v)) {
+      const why = badText(x);
+      if (why) return why;
+    }
+  return null;
+}
+
 export function fakeSupabase(
   seed: Record<string, Row[]> = {},
   rpcs: Record<string, (args: Row) => unknown> = {},
+  /** Rows a table refuses, as a constraint would: the database's words, or null to take the row. */
+  refuse: Record<string, (r: Row) => string | null> = {},
 ) {
   const tables: Record<string, Row[]> = {
     campaigns: [{ id: CHANNEL_CAMPAIGN, owns_channels: true, created_at: "2026-01-01T00:00:00Z" }],
@@ -86,6 +108,13 @@ export function fakeSupabase(
     };
 
     const run = (): Result => {
+      // One statement takes all its rows or none.
+      if (op === "insert" || op === "upsert" || op === "update") {
+        for (const p of op === "update" ? [patch] : payload) {
+          const why = badText(p) ?? (op === "update" ? null : (refuse[table]?.(p) ?? null));
+          if (why) return { data: null, error: { message: why } };
+        }
+      }
       if (op === "insert") {
         const out: Row[] = [];
         for (const p of payload) {

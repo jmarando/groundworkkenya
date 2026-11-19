@@ -4,6 +4,7 @@
 // their moods counted; the comments, and who wrote them, are never kept. Every
 // ScrapeCreators request comes out of the day's "rivals" budget.
 
+import { clip } from "@/lib/clip";
 import { askAiJson } from "@/lib/listening.server";
 import { tally, type Platform, type SocialPost } from "@/lib/rival-posts";
 import {
@@ -214,8 +215,8 @@ export async function runRivalSweep(
             source: p.platform,
             author: r.name,
             url: p.url,
-            title: p.text.slice(0, 300) || null,
-            snippet: p.text.slice(0, 1200) || null,
+            title: clip(p.text, 300),
+            snippet: clip(p.text, 1200),
             published_at: p.publishedAt,
             reach: p.reach,
           })),

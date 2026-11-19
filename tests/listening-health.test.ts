@@ -126,6 +126,54 @@ eq(
   ["social-credits"],
 );
 
+// The keyword news search (Serper) running out pauses nothing either: the outlets' own feeds still
+// come in. The words the hourly sweep recorded on the live site, while it was idle.
+const liveNews =
+  'Keyword news search stopped: the news search was refused (400): {"message":"Not enough credits","statusCode":400}.';
+const n = sweepProblems(social(liveNews, null));
+eq(
+  "news search credits, seen in the sweep's notes",
+  n.map((p) => p.key),
+  ["news-credits"],
+);
+eq("no restart for it either", n[0]!.restart, false);
+eq(
+  "said plainly",
+  [n[0]!.title, n[0]!.why, n[0]!.fix],
+  [
+    "News search has stopped",
+    "Serper, which searches the news for each keyword, is out of credits. The outlets' own news feeds still come in.",
+    "Add credits there. The next hourly sweep carries on by itself.",
+  ],
+);
+eq(
+  "the service's own words are kept for whoever looks into it",
+  n[0]!.detail,
+  'the news search was refused (400): {"message":"Not enough credits","statusCode":400}.',
+);
+eq(
+  "a key turned away is said as such",
+  keys(
+    social("Keyword news search stopped: the news search was refused (401): Unauthorized.", null),
+  ),
+  ["news-refused"],
+);
+eq(
+  "seen among the sweep's other notes",
+  keys(
+    social(
+      `Social search skipped — ScrapeCreators is out of credits. · ${liveNews} · 2 keywords could not be searched.`,
+      null,
+    ),
+  ),
+  ["social-credits", "news-credits"],
+);
+eq(
+  "a news search with no key set is not a stopped one",
+  keys(social("Keyword news search is off: no Serper key (SERPER_API_KEY).", null)),
+  [],
+);
+
 // Both at once: the stopped sweep first.
 eq(
   "both",

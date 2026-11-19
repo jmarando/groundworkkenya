@@ -95,6 +95,7 @@ const TOPIC = {
 function world(
   extra: Record<string, Record<string, unknown>[]> = {},
   rpcs: Record<string, (args: Record<string, unknown>) => unknown> = {},
+  refuse: Record<string, (r: Record<string, unknown>) => string | null> = {},
 ) {
   return fakeSupabase(
     {
@@ -105,8 +106,15 @@ function world(
       ...extra,
     },
     rpcs,
+    refuse,
   );
 }
+
+/** The database refusing one post, as a constraint would. */
+const CONSTRAINT = 'new row for relation "listening_mentions" violates check constraint';
+const refusing = (url: string) => ({
+  listening_mentions: (r: Record<string, unknown>) => (r["url"] === url ? CONSTRAINT : null),
+});
 
 async function main() {
   process.env["GEMINI_API_KEY"] = "test-key";
@@ -278,6 +286,54 @@ async function main() {
       "a news-search story is kept as news, under its outlet's site",
       sb.tables["listening_mentions"]?.map((m) => [m["source"], m["domain"]]),
       [["news", "courier.test"]],
+    );
+  }
+  {
+    // One post the database refuses costs only itself, not the keyword's whole find.
+    const sb = world({}, {}, refusing("https://news.test/b"));
+    stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search(["https://news.test/a", "https://news.test/b", "https://news.test/c"]) }
+        : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a refused post leaves the keyword's others stored",
+      [r.stored, sb.tables["listening_mentions"]?.map((m) => m["url"])],
+      [2, ["https://news.test/a", "https://news.test/c"]],
+    );
+    eq(
+      "the one who swept hears how many were lost, and why",
+      r.notes.filter((n) => n.includes("could not be stored")),
+      [`Water: 1 of 3 posts found could not be stored (${CONSTRAINT}).`],
+    );
+    eq(
+      "the shared note counts them, naming no keyword",
+      sb.tables["listening_jobs"]?.[0]?.["detail"],
+      "1 post could not be stored.",
+    );
+  }
+  {
+    // The same for the outlets' own feeds.
+    const sb = world({}, {}, refusing("https://outlet.test/water-2"));
+    const now = new Date().toUTCString();
+    stubFetch(
+      (u) => (u.includes("google.serper.dev") ? { body: search([]) } : { body: NO_MOODS }),
+      rss(
+        `<item><title>Water shortage in Nairobi: tankers promised</title><link>https://outlet.test/water-1</link><pubDate>${now}</pubDate></item>` +
+          `<item><title>Nairobi water rationing extended</title><link>https://outlet.test/water-2</link><pubDate>${now}</pubDate></item>`,
+      ),
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a refused story leaves the feeds' other finds stored",
+      [r.stored, sb.tables["listening_mentions"]?.map((m) => m["url"])],
+      [1, ["https://outlet.test/water-1"]],
+    );
+    eq(
+      "and the one who swept hears it",
+      r.notes.filter((n) => n.includes("could not be stored")),
+      [`Water: 1 of 2 posts the news feeds found could not be stored (${CONSTRAINT}).`],
     );
   }
   {
@@ -756,6 +812,123 @@ async function main() {
       "counted as a failed social search, without pausing the sweep",
       [String(job?.["detail"] ?? "").includes("1 social search failed."), r.ran, r.paused ?? null],
       [true, true, null],
+    );
+  }
+  {
+    // A caption with an emoji across the cut: Postgres would refuse half an emoji, and with it the
+    // keyword's whole find.
+    const sb = world({}, { take_social_credits: () => true });
+    const video = (id: string, desc: string) => ({
+      aweme_info: {
+        aweme_id: id,
+        desc,
+        create_time: 1790640000,
+        author: { unique_id: "maji.watch254" },
+      },
+    });
+    stubFetch(
+      tiktokSearch([
+        video("7500000000000000011", `${"a".repeat(299)}😀 tankers late`),
+        video("7500000000000000012", "Maji yamefika 💧"),
+      ]),
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "an emoji at the cut loses no post",
+      [r.stored, sb.tables["listening_mentions"]?.map((m) => m["title"])],
+      [2, ["a".repeat(299), "Maji yamefika 💧"]],
+    );
+    eq(
+      "and nothing is said to be lost",
+      r.notes.some((n) => n.includes("could not be stored")),
+      false,
+    );
+  }
+  {
+    // Who posted is cut at 120 when stored: a channel name with an emoji across the cut.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search([]) }
+        : u.includes("/v1/youtube/search")
+          ? {
+              body: JSON.stringify({
+                videos: [
+                  {
+                    url: "https://www.youtube.com/watch?v=abc",
+                    title: "Maji Nairobi",
+                    channel: { title: `${"c".repeat(119)}😀 TV` },
+                  },
+                ],
+              }),
+            }
+          : u.includes("scrapecreators")
+            ? { body: "{}" }
+            : { body: NO_MOODS },
+    );
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "an author with an emoji at the cut loses no post",
+      [r.stored, sb.tables["listening_mentions"]?.map((m) => m["author"])],
+      [1, ["c".repeat(119)]],
+    );
+  }
+  {
+    // ScrapeCreators out of credits refuses every search: nothing was searched, so the six-hour
+    // wait does not start, and the rest of the sweep leaves ScrapeCreators alone.
+    const taken: number[] = [];
+    const sb = world(
+      { listening_topics: [TOPIC, { ...TOPIC, id: "t2", label: "Roads", query: "Nairobi roads" }] },
+      {
+        take_social_credits: (a) => {
+          taken.push(Number(a["_n"]));
+          return true;
+        },
+      },
+    );
+    const calls = stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search([]) }
+        : u.includes("scrapecreators")
+          ? { status: 402, body: JSON.stringify({ success: false, message: "Out of credits" }) }
+          : { body: NO_MOODS },
+    );
+    const social = () => calls.filter((c) => c.includes("scrapecreators")).length;
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "every search refused for credits: no keywords are said to be searched, and no wait starts",
+      sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_social") ?? null,
+      null,
+    );
+    eq(
+      "one keyword asked, not every one, and one keyword's credits taken",
+      [social(), taken],
+      [3, [3]],
+    );
+    const detail = String(
+      sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_scan")?.["detail"] ?? "",
+    );
+    eq("the sweep says why, once", detail.split("ScrapeCreators is out of credits").length - 1, 1);
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("the next sweep tries again, without waiting six hours", social(), 6);
+  }
+  {
+    // A keyword some of whose searches answered was searched: its six hours start.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch((u) =>
+      u.includes("google.serper.dev")
+        ? { body: search([]) }
+        : u.includes("/v1/tiktok/search/keyword")
+          ? { status: 402, body: "{}" }
+          : u.includes("scrapecreators")
+            ? { body: "{}" }
+            : { body: NO_MOODS },
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "some searches answered: the clock starts",
+      sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_social")?.["detail"],
+      "1 keyword searched on social platforms.",
     );
   }
   delete process.env["SCRAPECREATORS_API_KEY"];

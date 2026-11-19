@@ -10,6 +10,7 @@
 
 import { type AiAnswer, answerFault } from "./ai-answer";
 import { ALERT_FEED, parseAlertFeed } from "./alerts-feed";
+import { clip } from "./clip";
 import {
   CLAUDE_MODELS,
   CLAUDE_URL,
@@ -37,6 +38,7 @@ import {
   NewsSearchRefused,
   readOutletFeeds,
 } from "./news-sources.server";
+import { storeMentions } from "./listening-store.server";
 import { recordCounts } from "./readings.server";
 import { dailyCredits, takeCredits } from "./social-credits";
 import { socialPlan } from "./social-schedule";
@@ -200,22 +202,19 @@ async function outletPass(
       topic_id: topic.id,
       source: "news",
       domain: hostOf(h.url),
-      title: h.title?.slice(0, 300) ?? null,
+      title: clip(h.title, 300),
       url: h.url,
-      snippet: h.snippet?.slice(0, 1200) ?? null,
+      snippet: clip(h.snippet, 1200),
       published_at: h.publishedAt,
     }));
-    const { data: ins, error } = await sb
-      .from("listening_mentions")
-      .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true })
-      .select("id");
-    if (error) {
-      failed.stored++;
+    const saved = await storeMentions(sb, rows);
+    if (saved.skipped) {
+      failed.stored += saved.skipped;
       notes.push(
-        `${topic.label}: what the news feeds found could not be stored (${error.message}).`,
+        `${topic.label}: ${saved.skipped} of ${rows.length} posts the news feeds found could not be stored (${saved.reason}).`,
       );
     }
-    stored += ins?.length ?? 0;
+    stored += saved.stored;
   }
   return { found, stored };
 }
@@ -603,6 +602,8 @@ export async function runListeningScan(
       force: opts.force === true,
     }).topics;
     let socialSearched = 0;
+    // ScrapeCreators said it is out of credits: the rest of the sweep leaves it alone.
+    let socialOut = false;
 
     for (const topic of topics ?? []) {
       // An extra keyword of two words or more is searched as a phrase: "githunguri dairy".
@@ -662,7 +663,7 @@ export async function runListeningScan(
       // social platforms via ScrapeCreators — best effort, never pauses the sweep
       let socialFound = 0;
       const counter = opts.credits === undefined ? sb : opts.credits;
-      if (scConfigured() && counter && socialLeft > 0) {
+      if (scConfigured() && counter && socialLeft > 0 && !socialOut) {
         const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
         // Three searches, three credits, from the day's keyword budget.
         if (kw && !keywordsSpent && !(await takeCredits(counter, "keywords", 3))) {
@@ -671,7 +672,6 @@ export async function runListeningScan(
         }
         if (kw && !keywordsSpent) {
           socialLeft--;
-          socialSearched++;
           const social = await Promise.allSettled([
             scSearchTikTok(kw, 8),
             scSearchReddit(kw, 8),
@@ -686,6 +686,7 @@ export async function runListeningScan(
             }
             const err = r.reason instanceof Error ? r.reason : new Error(String(r.reason));
             if (err instanceof ScrapeCreatorsCreditError) {
+              socialOut = true;
               if (!creditNoted) {
                 say("Social search skipped — ScrapeCreators is out of credits.");
                 creditNoted = true;
@@ -695,6 +696,13 @@ export async function runListeningScan(
               notes.push(`${topic.label} social: ${err.message}`);
             }
           }
+          // A keyword whose every search was refused for credits was not searched.
+          if (
+            social.some(
+              (r) => r.status === "fulfilled" || !(r.reason instanceof ScrapeCreatorsCreditError),
+            )
+          )
+            socialSearched++;
         }
       }
       found += socialFound;
@@ -703,26 +711,25 @@ export async function runListeningScan(
         topic_id: topic.id,
         source: h.source ?? sourceOf(h.url),
         domain: h.domain ?? hostOf(h.url),
-        title: h.title?.slice(0, 300) ?? null,
+        title: clip(h.title, 300),
         url: h.url,
-        snippet: h.snippet?.slice(0, 1200) ?? null,
+        snippet: clip(h.snippet, 1200),
         published_at: h.publishedAt ? new Date(h.publishedAt).toISOString() : null,
-        author: h.author?.slice(0, 120) ?? null,
+        author: clip(h.author, 120),
         reach: h.reach ?? null,
         shares: h.shares ?? null,
       }));
 
       if (rows.length) {
         // Unique per campaign: the same story can matter to two campaigns.
-        const { data: ins, error: insErr } = await sb
-          .from("listening_mentions")
-          .upsert(rows, { onConflict: "campaign_id,url", ignoreDuplicates: true })
-          .select("id");
-        if (insErr) {
-          failed.stored++;
-          notes.push(`${topic.label}: what was found could not be stored (${insErr.message}).`);
+        const saved = await storeMentions(sb, rows);
+        if (saved.skipped) {
+          failed.stored += saved.skipped;
+          notes.push(
+            `${topic.label}: ${saved.skipped} of ${rows.length} posts found could not be stored (${saved.reason}).`,
+          );
         }
-        stored += ins?.length ?? 0;
+        stored += saved.stored;
         // A post found again keeps its highest views and shares, so a spreading post shows it, and
         // each sighting is a reading, so how it spread can be drawn later.
         if (topic.campaign_id)
@@ -744,7 +751,8 @@ export async function runListeningScan(
     }
 
     // The paid search ran: its six hours start now. A run that searched nothing (no key, no
-    // credits left) leaves it due, so the next sweep tries again.
+    // credits left, or ScrapeCreators refused every search for credits) leaves it due, so the next
+    // sweep tries again.
     if (socialSearched > 0)
       await sb.from("listening_jobs").upsert(
         {
@@ -851,8 +859,7 @@ export async function runListeningScan(
     failed.feeds &&
       `${count(failed.feeds, "Google Alert feed", "Google Alert feeds")} could not be read.`,
     failed.social && `${count(failed.social, "social search", "social searches")} failed.`,
-    failed.stored &&
-      `What ${count(failed.stored, "keyword", "keywords")} found could not be stored.`,
+    failed.stored && `${count(failed.stored, "post", "posts")} could not be stored.`,
   ].filter((c): c is string => Boolean(c));
   await sb
     .from("listening_jobs")
