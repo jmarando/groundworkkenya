@@ -40,10 +40,12 @@ declare
 begin
   insert into public.demo_leads (name, phone, seat, county) values ('Amina', '0712345678', 'MP', 'Nyeri');
 
+  -- Refused by the table's check, or first by the insert policy's own length limit (since
+  -- 20261119194000); either way it is never stored.
   begin
     insert into public.demo_leads (name, phone) values (repeat('x', 5000), '0712345678');
     assert false, 'an oversized name was stored';
-  exception when check_violation then null;
+  exception when check_violation or insufficient_privilege then null;
   end;
 
   -- A backdated row still counts as now.
