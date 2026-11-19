@@ -58,6 +58,7 @@ eq(
   [
     "not-visited:nairobi/kasarani",
     "time-in-safe-seats:campaign",
+    `crowd-coming:${KEYS.mwiki}:c1`,
     `ward-top-issue:${KEYS.kawangware}`,
     "issue-rising:floods",
     "one-seat-different-places:nairobi/dagoretti-north",

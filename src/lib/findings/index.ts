@@ -17,6 +17,7 @@ import {
 } from "@/lib/findings/field";
 import { issueRising, oneSeatDifferentPlaces, wardTopIssue } from "@/lib/findings/message";
 import { pollMove, rivalInNews } from "@/lib/findings/rivals";
+import { crowdComing } from "@/lib/findings/crowds";
 import { notVisited, timeInSafeSeats } from "@/lib/findings/time";
 
 export type Rule = (i: FindingsInput) => Finding[];
@@ -25,6 +26,7 @@ export type Rule = (i: FindingsInput) => Finding[];
 export const RULE_FNS: Partial<Record<RuleId, Rule>> = {
   "not-visited": notVisited,
   "time-in-safe-seats": timeInSafeSeats,
+  "crowd-coming": crowdComing,
   "ward-top-issue": wardTopIssue,
   "issue-rising": issueRising,
   "one-seat-different-places": oneSeatDifferentPlaces,

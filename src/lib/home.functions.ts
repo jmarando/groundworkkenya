@@ -7,8 +7,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { nairobiToday } from "@/lib/nairobi-date";
+import { loadCrowdEvents } from "@/lib/crowd-events.functions";
 import { addDays, type DiaryEntry } from "@/lib/diary";
 import { loadDiary } from "@/lib/diary.functions";
+import type { CrowdEvent } from "@/lib/crowd-events";
 import { type HomeFacts, type RaceView, type RealSignals } from "@/lib/home";
 import type { StoryView } from "@/lib/morning-story";
 import { loadHomeStory } from "@/lib/morning-story.functions";
@@ -37,6 +39,13 @@ export type HomeData = {
   search: SearchRead | null;
 };
 
+/** The coming week's crowd events still to decide: how many, and how many in the campaign's wards. */
+export function crowdWeek(events: CrowdEvent[], today: string): { week: number; inWards: number } {
+  const last = addDays(today, 6);
+  const open = events.filter((e) => e.status === "new" && e.day >= today && e.day <= last);
+  return { week: open.length, inWards: open.filter((e) => e.wardId).length };
+}
+
 /** Roles that can approve expenses, so only they are asked to. */
 const APPROVERS = ["super", "candidate", "manager"];
 
@@ -63,6 +72,7 @@ export async function loadHome(
     story,
     search,
     issueSearch,
+    crowdEvents,
   ] = await Promise.all([
     sb.from("profiles").select("full_name").eq("user_id", userId).maybeSingle(),
     sb.from("people").select("id", { count: "exact", head: true }).not("tags", "cs", "{sample}"),
@@ -87,6 +97,7 @@ export async function loadHome(
     loadHomeStory(sb, todayIso).catch(() => null),
     loadSearch(sb as never, "candidates").catch(() => null),
     loadSearch(sb as never, "issues").catch(() => null),
+    loadCrowdEvents(sb, todayIso).catch(() => []),
   ]);
   const mind = topOfMind({ ...mindIn, searches: issueAverages(issueSearch, todayIso) });
   const posts = ((postRows.data ?? []) as PostRow[])
@@ -104,6 +115,7 @@ export async function loadHome(
         postSpike(rivals, posts, new Date()) ??
         rivalMove(rivals, polls, todayIso) ??
         searchSpike(search, rivals, todayIso),
+      crowds: crowdWeek(crowdEvents, todayIso),
     },
     race: { rivals, polls, posts },
     diary,
