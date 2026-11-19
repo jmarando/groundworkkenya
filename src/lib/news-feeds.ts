@@ -7,6 +7,7 @@
 // fetches.
 
 import { plain, realLink } from "./alerts-feed";
+import { clip } from "./clip";
 
 /** The feeds read every hour; each answered with stories when checked on 30 October 2026. */
 export const OUTLET_FEEDS: { outlet: string; url: string }[] = [
@@ -64,8 +65,8 @@ export function parseFeed(xml: string): FeedStory[] {
       element(body, "description") ?? element(body, "summary") ?? element(body, "content:encoded");
     out.push({
       url,
-      title: title ? plain(title).slice(0, 300) || null : null,
-      snippet: summary ? plain(summary).slice(0, 1200) || null : null,
+      title: title ? clip(plain(title), 300) : null,
+      snippet: summary ? clip(plain(summary), 1200) : null,
       publishedAt: when(
         element(body, "pubDate") ??
           element(body, "dc:date") ??
@@ -256,8 +257,7 @@ export function serperStories(json: unknown, now = Date.now()): NewsHit[] {
     const r = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
     const url = typeof r["link"] === "string" ? realLink(r["link"]) : null;
     if (!url) continue;
-    const text = (v: unknown, max: number) =>
-      typeof v === "string" ? plain(v).slice(0, max) || null : null;
+    const text = (v: unknown, max: number) => (typeof v === "string" ? clip(plain(v), max) : null);
     out.push({
       url,
       title: text(r["title"], 300),

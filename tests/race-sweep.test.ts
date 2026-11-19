@@ -265,6 +265,34 @@ async function main() {
     );
   }
   {
+    // A caption with an emoji across the cut: Postgres would refuse half an emoji, and with it the
+    // account's whole read.
+    const sb = world();
+    stubFetch((u) =>
+      u.includes("/v3/tiktok/profile/videos")
+        ? {
+            body: JSON.stringify({
+              aweme_list: [
+                {
+                  aweme_id: "444",
+                  desc: `${"a".repeat(299)}😀${"b".repeat(898)}😀 tail`,
+                  create_time: secs(1),
+                  statistics: { digg_count: 10, comment_count: 0, share_count: 0 },
+                },
+              ],
+            }),
+          }
+        : null,
+    );
+    await runRivalSweep(sb as never, { now: NOW });
+    const video = mentions(sb).find((m) => m["source"] === "tiktok");
+    eq(
+      "a caption with an emoji at the cut is stored, without half an emoji",
+      [video?.["title"], video?.["snippet"]],
+      ["a".repeat(299), `${"a".repeat(299)}😀${"b".repeat(898)}`],
+    );
+  }
+  {
     delete process.env["SCRAPECREATORS_API_KEY"];
     const sb = world();
     const calls = stubFetch();

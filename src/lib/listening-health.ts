@@ -19,6 +19,27 @@ export type Problem = {
 type Job = { status: string; pausedReason: string | null; detail: string | null };
 
 const OUT_OF_CREDITS = /scrapecreators is out of credits/i;
+/** The sweep's note when Serper turns the keyword news search away, up to the next note. */
+const NEWS_STOPPED = /keyword news search stopped: ([^·]*)/i;
+
+/** The keyword news search (Serper) turned away: its credits used up, or its key refused. */
+function newsStopped(words: string): Problem {
+  const base = { title: "News search has stopped", detail: words, restart: false };
+  const still = "The outlets' own news feeds still come in.";
+  return /credit/i.test(words)
+    ? {
+        ...base,
+        key: "news-credits",
+        why: `Serper, which searches the news for each keyword, is out of credits. ${still}`,
+        fix: "Add credits there. The next hourly sweep carries on by itself.",
+      }
+    : {
+        ...base,
+        key: "news-refused",
+        why: `Serper, which searches the news for each keyword, turned the request down: its key may be wrong or switched off. ${still}`,
+        fix: "Check SERPER_API_KEY in Groundwork's secrets in Lovable. The next hourly sweep carries on by itself.",
+      };
+}
 
 /** The AI is what stops a sweep now ("AI stopped (429): …", "AI is not configured."). */
 function aiStopped(reason: string, code: string | undefined): Problem {
@@ -109,5 +130,8 @@ export function sweepProblems(input: {
       detail: null,
       restart: false,
     });
+  // Nor does the keyword news search stopping: the outlets' own feeds and Google Alerts still come in.
+  const news = NEWS_STOPPED.exec(input.job?.detail ?? "")?.[1]?.trim();
+  if (news) out.push(newsStopped(news));
   return out;
 }

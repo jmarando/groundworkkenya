@@ -2,6 +2,8 @@
 // keyword may carry its feed link, and the hourly sweep reads it beside the web
 // search. Only Google's own feed links are accepted, here and in the database.
 
+import { clip } from "./clip";
+
 /** https://www.google.com/alerts/feeds/<user>/<alert>, nothing more. */
 export const ALERT_FEED =
   /^https:\/\/www\.google\.com\/alerts\/feeds\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/;
@@ -75,8 +77,8 @@ export function parseAlertFeed(xml: string): AlertEntry[] {
     const published = /<published>([^<]+)<\/published>/.exec(body)?.[1];
     out.push({
       url,
-      title: title ? plain(title).slice(0, 300) || null : null,
-      snippet: content ? plain(content).slice(0, 1200) || null : null,
+      title: title ? clip(plain(title), 300) : null,
+      snippet: content ? clip(plain(content), 1200) : null,
       publishedAt:
         published && !Number.isNaN(Date.parse(published))
           ? new Date(published).toISOString()
