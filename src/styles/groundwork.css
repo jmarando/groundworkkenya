@@ -11652,6 +11652,161 @@ table.fp-board {
   overflow-wrap: anywhere;
 }
 
+/* Listening's Report: figures against the days before, the mood score, shares, phrases.
+   The day columns reuse Replay's .rp-bars; the mood split reuses .lsn-mood. */
+.rpt-notes {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.rpt-tile {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.rpt-mood {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+.rpt-mood .kpi-val {
+  display: block;
+  margin-top: 8px;
+}
+.rpt-mood .kpi-sub {
+  display: block;
+  margin-top: 6px;
+}
+.rpt-scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 2px 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.rpt-rows {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.rpt-rows button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rpt-rows button:disabled {
+  cursor: default;
+}
+.rpt-rows .top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+.rpt-rows .top b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rpt-cloud {
+  list-style: none;
+  margin: 8px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px 14px;
+}
+.rpt-cloud button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  line-height: 1.25;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.rpt-cloud button:hover,
+.rpt-ph button:hover .t {
+  text-decoration: underline;
+}
+.rpt-cloud .rpt-s0 {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.rpt-cloud .rpt-s1 {
+  font-size: 15px;
+}
+.rpt-cloud .rpt-s2 {
+  font-size: 18px;
+}
+.rpt-cloud .rpt-s3 {
+  font-size: 22px;
+  font-weight: 500;
+}
+.rpt-cloud .rpt-s4 {
+  font-size: 27px;
+  font-weight: 500;
+}
+.rpt-tables {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.rpt-ph {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.rpt-ph button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 84px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rpt-ph .t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpt-ph-n {
+  display: grid;
+  grid-template-columns: 1fr 30px;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+@media (max-width: 760px) {
+  .rpt-mood,
+  .rpt-tables {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Road to election day: dates, phases, milestones, notes */
 .rm-dates {
   list-style: none;

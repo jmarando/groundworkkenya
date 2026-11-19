@@ -1,7 +1,7 @@
 // Reading a window of Listening's posts, a thousand at a time (the database answers at most a
 // thousand rows a request), for the screens and jobs that work on more than the latest 600: big
-// voices, stories, Replay. A post's words are left out on purpose; who, where, when and how much
-// is what they count. Server only.
+// voices, stories, Replay, the Report. A post's words are left out unless asked for (only the
+// Report's phrases read them); who, where, when and how much is what the others count. Server only.
 
 import type { MentionRow } from "@/lib/listening-mention";
 import { OFF_TOPIC } from "@/lib/top-of-mind";
@@ -30,16 +30,18 @@ export async function loadWindow(
     cap?: number;
     /** More columns, for a job that needs them (they must exist: a column added by a later schema does not before it). */
     extra?: string;
+    /** Keep each post's headline and text (title, snippet). */
+    words?: boolean;
   },
 ): Promise<{ rows: MentionRow[]; truncated: boolean }> {
   const cap = opts.cap ?? 4000;
   const rows: MentionRow[] = [];
   let full = false;
+  const columns = [COLUMNS, opts.words ? "title, snippet" : "", opts.extra ?? ""]
+    .filter(Boolean)
+    .join(", ");
   for (let from = 0; ; from += PAGE) {
-    let q = sb
-      .from("listening_mentions")
-      .select(opts.extra ? `${COLUMNS}, ${opts.extra}` : COLUMNS)
-      .gte("found_at", opts.since);
+    let q = sb.from("listening_mentions").select(columns).gte("found_at", opts.since);
     if (opts.until) q = q.lt("found_at", opts.until);
     if (opts.campaignId) q = q.eq("campaign_id", opts.campaignId);
     const { data, error } = await q
@@ -48,7 +50,8 @@ export async function loadWindow(
       .range(from, from + PAGE - 1);
     if (error) throw new Error("The posts could not be read.");
     const page = (data ?? []) as Omit<MentionRow, "title" | "snippet">[];
-    for (const r of page) rows.push({ ...r, title: null, snippet: null });
+    for (const r of page)
+      rows.push(opts.words ? (r as MentionRow) : { ...r, title: null, snippet: null });
     full = page.length === PAGE;
     if (!full || rows.length >= cap) break;
   }
