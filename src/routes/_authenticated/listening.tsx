@@ -28,6 +28,7 @@ import { QueryState } from "@/components/gw/QueryState";
 import { Alerts, Keywords } from "@/components/gw/listening/Settings";
 import { Reactions } from "@/components/gw/listening/Reactions";
 import { ReplayPanel } from "@/components/gw/listening/ReplayPanel";
+import { ReportPanel } from "@/components/gw/listening/ReportPanel";
 import { StoryPanel } from "@/components/gw/listening/StoryPanel";
 import { StoryProvider } from "@/components/gw/listening/story-context";
 import { Voices } from "@/components/gw/listening/Voices";
@@ -70,6 +71,7 @@ export const Route = createFileRoute("/_authenticated/listening")({
 const MOOD: Record<string, string> = { positive: "warm", neutral: "neutral", negative: "angry" };
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "report", label: "Report" },
   { key: "voices", label: "Voices & platforms" },
   { key: "reactions", label: "Reactions" },
   { key: "replay", label: "Replay" },
@@ -327,6 +329,8 @@ function Listening() {
         )}
 
         {view === "reactions" && <Reactions openId={openReaction} />}
+
+        {view === "report" && <ReportPanel busy={busy} mark={mark} react={react} />}
 
         {view === "replay" && <ReplayPanel busy={busy} mark={mark} react={react} />}
 
