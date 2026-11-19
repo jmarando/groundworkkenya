@@ -2,11 +2,13 @@
 // (src/lib/map-areas.ts), from Google Open Buildings v3 (CC BY 4.0), as one
 // PMTiles file per area and the number of houses in each ward.
 //
-//   npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz> [id …]
+//   npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz> … [id …]
 //
-// With ids (roysambu, mathira …), only those areas are built: the S2 cell must cover them.
+// With ids (roysambu, mathira …), only those areas are built: the S2 cells must cover them.
 // <183_buildings.csv.gz> is the S2 cell covering Nairobi and Nyeri (1.76 GB):
 //   https://storage.googleapis.com/open-buildings-data/v3/polygons_s2_level_4_gzip/183_buildings.csv.gz
+// An area across the equator needs the cell to its north as well: Meru is 179 and 183, given
+// as two files (every argument ending .csv.gz is a cell; a house is in one cell only).
 // Writes public/tiles/houses-<id>.pmtiles and public/tiles/houses-<id>.json,
 // and nothing at all if a ward has no houses or a file is over 25 MiB.
 
@@ -31,15 +33,16 @@ import { HOUSE_ZOOM, LAYER } from "@/lib/house-tiles";
 import { MAP_AREAS } from "@/lib/map-areas";
 import { writeArchive } from "@/lib/pmtiles";
 
-const src = process.argv[2];
-if (!src) {
+const args = process.argv.slice(2);
+const sources = args.filter((a) => a.endsWith(".csv.gz"));
+if (!sources.length) {
   console.error(
-    "Usage: npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz>",
+    "Usage: npx tsx --tsconfig tsconfig.json scripts/geo/house-tiles.ts <183_buildings.csv.gz> … [id …]",
   );
   process.exit(1);
 }
 
-const only = process.argv.slice(3);
+const only = args.filter((a) => !a.endsWith(".csv.gz"));
 const unknown = only.filter((id) => !MAP_AREAS.some((a) => a.id === id));
 if (unknown.length) {
   console.error(`No map area with id ${unknown.join(", ")}`);
@@ -52,29 +55,31 @@ const areas = MAP_AREAS.filter((a) => !only.length || only.includes(a.id)).map((
   return { area, box, wards, found: emptyCollected() };
 });
 
-const lines = createInterface({
-  input: createReadStream(src).pipe(createGunzip()),
-  crlfDelay: Infinity,
-});
-let header = true;
 let rows = 0;
-for await (const line of lines) {
-  if (header) {
-    header = false;
-    if (line.trim() !== CSV_HEADER) {
-      console.error(`These aren't Open Buildings v3 columns: ${line}`);
-      process.exit(1);
+for (const src of sources) {
+  const lines = createInterface({
+    input: createReadStream(src).pipe(createGunzip()),
+    crlfDelay: Infinity,
+  });
+  let header = true;
+  for await (const line of lines) {
+    if (header) {
+      header = false;
+      if (line.trim() !== CSV_HEADER) {
+        console.error(`These aren't Open Buildings v3 columns: ${line}`);
+        process.exit(1);
+      }
+      continue;
     }
-    continue;
-  }
-  rows += 1;
-  if (rows % 5_000_000 === 0) console.log(`${rows / 1_000_000} million rows read…`);
-  const p = quickPosition(line);
-  if (!p) continue;
-  for (const a of areas) {
-    if (!inBox(p, a.box)) continue;
-    const row = parseRow(line);
-    if (row) collect(a.wards, a.box, row, a.found);
+    rows += 1;
+    if (rows % 5_000_000 === 0) console.log(`${rows / 1_000_000} million rows read…`);
+    const p = quickPosition(line);
+    if (!p) continue;
+    for (const a of areas) {
+      if (!inBox(p, a.box)) continue;
+      const row = parseRow(line);
+      if (row) collect(a.wards, a.box, row, a.found);
+    }
   }
 }
 

@@ -5,9 +5,11 @@ import { githunguri } from "@/lib/demo/scenarios/githunguri";
 import { kalonzo } from "@/lib/demo/scenarios/kalonzo";
 import { kuriaEast } from "@/lib/demo/scenarios/kuria-east";
 import { mathira } from "@/lib/demo/scenarios/mathira";
+import { meru } from "@/lib/demo/scenarios/meru";
 import { roysambu } from "@/lib/demo/scenarios/roysambu";
 import { sakaja } from "@/lib/demo/scenarios/sakaja";
 import type { Contender, Scenario, ScenarioKey } from "@/lib/demo/types";
+import { raceOf } from "@/lib/race";
 
 export const SCENARIOS: Scenario[] = [
   kalonzo,
@@ -17,6 +19,7 @@ export const SCENARIOS: Scenario[] = [
   githunguri,
   kuriaEast,
   athwana,
+  meru,
 ];
 
 /** Nairobi's governor race is this workspace's own campaign, so it comes first. */
@@ -27,16 +30,22 @@ export function scenarioKey(v: unknown): ScenarioKey {
   return SCENARIOS.some((s) => s.key === v) ? (v as ScenarioKey) : DEFAULT_SCENARIO;
 }
 
-/** The demo scenario for a campaign's race: president, governor, MP or MCA. */
+/** The demo scenario for a campaign's race: president, governor, woman rep, MP or MCA. */
 export function scenarioForLevel(level: string | null | undefined): ScenarioKey {
-  return OWN_DEMO[level ?? ""] ?? DEFAULT_SCENARIO;
+  return OWN_DEMO[raceOf(level) ?? ""] ?? DEFAULT_SCENARIO;
 }
+
+/** A campaign's level and a demo's office name one race ("woman-rep" is the woman_rep demo's). */
+const sameRace = (office: string, level: string | null | undefined) =>
+  raceOf(office) !== null && raceOf(office) === raceOf(level);
 
 /** A campaign's demo: its own place's, where there is one, else its race's. */
 export function scenarioFor(
   campaign: { slug: string; level: string } | null | undefined,
 ): ScenarioKey {
-  const own = SCENARIOS.find((s) => s.key === campaign?.slug && s.office === campaign?.level);
+  const own = SCENARIOS.find(
+    (s) => s.key === campaign?.slug && sameRace(s.office, campaign?.level),
+  );
   return own ? own.key : scenarioForLevel(campaign?.level);
 }
 
@@ -44,10 +53,11 @@ export function getScenario(key: ScenarioKey): Scenario {
   return SCENARIOS.find((s) => s.key === key) ?? sakaja;
 }
 
-/** Which demo is a race's own: only these four have one. */
+/** Which demo is a race's own: only these five have one. */
 const OWN_DEMO: Record<string, ScenarioKey> = {
   president: "kalonzo",
   governor: "sakaja",
+  woman_rep: "meru",
   mp: "mathira",
   mca: "roysambu",
 };
@@ -61,7 +71,7 @@ export function forCampaign(
   campaign: { candidate: string | null; level: string } | null | undefined,
 ): Scenario {
   const name = campaign?.candidate?.trim();
-  if (!name || s.office !== campaign?.level || name === s.candidate.name) return s;
+  if (!name || !sameRace(s.office, campaign?.level) || name === s.candidate.name) return s;
   const words = name.split(/\s+/);
   const first = words[0]!;
   const initials = (

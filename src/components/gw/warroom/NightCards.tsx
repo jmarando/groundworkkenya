@@ -1,7 +1,7 @@
 import { ChoroplethMap } from "@/components/gw/demo/ChoroplethMap";
 import { toneVar } from "@/components/gw/demo/tone";
 import type { NightFrame } from "@/lib/demo/election-night";
-import type { Scenario } from "@/lib/demo/types";
+import { countyWide, type Scenario } from "@/lib/demo/types";
 import { nf } from "@/lib/format";
 
 const pct = (n: number) => `${n.toFixed(1)}%`;
@@ -332,10 +332,10 @@ type Row = {
   swing: number | null;
 };
 
-/** Areas, or for the governor the constituencies the wards make up. */
+/** Areas, or for a county's own race the constituencies the wards make up. */
 export function Areas({ s, f }: { s: Scenario; f: NightFrame }) {
   let rows: Row[];
-  if (s.office === "governor") {
+  if (countyWide(s.office)) {
     const groups = new Map<
       string,
       { votes: number[]; valid: number; stIn: number; reg: number; us22: number; w: number }
@@ -392,13 +392,14 @@ export function Areas({ s, f }: { s: Scenario; f: NightFrame }) {
       (y.reported > 0 ? 1 : 0) - (x.reported > 0 ? 1 : 0) ||
       Math.abs(x.margin) - Math.abs(y.margin),
   );
-  const unit =
-    s.office === "governor" ? "Constituency" : s.geo.unit[0]!.toUpperCase() + s.geo.unit.slice(1);
+  const unit = countyWide(s.office)
+    ? "Constituency"
+    : s.geo.unit[0]!.toUpperCase() + s.geo.unit.slice(1);
   return (
     <div className="card w-span7">
       <div className="card-head">
         <h2>
-          {s.office === "governor"
+          {countyWide(s.office)
             ? "Constituencies"
             : s.office === "president"
               ? "Counties"

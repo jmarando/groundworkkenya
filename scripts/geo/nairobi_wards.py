@@ -1,16 +1,19 @@
-"""Nairobi's wards from geoBoundaries KEN ADM3, matched to the wards in our database.
+"""A county's wards from geoBoundaries KEN ADM3, matched to the wards in our database: Nairobi's,
+and Meru's for the county campaign there.
 
 Usage (run in a folder holding the three inputs):
   python3 nairobi_wards.py public/geo/nairobi-wards.json
+  python3 nairobi_wards.py public/geo/meru-wards.json Meru
 
 Inputs:
   ken_adm1_full.geojson  geoBoundaries gbOpen KEN ADM1 (counties)
   ken_adm3_full.geojson  geoBoundaries gbOpen KEN ADM3 (wards; Omare & Omare 2020, CC BY 4.0)
       both from https://www.geoboundaries.org/api/current/gbOpen/KEN/<level>/
-  db_wards.json          [{slug, name, constituency}] exported from public.wards
+  db_wards.json          [{slug, name, constituency}] exported from public.wards; for Meru,
+                         its 45 wards as IEBC's 2022 register by polling station names them
 
-Picks every ADM3 polygon whose interior point lies inside the Nairobi ADM1
-polygon, matches it to a database ward by name, simplifies it to about 3 m and
+Picks every ADM3 polygon whose interior point lies inside the county's ADM1
+polygon (Nairobi unless a county is named), matches it to a database ward by name, simplifies it to about 3 m and
 writes a compact GeoJSON keyed by our ward slug. Reports anything it could not
 match, both ways.
 """
@@ -22,6 +25,7 @@ ADM1 = "ken_adm1_full.geojson"
 ADM3 = "ken_adm3_full.geojson"
 DB = "db_wards.json"
 OUT = sys.argv[1] if len(sys.argv) > 1 else "nairobi-wards.geojson"
+COUNTY = sys.argv[2] if len(sys.argv) > 2 else "Nairobi"
 # Douglas-Peucker tolerance: about 3 m at Nairobi's latitude.
 TOL = 3 / 111_320
 
@@ -136,14 +140,16 @@ def round_geom(geom, nd=5):
 
 
 adm1 = json.load(open(ADM1))
-nairobi = next(f for f in adm1["features"] if f["properties"]["shapeName"].lower().startswith("nairobi"))
+county = next(
+    f for f in adm1["features"] if f["properties"]["shapeName"].lower().startswith(COUNTY.lower())
+)
 adm3 = json.load(open(ADM3))
 db = json.load(open(DB))
 
 picked = []
 for f in adm3["features"]:
     p = interior_point(f["geometry"])
-    if p and in_geom(p, nairobi["geometry"]):
+    if p and in_geom(p, county["geometry"]):
         picked.append(f)
 
 by_norm = {}
@@ -178,6 +184,6 @@ for f in picked:
 unmatched_db = [w["name"] + " (" + w["constituency"] + ")" for w in db if w["slug"] not in used]
 json.dump({"type": "FeatureCollection", "features": features}, open(OUT, "w"), separators=(",", ":"))
 
-print(f"Nairobi polygons found: {len(picked)} · matched to database wards: {len(features)} of {len(db)}")
+print(f"{COUNTY} polygons found: {len(picked)} · matched to database wards: {len(features)} of {len(db)}")
 print("geo names not matched:", unmatched_geo or "none")
 print("database wards without a shape:", unmatched_db or "none")

@@ -2,9 +2,11 @@
 // a whole map's tiles in one file, read a tile at a time with HTTP range
 // requests, so a static host can serve it. This writes the house files
 // (scripts/geo/house-tiles.ts) and reads them in the browser. It holds only
-// what they use: one root directory and no leaf directories, gzip for the
-// directory, the metadata and the tiles, and vector tiles. Pure apart from the
-// gzip and the reading handed in, so it runs the same in tests and browsers.
+// what they use: a root directory, and one level of leaf directories when the
+// tiles are too many for the root to fit the first read (a county as big as
+// Meru's); gzip for the directories, the metadata and the tiles; vector tiles.
+// Pure apart from the gzip and the reading handed in, so it runs the same in
+// tests and browsers.
 
 import { readVarint, writeVarint } from "@/lib/varint";
 
@@ -14,6 +16,9 @@ export type Entry = { tileId: number; offset: number; length: number; runLength:
 export type Header = {
   rootOffset: number;
   rootLength: number;
+  /** Where the leaf directories are: a length of 0 when the root holds every tile. */
+  leafOffset: number;
+  leafLength: number;
   tileDataOffset: number;
   tileCount: number;
   minZoom: number;
@@ -46,6 +51,10 @@ export type ReadRange = (offset: number, length: number) => Promise<Uint8Array>;
 const HEADER_BYTES = 127;
 /** The header and root directory are in the first 16 KiB, so one request reads both. */
 const FIRST_READ = 16_384;
+/** Tiles per leaf directory to start from, doubled until the root fits: as the spec's tools do. */
+const LEAF_TILES = 4096;
+/** Directories nested deeper than this are a broken file, not a big one. */
+const MAX_DEPTH = 3;
 const GZIP = 2;
 const MVT = 1;
 const U32 = 2 ** 32;
@@ -138,7 +147,41 @@ function getU64(v: DataView, at: number): number {
   return v.getUint32(at, true) + v.getUint32(at + 4, true) * U32;
 }
 
-/** One file holding every tile, in tile-id order. Throws if the directory won't fit the first read. */
+/**
+ * The root directory, and the leaf directories it points to when every tile won't fit in a
+ * root that the first read holds: runs of tiles, each run a gzipped leaf, the root an entry
+ * per leaf (run length 0, its offset within the leaf section). No leaves when the root fits.
+ */
+function directories(
+  entries: Entry[],
+  gzip: (b: Uint8Array) => Uint8Array,
+): { root: Uint8Array; leaves: Uint8Array } {
+  const fits = (root: Uint8Array) => HEADER_BYTES + root.length <= FIRST_READ;
+  const whole = gzip(serializeDirectory(entries));
+  if (fits(whole)) return { root: whole, leaves: new Uint8Array(0) };
+  for (let per = LEAF_TILES; ; per *= 2) {
+    const pointers: Entry[] = [];
+    const parts: Uint8Array[] = [];
+    let at = 0;
+    for (let i = 0; i < entries.length; i += per) {
+      const leaf = gzip(serializeDirectory(entries.slice(i, i + per)));
+      pointers.push({ tileId: entries[i]!.tileId, offset: at, length: leaf.length, runLength: 0 });
+      parts.push(leaf);
+      at += leaf.length;
+    }
+    const root = gzip(serializeDirectory(pointers));
+    if (!fits(root)) continue;
+    const leaves = new Uint8Array(at);
+    let o = 0;
+    for (const p of parts) {
+      leaves.set(p, o);
+      o += p.length;
+    }
+    return { root, leaves };
+  }
+}
+
+/** One file holding every tile, in tile-id order: header, root, metadata, leaves, tiles. */
 export function writeArchive(
   tiles: TileIn[],
   info: ArchiveInfo,
@@ -154,13 +197,12 @@ export function writeArchive(
     entries.push({ tileId: t.id, offset: tileBytes, length: t.data.length, runLength: 1 });
     tileBytes += t.data.length;
   }
-  const root = gzip(serializeDirectory(entries));
-  if (HEADER_BYTES + root.length > FIRST_READ)
-    throw new Error(`Too many tiles for one directory (${entries.length}): split the area.`);
+  const { root, leaves } = directories(entries, gzip);
   const metadata = gzip(new TextEncoder().encode(JSON.stringify(info.metadata)));
   const rootOffset = HEADER_BYTES;
   const metadataOffset = rootOffset + root.length;
-  const tileDataOffset = metadataOffset + metadata.length;
+  const leafOffset = metadataOffset + metadata.length;
+  const tileDataOffset = leafOffset + leaves.length;
 
   const out = new Uint8Array(tileDataOffset + tileBytes);
   const v = new DataView(out.buffer);
@@ -170,8 +212,8 @@ export function writeArchive(
   setU64(v, 16, root.length);
   setU64(v, 24, metadataOffset);
   setU64(v, 32, metadata.length);
-  setU64(v, 40, tileDataOffset); // no leaf directories: an empty section
-  setU64(v, 48, 0);
+  setU64(v, 40, leafOffset); // an empty section when the root holds every tile
+  setU64(v, 48, leaves.length);
   setU64(v, 56, tileDataOffset);
   setU64(v, 64, tileBytes);
   setU64(v, 72, entries.length); // tiles addressed
@@ -195,6 +237,7 @@ export function writeArchive(
   v.setInt32(123, e7(lat), true);
   out.set(root, rootOffset);
   out.set(metadata, metadataOffset);
+  out.set(leaves, leafOffset);
   let at = tileDataOffset;
   for (const t of sorted) {
     out.set(t.data, at);
@@ -213,11 +256,12 @@ export function readHeader(b: Uint8Array): Header {
   if (b[97] !== GZIP || b[98] !== GZIP || b[99] !== MVT)
     throw new Error("Only gzipped vector tiles are read here.");
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
-  if (getU64(v, 48) > 0) throw new Error("Leaf directories aren't read here.");
   const deg = (at: number) => v.getInt32(at, true) / 1e7;
   return {
     rootOffset: getU64(v, 8),
     rootLength: getU64(v, 16),
+    leafOffset: getU64(v, 40),
+    leafLength: getU64(v, 48),
     tileDataOffset: getU64(v, 56),
     tileCount: getU64(v, 72),
     minZoom: b[100]!,
@@ -226,7 +270,11 @@ export function readHeader(b: Uint8Array): Header {
   };
 }
 
-/** An archive read through `read`: the header and directory once, then a tile per call. */
+/**
+ * An archive read through `read`: the header and root directory once, a leaf directory the
+ * first time a tile needs it (kept, unless reading it failed, so the next tile tries again),
+ * then a tile per call.
+ */
 export async function openArchive(
   read: ReadRange,
   unzip: (b: Uint8Array) => Promise<Uint8Array>,
@@ -235,7 +283,21 @@ export async function openArchive(
   const header = readHeader(first);
   const rootEnd = header.rootOffset + header.rootLength;
   if (rootEnd > first.length) throw new Error("The directory isn't where the header says.");
-  const entries = parseDirectory(await unzip(first.subarray(header.rootOffset, rootEnd)));
+  const root = parseDirectory(await unzip(first.subarray(header.rootOffset, rootEnd)));
+  const leaves = new Map<number, Promise<Entry[]>>();
+  const leaf = (e: Entry): Promise<Entry[]> => {
+    let got = leaves.get(e.offset);
+    if (!got) {
+      if (e.offset + e.length > header.leafLength)
+        throw new Error("A leaf directory isn't where the root says.");
+      got = read(header.leafOffset + e.offset, e.length).then(async (b) =>
+        parseDirectory(await unzip(b)),
+      );
+      leaves.set(e.offset, got);
+      got.catch(() => leaves.delete(e.offset));
+    }
+    return got;
+  };
   return {
     header,
     async getTile(z, x, y) {
@@ -243,10 +305,15 @@ export async function openArchive(
       const n = 2 ** z;
       if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= n || y >= n)
         return null;
-      const e = findEntry(entries, zxyToTileId(z, x, y));
-      if (!e) return null;
-      if (e.runLength === 0) throw new Error("Leaf directories aren't read here.");
-      return unzip(await read(header.tileDataOffset + e.offset, e.length));
+      const id = zxyToTileId(z, x, y);
+      let entries = root;
+      for (let depth = 0; depth <= MAX_DEPTH; depth++) {
+        const e = findEntry(entries, id);
+        if (!e) return null;
+        if (e.runLength > 0) return unzip(await read(header.tileDataOffset + e.offset, e.length));
+        entries = await leaf(e);
+      }
+      throw new Error("The directories nest too deep.");
     },
   };
 }

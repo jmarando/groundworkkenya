@@ -4,6 +4,7 @@
 // 2022's precedent, never presented as confirmed. Pure.
 
 import type { Source } from "@/lib/brief";
+import { raceOf } from "@/lib/race";
 
 export const ELECTION_DAY = "2027-08-10";
 
@@ -81,7 +82,9 @@ const SEAT_DATES: Record<string, { nominate: [string, string]; campaign: string;
   woman_rep: { nominate: ["2027-06-07", "2027-06-11"], campaign: "2027-06-07", seat: "Woman Rep" },
 };
 
-export const seatDates = (level: string) => SEAT_DATES[level] ?? SEAT_DATES["president"]!;
+/** A seat's dates, its level written either way ("woman-rep" as the admin form writes it). */
+export const seatDates = (level: string) =>
+  SEAT_DATES[raceOf(level) ?? level] ?? SEAT_DATES["president"]!;
 
 /** The dates that shape a campaign for this seat, in order. */
 export function keyDates(level: string): KeyDate[] {

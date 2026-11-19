@@ -50,6 +50,15 @@ export const STATION_AREAS: StationArea[] = [
     migration: "20261109090300_polling_centres_kuria_east.sql",
   },
   {
+    // A county campaign (the woman rep's): every centre with the county's 3 digits.
+    id: "meru",
+    mapArea: "meru",
+    prefix: "012",
+    wards: "public/geo/meru-wards.json",
+    atlas: "data/atlas/meru/register.csv",
+    migration: "20261119090400_polling_centres_meru.sql",
+  },
+  {
     // A ward campaign: the ward's own 10 digits (county, constituency, ward).
     id: "athwana",
     mapArea: "meru/tigania-west/athwana",

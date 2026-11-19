@@ -1,4 +1,31 @@
 election,seat,candidate,area,votes,source
+2022-president,kenya,William Ruto,meru,398946,iebc-2022-form-34c
+2022-president,kenya,Raila Odinga,meru,103679,iebc-2022-form-34c
+2022-president,kenya,David Mwaure Waihiga,meru,1053,iebc-2022-form-34c
+2022-president,kenya,George Wajackoyah,meru,2798,iebc-2022-form-34c
+2013-president,kenya,Uhuru Kenyatta,meru,384290,electionskenya-2013-president
+2013-president,kenya,Raila Odinga,meru,32447,electionskenya-2013-president
+2013-president,kenya,Musalia Mudavadi,meru,1364,electionskenya-2013-president
+2013-president,kenya,Peter Kenneth,meru,3035,electionskenya-2013-president
+2022-woman_rep,meru,Elizabeth Karambu Kailemia,meru,259445,ballotwinners-meru-county
+2022-woman_rep,meru,Felicity Nkirote Biriri,meru,164280,ballotwinners-meru-county
+2022-woman_rep,meru,Edith Nkatha Mwirigi,meru,46031,ballotwinners-meru-county
+2022-woman_rep,meru,Beth Kanana,meru,8357,ballotwinners-meru-county
+2017-woman_rep,meru,Mwangaza Kawira,meru,280044,ballotwinners-meru-county
+2017-woman_rep,meru,Kajuju Florence,meru,231636,ballotwinners-meru-county
+2017-woman_rep,meru,Kailemia Elizabeth Karambu,meru,16592,ballotwinners-meru-county
+2017-woman_rep,meru,Isaiah Catherine Kagwiria,meru,5200,ballotwinners-meru-county
+2017-woman_rep,meru,Kinya Betsy,meru,3801,ballotwinners-meru-county
+2017-woman_rep,meru,Kinyua Susan K M,meru,2173,ballotwinners-meru-county
+2022-governor,meru,Kawira Mwangaza,meru,209148,ballotwinners-meru-county
+2022-governor,meru,Franklin Mithika Linturi,meru,183859,ballotwinners-meru-county
+2022-governor,meru,Kiraitu Murungi,meru,110814,ballotwinners-meru-county
+2017-governor,meru,Kiraitu Murungi,meru,280795,ballotwinners-meru-county
+2017-governor,meru,Peter Gatirau Munya,meru,231420,ballotwinners-meru-county
+2017-governor,meru,Kilemi Mwiria,meru,17441,ballotwinners-meru-county
+2017-governor,meru,Kiambi James Thambura Atheru,meru,4273,ballotwinners-meru-county
+2017-governor,meru,Winfred Kaburu,meru,4070,ballotwinners-meru-county
+2017-governor,meru,Bonface Kinoti Gatobu,meru,3575,ballotwinners-meru-county
 2017-mca,meru/tigania-west/athwana,Mutumah Victor Karithi,meru/tigania-west/athwana,2625,ballotwinners-athwana-ward
 2017-mca,meru/tigania-west/athwana,Dionisio Jim Muchui,meru/tigania-west/athwana,2514,ballotwinners-athwana-ward
 2017-mca,meru/tigania-west/athwana,Theuri Joan Gacheri,meru/tigania-west/athwana,711,ballotwinners-athwana-ward

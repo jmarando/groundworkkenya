@@ -6,7 +6,7 @@
 import { count, percent, type Figure } from "@/lib/findings/core";
 import { isBaseline, type Scenario } from "@/lib/path";
 import { list, sharePercent, type PathLine } from "@/lib/path-lines";
-import type { Seat } from "@/lib/seat";
+import { raceWord, seatRace, type CountyRace, type Seat } from "@/lib/seat";
 import { closestSeats, runSeat, seatTurnoutLever, worthSeat } from "@/lib/seat-path";
 
 const MINE = { source: "Your changes on the 2022 map", period: "scenario" };
@@ -19,6 +19,10 @@ const TURNOUT_LEAST = 50;
 /** "City Hall" for Nairobi, "County Hall" for every other county. */
 export const hallName = (countyName: string): string =>
   countyName === "Nairobi" ? "City Hall" : "County Hall";
+
+/** Where the race leads: a governor's to City Hall or County Hall, a woman rep's to Parliament. */
+export const pathName = (race: CountyRace, countyName: string): string =>
+  race === "woman_rep" ? "Parliament" : hallName(countyName);
 
 const figure = (
   label: string,
@@ -48,7 +52,7 @@ const votes = (l: Lean) =>
 
 /** The words above the screen: where it starts, and, when no side is set and it still starts from the winner's, that. */
 export function seatIntro(seat: Seat, flipped: boolean): string {
-  return `Start from the 2022 result in each constituency and change one's share or turnout. A governor is elected in one round by the most votes.${
+  return `Start from the 2022 result in each constituency and change one's share or turnout. A ${raceWord(seatRace(seat))} is elected in one round by the most votes.${
     seat.defaulted && !flipped
       ? " Your side isn't set in Elections, so this starts from the winner's."
       : ""

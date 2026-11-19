@@ -46,10 +46,11 @@ export function ConstituencyView({
     .filter((a) => a.parent === area.key)
     .map((w) => figuresFor(d, w.key, race, year));
   const estimateYear = wards.find((w) => w.population)?.population?.year ?? null;
-  // A ward's own race (MCA) is counted in its wards, never here.
-  const missing = RACES.filter((r) => r !== "mca" && !blocks.some((b) => b.race === r)).map(
-    (r) => RACE_NAMES[r],
-  );
+  // A ward's own race (MCA) is counted in its wards, never here. The woman rep's is counted by
+  // constituency too, but is seldom published that way: missing only while it is the race shown.
+  const missing = RACES.filter(
+    (r) => r !== "mca" && (r !== "woman_rep" || r === race) && !blocks.some((b) => b.race === r),
+  ).map((r) => RACE_NAMES[r]);
   return (
     <>
       <AreaNumbers

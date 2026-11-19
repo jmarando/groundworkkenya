@@ -52,6 +52,7 @@ eq(
     "githunguri:mp",
     "kuria-east:mp",
     "athwana:mca",
+    "meru:woman_rep",
   ],
 );
 eq(
@@ -62,7 +63,7 @@ eq(
 eq(
   "area counts",
   SCENARIOS.map((s) => s.areas.length),
-  [47, 85, 6, 5, 5, 5, 14],
+  [47, 85, 6, 5, 5, 5, 14, 45],
 );
 
 for (const s of SCENARIOS) {
@@ -127,7 +128,7 @@ eq("the Mathira candidate is fictional", getScenario("mathira").candidate.fictio
 eq(
   "only real results are marked official",
   SCENARIOS.map((s) => s.lastTime.official),
-  [true, true, false, true, true, true, true],
+  [true, true, false, true, true, true, true, true],
 );
 
 // ---- insights
@@ -333,9 +334,45 @@ for (const s of SCENARIOS) {
       scenarioFor({ slug: "githunguri", level: "governor" }),
       scenarioFor({ slug: "kuria-east", level: "governor" }),
       scenarioFor(null),
+      scenarioFor({ slug: "meru", level: "woman-rep" }),
+      scenarioFor({ slug: "elsewhere", level: "woman-rep" }),
+      scenarioFor({ slug: "meru", level: "governor" }),
     ],
-    ["githunguri", "kuria-east", "roysambu", "athwana", "mathira", "sakaja", "sakaja", "sakaja"],
+    [
+      "githunguri",
+      "kuria-east",
+      "roysambu",
+      "athwana",
+      "mathira",
+      "sakaja",
+      "sakaja",
+      "sakaja",
+      "meru",
+      "meru",
+      "sakaja",
+    ],
   );
+  eq(
+    "Meru's demo carries its candidate, the level written either way",
+    [
+      forCampaign(getScenario("meru"), { candidate: "Meru Candidate", level: "woman-rep" })
+        .candidate.name,
+      forCampaign(getScenario("meru"), { candidate: "Meru Candidate", level: "woman_rep" })
+        .candidate.name,
+      forCampaign(getScenario("meru"), { candidate: "Meru Candidate", level: "governor" }).candidate
+        .name,
+    ],
+    ["Meru Candidate", "Meru Candidate", "Kendi Mbaabu"],
+  );
+  eq(
+    "Meru's wards add up to IEBC's 2022 register for the county",
+    getScenario("meru").areas.reduce((t, a) => t + a.registered, 0),
+    772_139,
+  );
+  eq("Meru's war room reads its forms as 39A, 39B and 39C", getScenario("meru").night.forms, {
+    station: "Form 39A",
+    levels: ["39B · constituency", "39C · county"],
+  });
   eq(
     "Kuria East's demo carries its candidate",
     forCampaign(getScenario("kuria-east"), { candidate: "Kuria Candidate", level: "mp" }).candidate

@@ -1,10 +1,18 @@
-// A county's governor race as a seat to plan on: the two main candidates' votes
-// in each constituency, the register, and the county's totals, read from the
-// atlas's rows. Pure. The sums are src/lib/seat-path.ts; the screen is the
-// Strategy page's Path to City Hall.
+// A county's own race as a seat to plan on, the governor's or the county woman
+// representative's: the two main candidates' votes in each constituency, the
+// register, and the county's totals, read from the atlas's rows. Pure. The sums
+// are src/lib/seat-path.ts; the screen is the Strategy page's Path to City Hall
+// (Path to Parliament for a woman rep).
 // docs/superpowers/plans/2026-10-17-path-to-city-hall.md.
 
 import type { AtlasData } from "@/lib/atlas-view";
+import { raceOf } from "@/lib/race";
+
+/** A county's own races: the governor's, and the county woman representative's. */
+export type CountyRace = "governor" | "woman_rep";
+/** The race inside a sentence: "governor", "woman rep". */
+export const raceWord = (race: CountyRace): string =>
+  race === "woman_rep" ? "woman rep" : "governor";
 
 export type Contender = { name: string; bloc: string };
 /** A presidential candidate's votes in the county. */
@@ -46,6 +54,10 @@ export type Seat = {
 
 export type SeatResult = { ok: true; seat: Seat } | { ok: false; why: string };
 
+/** The race a seat is: its election names it ("2022-woman_rep"). */
+export const seatRace = (seat: Pick<Seat, "election">): CountyRace =>
+  seat.election.endsWith("-woman_rep") ? "woman_rep" : "governor";
+
 /** "Embakasi Central, East, North and South"; names that share no first word are joined in full. */
 export function togetherName(names: string[]): string {
   if (names.length < 2) return names[0] ?? "";
@@ -81,19 +93,21 @@ export function registerOf(d: AtlasData, area: string, year: number): number | n
 }
 
 /**
- * A county's governor race in `year` by constituency, from the atlas. `bloc` is
- * the campaign's side in that race; without one that matches, the county's
- * winner is "yours" and `defaulted` says so. Not ok, with a sentence for the
- * screen, when the atlas has no such result, has it for the county only, or
- * has figures that cannot be put together.
+ * A county's governor race (or woman rep race) in `year` by constituency, from
+ * the atlas. `bloc` is the campaign's side in that race; without one that
+ * matches, the county's winner is "yours" and `defaulted` says so. Not ok, with
+ * a sentence for the screen, when the atlas has no such result, has it for the
+ * county only, or has figures that cannot be put together.
  */
 export function seatFromAtlas(
   d: AtlasData,
   county: string,
   bloc: string | null,
   year = 2022,
+  race: CountyRace = "governor",
 ): SeatResult {
-  const election = `${year}-governor`;
+  const election = `${year}-${race}`;
+  const word = raceWord(race);
   const countyName = d.areas.find((a) => a.key === county)?.name ?? county;
   const label = (id: string | undefined) => {
     const s = d.sources.find((x) => x.id === id);
@@ -110,7 +124,7 @@ export function seatFromAtlas(
     })
     .sort((a, b) => b.votes - a.votes);
   if (field.length < 2)
-    return { ok: false, why: `The ${year} governor result isn't on file for ${countyName}.` };
+    return { ok: false, why: `The ${year} ${word} result isn't on file for ${countyName}.` };
 
   const named = bloc ? field.find((x) => x.c.bloc === bloc) : undefined;
   const mine = named ?? field[0]!;
@@ -129,7 +143,7 @@ export function seatFromAtlas(
   if (!reported.length)
     return {
       ok: false,
-      why: `${countyName}'s ${year} governor result is on file for the county as a whole, not by constituency.`,
+      why: `${countyName}'s ${year} ${word} result is on file for the county as a whole, not by constituency.`,
     };
   const regs = new Map(seats.map((a) => [a.key, registered(a.key)]));
   if (seats.some((a) => regs.get(a.key) === null))
@@ -209,8 +223,8 @@ export function seatFromAtlas(
 }
 
 /**
- * The seat a governor campaign plans on, or the sentence for why there is none;
- * null for any other level. `home` is the campaign's home area key, which is a
+ * The seat a governor or woman rep campaign plans on ("woman-rep" as the admin
+ * form writes it), or the sentence for why there is none; null for any other level. `home` is the campaign's home area key, which is a
  * county only when the atlas knows the campaign's county.
  */
 export function seatForCampaign(
@@ -218,11 +232,12 @@ export function seatForCampaign(
   d: AtlasData,
   home: string,
 ): SeatResult | null {
-  if (campaign?.level !== "governor") return null;
+  const race = raceOf(campaign?.level);
+  if (!campaign || (race !== "governor" && race !== "woman_rep")) return null;
   if (!d.areas.some((a) => a.key === home && a.level === "county"))
     return {
       ok: false,
-      why: `The 2022 governor result isn't on file for ${placeOfSeat(campaign.seat) || "this county"}.`,
+      why: `The 2022 ${raceWord(race)} result isn't on file for ${placeOfSeat(campaign.seat) || "this county"}.`,
     };
-  return seatFromAtlas(d, home, d.sides["2022-governor"] ?? null);
+  return seatFromAtlas(d, home, d.sides[`2022-${race}`] ?? null, 2022, race);
 }

@@ -7,11 +7,14 @@ import type { AtlasData } from "@/lib/atlas-view";
 import {
   flipSeat,
   placeOfSeat,
+  raceWord,
   seatForCampaign,
   seatFromAtlas,
+  seatRace,
   togetherName,
   type Seat,
 } from "@/lib/seat";
+import { pathName, seatIntro } from "@/lib/seat-lines";
 
 import { atlasFromCsv, candidateId } from "./atlas-csv";
 
@@ -693,6 +696,63 @@ eq("none", togetherName([]), "");
       ok: false,
       why: "Nyeri's 2022 governor result is on file for the county as a whole, not by constituency.",
     },
+  );
+  eq(
+    "Meru's woman rep: the level as the admin form writes it, on file for the county only",
+    seatForCampaign({ level: "woman-rep", seat: "Woman Rep · Meru" }, real, "meru"),
+    {
+      ok: false,
+      why: "Meru's 2022 woman rep result is on file for the county as a whole, not by constituency.",
+    },
+  );
+  eq(
+    "a woman rep whose county the atlas can't place is told the county",
+    seatForCampaign({ level: "woman_rep", seat: "Woman Rep · Kiambu" }, real, "kenya"),
+    { ok: false, why: "The 2022 woman rep result isn't on file for Kiambu." },
+  );
+  eq(
+    "a senator has no seat to plan",
+    seatForCampaign({ level: "senator", seat: "Senator · Meru" }, real, "meru"),
+    null,
+  );
+}
+
+// ---------------------------------------------------------- a woman rep's seat, by constituency
+
+{
+  // The toy county's governor race, held as its woman rep race instead.
+  const gov = toyAtlas(BASE);
+  const asWomanRep = (id: string) => id.replace(/^2022-governor:/, "2022-woman_rep:");
+  const d: AtlasData = {
+    ...gov,
+    candidates: gov.candidates.map((c) =>
+      c.election === "2022-governor"
+        ? { ...c, id: asWomanRep(c.id), election: "2022-woman_rep" }
+        : c,
+    ),
+    results: gov.results.map((r) => ({ ...r, candidate: asWomanRep(r.candidate) })),
+  };
+  const g = seatFromAtlas(gov, "x", "Bloc P");
+  const w = seatFromAtlas(d, "x", "Bloc P", 2022, "woman_rep");
+  eq(
+    "a woman rep's seat reads as a governor's would, under its own election",
+    w.ok && g.ok && [w.seat.election, seatRace(w.seat), seatRace(g.seat), w.seat.buckets],
+    ["2022-woman_rep", "woman_rep", "governor", g.ok ? g.seat.buckets : null],
+  );
+  eq(
+    "and leads to Parliament, not County Hall",
+    [pathName("woman_rep", "Meru"), pathName("governor", "Meru"), pathName("governor", "Nairobi")],
+    ["Parliament", "County Hall", "City Hall"],
+  );
+  eq(
+    "its words name the race",
+    [raceWord("woman_rep"), w.ok && seatIntro(w.seat, false).includes("A woman rep is elected")],
+    ["woman rep", true],
+  );
+  eq(
+    "the governor race isn't read as the woman rep's",
+    seatFromAtlas(gov, "x", "Bloc P", 2022, "woman_rep"),
+    { ok: false, why: "The 2022 woman rep result isn't on file for Xland." },
   );
 }
 

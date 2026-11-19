@@ -85,6 +85,15 @@ eq(
   keyDates("governor").find((d) => d.key === "nomination")?.until,
   "2027-06-06",
 );
+eq(
+  "a woman rep, the level written as the admin form writes it, nominates 7 to 11 June",
+  [
+    keyDates("woman-rep").find((d) => d.key === "nomination")?.on,
+    keyDates("woman-rep").find((d) => d.key === "nomination")?.until,
+    keyDates("woman_rep").find((d) => d.key === "nomination")?.until,
+  ],
+  ["2027-06-07", "2027-06-11", "2027-06-11"],
+);
 
 const g = gaps(figures, today);
 eq("urgent gaps first", g[0]?.tone, "urgent");
