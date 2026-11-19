@@ -80,6 +80,30 @@ async function main() {
     false,
   );
 
+  // The Report reads what posts say: asked for, the words come too.
+  const asked: string[] = [];
+  const spy = {
+    from: (table: string) => {
+      const q = sb.from(table) as { select: (cols?: string, o?: unknown) => unknown };
+      const select = q.select.bind(q);
+      q.select = (cols?: string, o?: unknown) => {
+        asked.push(cols ?? "");
+        return select(cols, o);
+      };
+      return q;
+    },
+  };
+  const worded = await loadWindow(spy as never, { since, campaignId: "c1", words: true });
+  eq(
+    "words kept when asked for",
+    [worded.rows[0]!.title, worded.rows[0]!.snippet],
+    ["words that are not loaded", "nor these"],
+  );
+  eq("and asked of the database", /\btitle, snippet\b/.test(asked[0] ?? ""), true);
+  asked.length = 0;
+  await loadWindow(spy as never, { since, campaignId: "c1" });
+  eq("not asked for otherwise", /\b(title|snippet)\b/.test(asked[0] ?? ""), false);
+
   const capped = await loadWindow(sb as never, { since, campaignId: "c1", cap: 1500 });
   eq("a cap cuts the list", capped.rows.length, 1500);
   eq("and says so", capped.truncated, true);
