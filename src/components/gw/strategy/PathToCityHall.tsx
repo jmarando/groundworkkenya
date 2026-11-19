@@ -5,8 +5,8 @@ import { count, percent } from "@/lib/findings/core";
 import { isBaseline, type Move, type Scenario } from "@/lib/path";
 import { sharePercent } from "@/lib/path-lines";
 import { commonMove, lead, RANGE, setAll, setMove, signed } from "@/lib/path-view";
-import { flipSeat, type Seat } from "@/lib/seat";
-import { hallName, seatIntro, seatLines } from "@/lib/seat-lines";
+import { flipSeat, raceWord, seatRace, type CountyRace, type Seat } from "@/lib/seat";
+import { pathName, seatIntro, seatLines } from "@/lib/seat-lines";
 import { runSeat, type BucketNow } from "@/lib/seat-path";
 
 const NO_MOVE: Move = { share: 0, turnout: 0 };
@@ -137,11 +137,13 @@ function BucketRow({
 }
 
 /**
- * A governor's 2022 race, constituency by constituency: change a constituency's
- * share or turnout and see whether the side still has more votes than anyone
- * else. Worked out in the browser from the atlas's rows; nothing is saved.
+ * A governor's 2022 race (or a woman rep's), constituency by constituency: change
+ * a constituency's share or turnout and see whether the side still has more votes
+ * than anyone else. Worked out in the browser from the atlas's rows; nothing is saved.
  */
 export function PathToCityHall({ seat }: { seat: Seat }) {
+  const race = seatRace(seat);
+  const word = raceWord(race);
   const [flipped, setFlipped] = useState(false);
   const [moves, setMoves] = useState<Scenario>({});
   const view = useMemo(() => (flipped ? flipSeat(seat) : seat), [seat, flipped]);
@@ -163,8 +165,8 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
   return (
     <details className="card pth" open>
       <summary>
-        <h2>Path to {hallName(seat.countyName)}</h2>
-        <span className="meta">The 2022 governor race, constituency by constituency</span>
+        <h2>Path to {pathName(race, seat.countyName)}</h2>
+        <span className="meta">The 2022 {word} race, constituency by constituency</span>
       </summary>
       <div className="pth-body">
         <p className="meta pth-intro">{seatIntro(seat, flipped)}</p>
@@ -255,7 +257,7 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
           <summary>How this works</summary>
           <ul>
             <li>
-              It starts from the 2022 governor result in each constituency as the atlas holds it:{" "}
+              It starts from the 2022 {word} result in each constituency as the atlas holds it:{" "}
               {seat.source.constituencies}; the county's totals are {seat.source.county}.
               {now.buckets.some((b) => b.together)
                 ? " Seats the figures don't separate are shown together: the county's total less the constituencies reported."
@@ -269,12 +271,12 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
               other candidate ({count(seat.others)} votes) is held as they were.
             </li>
             <li>
-              A governor is elected in one round by the most votes: there is no second bar. "Votes
-              to turn the county" is half the margin, and one.
+              A {word} is elected in one round by the most votes: there is no second bar. "Votes to
+              turn the county" is half the margin, and one.
             </li>
             <li>
               The comparison with the presidential vote is of two totals of votes. It says nothing
-              about how many people voted for one party's candidate for governor and another's for
+              about how many people voted for one party's candidate for {word} and another's for
               president.
             </li>
             <li>Constituencies are places. Nothing here records or guesses anyone's community.</li>
@@ -285,15 +287,24 @@ export function PathToCityHall({ seat }: { seat: Seat }) {
   );
 }
 
-/** What a governor campaign sees when its county's result isn't in the atlas by constituency. */
-export function NoPathToCityHall({ place, why }: { place: string; why: string }) {
+/** What a governor (or woman rep) campaign sees when its county's result isn't in the atlas by constituency. */
+export function NoPathToCityHall({
+  place,
+  why,
+  race = "governor",
+}: {
+  place: string;
+  why: string;
+  race?: CountyRace;
+}) {
   return (
     <section className="card pth" aria-labelledby="pch-none">
-      <h2 id="pch-none">Path to {hallName(place)}</h2>
+      <h2 id="pch-none">Path to {pathName(race, place)}</h2>
       <p className="f-note">{why}</p>
       <p className="f-note">
-        It needs the 2022 governor result for each constituency of the county. Once that is in the
-        atlas this section opens by itself.
+        It needs the 2022 {raceWord(race)} result for each constituency of the county (IEBC's Form{" "}
+        {race === "woman_rep" ? "39B" : "37B"}). Once that is in the atlas this section opens by
+        itself.
       </p>
     </section>
   );

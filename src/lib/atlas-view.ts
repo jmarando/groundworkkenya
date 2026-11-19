@@ -90,12 +90,15 @@ export const electionOf = (race: Race, year: number) => `${year}-${race}`;
 export const RACE_NAMES: Record<Race, string> = {
   president: "President",
   governor: "Governor",
+  woman_rep: "Woman Rep",
   mp: "MP",
   mca: "MCA",
 };
-/** A race inside a sentence: "governor", "president", but "MP" and "MCA". */
+/** A race inside a sentence: "governor", "president", but "MP", "MCA" and "Woman Rep". */
 export const raceInText = (race: Race) =>
-  race === "mp" || race === "mca" ? RACE_NAMES[race] : RACE_NAMES[race].toLowerCase();
+  race === "mp" || race === "mca" || race === "woman_rep"
+    ? RACE_NAMES[race]
+    : RACE_NAMES[race].toLowerCase();
 
 export const share1 = (x: number) => `${(Math.round(x * 1000) / 10).toFixed(1)}%`;
 export const whole = (x: number) => `${Math.round(x * 100)}%`;

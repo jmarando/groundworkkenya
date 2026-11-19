@@ -44,9 +44,9 @@ export const atlasFolders = (root: string): string[] =>
 
 /**
  * The wards each county's ward map knows, by slug, with the constituency the map puts each in
- * (null where it names none: Mathira's, Githunguri's, Kuria East's and Athwana's don't). Nyeri's
- * map holds Mathira's wards only, Kiambu's Githunguri's, Migori's Kuria East's, and Meru's
- * Athwana alone.
+ * (null where it names none: Mathira's, Githunguri's and Kuria East's don't). Nyeri's map holds
+ * Mathira's wards only, Kiambu's Githunguri's and Migori's Kuria East's; Meru's, like Nairobi's,
+ * is the whole county (Athwana's own map is its ward alone).
  */
 export function wardMaps(): Record<string, Map<string, string | null>> {
   const wards = (file: string) =>
@@ -65,6 +65,6 @@ export function wardMaps(): Record<string, Map<string, string | null>> {
     nyeri: wards("public/geo/mathira-wards.json"),
     kiambu: wards("public/geo/githunguri-wards.json"),
     migori: wards("public/geo/kuria-east-wards.json"),
-    meru: wards("public/geo/athwana-wards.json"),
+    meru: wards("public/geo/meru-wards.json"),
   };
 }

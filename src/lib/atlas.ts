@@ -3,8 +3,9 @@
 // why, and the votes within reach. Pure: the screens hand it an area's count
 // and show what comes back.
 
-export type Race = "president" | "governor" | "mp" | "mca";
-export const RACES: Race[] = ["president", "governor", "mp", "mca"];
+/** The county woman representative (woman_rep) is counted county-wide, as the governor is. */
+export type Race = "president" | "governor" | "woman_rep" | "mp" | "mca";
+export const RACES: Race[] = ["president", "governor", "woman_rep", "mp", "mca"];
 export const YEARS = [2013, 2017, 2022] as const;
 
 export const electionId = (year: number, race: Race) => `${year}-${race}`;

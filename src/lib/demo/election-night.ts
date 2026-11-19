@@ -4,7 +4,7 @@
 // polls close; the night ends at 06:00.
 
 import { expectedVotes, seeded } from "@/lib/demo/insights";
-import type { Scenario } from "@/lib/demo/types";
+import { countyWide, type Scenario } from "@/lib/demo/types";
 
 export const NIGHT_END = 13 * 60;
 const VOTERS_PER_STATION = 480;
@@ -14,11 +14,12 @@ const ADJUDICATE = 0.025;
 /**
  * Minutes before a station's form usually reaches us, before travel and
  * network delays. Ballots are counted in order at each station (President,
- * then MP, Governor fifth and MCA last), so later races report later.
+ * then MP, Woman Rep third, Governor fifth and MCA last), so later races report later.
  */
 const COUNT_DELAY: Record<Scenario["office"], number> = {
   president: 120,
   mp: 170,
+  woman_rep: 190,
   governor: 230,
   mca: 260,
 };
@@ -173,7 +174,7 @@ export function buildNight(s: Scenario): Night {
     (st) => st.area === divArea && st.reportAt !== null && st.reportAt < divAt - 20,
   );
   const count = Math.min(
-    s.office === "president" ? 3 : s.office === "governor" ? 2 : 1,
+    s.office === "president" ? 3 : countyWide(s.office) ? 2 : 1,
     candidates.length,
   );
   for (let d = 0; d < count; d++) {
@@ -181,7 +182,7 @@ export function buildNight(s: Scenario): Night {
     st.portalAt = divAt;
     // Our candidate is short on the portal, or the main rival is over.
     if (s.office === "president") st.portalDelta[0] = -Math.round(1204 / count);
-    else st.portalDelta[1] = Math.round((s.office === "governor" ? 318 : 96) / count);
+    else st.portalDelta[1] = Math.round((countyWide(s.office) ? 318 : 96) / count);
   }
 
   const prior = s.areas.map((a) => keys.map((k) => a.shares[k] ?? 0));

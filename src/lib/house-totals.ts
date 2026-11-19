@@ -6,6 +6,7 @@ import athwana from "../../public/tiles/houses-athwana.json";
 import githunguri from "../../public/tiles/houses-githunguri.json";
 import kuriaEast from "../../public/tiles/houses-kuria-east.json";
 import mathira from "../../public/tiles/houses-mathira.json";
+import meru from "../../public/tiles/houses-meru.json";
 import nairobi from "../../public/tiles/houses-nairobi.json";
 import roysambu from "../../public/tiles/houses-roysambu.json";
 import type { HouseCounts } from "@/lib/map-areas";
@@ -18,6 +19,7 @@ export const HOUSE_TOTALS: Record<string, HouseCounts> = {
   "kiambu/githunguri": githunguri as HouseCounts,
   "migori/kuria-east": kuriaEast as HouseCounts,
   "meru/tigania-west/athwana": athwana as HouseCounts,
+  meru: meru as HouseCounts,
 };
 
 /** Houses per ward slug in a map area; null for none, or an area with no house file. */

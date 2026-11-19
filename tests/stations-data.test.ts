@@ -31,6 +31,7 @@ const WANT: Record<string, { centres: number; streams: number; voters: number }>
   mathira: { centres: 109, streams: 201, voters: 104492 },
   githunguri: { centres: 63, streams: 184, voters: 104592 },
   "kuria-east": { centres: 75, streams: 92, voters: 41976 },
+  meru: { centres: 1043, streams: 1639, voters: 772139 },
   athwana: { centres: 14, streams: 20, voters: 9123 },
 };
 

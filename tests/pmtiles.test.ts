@@ -116,24 +116,62 @@ eq("a tile the file doesn't have", await read(16, 39462, 32998), null);
 eq("a zoom the file doesn't have", await read(15, 19730, 16499), null);
 eq(
   "the header says what the file holds",
-  (({ minZoom, maxZoom, tileCount, bounds }) => ({ minZoom, maxZoom, tileCount, bounds }))(
-    readHeader(file),
-  ),
-  { minZoom: 16, maxZoom: 16, tileCount: 3, bounds: [36.66, -1.45, 37.11, -1.16] },
+  (({ minZoom, maxZoom, tileCount, bounds, leafLength }) => ({
+    minZoom,
+    maxZoom,
+    tileCount,
+    bounds,
+    leafLength,
+  }))(readHeader(file)),
+  { minZoom: 16, maxZoom: 16, tileCount: 3, bounds: [36.66, -1.45, 37.11, -1.16], leafLength: 0 },
 );
 throws("not a PMTiles file", () => readHeader(new Uint8Array(127)), /Not a PMTiles v3 file/);
 throws("two tiles at one place", () => writeArchive([TILES[0]!, TILES[0]!], INFO, gz), /Two tiles/);
 {
-  // 6,000 tiles scattered across the world: a directory too big for the first read.
+  // 20,000 tiles scattered across the world: a directory too big for the first read, so the
+  // root points to leaf directories, each read once, when a tile first needs it.
   const many: TileIn[] = [];
-  for (let i = 0; i < 6000; i++)
-    many.push({
-      z: 16,
-      x: (i * 7919) % 65536,
-      y: (i * 104729) % 65536,
-      data: Uint8Array.of(i % 251),
-    });
-  throws("too many tiles for one directory", () => writeArchive(many, INFO, gz), /Too many tiles/);
+  const seen = new Set<string>();
+  for (let i = 0; seen.size < 20000; i++) {
+    const x = (i * 7919) % 65536;
+    const y = (i * 104729) % 65536;
+    if (seen.has(`${x}/${y}`)) continue;
+    seen.add(`${x}/${y}`);
+    many.push({ z: 16, x, y, data: text(`tile ${seen.size - 1}`) });
+  }
+  const big = writeArchive(many, INFO, gz);
+  const h = readHeader(big);
+  eq(
+    "a big file has leaf directories after the metadata and before the tiles",
+    [h.leafLength > 0, h.rootOffset + h.rootLength <= 16384, h.leafOffset + h.leafLength],
+    [true, true, h.tileDataOffset],
+  );
+  const reads: [number, number][] = [];
+  const opened = await openArchive(async (offset, length) => {
+    reads.push([offset, length]);
+    return big.subarray(offset, offset + length);
+  }, gunzip);
+  const got: (string | null)[] = [];
+  for (const t of many) {
+    const b = await opened.getTile(16, t.x, t.y);
+    got.push(b ? new TextDecoder().decode(b) : null);
+  }
+  eq(
+    "every tile reads back through its leaf",
+    got.every((g, i) => g === `tile ${i}`),
+    true,
+  );
+  const leafReads = reads.filter(([o]) => o >= h.leafOffset && o < h.tileDataOffset).length;
+  const root = parseDirectory(
+    await gunzip(big.subarray(h.rootOffset, h.rootOffset + h.rootLength)),
+  );
+  eq(
+    "each leaf is read once, and the root holds only leaves",
+    [leafReads, root.every((e) => e.runLength === 0)],
+    [root.length, true],
+  );
+  const missing = many.findIndex((t) => !seen.has(`${t.x + 1}/${t.y}`));
+  eq("a tile no leaf has", await opened.getTile(16, many[missing]!.x + 1, many[missing]!.y), null);
 }
 
 console.log(`${pass} passed, ${fail} failed`);

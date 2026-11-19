@@ -8,14 +8,17 @@ Written by scripts/atlas/report.ts from data/atlas. Each figure's document is li
 |---|---|---|---|
 | 2013 president | 0 of 1 | 0 of 1 | no |
 | 2013 governor | 0 of 1 | 0 of 1 | no |
+| 2013 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2013 mp | 0 of 1 | 0 of 1 | n/a |
 | 2013 mca | 0 of 1 | 0 of 1 | no |
 | 2017 president | 0 of 1 | 0 of 1 | no |
 | 2017 governor | 0 of 1 | 0 of 1 | no |
+| 2017 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2017 mp | 1 of 1 | 1 of 1 | n/a |
 | 2017 mca | 0 of 1 | 0 of 1 | no |
 | 2022 president | 0 of 1 | 0 of 1 | no |
 | 2022 governor | 0 of 1 | 0 of 1 | no |
+| 2022 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 1 of 1 | 0 of 1 | n/a |
 | 2022 mca | 0 of 1 | 0 of 1 | no |
 
@@ -29,6 +32,8 @@ Missing:
 - 2013 president: the county total
 - 2013 governor: results for 1 of 1 constituencies
 - 2013 governor: the county total
+- 2013 woman_rep: results for 1 of 1 constituencies
+- 2013 woman_rep: the county total
 - 2013 mp: results for 1 of 1 constituencies
 - 2013 mca: results for 1 of 1 constituencies
 - 2013 mca: the county total
@@ -36,12 +41,16 @@ Missing:
 - 2017 president: the county total
 - 2017 governor: results for 1 of 1 constituencies
 - 2017 governor: the county total
+- 2017 woman_rep: results for 1 of 1 constituencies
+- 2017 woman_rep: the county total
 - 2017 mca: results for 1 of 1 constituencies
 - 2017 mca: the county total
 - 2022 president: results for 1 of 1 constituencies
 - 2022 president: the county total
 - 2022 governor: results for 1 of 1 constituencies
 - 2022 governor: the county total
+- 2022 woman_rep: results for 1 of 1 constituencies
+- 2022 woman_rep: the county total
 - 2022 mca: results for 1 of 1 constituencies
 - 2022 mca: the county total
 
@@ -49,44 +58,47 @@ Missing:
 
 | Election | Constituencies with results | Turnout | County total |
 |---|---|---|---|
-| 2013 president | 0 of 1 | 0 of 1 | no |
-| 2013 governor | 0 of 1 | 0 of 1 | no |
-| 2013 mp | 0 of 1 | 0 of 1 | n/a |
-| 2013 mca | 0 of 1 | 0 of 1 | no |
-| 2017 president | 0 of 1 | 0 of 1 | no |
-| 2017 governor | 0 of 1 | 0 of 1 | no |
-| 2017 mp | 0 of 1 | 0 of 1 | n/a |
-| 2017 mca | 0 of 1 | 0 of 1 | no |
-| 2022 president | 0 of 1 | 0 of 1 | no |
-| 2022 governor | 0 of 1 | 0 of 1 | no |
-| 2022 mp | 0 of 1 | 0 of 1 | n/a |
-| 2022 mca | 0 of 1 | 0 of 1 | no |
+| 2013 president | 0 of 9 | 0 of 9 | yes |
+| 2013 governor | 0 of 9 | 0 of 9 | no |
+| 2013 woman_rep | 0 of 9 | 0 of 9 | no |
+| 2013 mp | 0 of 9 | 0 of 9 | n/a |
+| 2013 mca | 0 of 9 | 0 of 9 | no |
+| 2017 president | 0 of 9 | 0 of 9 | no |
+| 2017 governor | 0 of 9 | 0 of 9 | yes |
+| 2017 woman_rep | 0 of 9 | 0 of 9 | yes |
+| 2017 mp | 0 of 9 | 0 of 9 | n/a |
+| 2017 mca | 0 of 9 | 0 of 9 | no |
+| 2022 president | 0 of 9 | 0 of 9 | yes |
+| 2022 governor | 0 of 9 | 0 of 9 | yes |
+| 2022 woman_rep | 0 of 9 | 0 of 9 | yes |
+| 2022 mp | 0 of 9 | 0 of 9 | n/a |
+| 2022 mca | 0 of 9 | 0 of 9 | no |
 
-Registered voters by ward: 2013: 0 of 1 · 2017: 0 of 1 · 2022: 1 of 1.
-Population estimates: 1 of 1 wards.
-Buildings measured: 1 of 1 wards.
+Registered voters by ward: 2013: 0 of 45 · 2017: 0 of 45 · 2022: 45 of 45.
+Population estimates: 1 of 45 wards.
+Buildings measured: 45 of 45 wards.
 
 Missing:
-- 2013 president: results for 1 of 1 constituencies
-- 2013 president: the county total
-- 2013 governor: results for 1 of 1 constituencies
+- 2013 president: results for 9 of 9 constituencies
+- 2013 governor: results for 9 of 9 constituencies
 - 2013 governor: the county total
-- 2013 mp: results for 1 of 1 constituencies
-- 2013 mca: results for 1 of 1 constituencies
+- 2013 woman_rep: results for 9 of 9 constituencies
+- 2013 woman_rep: the county total
+- 2013 mp: results for 9 of 9 constituencies
+- 2013 mca: results for 9 of 9 constituencies
 - 2013 mca: the county total
-- 2017 president: results for 1 of 1 constituencies
+- 2017 president: results for 9 of 9 constituencies
 - 2017 president: the county total
-- 2017 governor: results for 1 of 1 constituencies
-- 2017 governor: the county total
-- 2017 mp: results for 1 of 1 constituencies
-- 2017 mca: results for 1 of 1 constituencies
+- 2017 governor: results for 9 of 9 constituencies
+- 2017 woman_rep: results for 9 of 9 constituencies
+- 2017 mp: results for 9 of 9 constituencies
+- 2017 mca: results for 9 of 9 constituencies
 - 2017 mca: the county total
-- 2022 president: results for 1 of 1 constituencies
-- 2022 president: the county total
-- 2022 governor: results for 1 of 1 constituencies
-- 2022 governor: the county total
-- 2022 mp: results for 1 of 1 constituencies
-- 2022 mca: results for 1 of 1 constituencies
+- 2022 president: results for 9 of 9 constituencies
+- 2022 governor: results for 9 of 9 constituencies
+- 2022 woman_rep: results for 9 of 9 constituencies
+- 2022 mp: results for 9 of 9 constituencies
+- 2022 mca: results for 9 of 9 constituencies
 - 2022 mca: the county total
 
 ## Migori
@@ -95,14 +107,17 @@ Missing:
 |---|---|---|---|
 | 2013 president | 0 of 1 | 0 of 1 | no |
 | 2013 governor | 0 of 1 | 0 of 1 | no |
+| 2013 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2013 mp | 0 of 1 | 0 of 1 | n/a |
 | 2013 mca | 0 of 1 | 0 of 1 | no |
 | 2017 president | 0 of 1 | 0 of 1 | no |
 | 2017 governor | 0 of 1 | 0 of 1 | no |
+| 2017 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2017 mp | 1 of 1 | 1 of 1 | n/a |
 | 2017 mca | 0 of 1 | 0 of 1 | no |
 | 2022 president | 1 of 1 | 0 of 1 | no |
 | 2022 governor | 0 of 1 | 0 of 1 | no |
+| 2022 woman_rep | 0 of 1 | 0 of 1 | no |
 | 2022 mp | 1 of 1 | 0 of 1 | n/a |
 | 2022 mca | 0 of 1 | 0 of 1 | no |
 
@@ -115,6 +130,8 @@ Missing:
 - 2013 president: the county total
 - 2013 governor: results for 1 of 1 constituencies
 - 2013 governor: the county total
+- 2013 woman_rep: results for 1 of 1 constituencies
+- 2013 woman_rep: the county total
 - 2013 mp: results for 1 of 1 constituencies
 - 2013 mca: results for 1 of 1 constituencies
 - 2013 mca: the county total
@@ -122,11 +139,15 @@ Missing:
 - 2017 president: the county total
 - 2017 governor: results for 1 of 1 constituencies
 - 2017 governor: the county total
+- 2017 woman_rep: results for 1 of 1 constituencies
+- 2017 woman_rep: the county total
 - 2017 mca: results for 1 of 1 constituencies
 - 2017 mca: the county total
 - 2022 president: the county total
 - 2022 governor: results for 1 of 1 constituencies
 - 2022 governor: the county total
+- 2022 woman_rep: results for 1 of 1 constituencies
+- 2022 woman_rep: the county total
 - 2022 mca: results for 1 of 1 constituencies
 - 2022 mca: the county total
 
@@ -136,14 +157,17 @@ Missing:
 |---|---|---|---|
 | 2013 president | 0 of 17 | 0 of 17 | yes |
 | 2013 governor | 0 of 17 | 0 of 17 | no |
+| 2013 woman_rep | 0 of 17 | 0 of 17 | no |
 | 2013 mp | 1 of 17 | 0 of 17 | n/a |
 | 2013 mca | 0 of 17 | 0 of 17 | no |
 | 2017 president | 0 of 17 | 0 of 17 | yes |
 | 2017 governor | 0 of 17 | 0 of 17 | yes |
+| 2017 woman_rep | 0 of 17 | 0 of 17 | no |
 | 2017 mp | 17 of 17 | 0 of 17 | n/a |
 | 2017 mca | 0 of 17 | 0 of 17 | no |
 | 2022 president | 1 of 17 | 1 of 17 | yes |
 | 2022 governor | 13 of 17 | 0 of 17 | yes |
+| 2022 woman_rep | 0 of 17 | 0 of 17 | no |
 | 2022 mp | 15 of 17 | 11 of 17 | n/a |
 | 2022 mca | 0 of 17 | 0 of 17 | no |
 
@@ -157,15 +181,21 @@ Missing:
 - 2013 president: results for 17 of 17 constituencies
 - 2013 governor: results for 17 of 17 constituencies
 - 2013 governor: the county total
+- 2013 woman_rep: results for 17 of 17 constituencies
+- 2013 woman_rep: the county total
 - 2013 mp: results for 16 of 17 constituencies
 - 2013 mca: results for 17 of 17 constituencies
 - 2013 mca: the county total
 - 2017 president: results for 17 of 17 constituencies
 - 2017 governor: results for 17 of 17 constituencies
+- 2017 woman_rep: results for 17 of 17 constituencies
+- 2017 woman_rep: the county total
 - 2017 mca: results for 17 of 17 constituencies
 - 2017 mca: the county total
 - 2022 president: results for 16 of 17 constituencies
 - 2022 governor: results for 4 of 17 constituencies
+- 2022 woman_rep: results for 17 of 17 constituencies
+- 2022 woman_rep: the county total
 - 2022 mp: results for 2 of 17 constituencies
 - 2022 mca: results for 17 of 17 constituencies
 - 2022 mca: the county total
@@ -176,14 +206,17 @@ Missing:
 |---|---|---|---|
 | 2013 president | 0 of 6 | 0 of 6 | yes |
 | 2013 governor | 0 of 6 | 0 of 6 | no |
+| 2013 woman_rep | 0 of 6 | 0 of 6 | no |
 | 2013 mp | 0 of 6 | 0 of 6 | n/a |
 | 2013 mca | 0 of 6 | 0 of 6 | no |
 | 2017 president | 0 of 6 | 0 of 6 | no |
 | 2017 governor | 0 of 6 | 0 of 6 | yes |
+| 2017 woman_rep | 0 of 6 | 0 of 6 | no |
 | 2017 mp | 6 of 6 | 0 of 6 | n/a |
 | 2017 mca | 0 of 6 | 0 of 6 | no |
 | 2022 president | 1 of 6 | 1 of 6 | yes |
 | 2022 governor | 0 of 6 | 0 of 6 | yes |
+| 2022 woman_rep | 0 of 6 | 0 of 6 | no |
 | 2022 mp | 5 of 6 | 2 of 6 | n/a |
 | 2022 mca | 0 of 6 | 0 of 6 | no |
 
@@ -196,38 +229,47 @@ Missing:
 - 2013 president: results for 6 of 6 constituencies
 - 2013 governor: results for 6 of 6 constituencies
 - 2013 governor: the county total
+- 2013 woman_rep: results for 6 of 6 constituencies
+- 2013 woman_rep: the county total
 - 2013 mp: results for 6 of 6 constituencies
 - 2013 mca: results for 6 of 6 constituencies
 - 2013 mca: the county total
 - 2017 president: results for 6 of 6 constituencies
 - 2017 president: the county total
 - 2017 governor: results for 6 of 6 constituencies
+- 2017 woman_rep: results for 6 of 6 constituencies
+- 2017 woman_rep: the county total
 - 2017 mca: results for 6 of 6 constituencies
 - 2017 mca: the county total
 - 2022 president: results for 5 of 6 constituencies
 - 2022 governor: results for 6 of 6 constituencies
+- 2022 woman_rep: results for 6 of 6 constituencies
+- 2022 woman_rep: the county total
 - 2022 mp: results for 1 of 6 constituencies
 - 2022 mca: results for 6 of 6 constituencies
 - 2022 mca: the county total
 
 ## Coalitions
 
-From data/atlas/blocs.csv: the coalition each party stood in for president and governor. A party not listed stood as itself; in MP races the bloc is the party.
+From data/atlas/blocs.csv: the coalition each party stood in for president and governor. A party not listed stood as itself; in MP and woman rep races the bloc is the party.
 
 - 2013: KNC in Eagle. Wikipedia, 2013 Kenyan general election: the coalitions (citing the Daily Nation, 6 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
 - 2013: ODM in CORD. Wikipedia, 2013 Kenyan general election: the coalitions (citing The Standard, 23 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
 - 2013: TNA in Jubilee. Wikipedia, 2013 Kenyan general election: the coalitions (citing the Daily Nation, 4 December 2012), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
 - 2013: UDF in Amani. Wikipedia, 2013 Kenyan general election: the coalitions (citing The Star, 4 January 2013), https://en.wikipedia.org/wiki/2013_Kenyan_general_election
 - 2017: ODM in NASA. KBC, NASA leaders sign coalition deal (22 February 2017), https://kbctv.co.ke/blog/2017/02/22/nasa-leaders-expected-to-sign-coalition-deal-wednesday
+- 2022: DEVOLUTION EMPOWERMENT PARTY in Azimio. Capital FM, 23 parties within the Azimio La Umoja One-Kenya Coalition Political Party (13 April 2022), https://capitalfm.africa/23-parties-within-the-azimio-la-umoja-one-kenya-coalition-political-party/
 - 2022: Jubilee in Azimio. Capital FM, 23 parties within the Azimio La Umoja One-Kenya Coalition Political Party (13 April 2022), https://capitalfm.africa/23-parties-within-the-azimio-la-umoja-one-kenya-coalition-political-party/
 - 2022: ODM in Azimio. Capital FM, 23 parties within the Azimio La Umoja One-Kenya Coalition Political Party (13 April 2022), https://capitalfm.africa/23-parties-within-the-azimio-la-umoja-one-kenya-coalition-political-party/
 - 2022: UDA in Kenya Kwanza. The Star, Kenya Kwanza parties sign coalition agreement (12 April 2022), https://www.the-star.co.ke/news/2022-04-12-kenya-kwanza-parties-sign-coalition-agreement
+- 2022: UNITED DEMOCRATIC ALLIANCE in Kenya Kwanza. The Star, Kenya Kwanza parties sign coalition agreement (12 April 2022), https://www.the-star.co.ke/news/2022-04-12-kenya-kwanza-parties-sign-coalition-agreement
 
 ## Sources
 
 - `ballotwinners-athwana-ward`: ATHWANA Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/0266. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 6,177 valid votes, which the six candidates add up to. 2022 lists the winner only (Dionisio Jim Muchui, UDA, 3,864, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
 - `ballotwinners-githunguri`: GITHUNGURI Constituency: MP, Wards and Results, BallotWinners, https://ballotwinners.com/geography/constituency/116. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 86,306 valid votes, which the eight candidates add up to. 2013 gives no parties, so it isn't entered. Read 19 October 2026.
 - `ballotwinners-kuria-east`: KURIA EAST Constituency: MP, Wards and Results, BallotWinners, https://ballotwinners.com/geography/constituency/260. A third-party site carrying IEBC's declared results. 2017: all eight candidates as printed (surname first) and 26,771 valid votes, which they add up to. 2022 lists the winner only, so the 2022 race is entered from Mzalendo's copy of the Gazette instead. 2013 gives no parties, so it isn't entered. Its 36,301 registered voters is an earlier register than IEBC's 2022 one, so it isn't entered. Read 1 November 2026.
+- `ballotwinners-meru-county`: MERU County: Constituencies, Wards and Results, BallotWinners, https://ballotwinners.com/geography/county/012. A third-party site carrying IEBC's declared results for the county's seats. Woman rep 2017: all six candidates as printed (surname first), 539,446 valid votes, which they add up to. Woman rep 2022: the four leading of the eleven candidates IEBC listed, the winner's 259,445 as Gazette 9951 gives; its 478,113 is those four added up, not the valid votes, so no valid total is entered. Governor 2022: all three candidates, 503,821 valid; 2017: all six, 541,574 valid. The 2022 names and parties are IEBC's candidate list (electionskenya.org's copy of it), names as other names then surname; that list has Beth Kanana for ODM where this page says Jubilee. None is given by constituency. 2013 gives no parties, so it isn't entered. Its register (627,210) is older than IEBC's 2022 one, so it isn't entered. Read 19 November 2026.
 - `ballotwinners-roysambu-ward`: ROYSAMBU Ward: MCA and Election Results, BallotWinners, https://ballotwinners.com/geography/ward/1394. A third-party site carrying IEBC's declared results, every candidate as printed (surname first). 2017: 23,195 valid votes, which the eight candidates add up to. 2022 lists the winner only (Mumbi Sospeter Gathahu, independent, 6,317, as the Gazette gives), so it isn't entered. 2013 gives no parties, so it isn't entered either. Read 19 October 2026.
 - `citizen-2022-dagoretti-north-mp`: Beatrice Elachi wins Dagoretti North MP race, Citizen Digital, https://citizen.digital/article/beatrice-elachi-wins-dagoretti-north-mp-race-n303832. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
 - `citizen-2022-dagoretti-south-mp`: John 'KJ' Kiarie retains Dagoretti South MP seat, Citizen Digital, https://citizen.digital/article/john-kj-kiarie-retains-dagoretti-south-mp-seat-n303794. The top two, as printed. Checked against the provisional results loaded instead, which list every candidate; the leaders' figures agree.
@@ -242,10 +284,10 @@ From data/atlas/blocs.csv: the coalition each party stood in for president and g
 - `google-open-buildings-v3`: Open Buildings v3: building footprints, Google Open Buildings, https://sites.research.google/gr/open-buildings/. Footprints at confidence 0.65 or more, each counted in the ward its centre falls in, measured from the Voters map's house files (outlines to about 0.6 m) (CC BY 4.0). Small structures are under 40 m², large buildings 200 m² or more.
 - `iebc-2022-form-34c`: Declaration of results for the election of President, national tallying centre, by county (Form 34C summary), 2022, IEBC, https://www.iebc.or.ke/uploads/resources/QLTlLJx0Vr.pdf. County and national totals as printed. Votes cast is valid plus rejected. The national valid total (14,213,137) is 110 more than the four candidates' votes added up (14,213,027), as printed.
 - `iebc-2022-rov-per-constituency`: Registered voters per constituency for the 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_constituency.pdf. Kuria East: 41,976 registered voters. Its five wards, from IEBC's register by polling station, add up to the same. Read 1 November 2026.
-- `iebc-2022-rov-per-polling-station`: Register of voters per polling station, 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_polling_station.pdf. 712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri's wards add up to 104,592 and Tigania West's to 70,283, the constituency registers Mzalendo gives.
+- `iebc-2022-rov-per-polling-station`: Register of voters per polling station, 2022 General Election, IEBC, https://www.iebc.or.ke/docs/rov_per_polling_station.pdf. 712 pages, dated 3 August 2022; each ward is its streams added up. Githunguri's wards add up to 104,592, the constituency register Mzalendo gives, and Meru's 45 wards to 772,139, each of its nine constituencies' registers as Mzalendo gives them.
 - `kna-2022-nyeri-mps`: Political newcomers dominate Nyeri MP seats, Kenya News Agency, https://www.kenyanews.go.ke/political-newcomers-dominate-nyeri-mp-seats/1000/. The government news agency's report of five of Nyeri's six MP races, the leading candidates as printed. Its '58,534 votes cast' in Mukurweini is that constituency's register, so it isn't entered as votes cast; Othaya's '44,676 votes' is entered as votes cast.
 - `mzalendo-2022-kiambu`: Kiambu County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/kiambu/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Githunguri: 104,592 registered (99,384 in 2017; its wards as IEBC's register adds them up); Wamuchomba Gathoni, UDA, 34,646 votes. Read 19 October 2026.
-- `mzalendo-2022-meru`: Meru County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/meru/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners, winners only (Gazette 9956 for MCAs: Athwana, Dionisio Jim Muchui, UDA, 3,864). Tigania West: 70,283 registered (64,114 in 2017; its wards as IEBC's register adds them up). Read 19 October 2026.
+- `mzalendo-2022-meru`: Meru County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/meru/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners, winners only. Meru: 772,139 registered (702,480 in 2017); its constituencies Igembe South 77,126, Igembe Central 93,434, Igembe North 77,050, Tigania West 70,283 (64,114 in 2017), Tigania East 83,527, North Imenti 96,241, Buuri 82,341, Central Imenti 76,495 and South Imenti 115,642, which add up to the county's and are each its wards as IEBC's register by polling station adds them up. Woman rep: Kailemia Elizabeth Karambu, UDA, 259,445 (Gazette 9951); MCAs: Gazette 9956 (Athwana, Dionisio Jim Muchui, UDA, 3,864). Read 19 October and 19 November 2026.
 - `mzalendo-2022-migori`: Migori County: elections, Parliament and public money, Mzalendo, https://mzalendo.com/mps-performance/counties/migori/. Reproduces IEBC's 2022 register by constituency and the Kenya Gazette's declared winners (Gazette 9950 for MPs), winners only. Kuria East: 41,976 registered; Kemero Maisori Marwa Kitayama, UDA, 15,362 votes, which agrees with BallotWinners. No source read gives the 2022 runner-up's votes, so the 2022 MP race holds the winner alone. Read 1 November 2026.
 - `nairobileo-2025-wamuchomba`: Woman MP Who Holds Record for Receiving Highest Number of Votes in Kenya, Nairobi Leo, https://www.nairobileo.co.ke/features/article/18973/woman-mp-who-holds-record-for-receiving-highest-number-of-votes-in-kenya. 25 January 2025. Githunguri's 2022 MP race, the top two as printed: Wamuchomba 34,646 and Jubilee's Gabriel Kago 31,127. The winner's figure agrees with the Gazette as Mzalendo gives it. No valid total, so shares are of the candidates listed.
 - `provisional-2017-governor-nairobi`: 2017 Governor result, Nairobi City County, Provisional results. Public provisional figures for the county, eight candidates, names as printed, not yet checked against IEBC's forms. Whether every candidate is listed isn't checked, so shares are of the candidates listed.

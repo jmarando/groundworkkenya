@@ -162,8 +162,13 @@ function Elections() {
       </div>
       <div className="el-switches">
         <div className="seg" role="group" aria-label="Race">
-          {/* The MCA race is a ward's own: offered on a ward, or while it is the race shown. */}
-          {RACES.filter((r) => r !== "mca" || area.level === "ward" || race === "mca").map((r) => (
+          {/* The MCA race is a ward's own: offered on a ward, or while it is the race shown. The
+              woman rep's is a county's: offered below Kenya, or while it is the race shown. */}
+          {RACES.filter(
+            (r) =>
+              (r !== "mca" || area.level === "ward" || race === "mca") &&
+              (r !== "woman_rep" || area.level !== "country" || race === "woman_rep"),
+          ).map((r) => (
             <button key={r} type="button" aria-pressed={race === r} onClick={() => go({ race: r })}>
               {RACE_NAMES[r]}
             </button>

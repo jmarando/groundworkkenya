@@ -27,6 +27,7 @@ import { outlookNotes, registered2026 } from "@/lib/outlook-data";
 import { registeredFor } from "@/lib/outlook-notes";
 import { youthFacts } from "@/lib/outlook-youth";
 import { sideFromBloc } from "@/lib/path-view";
+import { raceOf } from "@/lib/race";
 import { placeOfSeat, seatForCampaign } from "@/lib/seat";
 
 const ABOUT =
@@ -69,20 +70,23 @@ function Strategy() {
 
   const home = atlas ? homeAreaFor(campaign, atlas.homeArea, atlas.areas) : null;
   const homeName = atlas?.areas.find((a) => a.key === home)?.name ?? "your area";
-  // A governor's path by constituency, or why there is none; null for any other race.
+  // A governor's (or woman rep's) path by constituency, or why there is none; null for any
+  // other race. The Outlook 2027 reads a governor's race only.
+  const race = raceOf(campaign?.level);
   const seat = useMemo(
     () => (atlas && home ? seatForCampaign(campaign, atlas, home) : null),
     [campaign, atlas, home],
   );
+  const outlook = race === "governor" && seat?.ok ? seat.seat : null;
   // The people-in-places facts and the county's new registrations behind the Outlook 2027.
   const youth = useMemo(
-    () => (atlas && seat?.ok ? youthFacts(atlas, seat.seat) : null),
-    [atlas, seat],
+    () => (atlas && outlook ? youthFacts(atlas, outlook) : null),
+    [atlas, outlook],
   );
   const registration = useMemo(() => {
-    const row = seat?.ok ? registeredFor(registered2026, seat.seat.countyName) : null;
+    const row = outlook ? registeredFor(registered2026, outlook.countyName) : null;
     return row ? { count: row.newRegistrations, period: row.period, source: row.source } : null;
-  }, [seat]);
+  }, [outlook]);
   // An MP's or MCA's last race, or why there is none; null for any other race.
   const mpSeat = useMemo(() => {
     const race = campaign?.level;
@@ -103,17 +107,23 @@ function Strategy() {
       {seat?.ok ? (
         <>
           <PathToCityHall seat={seat.seat} />
-          <Outlook2027
-            key={`${campaign?.id ?? ""}:${seat.seat.county}`}
-            seat={seat.seat}
-            youth={youth}
-            registration={registration}
-            notes={outlookNotes}
-            candidate={campaign?.candidate ?? null}
-          />
+          {outlook ? (
+            <Outlook2027
+              key={`${campaign?.id ?? ""}:${outlook.county}`}
+              seat={outlook}
+              youth={youth}
+              registration={registration}
+              notes={outlookNotes}
+              candidate={campaign?.candidate ?? null}
+            />
+          ) : null}
         </>
       ) : seat ? (
-        <NoPathToCityHall place={placeOfSeat(campaign?.seat ?? "")} why={seat.why} />
+        <NoPathToCityHall
+          place={placeOfSeat(campaign?.seat ?? "")}
+          why={seat.why}
+          race={race === "woman_rep" ? "woman_rep" : "governor"}
+        />
       ) : null}
       {mpSeat?.ok ? (
         <PathToParliament seat={mpSeat.seat} />

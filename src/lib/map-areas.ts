@@ -82,6 +82,18 @@ export const MAP_AREAS: MapArea[] = [
     counts: "/tiles/houses-athwana.json",
     bounds: [37.58, 0.19, 37.79, 0.49],
   },
+  {
+    // A county seat (the woman rep's): its 45 wards, opened by constituency as Nairobi's are.
+    // Across the equator, so its houses come from two Open Buildings cells (179 and 183).
+    key: "meru",
+    id: "meru",
+    name: "Meru County",
+    top: "county",
+    wards: "/geo/meru-wards.json",
+    houses: "/tiles/houses-meru.pmtiles",
+    counts: "/tiles/houses-meru.json",
+    bounds: [37.09, -0.22, 38.42, 0.68],
+  },
 ];
 
 export function mapAreaFor(key: string | null | undefined): MapArea | null {

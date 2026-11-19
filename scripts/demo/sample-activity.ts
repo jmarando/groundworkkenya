@@ -10,7 +10,7 @@
 // supabase/seeds/sample-activity-remove.sql removes the lot.
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { inPolygon, wardShapes, type WardShape } from "@/lib/geo";
+import { inBox, inPolygon, wardShapes, type WardShape } from "@/lib/geo";
 import { decodeTile, HOUSE_ZOOM, toTileSpace } from "@/lib/house-tiles";
 import { MAP_AREAS } from "@/lib/map-areas";
 import { gunzip, openArchive } from "@/lib/pmtiles";
@@ -215,6 +215,16 @@ const ATHWANA_SEGMENTS: Config["segments"] = [
   ["youth", "Youth 18-34", "First and second time voters", "#C99A2E"],
   ["elders", "Elders", "Njuri Ncheke and clan elders", "#3D7A6B"],
   ["traders", "Market traders", "Stall holders and market traders", "#2B6CB0"],
+];
+// Meru's groups, county-wide, are livelihoods and networks invented for the demo: not research
+// findings.
+const MERU_SEGMENTS: Config["segments"] = [
+  ["miraa", "Miraa growers and traders", "Growers, traders, loaders and transporters", "#1F6F4A"],
+  ["tea-dairy", "Tea and dairy farmers", "Factory growers and dairy cooperatives", "#3D7A6B"],
+  ["women", "Women's groups", "Chamas, table-banking groups and church guilds", "#7A4FB5"],
+  ["youth", "Youth 18-34", "First and second time voters", "#C99A2E"],
+  ["boda", "Boda riders", "Riders' groups at the town stages", "#2B6CB0"],
+  ["traders", "Market traders", "Stall holders in Meru town, Maua and Nkubu", "#8B5E3C"],
 ];
 // Kuria East's groups are livelihoods and networks, invented for the demo: not research findings.
 const KURIA_EAST_SEGMENTS: Config["segments"] = [
@@ -559,6 +569,97 @@ const CONFIGS: Config[] = [
       ],
     },
   },
+  {
+    // A county campaign: a few supporters in each of the 45 wards, the county's whole map.
+    id: "ca000000-0000-4000-8000-000000000008",
+    slug: "meru",
+    mapArea: "meru",
+    people: 8,
+    doors: 12,
+    names: MERU,
+    segments: MERU_SEGMENTS,
+    places: [
+      {
+        title: "Kangeta miraa market",
+        kind: "market",
+        ward: "kangeta",
+        note: "Before the lorries leave: the women traders first",
+      },
+      {
+        title: "Table-banking groups, Nkubu",
+        kind: "meeting",
+        ward: "abogeta-west",
+        note: "Group leaders bring two members each",
+      },
+      {
+        title: "Breakfast show on a Kimeru station",
+        kind: "media",
+        ward: "municipality",
+        note: "The credit line for women's groups",
+      },
+      {
+        title: "Maua market walkabout",
+        kind: "market",
+        ward: "maua",
+        note: "Traders' fees and the miraa price",
+      },
+      {
+        title: "Timau women's group",
+        kind: "meeting",
+        ward: "timau",
+        note: "Water and the potato price",
+      },
+      {
+        title: "Youth fellowship, Mikinduri",
+        kind: "church",
+        ward: "mikinduri",
+        note: "Young men: jobs and the boda stage",
+      },
+      {
+        title: "Chief's baraza on girls' safety",
+        kind: "meeting",
+        ward: "kianjai",
+        note: "Back the chief's plan for the schools",
+      },
+    ],
+    expenses: [
+      ["Transport, Igembe women's meetings", "transport", "Petty cash", 18_000, "pending"],
+      ["Hall hire, Nkubu table-banking groups", "events", "Nkubu social hall", 12_000, "pending"],
+      [
+        "Printing: sanitary-pad drive posters (2,000)",
+        "merchandise",
+        "Local printers",
+        46_000,
+        "approved",
+      ],
+      ["Bulk SMS credit", "comms", "Africa's Talking", 30_000, "paid"],
+      ["Sound system, Maua walkabout", "events", "Local sound hire", 15_000, "paid"],
+    ],
+    inbox: [
+      ["Miraa prices", "Bei ya miraa imeshuka tena, tusaidieni.", "jobs", "negative"],
+      ["Water in Meru town", "Maji yanakuja mara mbili tu kwa wiki.", "water", "negative"],
+      ["Bursary application", "Naomba msaada wa bursary kwa binti yangu.", "bursaries", "neutral"],
+      ["Our chama", "Kikundi chetu kinataka kujua kuhusu mkopo.", "general", "neutral"],
+      ["Thank you for the visit", "Asante kwa kututembelea Nkubu jana.", "general", "positive"],
+      [
+        "Girls' safety",
+        "Watoto wa shule wanatembea gizani kurudi nyumbani.",
+        "security",
+        "negative",
+      ],
+    ],
+    poll: {
+      question: "What should Meru's woman rep fix first?",
+      questionSw: "Mwakilishi wa wanawake wa Meru ashughulikie nini kwanza?",
+      options: [
+        ["prices", "Miraa, tea and farm prices"],
+        ["water", "Water"],
+        ["credit", "Loans for women's groups"],
+        ["bursaries", "Bursaries"],
+        ["safety", "Safety of women and girls"],
+      ],
+    },
+  },
 ];
 
 // A small seeded generator, so the same command writes the same file.
@@ -592,7 +693,9 @@ async function houses(mapArea: string, shapes: WardShape[]) {
       for (const h of decodeTile(x, y, bytes)) {
         if (seen.has(h.id)) continue;
         seen.add(h.id);
-        const w = shapes.find((s) => s.polygons.some((p) => inPolygon(h.centre, p)));
+        const w = shapes.find(
+          (s) => inBox(h.centre, s.box) && s.polygons.some((p) => inPolygon(h.centre, p)),
+        );
         if (w) byWard.get(w.slug)!.push({ pc: h.id, at: h.centre });
       }
     }

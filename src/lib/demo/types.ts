@@ -2,9 +2,13 @@
 // the election-night war room. Every figure is invented unless a block says
 // `official: true`. Rivals are placeholders, never named people.
 
-export type Office = "president" | "governor" | "mp" | "mca";
+export type Office = "president" | "governor" | "woman_rep" | "mp" | "mca";
 export type ScenarioKey =
-  "kalonzo" | "sakaja" | "mathira" | "roysambu" | "githunguri" | "kuria-east" | "athwana";
+  "kalonzo" | "sakaja" | "mathira" | "roysambu" | "githunguri" | "kuria-east" | "athwana" | "meru";
+
+/** A county's own race (governor, woman rep): its wards tallied by constituency, then the county. */
+export const countyWide = (office: Office): boolean =>
+  office === "governor" || office === "woman_rep";
 
 export type NewsTag =
   "Local" | "County" | "National" | "Party" | "Opponent" | "Economy" | "Security";
@@ -181,7 +185,7 @@ export type NightScript = {
 export type OpsConfig = {
   /** Seeds the per-area spread. */
   seed: number;
-  /** President: the supporter list target and count. Governor and MP use winNumber. */
+  /** President: the supporter list target and count. The other offices use winNumber. */
   list?: { target: number; found: number };
   /** Share of found supporters who rated their support 4 or 5 at the door, 0-1. */
   sureShare: number;
@@ -223,7 +227,7 @@ export type Scenario = {
   contenders: Contender[];
   geo: { file: string; unit: string; units: string; group: string };
   areas: AreaModel[];
-  /** Governor and MP: the votes we need, and the supporters found so far. */
+  /** Every office but president: the votes we need, and the supporters found so far. */
   winNumber?: { target: number; found: number };
   today: { title: string; detail: string; action: Action }[];
   story: Story;

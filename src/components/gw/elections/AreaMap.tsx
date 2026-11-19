@@ -8,6 +8,7 @@ import { getJson } from "@/lib/geo-files";
 /** The ward maps the atlas can draw, by county. Nyeri's holds Mathira's wards only. */
 const MAPS: Record<string, { url: string; constituency?: string; partial?: string }> = {
   nairobi: { url: "/geo/nairobi-wards.json" },
+  meru: { url: "/geo/meru-wards.json" },
   nyeri: {
     url: "/geo/mathira-wards.json",
     constituency: "mathira",

@@ -4,6 +4,7 @@
 
 import { RACES, YEARS, type Race } from "@/lib/atlas";
 import { ATLAS_ELECTIONS, slugify } from "@/lib/atlas-files";
+import { raceOf } from "@/lib/race";
 
 export type Shade = "todo" | "lean" | "turnout" | "swing";
 export const SHADES: Shade[] = ["todo", "lean", "turnout", "swing"];
@@ -40,9 +41,11 @@ export function nextElectionsSearch(
   return validateElectionsSearch(out);
 }
 
-/** The race a campaign looks at first: its own. */
-export const defaultRace = (level: string | null | undefined): Race =>
-  level === "mp" || level === "mca" || level === "president" ? level : "governor";
+/** The race a campaign looks at first: its own ("woman-rep" as the admin form writes it). */
+export const defaultRace = (level: string | null | undefined): Race => {
+  const race = raceOf(level);
+  return race && (RACES as string[]).includes(race) ? (race as Race) : "governor";
+};
 
 /** The campaign's home area: what it set, else its seat ("MP · Mathira", "MCA · Roysambu", "Governor · Nairobi"), else Kenya. */
 export function homeAreaFor(
