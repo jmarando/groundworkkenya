@@ -64,6 +64,13 @@
       "when": 1792063296603,
       "tag": "0008_polling_centres_version",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795117242924,
+      "tag": "0009_tighten_demo_leads_listening_accounts",
+      "breakpoints": true
     }
   ]
 }
