@@ -1325,6 +1325,94 @@ export type Database = {
         }
         Relationships: []
       }
+      crowd_events: {
+        Row: {
+          campaign_id: string
+          crowd: string | null
+          decided_at: string | null
+          decided_by: string | null
+          dedupe: string
+          diary_entry_id: string | null
+          found_at: string
+          id: string
+          kind: string
+          place: string | null
+          source_name: string | null
+          source_title: string | null
+          source_url: string
+          starts_at: string | null
+          starts_on: string
+          status: string
+          title: string
+          ward_id: string | null
+          why: string | null
+        }
+        Insert: {
+          campaign_id: string
+          crowd?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          dedupe: string
+          diary_entry_id?: string | null
+          found_at?: string
+          id?: string
+          kind: string
+          place?: string | null
+          source_name?: string | null
+          source_title?: string | null
+          source_url: string
+          starts_at?: string | null
+          starts_on: string
+          status?: string
+          title: string
+          ward_id?: string | null
+          why?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          crowd?: string | null
+          decided_at?: string | null
+          decided_by?: string | null
+          dedupe?: string
+          diary_entry_id?: string | null
+          found_at?: string
+          id?: string
+          kind?: string
+          place?: string | null
+          source_name?: string | null
+          source_title?: string | null
+          source_url?: string
+          starts_at?: string | null
+          starts_on?: string
+          status?: string
+          title?: string
+          ward_id?: string | null
+          why?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crowd_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowd_events_diary_entry_id_fkey"
+            columns: ["diary_entry_id"]
+            isOneToOne: false
+            referencedRelation: "diary_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crowd_events_ward_fkey"
+            columns: ["ward_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id", "campaign_id"]
+          },
+        ]
+      }
       diary_entries: {
         Row: {
           campaign_id: string
@@ -4104,6 +4192,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_crowd_event: { Args: { _event: string }; Returns: string }
       add_person: {
         Args: {
           _consent: Json
@@ -4204,6 +4293,7 @@ export type Database = {
         }
         Returns: Json
       }
+      dismiss_crowd_event: { Args: { _event: string }; Returns: undefined }
       field_day_checks: {
         Args: { _from: string; _to: string }
         Returns: {

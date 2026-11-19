@@ -8244,6 +8244,34 @@ figure {
   gap: 10px;
   margin-top: 8px;
 }
+/* Where the crowds are: events found in the news, for the team to add or set aside. */
+.crowd-list .mb-time-at {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.crowd-at {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+/* On a phone the links wrap as whole phrases, never a word to a line. */
+.crowd-list .diary-actions {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.crowd-list .diary-link,
+.crowd-added {
+  white-space: nowrap;
+}
+.crowd-add {
+  color: var(--gw-accent);
+  font-weight: 600;
+}
+.crowd-added {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
 
 /* The story editor's list of the morning's other stories. */
 .se-picks {

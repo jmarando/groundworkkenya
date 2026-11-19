@@ -14,11 +14,14 @@ import { nairobiToday } from "@/lib/nairobi-date";
 import { addDays } from "@/lib/diary";
 import { loadDiary } from "@/lib/diary.functions";
 import { defaultRace, homeAreaFor } from "@/lib/elections-view";
+import { CROWD_KINDS } from "@/lib/crowd-events";
 import { findings } from "@/lib/findings";
+import { CROWD_DAYS } from "@/lib/findings/crowds";
 import {
   FINDINGS_READERS,
   LIMITS,
   type Count,
+  type CrowdLite,
   type FindingsResult,
   type FindingsWard,
 } from "@/lib/findings/core";
@@ -93,6 +96,7 @@ export async function loadFindings(
     issues,
     issueWeeks,
     rivalWeeks,
+    crowds,
   ] = await Promise.all([
     loadAtlas(sb),
     sb
@@ -118,6 +122,7 @@ export async function loadFindings(
     readCount("ward_issues", { _days: 30 }),
     readCount("issue_weeks", { _weeks: 5 }),
     readCount("rival_mention_weeks", { _weeks: 5 }),
+    loadCrowds(sb, today),
   ]);
 
   const c = campaign.data;
@@ -154,11 +159,51 @@ export async function loadFindings(
       diary,
       rivals,
       polls,
+      crowds,
     }),
     waiting: waiting.sort(),
     sideSet: Boolean(atlas.sides[electionOf(race, 2022)]),
     wardKeys: Object.fromEntries(wards.flatMap((w) => (w.key ? [[w.id, w.key]] : []))),
   };
+}
+
+/** Crowd events in the coming week not yet in the diary; null before schema 50. */
+async function loadCrowds(sb: Client, today: string): Promise<CrowdLite[] | null> {
+  const { data, error } = (await sb
+    .from("crowd_events")
+    .select("id, kind, title, starts_on, ward_id, source_name")
+    .eq("status", "new")
+    .gte("starts_on", today)
+    .lte("starts_on", addDays(today, CROWD_DAYS - 1))
+    .limit(100)) as {
+    data:
+      | {
+          id: string;
+          kind: string;
+          title: string;
+          starts_on: string;
+          ward_id: string | null;
+          source_name: string | null;
+        }[]
+      | null;
+    error: unknown;
+  };
+  if (error) return null;
+  return (data ?? []).flatMap((r) => {
+    const kind = CROWD_KINDS.find((k) => k === r.kind);
+    return kind
+      ? [
+          {
+            id: r.id,
+            kind,
+            title: r.title,
+            day: r.starts_on,
+            wardId: r.ward_id,
+            sourceName: r.source_name,
+          },
+        ]
+      : [];
+  });
 }
 
 export const getFindings = createServerFn({ method: "GET" })

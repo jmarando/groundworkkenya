@@ -26,6 +26,8 @@ export type RealSignals = {
   mind: MindLine | null;
   /** The biggest recent change for a rival in one pollster's polls. */
   rivalMove?: RivalMove | null;
+  /** Crowd events found in the news for the next seven days, not yet in the diary or set aside. */
+  crowds?: { week: number; inWards: number } | null;
 };
 
 export type TodayItem = { title: string; detail: string; action: Action };
@@ -64,6 +66,7 @@ export function realToday(sig: RealSignals): TodayItem[] {
       action: { kind: "go", label: "Open the inbox", to: "/inbox" },
     });
   }
+  if (sig.crowds && sig.crowds.week > 0) items.push(crowdItem(sig.crowds));
   if (sig.mind) items.push(mindItem(sig.mind));
   if (sig.rivalMove) {
     items.push({
@@ -73,6 +76,21 @@ export function realToday(sig: RealSignals): TodayItem[] {
     });
   }
   return items;
+}
+
+/** The coming week's crowd events as a Today item. */
+export function crowdItem(c: { week: number; inWards: number }): TodayItem {
+  const where =
+    c.inWards === c.week
+      ? `${c.week === 1 ? "It is" : "All are"} in your wards.`
+      : c.inWards > 0
+        ? `${n(c.inWards, "is", "are")} in your wards.`
+        : "Found in your area.";
+  return {
+    title: `${n(c.week, "crowd event", "crowd events")} in the next 7 days`,
+    detail: `Funerals, church events, harambees, tournaments and shows found in the news. ${where}`,
+    action: { kind: "go", label: "See where", to: "/diary" },
+  };
 }
 
 /** The week's top issue as a Today item. */

@@ -5,6 +5,7 @@
 
 import type { Race } from "@/lib/atlas";
 import type { AtlasData } from "@/lib/atlas-view";
+import type { CrowdKind } from "@/lib/crowd-events";
 import type { DiaryEntry } from "@/lib/diary";
 import { validateElectionsSearch } from "@/lib/elections-view";
 import type { WardDoors } from "@/lib/houses";
@@ -27,6 +28,7 @@ export const DECISION_NAMES: Record<Decision, string> = {
 export const RULES = [
   { id: "not-visited", decision: "time" },
   { id: "time-in-safe-seats", decision: "time" },
+  { id: "crowd-coming", decision: "time" },
   { id: "ward-top-issue", decision: "message" },
   { id: "issue-rising", decision: "message" },
   { id: "one-seat-different-places", decision: "message" },
@@ -121,6 +123,15 @@ export type FindingsWard = {
   targetVotes: number | null;
 };
 export type WardIssue = { wardId: string; source: IssueSource; issue: string; n: number };
+/** A crowd event found in the news and not yet in the diary (crowd_events, schema 50). */
+export type CrowdLite = {
+  id: string;
+  kind: CrowdKind;
+  title: string;
+  day: string;
+  wardId: string | null;
+  sourceName: string | null;
+};
 /** Week 0 is the last 7 days; week 1 the 7 before, and so on. */
 export type IssueWeek = { week: number; source: IssueSource; issue: string; n: number };
 /** A null rival is every news and social mention that week. */
@@ -146,6 +157,8 @@ export type FindingsInput = {
   diary: DiaryEntry[];
   rivals: RaceRival[];
   polls: RacePoll[];
+  /** Crowd events in the coming week not yet in the diary; null or left out before schema 50. */
+  crowds?: CrowdLite[] | null;
 };
 
 export type FindingsResult = {
