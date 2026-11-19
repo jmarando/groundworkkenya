@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { CalendarLink } from "@/components/gw/diary/CalendarLink";
+import { CrowdEvents } from "@/components/gw/diary/CrowdEvents";
 import { DiaryWeek } from "@/components/gw/diary/DiaryWeek";
 import { PlaceFindings } from "@/components/gw/findings/SoWhat";
 import { useAccess } from "@/hooks/useAccess";
@@ -104,6 +105,12 @@ function DiaryPage() {
               title="Where the candidate's time goes"
             />
             <DiaryWeek week={data} canEdit={isPrincipal} addWard={add} />
+            {role === "super" ||
+            role === "candidate" ||
+            role === "manager" ||
+            role === "organiser" ? (
+              <CrowdEvents canEdit={isPrincipal} />
+            ) : null}
             {role === "super" ||
             role === "candidate" ||
             role === "manager" ||

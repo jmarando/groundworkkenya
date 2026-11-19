@@ -319,6 +319,16 @@ export const FULL: FindingsInput = {
     stop("d7", "2026-10-14", "watch", "w-mwiki"),
     stop("d8", "2026-10-10", "media", null),
   ],
+  crowds: [
+    {
+      id: "c1",
+      kind: "funeral",
+      title: "Burial at Mwiki grounds",
+      day: "2026-10-15",
+      wardId: "w-mwiki",
+      sourceName: "The Star",
+    },
+  ],
   rivals: RIVALS,
   polls: [
     poll("older", "2026-08-15", [

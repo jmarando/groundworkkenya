@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { runCrowdEvents } from "@/lib/crowd-events.server";
 import { runListeningScan } from "@/lib/listening.server";
 import { runProfileLookups } from "@/lib/profiles.server";
 import { recordSweepDays } from "@/lib/readings.server";
@@ -69,6 +70,11 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
+        // Once a day, the funerals, church events, tournaments and shows coming up in each area.
+        const crowds = await runCrowdEvents(sb as never).catch((e: Error) => ({
+          ran: false,
+          error: e.message,
+        }));
         // History: a run that gathered records its day for every campaign with a keyword (the last
         // week is recounted, so moods read late land on their own day). A paused run records
         // nothing, which is what lets Replay tell a paused day from a quiet one.
@@ -90,6 +96,7 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           rivals,
           story,
           search,
+          crowds,
           days,
           comms,
           pruned,
