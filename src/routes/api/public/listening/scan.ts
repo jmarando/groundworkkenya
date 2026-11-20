@@ -50,10 +50,6 @@ export const Route = createFileRoute("/api/public/listening/scan")({
           ran: false,
           error: e.message,
         }));
-        // Each campaign's newest county or national story read for its seat (two a day at most).
-        const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
-          error: e.message,
-        }));
         // Always check the morning record, even when collection throws or pauses.
         // Do this before rival work so that unrelated provider failures cannot delay it.
         const story = await runMorningStory(sb as never).catch((e: Error) => ({
@@ -83,10 +79,15 @@ export const Route = createFileRoute("/api/public/listening/scan")({
         const comms = await sb
           .rpc("comms_to_ledger")
           .then(({ data, error }) => (error ? { error: error.message } : { posted: data }));
-        // Last, records past their keeping time (old webhook payloads, alert events, posts).
+        // Records past their keeping time (old webhook payloads, alert events, posts).
         const pruned = await sb
           .rpc("prune_old_records")
           .then(({ data, error }) => (error ? { error: error.message } : data));
+        // Last, each campaign's newest county or national story read for its seat (two a day, three
+        // a call): each read takes the AI about a minute, so everything else has run first.
+        const wider = await autoReadWiderNews(sb as never).catch((e: Error) => ({
+          error: e.message,
+        }));
         return Response.json({
           ...result,
           x,

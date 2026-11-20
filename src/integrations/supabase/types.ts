@@ -1295,36 +1295,6 @@ export type Database = {
           },
         ]
       }
-      demo_leads: {
-        Row: {
-          county: string | null
-          created_at: string
-          email: string | null
-          id: string
-          name: string
-          phone: string
-          seat: string | null
-        }
-        Insert: {
-          county?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name: string
-          phone: string
-          seat?: string | null
-        }
-        Update: {
-          county?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name?: string
-          phone?: string
-          seat?: string | null
-        }
-        Relationships: []
-      }
       crowd_events: {
         Row: {
           campaign_id: string
@@ -1412,6 +1382,36 @@ export type Database = {
             referencedColumns: ["id", "campaign_id"]
           },
         ]
+      }
+      demo_leads: {
+        Row: {
+          county: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          seat: string | null
+        }
+        Insert: {
+          county?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          seat?: string | null
+        }
+        Update: {
+          county?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          seat?: string | null
+        }
+        Relationships: []
       }
       diary_entries: {
         Row: {
