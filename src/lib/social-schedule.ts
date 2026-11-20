@@ -2,7 +2,8 @@
 // a credit a search from a daily budget. The sweep itself is hourly, because the free news feeds
 // and the news search are cheap; this paid lane runs every six hours, four times a day, each run
 // with a share of the day's budget, so the credits last the whole day instead of the first few
-// hours after midnight. Pure.
+// hours after midnight. A run searches as many keywords as its share buys, the ones it searched
+// longest ago, whatever the hour's news keywords are (src/lib/listening.server.ts). Pure.
 
 const HOUR = 3_600_000;
 
@@ -19,7 +20,7 @@ export const SOCIAL_EVERY_MS = 6 * HOUR - 15 * 60_000;
 export type SocialPlan = {
   /** The paid search runs in this sweep. */
   due: boolean;
-  /** How many of the sweep's keywords it searches. */
+  /** How many keywords it searches: the run's share of the day's budget. */
   topics: number;
   /** When it will next be due, when it is not due now. */
   nextAt: string | null;
@@ -31,8 +32,6 @@ export function socialPlan(o: {
   now: number;
   /** Today's budget for it, in credits. */
   dailyCredits: number;
-  /** Keywords this sweep covers. */
-  topics: number;
   /** "Sweep now": a person asked, so there is no wait. */
   force?: boolean;
 }): SocialPlan {
@@ -51,9 +50,5 @@ export function socialPlan(o: {
     o.force === true || Number.isNaN(elapsed) || elapsed < 0 || elapsed >= SOCIAL_EVERY_MS;
   if (!due)
     return { due: false, topics: 0, nextAt: new Date(last + SOCIAL_EVERY_MS).toISOString() };
-  return {
-    due: true,
-    topics: o.force === true ? o.topics : Math.min(o.topics, share),
-    nextAt: null,
-  };
+  return { due: true, topics: share, nextAt: null };
 }

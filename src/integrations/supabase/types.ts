@@ -2216,6 +2216,7 @@ export type Database = {
           label: string
           last_scanned_at: string | null
           query: string
+          social_scanned_at: string | null
           updated_at: string
           x_scanned_at: string | null
         }
@@ -2231,6 +2232,7 @@ export type Database = {
           label: string
           last_scanned_at?: string | null
           query: string
+          social_scanned_at?: string | null
           updated_at?: string
           x_scanned_at?: string | null
         }
@@ -2246,6 +2248,7 @@ export type Database = {
           label?: string
           last_scanned_at?: string | null
           query?: string
+          social_scanned_at?: string | null
           updated_at?: string
           x_scanned_at?: string | null
         }

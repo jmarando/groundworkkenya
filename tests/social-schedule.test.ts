@@ -22,7 +22,7 @@ const HOUR = 3_600_000;
 const NOW = Date.parse("2026-10-31T09:07:00Z");
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
 const plan = (o: Partial<Parameters<typeof socialPlan>[0]> = {}) =>
-  socialPlan({ lastRunAt: null, now: NOW, dailyCredits: 60, topics: 6, ...o });
+  socialPlan({ lastRunAt: null, now: NOW, dailyCredits: 60, ...o });
 
 // ---- the first search, and the next
 eq("never searched: it is due", plan().due, true);
@@ -59,9 +59,13 @@ eq(
 );
 eq("due says nothing of a next time", plan().nextAt, null);
 
-// ---- the day's credits are shared among the day's four runs
-eq("60 credits: five keywords a run (15 credits)", plan({ dailyCredits: 60, topics: 6 }).topics, 5);
-eq("never more than the sweep has", plan({ dailyCredits: 60, topics: 3 }).topics, 3);
+// ---- the day's credits are shared among the day's four runs, whatever the hour's news keywords
+eq("60 credits: five keywords a run (15 credits)", plan({ dailyCredits: 60 }).topics, 5);
+eq(
+  "240 credits: twenty keywords a run, so the day's four runs reach eighty keywords",
+  plan({ dailyCredits: 240 }).topics,
+  20,
+);
 eq("25 credits: two keywords", plan({ dailyCredits: 25 }).topics, 2);
 eq("a small budget still searches one keyword a run", plan({ dailyCredits: 5 }).topics, 1);
 eq("a budget under one search buys nothing", plan({ dailyCredits: 2 }).topics, 0);
@@ -74,12 +78,12 @@ eq("not due: no keywords", plan({ lastRunAt: ago(HOUR) }).topics, 0);
 
 // ---- "Sweep now"
 eq(
-  "a person pressing Sweep now is not made to wait, and gets every keyword the sweep has",
+  "a person pressing Sweep now is not made to wait, and the run searches its share like any other",
   [
     plan({ lastRunAt: ago(HOUR), force: true }).due,
     plan({ lastRunAt: ago(HOUR), force: true }).topics,
   ],
-  [true, 6],
+  [true, 5],
 );
 eq("though a budget of none still means none", plan({ dailyCredits: 0, force: true }).topics, 0);
 
