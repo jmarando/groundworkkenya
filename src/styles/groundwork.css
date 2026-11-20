@@ -6257,14 +6257,14 @@ figure {
   margin: 0;
   padding: 0;
 }
-.mb-time li {
+.mb-time > li {
   display: grid;
   grid-template-columns: 56px 1fr;
   gap: 10px;
   padding: 10px 0;
   border-top: 1px solid var(--border);
 }
-.mb-time li:first-child {
+.mb-time > li:first-child {
   border-top: 0;
   padding-top: 0;
 }
@@ -8158,18 +8158,315 @@ figure {
   gap: 8px;
   flex-wrap: wrap;
 }
-.diary-days {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: 14px;
-  align-items: start;
+/* The diary as a calendar (FullCalendar), in Groundwork's colours. */
+.cal-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
 }
-.diary-day.is-today {
-  border-color: var(--gw-accent);
+.cal-nav {
+  display: flex;
+  gap: 6px;
 }
-.diary-today {
-  color: var(--gw-accent);
+.cal-step {
+  min-width: 34px;
+  font-size: 16px;
+  line-height: 1;
+}
+.cal-views {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  overflow: hidden;
+  background: var(--card);
+}
+.cal-views button {
+  background: none;
+  border: 0;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.cal-views button + button {
+  border-left: 1px solid var(--border);
+}
+.cal-views button[aria-pressed="true"] {
+  background: var(--gw-paper-2);
+  color: var(--foreground);
   font-weight: 600;
+}
+.cal-add {
+  margin-left: auto;
+}
+.diary-cal {
+  --fc-border-color: var(--border);
+  --fc-page-bg-color: var(--card);
+  --fc-neutral-bg-color: var(--gw-paper);
+  --fc-today-bg-color: hsl(15 77% 48% / 0.05);
+  --fc-now-indicator-color: var(--gw-accent);
+  --fc-list-event-hover-bg-color: var(--gw-paper);
+  --fc-highlight-color: hsl(15 77% 48% / 0.1);
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: var(--foreground);
+  --fc-small-font-size: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 10px 12px 12px;
+  font-size: 13px;
+  transition: opacity 120ms;
+}
+.diary-cal.is-reading {
+  opacity: 0.7;
+}
+.diary-cal.can-edit .fc-timegrid-slot-lane,
+.diary-cal.can-edit .fc-daygrid-day {
+  cursor: copy;
+}
+.diary-cal .fc .fc-scrollgrid {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.diary-cal .fc .fc-col-header-cell-cushion,
+.diary-cal .fc .fc-daygrid-day-number,
+.diary-cal .fc .fc-list-day-text {
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: none;
+}
+.diary-cal .fc .fc-day-today .fc-col-header-cell-cushion,
+.diary-cal .fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--gw-accent);
+}
+.diary-cal .fc .fc-timegrid-slot-label-cushion,
+.diary-cal .fc .fc-timegrid-axis-cushion,
+.diary-cal .fc .fc-list-event-time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.diary-cal .fc .fc-timegrid-slot {
+  height: 22px;
+}
+.diary-cal .fc .fc-timegrid-slot-minor {
+  border-top-style: dotted;
+}
+/* Each block: a pale wash and a bar in its kind's colour. */
+.diary-cal .fc .fc-timegrid-event.cal-ev,
+.diary-cal .fc .fc-daygrid-event.cal-ev {
+  background: var(--k-bg, var(--gw-paper-2));
+  border: 0;
+  border-left: 3px solid var(--k, var(--muted-foreground));
+  border-radius: 0 6px 6px 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+.diary-cal .fc .fc-daygrid-event.cal-ev {
+  margin-top: 2px;
+}
+/* A block shows what fits; its panel has the rest. */
+.diary-cal .fc .fc-timegrid-event .fc-event-main {
+  overflow: hidden;
+}
+.diary-cal .fc .fc-timegrid-event .cal-ev-in {
+  height: 100%;
+}
+.diary-cal .fc .fc-timegrid-event.cal-ev--crowd,
+.diary-cal .fc .fc-daygrid-event.cal-ev--crowd {
+  background: var(--card);
+  border: 1.5px dashed var(--gw-accent);
+  border-radius: 6px;
+}
+.diary-cal .fc .fc-event.cal-ev:focus-visible {
+  outline: 2px solid var(--gw-accent);
+  outline-offset: 1px;
+}
+.diary-cal .fc .fc-event-mirror {
+  opacity: 0.85;
+}
+.cal-ev--visit,
+.cal-ev--market {
+  --k: hsl(160 55% 32%);
+  --k-bg: hsl(160 45% 94%);
+}
+.cal-ev--church {
+  --k: hsl(250 45% 55%);
+  --k-bg: hsl(250 60% 96%);
+}
+.cal-ev--funeral {
+  --k: hsl(220 12% 34%);
+  --k-bg: hsl(220 14% 93%);
+}
+.cal-ev--meeting {
+  --k: hsl(40 6% 48%);
+  --k-bg: hsl(45 10% 94%);
+}
+.cal-ev--media {
+  --k: hsl(205 70% 42%);
+  --k-bg: hsl(205 75% 95%);
+}
+.cal-ev--rally {
+  --k: var(--gw-accent);
+  --k-bg: hsl(15 80% 95%);
+}
+.cal-ev--watch {
+  --k: hsl(38 85% 42%);
+  --k-bg: hsl(45 90% 93%);
+}
+.cal-ev--crowd {
+  --k: var(--gw-accent);
+}
+.cal-ev-in {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 2px 5px;
+  line-height: 1.25;
+  overflow: hidden;
+  color: var(--foreground);
+}
+.cal-ev-top {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.cal-ev-title {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-ev-top {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Short blocks and month days: time and title on one line. */
+.fc-timegrid-event-short .cal-ev-in,
+.fc-daygrid-event .cal-ev-in {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+}
+.fc-timegrid-event-short .cal-ev-where,
+.fc-daygrid-event .cal-ev-where {
+  display: none;
+}
+.fc-timegrid-event-short .cal-ev-top,
+.fc-daygrid-event .cal-ev-top {
+  flex-shrink: 0;
+  overflow: visible;
+}
+.fc-timegrid-event-short .cal-ev-title,
+.fc-daygrid-event .cal-ev-title {
+  min-width: 0;
+  white-space: nowrap;
+}
+/* Schedule: a list by day. */
+.diary-cal .fc .fc-list {
+  border-radius: 10px;
+  overflow: hidden;
+}
+.diary-cal .fc .fc-list-event {
+  cursor: pointer;
+}
+.diary-cal .fc .fc-list-event-dot {
+  border-color: var(--k, var(--muted-foreground));
+}
+.diary-cal .fc .fc-list-event.cal-ev--crowd .fc-list-event-dot {
+  border-style: dashed;
+  border-radius: 3px;
+}
+.cal-li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cal-li-kind {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.cal-li-title {
+  font-weight: 600;
+}
+.diary-cal .fc .fc-list-empty {
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+/* The panel for one entry or suggestion: from the right, or from the bottom on a phone. */
+.cal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 14px;
+  overflow-y: auto;
+}
+.cal-panel.cal-panel--right {
+  width: min(380px, 100vw);
+  max-width: none;
+  box-shadow: -8px 0 30px hsl(158 15% 10% / 0.12);
+}
+.cal-panel.cal-panel--bottom {
+  max-height: 85vh;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 30px hsl(158 15% 10% / 0.14);
+  padding: 20px 18px calc(18px + env(safe-area-inset-bottom));
+}
+.cal-panel-head {
+  text-align: left;
+  gap: 2px;
+  padding-right: 28px;
+}
+.cal-panel-title {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.cal-panel-when {
+  font-size: 13.5px;
+  color: var(--muted-foreground);
+}
+.cal-panel-note {
+  margin: 0;
+  line-height: 1.5;
+}
+.cal-panel-note a,
+.cal-panel-src a {
+  color: var(--gw-accent-deep);
+  font-weight: 600;
+}
+.cal-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cal-remove.is-sure {
+  color: var(--destructive, hsl(0 70% 45%));
+  border-color: currentColor;
+}
+.cal-suggested {
+  color: var(--gw-accent-deep);
+}
+@media (max-width: 767px) {
+  .cal-add {
+    margin-left: 0;
+  }
+  .diary-cal {
+    padding: 8px;
+    border-radius: 16px;
+  }
 }
 .diary-actions {
   display: flex;
@@ -8219,12 +8516,6 @@ figure {
 .diary-finds li + li {
   margin-top: 3px;
 }
-.diary-day.is-empty {
-  padding-block: 14px;
-}
-.diary-day.is-empty .card-head {
-  margin-bottom: 4px;
-}
 .diary-seat {
   margin: 0;
   font-size: 13px;
@@ -8234,9 +8525,6 @@ figure {
   font-weight: 600;
   color: var(--foreground);
   margin-right: 6px;
-}
-.mb-time li.diary-editing {
-  display: block;
 }
 .diary-form {
   display: flex;
