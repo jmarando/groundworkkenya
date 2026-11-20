@@ -729,25 +729,38 @@ export const unreadWiderNews = createServerFn({ method: "GET" })
 export const AUTO_READER = "Read with AI for this seat (automatic)";
 
 /**
+ * Reads one hourly call may make. Each takes about a minute, and the call must answer within
+ * pg_net's ten minutes; after midnight on 20 Nov 2026, five to seven reads a call made three calls
+ * miss it, and the steps after the reads did not run.
+ */
+const READS_PER_CALL = 3;
+
+/**
  * The hourly job's share of wider news: for each campaign, its newest national or county story
- * of the last three days not yet read is read for its seat, at most two a day per campaign.
- * Stops at once when the AI is paused. Returns how many were read.
+ * of the last three days not yet read is read for its seat, at most two a day per campaign and
+ * three a call, the campaigns with the fewest reads today first. Stops at once when the AI is
+ * paused. Returns how many were read.
  */
 export async function autoReadWiderNews(sb: Client): Promise<number> {
   const today = nairobiToday();
   const { data: campaigns } = (await sb.from("campaigns").select("id, name, candidate, seat")) as {
     data: Pick<Campaign, "id" | "name" | "candidate" | "seat">[] | null;
   };
+  const { data: readToday } = (await sb
+    .from("news_impacts")
+    .select("campaign_id")
+    .eq("written_by", AUTO_READER)
+    .gte("created_at", `${today}T00:00:00+03:00`)) as { data: { campaign_id: string }[] | null };
+  const reads = new Map<string, number>();
+  for (const r of readToday ?? []) reads.set(r.campaign_id, (reads.get(r.campaign_id) ?? 0) + 1);
+  const turns = (campaigns ?? [])
+    .filter((c) => (reads.get(c.id) ?? 0) < 2)
+    .sort((a, b) => (reads.get(a.id) ?? 0) - (reads.get(b.id) ?? 0));
   const since = new Date(Date.now() - 3 * 86_400_000).toISOString();
   let read = 0;
-  for (const c of campaigns ?? []) {
-    const { count } = (await sb
-      .from("news_impacts")
-      .select("id", { count: "exact", head: true })
-      .eq("campaign_id", c.id)
-      .eq("written_by", AUTO_READER)
-      .gte("created_at", `${today}T00:00:00+03:00`)) as { count: number | null };
-    if ((count ?? 0) >= 2) continue;
+  let tried = 0;
+  for (const c of turns) {
+    if (tried >= READS_PER_CALL) break;
     const { data: topics } = (await sb
       .from("listening_topics")
       .select("id")
@@ -788,6 +801,8 @@ export async function autoReadWiderNews(sb: Client): Promise<number> {
       (p) => p.title && /^https:\/\//.test(p.url) && !seen.has(p.url) && !seen.has(p.id),
     );
     if (!story) continue;
+    // A read the AI fails takes its time too.
+    tried++;
     try {
       const { error } = await readForSeat(
         sb,
