@@ -13,6 +13,9 @@ import {
   dedupeKey,
   DIARY_KIND_OF,
   MAX_HITS,
+  nextLastRun,
+  placeTerms,
+  statesDay,
   upcoming,
   type CrowdArea,
   type CrowdEvent,
@@ -125,22 +128,105 @@ eq(
 );
 const prompt = crowdPrompt("Woman Rep · Meru", AREA, hits, "2026-11-20");
 eq(
-  "the prompt gives today, the window's end, the wards and every link",
+  "the prompt gives today, the window's end, the wards and every link, and asks for the date's words",
   [
     prompt.includes("Today is 2026-11-20"),
     prompt.includes("2026-12-11"),
     prompt.includes("Kiirua/Naari"),
     prompt.includes("https://b.ke/3"),
+    prompt.includes('"date_text"'),
+    prompt.includes("The result must name the place"),
   ],
-  [true, true, true, true],
+  [true, true, true, true, true, true],
+);
+
+// ---- the area's names and the date's words
+eq(
+  "the names a result must mention: places, county, wards and their parts, a name without its East or Town",
+  [...placeTerms(AREA)].sort(),
+  ["akirang ondu", "athwana", "kiirua", "meru", "naari", "nkuene", "tigania", "tigania west"],
+);
+eq(
+  "a ward that is an everyday word doesn't count, nor its bare word",
+  placeTerms({
+    places: ["Kuria East"],
+    county: "Migori",
+    wards: [
+      { id: "a", name: "Municipality", slug: "municipality" },
+      { id: "b", name: "Kahawa West", slug: "kahawa-west" },
+      { id: "c", name: "Karatina Town", slug: "karatina-town" },
+    ],
+  }).sort(),
+  ["kahawa west", "karatina", "karatina town", "kuria", "kuria east", "migori"],
+);
+eq(
+  "words that state the day: a month with its number, D/M, a weekday; a wrong day, year or no date do not",
+  [
+    statesDay("November 27-29", "2026-11-27"),
+    statesDay("on 27th November", "2026-11-27"),
+    statesDay("28.11.2026", "2026-11-28"),
+    statesDay("this Saturday", "2026-11-28"),
+    statesDay("December 12, 2026", "2026-12-12"),
+    statesDay("Nov 28", "2026-11-27"),
+    statesDay("December 12, 2025", "2026-12-12"),
+    statesDay("this Friday", "2026-11-28"),
+    statesDay("next week", "2026-11-28"),
+  ],
+  [true, true, true, true, true, false, false, false, false],
 );
 
 // ---- the checks
 const TODAY = "2026-11-20";
+const said = (url: string, title: string, snippet: string): CrowdHit => ({
+  url,
+  title,
+  snippet,
+  outlet: "The Star",
+  publishedAt: "2026-11-18T08:00:00Z",
+});
+const CHECKED = [
+  said(
+    "https://a.ke/1",
+    "Burial of the late Mzee Example",
+    "Mourners will gather at Kiirua on Saturday, November 28 for the burial.",
+  ),
+  said(
+    "https://a.ke/today",
+    "Athwana crusade opens",
+    "It opens on Friday, November 20 at Athwana.",
+  ),
+  said(
+    "https://a.ke/last",
+    "Tigania West sports day",
+    "It is on 11 December 2026 in Tigania West.",
+  ),
+  said(
+    "https://a.ke/far",
+    "Kaimosi Friends University graduation",
+    "Its fifth graduation is on November 28.",
+  ),
+  said("https://a.ke/numeric", "Nkuene harambee", "The harambee is set for 28/11/2026 at Nkuene."),
+  said(
+    "https://a.ke/weekday",
+    "Kiirua church harambee this Saturday",
+    "Members meet this Saturday.",
+  ),
+  said(
+    "https://a.ke/lastyear",
+    "Athwana show",
+    "The show was held on November 28, 2025 at Athwana.",
+  ),
+  said(
+    "https://a.ke/everyday",
+    "Municipality market day",
+    "The municipality market day is on November 28.",
+  ),
+];
 const ok = {
   kind: "funeral",
   title: "Burial of the late Mzee Example",
   date: "2026-11-28",
+  date_text: "Saturday, November 28",
   time: "10:00",
   place: "Kiirua Catholic Church",
   ward: "Kiirua/Naari",
@@ -148,7 +234,7 @@ const ok = {
   why: "Kiirua/Naari is a big ward.",
   url: "https://a.ke/1",
 };
-const kept = cleanCrowdEvents({ events: [ok] }, hits, AREA, TODAY);
+const kept = cleanCrowdEvents({ events: [ok] }, CHECKED, AREA, TODAY);
 eq("a good event is kept, with its ward, source and dedupe key", kept, [
   {
     kind: "funeral",
@@ -160,7 +246,7 @@ eq("a good event is kept, with its ward, source and dedupe key", kept, [
     crowd: "hundreds expected",
     why: "Kiirua/Naari is a big ward.",
     source_url: "https://a.ke/1",
-    source_title: "Title 1",
+    source_title: "Burial of the late Mzee Example",
     source_name: "The Star",
     dedupe: "burial-of-the-late-mzee-example|2026-11-28",
   },
@@ -176,34 +262,89 @@ const rejected = [
 ];
 eq(
   "an unknown kind, a link not searched, a past day, a day past the window, a day not as YYYY-MM-DD, an impossible day, no title: all left out",
-  rejected.map((e) => cleanCrowdEvents({ events: [e] }, hits, AREA, TODAY).length),
+  rejected.map((e) => cleanCrowdEvents({ events: [e] }, CHECKED, AREA, TODAY).length),
   [0, 0, 0, 0, 0, 0, 0],
 );
 eq(
   "today and the window's last day are in",
   [
-    cleanCrowdEvents({ events: [{ ...ok, date: TODAY }] }, hits, AREA, TODAY).length,
-    cleanCrowdEvents({ events: [{ ...ok, date: "2026-12-11" }] }, hits, AREA, TODAY).length,
+    cleanCrowdEvents(
+      {
+        events: [
+          { ...ok, url: "https://a.ke/today", date: TODAY, date_text: "Friday, November 20" },
+        ],
+      },
+      CHECKED,
+      AREA,
+      TODAY,
+    ).length,
+    cleanCrowdEvents(
+      {
+        events: [
+          { ...ok, url: "https://a.ke/last", date: "2026-12-11", date_text: "11 December 2026" },
+        ],
+      },
+      CHECKED,
+      AREA,
+      TODAY,
+    ).length,
   ],
   [1, 1],
 );
+const keeps = (e: Record<string, unknown>, area: CrowdArea = AREA) =>
+  cleanCrowdEvents({ events: [{ ...ok, ...e }] }, CHECKED, area, TODAY).length;
+eq(
+  "the date's words must be the result's own and state the day: not in it, another day, none, or a guess are left out",
+  [
+    keeps({ date_text: "November 29" }),
+    keeps({ date: "2026-11-27" }),
+    keeps({ date_text: "" }),
+    keeps({ date_text: "this weekend" }),
+    keeps({ date: TODAY, date_text: "Saturday, November 28" }),
+  ],
+  [0, 0, 0, 0, 0],
+);
+eq(
+  "a weekday alone or a D/M date is kept when it is the day; a past year is not",
+  [
+    keeps({ url: "https://a.ke/weekday", date_text: "this Saturday" }),
+    keeps({ url: "https://a.ke/weekday", date: "2026-11-27", date_text: "this Saturday" }),
+    keeps({ url: "https://a.ke/numeric", date_text: "28/11/2026" }),
+    keeps({ url: "https://a.ke/lastyear", date_text: "November 28, 2025" }),
+  ],
+  [1, 0, 1, 0],
+);
+eq(
+  "a result that names no place in the area is left out, an everyday ward name proving nothing",
+  [
+    keeps({ url: "https://a.ke/far", date_text: "November 28" }),
+    keeps(
+      { url: "https://a.ke/everyday", date_text: "November 28" },
+      { ...AREA, wards: [...AREA.wards, { id: "w4", name: "Municipality", slug: "municipality" }] },
+    ),
+  ],
+  [0, 0],
+);
 eq(
   "a time not as HH:MM is dropped, not the event; a ward not the campaign's is none",
-  cleanCrowdEvents({ events: [{ ...ok, time: "10am", ward: "Westlands" }] }, hits, AREA, TODAY).map(
-    (e) => [e.starts_at, e.ward_id],
-  ),
+  cleanCrowdEvents(
+    { events: [{ ...ok, time: "10am", ward: "Westlands" }] },
+    CHECKED,
+    AREA,
+    TODAY,
+  ).map((e) => [e.starts_at, e.ward_id]),
   [[null, null]],
 );
 eq(
   "a ward matched however the AI writes it",
-  cleanCrowdEvents({ events: [{ ...ok, ward: "akirang'ondu" }] }, hits, AREA, TODAY)[0]?.ward_id,
+  cleanCrowdEvents({ events: [{ ...ok, ward: "akirang'ondu" }] }, CHECKED, AREA, TODAY)[0]?.ward_id,
   "w2",
 );
 eq(
   "the same event twice is kept once",
   cleanCrowdEvents(
     { events: [ok, { ...ok, title: "Burial of the late Mzee Example!" }] },
-    hits,
+    CHECKED,
     AREA,
     TODAY,
   ).length,
@@ -223,6 +364,16 @@ eq(
   "kiirua-crusade|2026-12-01",
 );
 eq("the window is three weeks", AHEAD_DAYS, 21);
+const NOW = new Date("2026-11-20T03:10:00.000Z");
+eq(
+  "a stopped run keeps the last run's time, so the next hour tries again; a run that searched records now",
+  [
+    nextLastRun(true, null, NOW),
+    nextLastRun(true, "2026-11-19T00:30:00.000Z", NOW),
+    nextLastRun(false, "2026-11-19T00:30:00.000Z", NOW),
+  ],
+  [null, "2026-11-19T00:30:00.000Z", "2026-11-20T03:10:00.000Z"],
+);
 eq(
   "in the diary a funeral stays a funeral, a tournament is a visit",
   [DIARY_KIND_OF.funeral, DIARY_KIND_OF.church, DIARY_KIND_OF.sports, DIARY_KIND_OF.market],
