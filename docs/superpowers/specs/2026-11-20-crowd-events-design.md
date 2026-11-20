@@ -24,9 +24,15 @@ on Home and on Strategy.
 
 ## How events are found
 
-`runCrowdEvents` (src/lib/crowd-events.server.ts) runs from the hourly Listening sweep on its own
-clock, once every 20 hours (`listening_jobs` key `crowd_events`, locked for 20 minutes while it
-runs). For each campaign:
+`runCrowdEvents` (src/lib/crowd-events.server.ts) runs from the hourly Listening sweep, and the
+campaigns take turns (`crowdTurns`): each area is searched once in 20 hours, never-searched first,
+then the longest since its last search. Each campaign's last search is kept in its own job row
+(`listening_jobs` key `crowd_events:<campaign id>`, no name), and the run's note in `crowd_events`
+(locked for 15 minutes while it runs). A run starts campaigns only within 2½ minutes
+(`CROWD_BUDGET_MS`), and the AI gets 30 seconds per read, the backup 30 more (`CROWD_AI_MS`), so a
+slow AI cannot push the sweep past pg_net's 10 minutes; whoever is left waits for the next hour. Added
+20 November 2026, after two runs that afternoon were cut off with seven campaigns in one go. For each
+campaign:
 
 1. **Area** (`areaOf`): a county seat searches its county, an MP's seat its constituency, and an
    MCA's seat its ward together with its constituency. A presidential campaign is skipped because
@@ -67,9 +73,10 @@ events per campaign, with title, link and reason, to tune the checks.
 have an area, that is 28 credits a day.
 
 **When something fails**: with no Serper key, the job's note says crowd events are not being looked
-for. A refused search (credits run out) stops all searching for that run and is said once. Neither
-counts as a run (`nextLastRun` keeps the last run's time), so the next hour tries again. If the AI
-cannot answer, that campaign waits for the next run. Every campaign's team can read
+for. A refused search (credits run out) stops the run and is said once; that campaign and the rest
+keep their turn for the next hour. If the AI cannot answer in time, that campaign's turn is taken and
+it waits 20 hours. The note is written after every campaign, so a run cut off part way still says
+what it did. Every campaign's team can read
 `listening_jobs`, so its note names no campaign; per-campaign problems go only to the scheduler's
 response.
 
