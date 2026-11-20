@@ -43,8 +43,14 @@ runs). For each campaign:
    name as the public notice prints it.
 5. **Checks** (`cleanCrowdEvents`): the event is kept only if its kind is known, it has a title, its
    link is one of the search's own results, and its date is real and falls between today and three
-   weeks ahead. A time must be HH:MM. A ward must match one of the campaign's wards by name. The same
-   event (title folded with its day, `dedupeKey`) is kept once.
+   weeks ahead. The AI also copies the words that state the date (`date_text`); they must appear in
+   that result's title or summary and state that very day (`statesDay`: a month with the day's
+   number, the day and month as numbers, or the day's weekday; a year, if given, must match). The
+   result must also name a place in the area (`placeTerms`: the places searched, the county and the
+   wards, less ward names that are everyday words such as Municipality or Harambee). A time must be
+   HH:MM. A ward must match one of the campaign's wards by name. The same event (title folded with
+   its day, `dedupeKey`) is kept once. Added 20 November 2026 after the first live run: of 3 events
+   kept, one had a date the AI guessed and one was in another county.
 6. **Saved** to `crowd_events` with `ignoreDuplicates`, so an event found again keeps its status,
    and one set aside is not brought back.
 
@@ -54,8 +60,9 @@ Events are pruned 30 days after their day.
 have an area, that is 28 credits a day.
 
 **When something fails**: with no Serper key, the job's note says crowd events are not being looked
-for. A refused search (credits run out) stops all searching for that run and is said once. If the
-AI cannot answer, that campaign waits for the next run. Every campaign's team can read
+for. A refused search (credits run out) stops all searching for that run and is said once. Neither
+counts as a run (`nextLastRun` keeps the last run's time), so the next hour tries again. If the AI
+cannot answer, that campaign waits for the next run. Every campaign's team can read
 `listening_jobs`, so its note names no campaign; per-campaign problems go only to the scheduler's
 response.
 

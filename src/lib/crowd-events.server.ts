@@ -2,7 +2,8 @@
 // from its area (src/lib/crowd-events.ts), one AI read of the results, and the events that pass
 // every check kept as suggestions in crowd_events. Runs from the hourly sweep on its own clock,
 // once in 20 hours; four Serper credits and one AI answer a campaign. A refused search stops the
-// searching for the run, said once; an AI that cannot answer leaves that campaign for tomorrow.
+// searching for the run, said once, and the next hour tries again (nextLastRun); an AI that cannot
+// answer leaves that campaign for tomorrow.
 
 import { askAiJson } from "@/lib/listening.server";
 import {
@@ -12,6 +13,7 @@ import {
   crowdHits,
   crowdPrompt,
   crowdQueries,
+  nextLastRun,
   type CrowdCampaign,
   type CrowdHit,
   type CrowdWard,
@@ -62,7 +64,8 @@ export async function runCrowdEvents(
 
   // Every campaign's team can read the job row, so what it says names no campaign.
   const shared: string[] = [];
-  const finish = async () => {
+  // A stopped run (no key, or the search refused) keeps the time of the last run that searched.
+  const finish = async (stopped: boolean) => {
     const detail =
       [
         ...shared,
@@ -75,7 +78,7 @@ export async function runCrowdEvents(
         key: JOB_KEY,
         status: "idle",
         locked_until: null,
-        last_run_at: now.toISOString(),
+        last_run_at: nextLastRun(stopped, job?.last_run_at ?? null, now),
         detail,
         updated_at: now.toISOString(),
       },
@@ -86,7 +89,7 @@ export async function runCrowdEvents(
 
   if (!newsSearchConfigured()) {
     shared.push("Crowd events are not being looked for: no Serper key (SERPER_API_KEY).");
-    return finish();
+    return finish(true);
   }
   await sb.from("listening_jobs").upsert(
     {
@@ -174,5 +177,5 @@ export async function runCrowdEvents(
     out.kept += (saved ?? []).length;
   }
   if (out.notes.length) shared.push(`${count(out.notes.length, "problem", "problems")} noted.`);
-  return finish();
+  return finish(refused);
 }
