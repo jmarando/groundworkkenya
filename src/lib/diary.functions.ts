@@ -7,6 +7,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { cleanRange } from "@/lib/diary-calendar";
 import { nairobiToday } from "@/lib/nairobi-date";
 import {
   byTime,
@@ -69,23 +70,33 @@ export async function removeEntry(sb: Sb, id: string): Promise<void> {
   if (!data?.length) throw new Error(DIARY_DENIED);
 }
 
+type Ward = { id: string; name: string; slug: string | null; constituency: string | null };
+
 export type DiaryWeek = {
   days: string[];
   today: string;
   entries: DiaryEntry[];
   /** With the slug and constituency that place each ward in the election atlas. */
-  wards: { id: string; name: string; slug: string | null; constituency: string | null }[];
+  wards: Ward[];
 };
 
-/** The week that holds `anyDay`, and the campaign's wards to file entries under. */
-export async function loadWeek(sb: Sb, anyDay: string): Promise<DiaryWeek> {
-  const days = weekOf(anyDay);
+/** The days the calendar shows, `from` to `to` (both included), and the wards to file entries under. */
+export type DiaryRange = {
+  from: string;
+  to: string;
+  today: string;
+  entries: DiaryEntry[];
+  wards: Ward[];
+};
+
+export async function loadRange(sb: Sb, from: string, to: string): Promise<DiaryRange> {
   const [entries, wards] = await Promise.all([
-    loadDiary(sb, days[0]!, days[6]!),
+    loadDiary(sb, from, to),
     sb.from("wards").select("id, name, slug, constituency").order("name"),
   ]);
   return {
-    days,
+    from,
+    to,
     today: nairobiToday(),
     entries,
     wards: (wards.data ?? []).map((w) => ({
@@ -97,13 +108,20 @@ export async function loadWeek(sb: Sb, anyDay: string): Promise<DiaryWeek> {
   };
 }
 
-export const getDiaryWeek = createServerFn({ method: "GET" })
+/** The week that holds `anyDay`, and the campaign's wards to file entries under. */
+export async function loadWeek(sb: Sb, anyDay: string): Promise<DiaryWeek> {
+  const days = weekOf(anyDay);
+  const { today, entries, wards } = await loadRange(sb, days[0]!, days[6]!);
+  return { days, today, entries, wards };
+}
+
+/** The entries for the days on screen: a day, a week, or a month view's six weeks at most. */
+export const getDiaryRange = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { week?: string } | undefined) => {
-    const w = String(input?.week ?? "");
-    return { week: /^\d{4}-\d{2}-\d{2}$/.test(w) ? w : nairobiToday() };
-  })
-  .handler(async ({ data, context }) => loadWeek(context.supabase, data.week));
+  .inputValidator((input: { from?: string; to?: string } | undefined) =>
+    cleanRange(input, nairobiToday()),
+  )
+  .handler(async ({ data, context }) => loadRange(context.supabase, data.from, data.to));
 
 export const saveDiaryEntry = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

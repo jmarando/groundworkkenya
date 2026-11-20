@@ -7,6 +7,7 @@ import {
   DIARY_DENIED,
   diaryError,
   loadDiary,
+  loadRange,
   loadWeek,
   removeEntry,
   writeEntry,
@@ -102,6 +103,13 @@ async function main() {
       ["kayole-north", "Embakasi Central"],
       ["umoja-i", "Embakasi West"],
     ],
+  );
+
+  const range = await loadRange(sb as never, "2026-10-11", "2026-10-12");
+  eq(
+    "a range reads only its own days, with the wards",
+    [range.from, range.to, range.entries.map((e) => e.id), range.wards.length],
+    ["2026-10-11", "2026-10-12", ["sunday", "next-week"], 2],
   );
 
   const id = await writeEntry(sb as never, {
