@@ -350,44 +350,115 @@ export function statesDay(words: string, day: string): boolean {
 export const dedupeKey = (title: string, day: string): string =>
   `${slugify(title).slice(0, 100) || "event"}|${day}`;
 
+/** Why an event the AI named was left out, in the order the checks run. */
+export const REFUSALS = [
+  "kind",
+  "title",
+  "link",
+  "date",
+  "window",
+  "date words",
+  "place",
+  "twice",
+] as const;
+export type Refusal = (typeof REFUSALS)[number];
+
+/** Each reason as the job's note words it: "left out: 4 with ...". */
+export const REFUSAL_NAMES: Record<Refusal, string> = {
+  kind: "a kind not known",
+  title: "no title",
+  link: "a link not among the results",
+  date: "no real date",
+  window: "a date outside the next three weeks",
+  "date words": "no date in the result's own words",
+  place: "no place in the area named",
+  twice: "the same event twice",
+};
+
+/** What the checks made of one answer: the rows kept, how many events it named, and each one left out. */
+export type CrowdCheck = {
+  rows: CrowdEventRow[];
+  named: number;
+  refused: { reason: Refusal; title: string | null; url: string | null }[];
+};
+
 /**
  * The events the AI named that pass every check, as crowd_events rows: a kind it knows, a title,
  * a real day from today to three weeks ahead, a link among the search's own results whose title or
  * summary holds the AI's date words (and they state that day) and names a place in the area, a
  * ward that is one of the campaign's (or none). The same event twice is kept once.
  */
-export function cleanCrowdEvents(
+export const cleanCrowdEvents = (
   answer: unknown,
   hits: CrowdHit[],
   area: CrowdArea,
   today: string,
-): CrowdEventRow[] {
+): CrowdEventRow[] => checkCrowdEvents(answer, hits, area, today).rows;
+
+/** The checks of cleanCrowdEvents, saying why each event left out was. */
+export function checkCrowdEvents(
+  answer: unknown,
+  hits: CrowdHit[],
+  area: CrowdArea,
+  today: string,
+): CrowdCheck {
   const events = (answer as Partial<CrowdAnswer> | null)?.events;
-  if (!Array.isArray(events)) return [];
+  if (!Array.isArray(events)) return { rows: [], named: 0, refused: [] };
   const byUrl = new Map(hits.map((h) => [h.url, h]));
   const wardBySlug = new Map(area.wards.map((w) => [w.slug, w.id]));
   const terms = placeTerms(area);
   const last = addDays(today, AHEAD_DAYS);
   const seen = new Set<string>();
   const out: CrowdEventRow[] = [];
+  const refused: CrowdCheck["refused"] = [];
+  let named = 0;
   for (const e of events) {
     if (!e || typeof e !== "object") continue;
+    named += 1;
     const kind = CROWD_KINDS.find((k) => k === e.kind);
     const title = clip(e.title, 160);
     const day = typeof e.date === "string" ? e.date.trim() : "";
-    const hit = typeof e.url === "string" ? byUrl.get(e.url.trim()) : undefined;
-    if (!kind || !title || title.length < 2 || !hit) continue;
-    if (!DAY.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`))) continue;
-    if (day < today || day > last) continue;
+    const url = typeof e.url === "string" ? e.url.trim() : "";
+    const hit = byUrl.get(url);
+    const no = (reason: Refusal) => refused.push({ reason, title, url: url || null });
+    if (!kind) {
+      no("kind");
+      continue;
+    }
+    if (!title || title.length < 2) {
+      no("title");
+      continue;
+    }
+    if (!hit) {
+      no("link");
+      continue;
+    }
+    if (!DAY.test(day) || Number.isNaN(Date.parse(`${day}T00:00:00Z`))) {
+      no("date");
+      continue;
+    }
+    if (day < today || day > last) {
+      no("window");
+      continue;
+    }
     // The result itself must state the day, in the words the AI copied, and name the area.
     const text = fold(`${hit.title ?? ""} ${hit.snippet ?? ""}`);
     const words = typeof e.date_text === "string" ? e.date_text : "";
-    if (!fold(words) || !text.includes(fold(words)) || !statesDay(words, day)) continue;
-    if (!names(text, terms)) continue;
+    if (!fold(words) || !text.includes(fold(words)) || !statesDay(words, day)) {
+      no("date words");
+      continue;
+    }
+    if (!names(text, terms)) {
+      no("place");
+      continue;
+    }
     const time = typeof e.time === "string" && TIME.test(e.time.trim()) ? e.time.trim() : null;
     const ward = typeof e.ward === "string" ? (wardBySlug.get(slugify(e.ward)) ?? null) : null;
     const dedupe = dedupeKey(title, day);
-    if (seen.has(dedupe)) continue;
+    if (seen.has(dedupe)) {
+      no("twice");
+      continue;
+    }
     seen.add(dedupe);
     out.push({
       kind,
@@ -404,7 +475,30 @@ export function cleanCrowdEvents(
       dedupe,
     });
   }
+  return { rows: out, named, refused };
+}
+
+/** How many were left out for each reason. */
+export function refusalCounts(refused: { reason: Refusal }[]): Partial<Record<Refusal, number>> {
+  const out: Partial<Record<Refusal, number>> = {};
+  for (const r of refused) out[r.reason] = (out[r.reason] ?? 0) + 1;
   return out;
+}
+
+/**
+ * One line for the job's note: how many events the AI named, how many were kept or already saved,
+ * and why the rest were left out. Names no campaign: every team can read the note.
+ */
+export function checkSummary(
+  named: number,
+  kept: number,
+  already: number,
+  counts: Partial<Record<Refusal, number>>,
+): string {
+  if (!named) return "The AI named no events.";
+  const out = REFUSALS.filter((r) => counts[r]).map((r) => `${counts[r]} with ${REFUSAL_NAMES[r]}`);
+  const head = `The AI named ${named} ${named === 1 ? "event" : "events"}: ${kept} kept${already ? `, ${already} already saved` : ""}`;
+  return out.length ? `${head}; left out: ${out.join(", ")}.` : `${head}.`;
 }
 
 /** The search results the AI reads: https links only, each once, newest first, at most MAX_HITS. */

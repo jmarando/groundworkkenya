@@ -6,6 +6,8 @@
 import {
   AHEAD_DAYS,
   areaOf,
+  checkCrowdEvents,
+  checkSummary,
   cleanCrowdEvents,
   crowdHits,
   crowdPrompt,
@@ -15,6 +17,7 @@ import {
   MAX_HITS,
   nextLastRun,
   placeTerms,
+  refusalCounts,
   statesDay,
   upcoming,
   type CrowdArea,
@@ -362,6 +365,49 @@ eq(
   "a dedupe key folds the name",
   dedupeKey("Kiirua  Crusade!!", "2026-12-01"),
   "kiirua-crusade|2026-12-01",
+);
+const checked = checkCrowdEvents(
+  {
+    events: [
+      ok,
+      { ...ok, kind: "rally" },
+      { ...ok, title: " " },
+      { ...ok, url: "https://elsewhere.ke/9" },
+      { ...ok, date: "28 November" },
+      { ...ok, date: "2026-12-12" },
+      { ...ok, date_text: "this weekend" },
+      { ...ok, url: "https://a.ke/far", date_text: "November 28" },
+      { ...ok, title: "Burial of the late Mzee Example!" },
+    ],
+  },
+  CHECKED,
+  AREA,
+  TODAY,
+);
+eq(
+  "every event named is counted, and each one left out says why, with its title and link",
+  [checked.named, checked.rows.length, checked.refused.map((r) => r.reason), checked.refused[3]],
+  [
+    9,
+    1,
+    ["kind", "title", "link", "date", "window", "date words", "place", "twice"],
+    { reason: "date", title: "Burial of the late Mzee Example", url: "https://a.ke/1" },
+  ],
+);
+eq(
+  "the counts by reason, and the job's line (no campaign named)",
+  [
+    refusalCounts([{ reason: "place" }, { reason: "date words" }, { reason: "place" }]),
+    checkSummary(9, 2, 1, { place: 4, "date words": 2 }),
+    checkSummary(1, 1, 0, {}),
+    checkSummary(0, 0, 0, {}),
+  ],
+  [
+    { place: 2, "date words": 1 },
+    "The AI named 9 events: 2 kept, 1 already saved; left out: 2 with no date in the result's own words, 4 with no place in the area named.",
+    "The AI named 1 event: 1 kept.",
+    "The AI named no events.",
+  ],
 );
 eq("the window is three weeks", AHEAD_DAYS, 21);
 const NOW = new Date("2026-11-20T03:10:00.000Z");
