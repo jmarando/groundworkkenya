@@ -474,6 +474,38 @@ export async function askAiJson<T>(
 
 /* ------------------------------------------------------------ the sweep */
 
+/** A keyword, as the sweep reads it. */
+type Topic = { id: string; campaign_id: string | null; label: string; query: string | null };
+
+/** Keywords searched on the social platforms at once: three searches each, twelve at most. */
+const SOCIAL_AT_ONCE = 4;
+
+/**
+ * The keywords a social run searches: the active ones it searched longest ago, never-searched
+ * first. Until schema 51 adds listening_topics.social_scanned_at the database refuses that order,
+ * and the ones the news search reached longest ago stand in, so the search goes on either way.
+ */
+async function socialTopics(sb: AnyClient, n: number): Promise<Topic[]> {
+  const pick = (by: string) =>
+    sb
+      .from("listening_topics")
+      .select("id, campaign_id, label, query")
+      .eq("active", true)
+      .order(by, { ascending: true, nullsFirst: true })
+      .limit(n);
+  const mine = await pick("social_scanned_at");
+  return ((mine.error ? (await pick("last_scanned_at")).data : mine.data) ?? []) as Topic[];
+}
+
+/** fn on every item, at most `lanes` at a time. */
+async function atMost<T>(lanes: number, items: T[], fn: (item: T) => Promise<void>) {
+  let next = 0;
+  const lane = async () => {
+    while (next < items.length) await fn(items[next++] as T);
+  };
+  await Promise.all(Array.from({ length: Math.min(lanes, items.length) }, lane));
+}
+
 export async function runListeningScan(
   sb: AnyClient,
   opts: {
@@ -561,7 +593,6 @@ export async function runListeningScan(
   let classified = 0;
   let alertsFired = 0;
   let paused: string | undefined;
-  let keywordsSpent = false;
 
   try {
     const seen = await recentTitles(sb, now.getTime());
@@ -587,23 +618,46 @@ export async function runListeningScan(
     if (!newsSearchConfigured()) say("Keyword news search is off: no Serper key (SERPER_API_KEY).");
     let searchRefused = false;
 
-    // The social keyword search (ScrapeCreators) is paid by the day and runs every six hours, each
-    // run with its share of the day's budget, so the credits last the day. "Sweep now" skips the wait.
-    const { data: socialJob } = await sb
-      .from("listening_jobs")
-      .select("last_run_at")
-      .eq("key", SOCIAL_KEY)
-      .maybeSingle();
-    let socialLeft = socialPlan({
-      lastRunAt: socialJob?.last_run_at ?? null,
-      now: now.getTime(),
-      dailyCredits: dailyCredits("keywords"),
-      topics: (topics ?? []).length,
-      force: opts.force === true,
-    }).topics;
-    let socialSearched = 0;
-    // ScrapeCreators said it is out of credits: the rest of the sweep leaves it alone.
-    let socialOut = false;
+    // What a keyword's searches found, stored under it: a post the database refuses costs only itself.
+    const keep = async (topic: Topic, hits: Found[]) => {
+      const rows = hits.map((h) => ({
+        topic_id: topic.id,
+        source: h.source ?? sourceOf(h.url),
+        domain: h.domain ?? hostOf(h.url),
+        title: clip(h.title, 300),
+        url: h.url,
+        snippet: clip(h.snippet, 1200),
+        published_at: h.publishedAt ? new Date(h.publishedAt).toISOString() : null,
+        author: clip(h.author, 120),
+        reach: h.reach ?? null,
+        shares: h.shares ?? null,
+      }));
+      if (!rows.length) return;
+      // In address order: two keywords storing the same posts at once then lock them in the same
+      // order, so the database never deadlocks on them and refuses one.
+      rows.sort((a, b) => (a.url < b.url ? -1 : a.url > b.url ? 1 : 0));
+      // Unique per campaign: the same story can matter to two campaigns.
+      const saved = await storeMentions(sb, rows);
+      if (saved.skipped) {
+        failed.stored += saved.skipped;
+        notes.push(
+          `${topic.label}: ${saved.skipped} of ${rows.length} posts found could not be stored (${saved.reason}).`,
+        );
+      }
+      stored += saved.stored;
+      // A post found again keeps its highest views and shares, so a spreading post shows it, and
+      // each sighting is a reading, so how it spread can be drawn later.
+      if (topic.campaign_id)
+        await recordCounts(
+          sb,
+          rows.map((r) => ({
+            campaign_id: topic.campaign_id as string,
+            url: r.url,
+            reach: r.reach,
+            shares: r.shares,
+          })),
+        );
+    };
 
     for (const topic of topics ?? []) {
       // An extra keyword of two words or more is searched as a phrase: "githunguri dairy".
@@ -660,94 +714,86 @@ export async function runListeningScan(
         }
       }
 
-      // social platforms via ScrapeCreators — best effort, never pauses the sweep
-      let socialFound = 0;
-      const counter = opts.credits === undefined ? sb : opts.credits;
-      if (scConfigured() && counter && socialLeft > 0 && !socialOut) {
-        const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
-        // Three searches, three credits, from the day's keyword budget.
-        if (kw && !keywordsSpent && !(await takeCredits(counter, "keywords", 3))) {
-          keywordsSpent = true;
-          say("Social keyword search stopped: today's ScrapeCreators credits for it are used.");
-        }
-        if (kw && !keywordsSpent) {
-          socialLeft--;
-          const social = await Promise.allSettled([
-            scSearchTikTok(kw, 8),
-            scSearchReddit(kw, 8),
-            scSearchYouTube(kw, 8),
-          ]);
-          let creditNoted = false;
-          for (const r of social) {
-            if (r.status === "fulfilled") {
-              hits.push(...r.value);
-              socialFound += r.value.length;
-              continue;
-            }
-            const err = r.reason instanceof Error ? r.reason : new Error(String(r.reason));
-            if (err instanceof ScrapeCreatorsCreditError) {
-              socialOut = true;
-              if (!creditNoted) {
-                say("Social search skipped — ScrapeCreators is out of credits.");
-                creditNoted = true;
-              }
-            } else {
-              failed.social++;
-              notes.push(`${topic.label} social: ${err.message}`);
-            }
-          }
-          // A keyword whose every search was refused for credits was not searched.
-          if (
-            social.some(
-              (r) => r.status === "fulfilled" || !(r.reason instanceof ScrapeCreatorsCreditError),
-            )
-          )
-            socialSearched++;
-        }
-      }
-      found += socialFound;
-
-      const rows = hits.map((h) => ({
-        topic_id: topic.id,
-        source: h.source ?? sourceOf(h.url),
-        domain: h.domain ?? hostOf(h.url),
-        title: clip(h.title, 300),
-        url: h.url,
-        snippet: clip(h.snippet, 1200),
-        published_at: h.publishedAt ? new Date(h.publishedAt).toISOString() : null,
-        author: clip(h.author, 120),
-        reach: h.reach ?? null,
-        shares: h.shares ?? null,
-      }));
-
-      if (rows.length) {
-        // Unique per campaign: the same story can matter to two campaigns.
-        const saved = await storeMentions(sb, rows);
-        if (saved.skipped) {
-          failed.stored += saved.skipped;
-          notes.push(
-            `${topic.label}: ${saved.skipped} of ${rows.length} posts found could not be stored (${saved.reason}).`,
-          );
-        }
-        stored += saved.stored;
-        // A post found again keeps its highest views and shares, so a spreading post shows it, and
-        // each sighting is a reading, so how it spread can be drawn later.
-        if (topic.campaign_id)
-          await recordCounts(
-            sb,
-            rows.map((r) => ({
-              campaign_id: topic.campaign_id as string,
-              url: r.url,
-              reach: r.reach,
-              shares: r.shares,
-            })),
-          );
-      }
-
+      await keep(topic, hits);
       await sb
         .from("listening_topics")
         .update({ last_scanned_at: new Date().toISOString() })
         .eq("id", topic.id);
+    }
+
+    // The social keyword search (ScrapeCreators: TikTok, Reddit, YouTube) is paid by the day and
+    // runs every six hours, each run with its share of the day's budget, so the credits last the
+    // day; "Sweep now" skips the wait. It takes its own keywords, the ones it searched longest ago,
+    // so the budget reaches every keyword, not only the hour's news ones. Best effort: it never
+    // pauses the sweep.
+    const { data: socialJob } = await sb
+      .from("listening_jobs")
+      .select("last_run_at")
+      .eq("key", SOCIAL_KEY)
+      .maybeSingle();
+    const share = socialPlan({
+      lastRunAt: socialJob?.last_run_at ?? null,
+      now: now.getTime(),
+      dailyCredits: dailyCredits("keywords"),
+      force: opts.force === true,
+    }).topics;
+    // A paused sweep's probe tries one keyword, its social search included.
+    const socialDue = probe ? Math.min(share, 1) : share;
+    let socialSearched = 0;
+    const counter = opts.credits === undefined ? sb : opts.credits;
+    if (scConfigured() && counter && socialDue > 0) {
+      // ScrapeCreators said it is out of credits, or today's credits for it are used: no more keywords.
+      let socialOut = false;
+      let keywordsSpent = false;
+      const searchSocial = async (topic: Topic) => {
+        const kw = (topic.query ?? topic.label ?? "").trim().slice(0, 80);
+        if (!kw || socialOut || keywordsSpent) return;
+        // Three searches, three credits, from the day's keyword budget.
+        if (!(await takeCredits(counter, "keywords", 3))) {
+          if (!keywordsSpent)
+            say("Social keyword search stopped: today's ScrapeCreators credits for it are used.");
+          keywordsSpent = true;
+          return;
+        }
+        const social = await Promise.allSettled([
+          scSearchTikTok(kw, 8),
+          scSearchReddit(kw, 8),
+          scSearchYouTube(kw, 8),
+        ]);
+        const hits: Found[] = [];
+        // A keyword whose every search was refused for credits was not searched.
+        let searched = false;
+        for (const r of social) {
+          if (r.status === "fulfilled") {
+            hits.push(...r.value);
+            searched = true;
+            continue;
+          }
+          const err = r.reason instanceof Error ? r.reason : new Error(String(r.reason));
+          if (err instanceof ScrapeCreatorsCreditError) {
+            if (!socialOut) say("Social search skipped — ScrapeCreators is out of credits.");
+            socialOut = true;
+          } else {
+            searched = true;
+            failed.social++;
+            notes.push(`${topic.label} social: ${err.message}`);
+          }
+        }
+        found += hits.length;
+        await keep(topic, hits);
+        if (!searched) return;
+        socialSearched++;
+        // Searched: to the back of the line (refused before schema 51; see socialTopics).
+        await sb
+          .from("listening_topics")
+          .update({ social_scanned_at: new Date().toISOString() })
+          .eq("id", topic.id);
+      };
+      const [first, ...rest] = await socialTopics(sb, socialDue);
+      // The first alone, so ScrapeCreators out of credits costs one keyword's three credits; then a
+      // few at a time, so twenty keywords take about as long as six did one after another.
+      if (first) await searchSocial(first);
+      await atMost(SOCIAL_AT_ONCE, rest, searchSocial);
     }
 
     // The paid search ran: its six hours start now. A run that searched nothing (no key, no

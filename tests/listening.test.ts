@@ -79,6 +79,20 @@ const tiktokSearch = (results: unknown[]) => (u: string) =>
         ? { body: "{}" }
         : { body: NO_MOODS };
 
+/** Every search answers, finding nothing: the news search, TikTok, Reddit and YouTube. */
+const quietSocial = (u: string) =>
+  u.includes("google.serper.dev")
+    ? { body: search([]) }
+    : u.includes("scrapecreators")
+      ? { body: "{}" }
+      : { body: NO_MOODS };
+
+/** The keywords TikTok was asked for, in order: one per keyword searched on the social platforms. */
+const tiktokAsked = (calls: string[]) =>
+  calls
+    .filter((c) => c.includes("/v1/tiktok/search/keyword"))
+    .map((c) => new URL(c).searchParams.get("query"));
+
 const TOPIC = {
   id: "t1",
   campaign_id: "c1",
@@ -91,6 +105,15 @@ const TOPIC = {
   last_scanned_at: null,
   alert_feed_url: null,
 };
+
+/** n active keywords of one campaign, none searched yet: t1 ("Nairobi keyword 1") onwards. */
+const keywords = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    ...TOPIC,
+    id: `t${i + 1}`,
+    label: `Keyword ${i + 1}`,
+    query: `Nairobi keyword ${i + 1}`,
+  }));
 
 function world(
   extra: Record<string, Record<string, unknown>[]> = {},
@@ -115,6 +138,41 @@ const CONSTRAINT = 'new row for relation "listening_mentions" violates check con
 const refusing = (url: string) => ({
   listening_mentions: (r: Record<string, unknown>) => (r["url"] === url ? CONSTRAINT : null),
 });
+
+/**
+ * The database before schema 51: listening_topics has no social_scanned_at yet, so ordering by it
+ * or writing it is refused, as PostgREST refuses a column it doesn't know.
+ */
+function beforeMigration(sb: ReturnType<typeof fakeSupabase>) {
+  const unknown = {
+    code: "42703",
+    message: "column listening_topics.social_scanned_at does not exist",
+  };
+  return {
+    ...sb,
+    from(table: string) {
+      const q = sb.from(table);
+      if (table !== "listening_topics") return q;
+      let refused = false;
+      const { order, update, then } = q;
+      return Object.assign(q, {
+        order(c: string, o?: { ascending?: boolean }) {
+          refused ||= c === "social_scanned_at";
+          return order(c, o);
+        },
+        update(v: Record<string, unknown>) {
+          refused ||= "social_scanned_at" in v;
+          return update(v);
+        },
+        then(resolve: (r: unknown) => unknown, reject?: (e: unknown) => unknown) {
+          return refused
+            ? Promise.resolve({ data: null, error: unknown }).then(resolve, reject)
+            : then(resolve, reject);
+        },
+      });
+    },
+  };
+}
 
 async function main() {
   process.env["GEMINI_API_KEY"] = "test-key";
@@ -909,6 +967,11 @@ async function main() {
       sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_scan")?.["detail"] ?? "",
     );
     eq("the sweep says why, once", detail.split("ScrapeCreators is out of credits").length - 1, 1);
+    eq(
+      "the refused keywords are not marked as searched, so they stay first in line",
+      sb.tables["listening_topics"]?.map((t) => t["social_scanned_at"] ?? null),
+      [null, null],
+    );
     await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
     eq("the next sweep tries again, without waiting six hours", social(), 6);
   }
@@ -931,6 +994,282 @@ async function main() {
       "1 keyword searched on social platforms.",
     );
   }
+  // The social search takes its own keywords, apart from the hour's news keywords: the ones it
+  // searched longest ago, as many as the run's share of the day's budget buys.
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+  const socialClock = (sb: ReturnType<typeof world>) =>
+    sb.tables["listening_jobs"]?.find((j) => j["key"] === "listening_social");
+  {
+    process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "24"; // two keywords a run
+    const [k1, k2, k3, k4, k5] = keywords(5);
+    const sb = world(
+      {
+        listening_topics: [
+          { ...k1, last_scanned_at: null, social_scanned_at: hoursAgo(24) },
+          { ...k2, last_scanned_at: hoursAgo(30), social_scanned_at: hoursAgo(48) },
+          { ...k3, last_scanned_at: hoursAgo(30), social_scanned_at: null },
+          { ...k4, last_scanned_at: hoursAgo(30), social_scanned_at: hoursAgo(72) },
+          { ...k5, last_scanned_at: hoursAgo(30), social_scanned_at: null, active: false },
+        ],
+      },
+      { take_social_credits: () => true },
+    );
+    const calls = stubFetch(quietSocial);
+    await runListeningScan(sb as never, { topicLimit: 1, classifyLimit: 40 });
+    const fresh = (col: string) =>
+      (sb.tables["listening_topics"] ?? [])
+        .filter((t) => String(t[col] ?? "") > hoursAgo(1))
+        .map((t) => t["id"]);
+    eq(
+      "the social search takes the keyword it never searched, then the one it searched longest ago",
+      tiktokAsked(calls),
+      ["Nairobi keyword 3", "Nairobi keyword 4"],
+    );
+    eq("and marks those two as searched", fresh("social_scanned_at"), ["t3", "t4"]);
+    eq("while the hour's news search took its own keyword", fresh("last_scanned_at"), ["t1"]);
+    socialClock(sb)!["last_run_at"] = hoursAgo(6);
+    await runListeningScan(sb as never, { topicLimit: 1, classifyLimit: 40 });
+    eq(
+      "six hours on, the next run takes the two now searched longest ago",
+      tiktokAsked(calls).slice(2),
+      ["Nairobi keyword 2", "Nairobi keyword 1"],
+    );
+    eq(
+      "an inactive keyword is never searched",
+      tiktokAsked(calls).includes("Nairobi keyword 5"),
+      false,
+    );
+    delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
+  {
+    // However few keywords the hour's news search takes, a run searches its share of the day: the
+    // default 60 credits buy five keywords a run.
+    const sb = world({ listening_topics: keywords(8) }, { take_social_credits: () => true });
+    const calls = stubFetch(quietSocial);
+    await runListeningScan(sb as never, { topicLimit: 2, classifyLimit: 40 });
+    eq(
+      "five keywords searched, though the hour's news search took two",
+      [...tiktokAsked(calls)].sort(),
+      [1, 2, 3, 4, 5].map((i) => `Nairobi keyword ${i}`),
+    );
+    eq(
+      "and the clock's note counts them",
+      socialClock(sb)?.["detail"],
+      "5 keywords searched on social platforms.",
+    );
+  }
+  {
+    // Each post is kept under the keyword whose search found it, in that keyword's campaign.
+    process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "24"; // two keywords a run
+    const sb = world(
+      {
+        listening_topics: [
+          TOPIC,
+          { ...TOPIC, id: "t2", campaign_id: "c2", label: "Roads", query: "Kisumu roads" },
+        ],
+      },
+      { take_social_credits: () => true },
+    );
+    const video = (q: string | null) =>
+      q === "Nairobi water" ? "7500000000000000031" : "7500000000000000032";
+    stubFetch((u) =>
+      u.includes("/v1/tiktok/search/keyword")
+        ? {
+            body: JSON.stringify({
+              success: true,
+              search_item_list: [
+                {
+                  aweme_info: {
+                    aweme_id: video(new URL(u).searchParams.get("query")),
+                    desc: "Tankers and potholes",
+                    author: { unique_id: "mtaa.news" },
+                  },
+                },
+              ],
+            }),
+          }
+        : quietSocial(u),
+    );
+    await runListeningScan(sb as never, { topicLimit: 1, classifyLimit: 40 });
+    eq(
+      "each keyword's find is stored under that keyword and its campaign",
+      sb.tables["listening_mentions"]?.map((m) => [m["url"], m["topic_id"], m["campaign_id"]]),
+      [
+        ["https://www.tiktok.com/@mtaa.news/video/7500000000000000031", "t1", "c1"],
+        ["https://www.tiktok.com/@mtaa.news/video/7500000000000000032", "t2", "c2"],
+      ],
+    );
+    delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
+  {
+    // Several keywords are searched at once, so twenty don't take twenty times as long as one:
+    // the first alone, then at most four at a time (twelve searches).
+    process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "240";
+    const sb = world({ listening_topics: keywords(24) }, { take_social_credits: () => true });
+    let open = 0;
+    let most = 0;
+    const asked: string[] = [];
+    globalThis.fetch = (async (url: string | URL) => {
+      const u = String(url);
+      if (OUTLET_URLS.has(u)) return new Response(OUTLET_QUIET);
+      if (u.includes("google.serper.dev")) return new Response(search([]));
+      if (!u.includes("scrapecreators")) return new Response(NO_MOODS);
+      asked.push(u);
+      open++;
+      most = Math.max(most, open);
+      await new Promise((r) => setTimeout(r, 5));
+      open--;
+      return new Response("{}");
+    }) as typeof fetch;
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("240 credits: twenty keywords in the run", tiktokAsked(asked).length, 20);
+    eq(
+      "several keywords searched at once, never more than four",
+      [most > 3, most <= 12],
+      [true, true],
+    );
+    delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
+  {
+    // However many keywords are due, the first is searched alone: when ScrapeCreators refuses it
+    // for credits, no other keyword is asked, and only its three credits are taken.
+    process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "240";
+    const taken: number[] = [];
+    const sb = world(
+      { listening_topics: keywords(24) },
+      {
+        take_social_credits: (a) => {
+          taken.push(Number(a["_n"]));
+          return true;
+        },
+      },
+    );
+    const calls = stubFetch((u) =>
+      u.includes("scrapecreators") ? { status: 402, body: "{}" } : quietSocial(u),
+    );
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "twenty keywords due, ScrapeCreators out of credits: one keyword asked, one keyword's credits",
+      [calls.filter((c) => c.includes("scrapecreators")).length, taken],
+      [3, [3]],
+    );
+    eq("and no wait starts", socialClock(sb) ?? null, null);
+    delete process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"];
+  }
+  {
+    // The day's credits running out partway stops the run there, and it is said once.
+    let left = 2;
+    const sb = world({ listening_topics: keywords(6) }, { take_social_credits: () => left-- > 0 });
+    const calls = stubFetch(quietSocial);
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq("two keywords' credits left: two keywords searched", tiktokAsked(calls).length, 2);
+    eq(
+      "the sweep says the credits are used, once",
+      r.notes.filter((n) => n.includes("today's ScrapeCreators credits")).length,
+      1,
+    );
+    eq(
+      "and the clock's note counts the two",
+      socialClock(sb)?.["detail"],
+      "2 keywords searched on social platforms.",
+    );
+  }
+  {
+    // A keyword's posts go in in address order, so two keywords storing the same posts at once lock
+    // them in the same order; in opposite orders the database could deadlock and refuse one batch.
+    const video = (id: string) => ({
+      aweme_info: { aweme_id: id, desc: "Maji", author: { unique_id: "maji.watch254" } },
+    });
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch(tiktokSearch([video("7500000000000000042"), video("7500000000000000041")]));
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a keyword's posts are stored in address order",
+      sb.tables["listening_mentions"]?.map((m) => String(m["url"]).slice(-2)),
+      ["41", "42"],
+    );
+  }
+  {
+    // A keyword whose searches failed for another reason was still searched: it is marked, so one
+    // broken keyword doesn't keep its place at the front of the line.
+    const sb = world({}, { take_social_credits: () => true });
+    stubFetch(tiktokSearch([{ aweme_info: { desc: "No id, no link" } }]));
+    await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a search that failed still marks the keyword as searched",
+      typeof sb.tables["listening_topics"]?.[0]?.["social_scanned_at"],
+      "string",
+    );
+  }
+  {
+    // A social post the database refuses costs only itself, not the keyword's whole find.
+    const video = (id: string) => ({
+      aweme_info: {
+        aweme_id: id,
+        desc: `Tankers late ${id}`,
+        create_time: 1790640000,
+        author: { unique_id: "maji.watch254" },
+      },
+    });
+    const at = (id: string) => `https://www.tiktok.com/@maji.watch254/video/${id}`;
+    const sb = world({}, { take_social_credits: () => true }, refusing(at("7500000000000000021")));
+    stubFetch(tiktokSearch([video("7500000000000000021"), video("7500000000000000022")]));
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "a refused social post leaves the keyword's other stored",
+      [r.stored, sb.tables["listening_mentions"]?.map((m) => m["url"])],
+      [1, [at("7500000000000000022")]],
+    );
+    eq(
+      "and the one who swept hears it",
+      r.notes.filter((n) => n.includes("could not be stored")),
+      [`Water: 1 of 2 posts found could not be stored (${CONSTRAINT}).`],
+    );
+  }
+  {
+    // A paused sweep's probe tries one keyword, its social search included.
+    const sb = world(
+      {
+        listening_topics: keywords(4),
+        listening_jobs: [
+          {
+            key: "listening_scan",
+            status: "paused",
+            paused_reason: "AI stopped (429): RESOURCE_EXHAUSTED: Quota exceeded.",
+            last_run_at: hoursAgo(7),
+          },
+        ],
+      },
+      { take_social_credits: () => true },
+    );
+    const calls = stubFetch(quietSocial);
+    const r = await runListeningScan(sb as never, { topicLimit: 4, classifyLimit: 40 });
+    eq(
+      "the probe searches one keyword on the social platforms",
+      [r.ran, tiktokAsked(calls).length],
+      [true, 1],
+    );
+  }
+  {
+    // Before the migration that adds social_scanned_at, the database refuses that order and that
+    // write: the run still searches its share, the keywords the news search reached longest ago.
+    const sb = beforeMigration(
+      world({ listening_topics: keywords(3) }, { take_social_credits: () => true }),
+    );
+    const calls = stubFetch(quietSocial);
+    const r = await runListeningScan(sb as never, { topicLimit: 1, classifyLimit: 40 });
+    eq(
+      "before the migration, social search still runs",
+      [...tiktokAsked(calls)].sort(),
+      [1, 2, 3].map((i) => `Nairobi keyword ${i}`),
+    );
+    eq(
+      "its clock starts, and the sweep finishes",
+      [socialClock(sb as never)?.["detail"], r.ran, r.paused ?? null],
+      ["3 keywords searched on social platforms.", true, null],
+    );
+  }
+
   delete process.env["SCRAPECREATORS_API_KEY"];
   process.env["SCRAPECREATORS_KEYWORD_DAILY_CREDITS"] = "25";
   eq("the limit comes from the environment", dailyCredits("keywords"), 25);
