@@ -96,10 +96,11 @@ and the candidate or manager gets "Write today's story".
 ## 3. Search interest (Google Trends through SerpApi)
 
 **When.** Once a day on the hourly call, at its first run at or after 06:00 Nairobi time, with
-its own clock. With no `SERPAPI_API_KEY` nothing is asked and Home says search interest isn't
-connected.
+its own clock. With no `SERPAPI_API_KEY` nothing is asked and the job's note says search
+interest isn't connected. A campaign with no read yet shows "Not read for this campaign yet.
+Google Trends is read each morning, a few campaigns at a time."
 
-**What it asks.** Per campaign, at most two searches a day:
+**What it asks.** Per campaign, at most two searches a day, one for each of:
 
 - the candidates: up to five of the race's candidates, ours first then in the race's order,
   past 30 days (`today 1-m`), interest over time. Each is searched as the name people use,
@@ -113,13 +114,23 @@ connected.
   "corruption", land "land", revenue "county revenue", lighting "street lights"; past 30
   days.
 
-Both ask for Nairobi (Google's region `KE-110`). When the answer is missing or thin (most
-points zero), it asks once more for all of Kenya (`KE`), and Home says which it shows.
+Both ask for all of Kenya (`KE`), and Home says which place a read covers. Google Trends has
+no smaller region for Kenya: SerpApi's list of Trends locations gives only `KE`. Until
+November 2026 each read asked for Nairobi (`KE-110`) first and for Kenya when that answer
+was missing or thin; every read kept since 1 October came from Kenya, so each had cost two
+searches. A thin answer is kept, and Home says there are too few searches to compare. So is
+SerpApi's "Google Trends hasn't returned any results" (too few searches across Kenya to chart
+any of the terms, as for most ward and constituency candidates): it is kept as a read with no
+points, so the campaign takes its turn instead of asking again every morning.
 SerpApi's time zone is set to Nairobi's.
 
 **Budget.** SerpApi searches come out of a daily budget, `trends`, counted by the server like
 the ScrapeCreators budgets (`SERPAPI_DAILY_SEARCHES`, default 8, so a month stays under the
-free 250). Past the limit the day's reads stop and the job says so.
+free 250). Past the limit the day's reads stop and the job says so. The budget runs out
+before every campaign is read, so campaigns take turns: those never read first, then the
+longest since their last read, ties by id. A campaign read today is not read again, so a
+second run the same day reads only the rest. Eight searches a day read each of eight
+campaigns about every other day; sixteen would read them all each morning.
 
 **Kept** as one row per campaign, day and kind (`search_interest`): which place it covers and
 each term's daily points (0–100, relative: 100 is the busiest moment of any term in the
@@ -127,7 +138,7 @@ set).
 
 **On Home**, in the race section: "Search interest, last 30 days": a line chart in the
 candidates' colours, with a sentence that says the same ("Babu Owino drew the most searches
-in Nairobi this month, then Johnson Sakaja"), where it covers, and "Google Trends via SerpApi,
+in Kenya this month, then Johnson Sakaja"), where it covers, and "Google Trends via SerpApi,
 read 06:05". A rival whose searches in the last 7 days are at least twice their previous
 three weeks' average is a rival move on Today ("Searches for Babu Owino doubled this week"),
 after an unusual post or a poll change.

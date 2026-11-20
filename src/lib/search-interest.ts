@@ -6,8 +6,31 @@ import type { Tone } from "@/lib/demo/types";
 import { addDays } from "@/lib/diary";
 import type { RaceRival, RivalMove } from "@/lib/race-data";
 
+/** Where a read covers. Reads are of all Kenya; Nairobi's code is kept for reads stored before. */
 export type Geo = "KE-110" | "KE";
 export const PLACE_NAMES: Record<Geo, string> = { "KE-110": "Nairobi", KE: "Kenya" };
+
+/**
+ * SerpApi's error when Google Trends has too few searches to chart any of the
+ * terms, as for most ward and constituency candidates across all of Kenya.
+ */
+export const noTrendsData = (message: string): boolean =>
+  /hasn.t returned any results/i.test(message);
+
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+/**
+ * The order campaigns are read in, so each gets its turn when the day's searches
+ * run out: never read first, then the longest since its last read; ties by id.
+ */
+export function readOrder<T extends { id: string }>(
+  campaigns: T[],
+  lastRead: Map<string, string>,
+): T[] {
+  return [...campaigns].sort(
+    (a, b) => byText(lastRead.get(a.id) ?? "", lastRead.get(b.id) ?? "") || byText(a.id, b.id),
+  );
+}
 
 /** One term's daily interest; `ref` ties it to a rival's id or an issue's key. */
 export type TermPoints = {
@@ -77,12 +100,6 @@ export function parseTrends(
     });
   }
   return out;
-}
-
-/** Too little to show: under a week of days, or mostly zeros for every term. */
-export function isThin(series: { points: { value: number }[] }[]): boolean {
-  if (!series.length || series.every((s) => s.points.length < 7)) return true;
-  return series.every((s) => s.points.filter((p) => p.value === 0).length > s.points.length / 2);
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);

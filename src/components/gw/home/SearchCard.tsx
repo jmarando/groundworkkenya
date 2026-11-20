@@ -57,7 +57,7 @@ export function SearchCard({ read, rivals }: { read: SearchRead | null; rivals: 
           <h2 id="home-search-h">Search interest, last 30 days</h2>
           <p className="meta">
             {!read
-              ? "Read each morning from Google Trends once SerpApi is connected."
+              ? "Not read for this campaign yet. Google Trends is read each morning, a few campaigns at a time."
               : searchSummary(read, rivals) || "Too few searches to compare yet."}
           </p>
         </div>

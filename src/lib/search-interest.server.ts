@@ -1,12 +1,24 @@
-// Search interest, read once a day for each campaign through SerpApi (server
-// only): its candidates, searched as people search them, and the week's top
-// issues from its own records. It rides on the hourly call with its own clock:
-// its first run at or after 06:00 Nairobi time. Nairobi first; all of Kenya
-// when Nairobi's answer is missing or thin. Every search comes out of the day's
-// "trends" budget. The shared job row says what happened in counts only.
+// Search interest, read through SerpApi (server only): each campaign's
+// candidates, searched as people search them, and the week's top issues from
+// its own records. It rides on the hourly call with its own clock: its first
+// run at or after 06:00 Nairobi time. Every read is of all Kenya, one search
+// each: Google Trends has no smaller region for Kenya (SerpApi lists only KE),
+// and the Nairobi answers asked for until November 2026 never came back usable.
+// Every search comes out of the day's "trends" budget, which runs out before
+// every campaign is read, so campaigns take turns: never read first, then the
+// longest since its last read. A campaign read today is not read again, so a
+// second run the same day reads only the rest. The shared job row says what
+// happened in counts only.
 
 import { nairobiToday } from "@/lib/nairobi-date";
-import { ISSUE_SEARCH, isThin, parseTrends, searchName, type Geo } from "@/lib/search-interest";
+import {
+  ISSUE_SEARCH,
+  noTrendsData,
+  parseTrends,
+  readOrder,
+  searchName,
+  type Geo,
+} from "@/lib/search-interest";
 import { loadMindInputs } from "@/lib/search-interest.functions";
 import { serpConfigured, trendsAnswer } from "@/lib/serpapi.server";
 import { takeCredits } from "@/lib/social-credits";
@@ -25,6 +37,7 @@ type Rival = { id: string; name: string; search_as: string | null; is_us: boolea
 type Term = { term: string; ref: string };
 
 const JOB_KEY = "search_interest";
+const GEO: Geo = "KE";
 const sixOn = (day: string) => Date.parse(`${day}T06:00:00+03:00`);
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -112,23 +125,19 @@ export async function runSearchInterest(
     try {
       return parseTrends(await trendsAnswer(terms, geo), terms);
     } catch (err) {
-      out.notes.push(`${geo}: ${(err as Error).message}`);
+      const message = (err as Error).message;
+      // Too few searches for Google to chart: a read of nothing, so the
+      // campaign takes its turn and Home says there are too few to compare.
+      if (noTrendsData(message)) return terms.map((term) => ({ term, points: [] }));
+      out.notes.push(`${geo}: ${message}`);
       return null;
     }
   };
-  /** Nairobi first; Kenya when Nairobi's answer is missing or thin. */
+  /** One read: a search of all Kenya, kept even when thin, so Home can say so. */
   const read = async (campaignId: string, kind: "candidates" | "issues", terms: Term[]) => {
     const names = terms.map((t) => t.term);
-    let geo: Geo = "KE-110";
-    let series = await ask(names, geo);
+    const series = await ask(names, GEO);
     if (series === undefined) return;
-    if (!series || isThin(series)) {
-      const kenya = await ask(names, "KE");
-      if (kenya) {
-        geo = "KE";
-        series = kenya;
-      }
-    }
     if (!series) {
       failed++;
       return;
@@ -138,7 +147,7 @@ export async function runSearchInterest(
         campaign_id: campaignId,
         day,
         kind,
-        geo,
+        geo: GEO,
         series: series.map((s, i) => ({ ...s, ref: terms[i]?.ref ?? null })),
       },
       { onConflict: "campaign_id,day,kind" },
@@ -149,10 +158,23 @@ export async function runSearchInterest(
     } else out.reads++;
   };
 
+  // Each campaign's last read, newest first: one missing from the page was
+  // never read, or not for so long that it goes first anyway.
+  const { data: past } = await sb
+    .from("search_interest")
+    .select("campaign_id, day")
+    .order("day", { ascending: false })
+    .limit(1000);
+  const lastRead = new Map<string, string>();
+  for (const r of (past ?? []) as { campaign_id: string; day: string }[]) {
+    if (!lastRead.has(r.campaign_id)) lastRead.set(r.campaign_id, r.day);
+  }
+
   const since = new Date(now.getTime() - 7 * 864e5).toISOString();
   const { data: campaigns } = await sb.from("campaigns").select("id");
-  for (const c of (campaigns ?? []) as { id: string }[]) {
+  for (const c of readOrder((campaigns ?? []) as { id: string }[], lastRead)) {
     if (stop) break;
+    if (lastRead.get(c.id) === day) continue;
     const { data: rivals } = await sb
       .from("race_rivals")
       .select("id, name, search_as, is_us, sort")

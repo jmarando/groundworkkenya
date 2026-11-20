@@ -1,15 +1,16 @@
-// Checks for search interest: reading SerpApi's Google Trends answer, when an
-// answer is too thin to show, a rival searched far more this week, and the
+// Checks for search interest: reading SerpApi's Google Trends answer, the order
+// campaigns take turns in, a rival searched far more this week, and the
 // chart's lines. Pure; nothing leaves this process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/search-interest.test.ts
 
 import type { RaceRival } from "@/lib/race-data";
 import {
   ISSUE_SEARCH,
-  isThin,
   issueAverages,
   monthAverages,
+  noTrendsData,
   parseTrends,
+  readOrder,
   searchChart,
   searchFromRow,
   searchName,
@@ -82,21 +83,31 @@ eq("each term's days, the partial day left out", parseTrends(ANSWER, ["Sakaja", 
 ]);
 eq("an answer with no timeline", parseTrends({ error: "Unsupported geo" }, ["Sakaja"]), null);
 
-const run = (n: number, value: (i: number) => number) =>
-  Array.from({ length: n }, (_, i) => ({
-    day: `2026-09-${String(i + 1).padStart(2, "0")}`,
-    value: value(i),
-  }));
-eq("a few days is thin", isThin([{ points: run(3, () => 50) }]), true);
+const order = (lastRead: [string, string][]) =>
+  readOrder([{ id: "c4" }, { id: "c1" }, { id: "c3" }, { id: "c2" }], new Map(lastRead)).map(
+    (c) => c.id,
+  );
 eq(
-  "mostly zeros is thin",
-  isThin([
-    { points: run(10, (i) => (i < 6 ? 0 : 40)) },
-    { points: run(10, (i) => (i < 7 ? 0 : 10)) },
+  "campaigns take turns: never read first, then the longest since a read, ties by id",
+  order([
+    ["c1", "2026-11-20"],
+    ["c3", "2026-11-18"],
+    ["c4", "2026-11-18"],
   ]),
-  true,
+  ["c2", "c3", "c4", "c1"],
 );
-eq("a month of interest is not", isThin([{ points: run(30, () => 20) }]), false);
+eq("none read yet: by id", order([]), ["c1", "c2", "c3", "c4"]);
+
+eq(
+  "too few searches to chart, in SerpApi's words, and other errors",
+  [
+    noTrendsData("Google Trends hasn't returned any results for this query."),
+    noTrendsData("Google Trends hasn’t returned any results for this query."),
+    noTrendsData("Your account has run out of searches."),
+    noTrendsData("SerpApi answered 500."),
+  ],
+  [true, true, false, false],
+);
 
 eq(
   "searched as",

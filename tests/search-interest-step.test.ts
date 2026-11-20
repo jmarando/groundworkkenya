@@ -1,6 +1,6 @@
 // Checks for the daily read of search interest: once a morning, each
 // campaign's candidates searched as people search them and its week's top
-// issues, Nairobi first and Kenya when Nairobi's answer is thin, within the
+// issues, all of Kenya at one search a read, campaigns taking turns within the
 // day's budget. Stand-ins for the database and SerpApi; nothing leaves this
 // process. Run from the repository root:
 //   npx tsx --tsconfig tsconfig.json tests/search-interest-step.test.ts
@@ -21,6 +21,8 @@ function eq(name: string, got: unknown, want: unknown) {
     console.log(`FAIL ${name}\n  got  ${g}\n  want ${w}`);
   }
 }
+
+type Row = Record<string, unknown>;
 
 const at = (hhmm: string, day = "2026-09-30") => new Date(`${day}T${hhmm}:00+03:00`);
 const ts = (day: string) => String(Date.parse(`${day}T00:00:00Z`) / 1000);
@@ -52,8 +54,9 @@ function stubSerp(route: (q: string, geo: string) => unknown) {
   return asked;
 }
 
-function world(now: Date, cap = 8) {
-  let used = 0;
+/** c2 has a race and a week's news; c3 has nothing unless `extra` gives it a candidate. */
+function world(now: Date, cap = 8, extra: { rivals?: Row[]; reads?: Row[] } = {}) {
+  const budget = { cap, used: 0 };
   const yesterday = new Date(now.getTime() - 864e5).toISOString();
   const story = (id: string, issue: string) => ({
     id,
@@ -64,7 +67,7 @@ function world(now: Date, cap = 8) {
     found_at: yesterday,
     rival_id: null,
   });
-  return fakeSupabase(
+  const sb = fakeSupabase(
     {
       campaigns: [
         { id: "c2", name: "Sakaja 2027" },
@@ -80,6 +83,7 @@ function world(now: Date, cap = 8) {
           is_us: true,
           sort: 0,
         },
+        ...(extra.rivals ?? []),
       ],
       listening_mentions: [
         ...["w1", "w2", "w3", "w4", "w5"].map((id) => story(id, "water")),
@@ -87,22 +91,32 @@ function world(now: Date, cap = 8) {
       ],
       conversations: [],
       person_events: [],
-      search_interest: [],
+      search_interest: [...(extra.reads ?? [])],
       listening_jobs: [],
     },
     {
       take_social_credits: (a) => {
         const n = Number(a["_n"]);
-        if (used + n > cap) return false;
-        used += n;
+        if (budget.used + n > budget.cap) return false;
+        budget.used += n;
         return true;
       },
     },
   );
+  return Object.assign(sb, { budget });
 }
 const reads = (sb: ReturnType<typeof world>) => sb.tables["search_interest"] ?? [];
 const detail = (sb: ReturnType<typeof world>) =>
   String(sb.tables["listening_jobs"]?.[0]?.["detail"] ?? "");
+
+const third = {
+  id: "g",
+  campaign_id: "c3",
+  name: "Candidate C",
+  search_as: null,
+  is_us: true,
+  sort: 0,
+};
 
 async function main() {
   process.env["SERPAPI_API_KEY"] = "test-key";
@@ -115,42 +129,34 @@ async function main() {
   {
     const now = at("06:05");
     const sb = world(now);
-    // Nairobi's answer for the candidates is all zeros, so Kenya's is used.
-    const asked = stubSerp((q, geo) =>
-      answer(q.split(","), q.startsWith("Sakaja") && geo === "KE-110" ? 0 : 30),
-    );
+    const asked = stubSerp((q) => answer(q.split(","), 30));
     const r = await runSearchInterest(sb as never, { now });
-    eq(
-      "ours first, searched as people search, from Nairobi then Kenya; then the week's issues",
-      asked,
-      [
-        ["Sakaja,Babu Owino", "KE-110"],
-        ["Sakaja,Babu Owino", "KE"],
-        ["water shortage,floods", "KE-110"],
-      ],
-    );
+    eq("ours first, searched as people search, for all of Kenya; then the week's issues", asked, [
+      ["Sakaja,Babu Owino", "KE"],
+      ["water shortage,floods", "KE"],
+    ]);
     const cand = reads(sb).find((x) => x["kind"] === "candidates");
     eq(
-      "kept from Kenya, each line tied to its candidate",
+      "kept for Kenya, each line tied to its candidate",
       [cand?.["geo"], (cand?.["series"] as { ref: string }[]).map((t) => t.ref)],
       ["KE", ["s", "b"]],
     );
     const issues = reads(sb).find((x) => x["kind"] === "issues");
     eq(
-      "the week's issues, from Nairobi",
+      "the week's issues, for Kenya",
       [
         issues?.["geo"],
         (issues?.["series"] as { term: string; ref: string }[]).map((t) => [t.term, t.ref]),
       ],
       [
-        "KE-110",
+        "KE",
         [
           ["water shortage", "water"],
           ["floods", "floods"],
         ],
       ],
     );
-    eq("a campaign with no race and no issues asks nothing", r.searches, 3);
+    eq("one search a read; a campaign with no race and no issues asks nothing", r.searches, 2);
     eq(
       "the shared note names no one",
       [detail(sb), /Sakaja|Babu|water/i.test(detail(sb))],
@@ -160,23 +166,99 @@ async function main() {
   }
   {
     const now = at("06:05");
+    const sb = world(now);
+    const asked = stubSerp((q) => answer(q.split(","), 0));
+    await runSearchInterest(sb as never, { now });
+    eq("an answer of zeros is kept and not asked again", [asked.length, reads(sb).length], [2, 2]);
+  }
+  {
+    const now = at("06:05");
     const sb = world(now, 1);
-    const asked = stubSerp((q, geo) => answer(q.split(","), geo === "KE-110" ? 0 : 30));
+    const asked = stubSerp((q) => answer(q.split(","), 30));
     await runSearchInterest(sb as never, { now });
     eq("the day's limit stops it", asked.length, 1);
     eq("and it says so", detail(sb).includes("limit"), true);
   }
   {
     const now = at("06:05");
-    const sb = world(now);
-    stubSerp((q, geo) =>
-      geo === "KE-110" ? { error: "Unsupported geo." } : answer(q.split(","), 20),
-    );
+    const sb = world(now, 1, {
+      rivals: [third],
+      reads: [
+        {
+          id: "r1",
+          campaign_id: "c2",
+          day: "2026-09-29",
+          kind: "candidates",
+          geo: "KE",
+          series: [],
+          created_at: "2026-09-29T03:05:00Z",
+        },
+      ],
+    });
+    const asked = stubSerp((q) => answer(q.split(","), 30));
     await runSearchInterest(sb as never, { now });
+    eq("a campaign never read goes before one read yesterday", asked, [["Candidate C", "KE"]]);
+  }
+  {
+    const now = at("06:05");
+    const sb = world(now, 2, { rivals: [third] });
+    const asked = stubSerp((q) => answer(q.split(","), 30));
+    await runSearchInterest(sb as never, { now });
+    eq("the limit leaves the second campaign for later", asked.length, 2);
+    // Today's count put back by hand: a second run the same day reads only the rest.
+    sb.budget.used = 0;
+    asked.length = 0;
+    const r = await runSearchInterest(sb as never, { now: at("09:00"), force: true });
     eq(
-      "an error for Nairobi falls back to Kenya",
-      reads(sb).map((x) => x["geo"]),
-      ["KE", "KE"],
+      "a second run the same day reads only campaigns not read today",
+      [r.ran, asked],
+      [true, [["Candidate C", "KE"]]],
+    );
+    eq("and keeps the morning's reads", reads(sb).length, 3);
+  }
+  {
+    const now = at("06:05");
+    const sb = world(now);
+    stubSerp((q) =>
+      q.startsWith("Sakaja") ? { error: "SerpApi is busy." } : answer(q.split(","), 20),
+    );
+    const r = await runSearchInterest(sb as never, { now });
+    eq(
+      "an error is noted for the scheduler and the next read still runs",
+      [reads(sb).map((x) => x["kind"]), r.notes.length],
+      [["issues"], 1],
+    );
+    eq("the shared note counts it", detail(sb).includes("1 read could not be made."), true);
+  }
+  {
+    const now = at("06:05");
+    const sb = world(now);
+    stubSerp((q) =>
+      q.startsWith("Sakaja")
+        ? { error: "Google Trends hasn't returned any results for this query." }
+        : answer(q.split(","), 20),
+    );
+    const r = await runSearchInterest(sb as never, { now });
+    const cand = reads(sb).find((x) => x["kind"] === "candidates");
+    eq(
+      "too few searches to chart is kept as a read of nothing, so the campaign takes its turn",
+      [
+        (cand?.["series"] as { term: string; ref: string; points: unknown[] }[]).map((t) => [
+          t.term,
+          t.ref,
+          t.points.length,
+        ]),
+        r.notes,
+        detail(sb),
+      ],
+      [
+        [
+          ["Sakaja", "s", 0],
+          ["Babu Owino", "b", 0],
+        ],
+        [],
+        "Read 2 sets of search interest.",
+      ],
     );
   }
   {
@@ -186,7 +268,7 @@ async function main() {
     const asked = stubSerp((q) => answer(q.split(","), 30));
     const r = await runSearchInterest(sb as never, { now });
     eq("no key: nothing asked", [r.ran, asked.length], [true, 0]);
-    eq("and Home is told", detail(sb).includes("not connected"), true);
+    eq("and the job says so", detail(sb).includes("not connected"), true);
   }
 
   console.log(`${pass} passed, ${fail} failed`);
