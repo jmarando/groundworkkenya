@@ -14,10 +14,14 @@ import {
   crowdQueries,
   dedupeKey,
   DIARY_KIND_OF,
+  CROWD_AI_MS,
+  CROWD_BUDGET_MS,
+  crowdTurnKey,
+  crowdTurns,
   MAX_HITS,
-  nextLastRun,
   placeTerms,
   refusalCounts,
+  runLine,
   statesDay,
   upcoming,
   type CrowdArea,
@@ -410,15 +414,32 @@ eq(
   ],
 );
 eq("the window is three weeks", AHEAD_DAYS, 21);
-const NOW = new Date("2026-11-20T03:10:00.000Z");
+const NOW = new Date("2026-11-20T12:00:00.000Z");
+const LAST = new Map<string, string | null>([
+  ["b", "2026-11-19T10:00:00.000Z"],
+  ["c", "2026-11-20T08:00:00.000Z"],
+  ["d", "2026-11-19T06:00:00.000Z"],
+  ["e", null],
+]);
 eq(
-  "a stopped run keeps the last run's time, so the next hour tries again; a run that searched records now",
+  "whose turn it is: never searched first, then the longest since; one searched under 20 hours ago waits",
+  crowdTurns(["d", "c", "b", "a", "e"], LAST, NOW),
+  ["a", "e", "d", "b"],
+);
+eq("nobody's turn: nothing", crowdTurns(["c"], LAST, NOW), []);
+eq(
+  "a campaign's turn is kept under its id, a run starts campaigns for 2.5 minutes, the AI gets 30 seconds",
+  [crowdTurnKey("ca1"), CROWD_BUDGET_MS, CROWD_AI_MS],
+  ["crowd_events:ca1", 150_000, 30_000],
+);
+eq(
+  "the note's first line says how many wait for the next hour",
+  [runLine(1, 8, 2, 5), runLine(0, 4, 1, 1), runLine(3, 28, 7, 0)],
   [
-    nextLastRun(true, null, NOW),
-    nextLastRun(true, "2026-11-19T00:30:00.000Z", NOW),
-    nextLastRun(false, "2026-11-19T00:30:00.000Z", NOW),
+    "1 event kept from 8 searches for 2 campaigns; 5 campaigns wait for the next hour.",
+    "0 events kept from 4 searches for 1 campaign; 1 campaign waits for the next hour.",
+    "3 events kept from 28 searches for 7 campaigns.",
   ],
-  [null, "2026-11-19T00:30:00.000Z", "2026-11-20T03:10:00.000Z"],
 );
 eq(
   "in the diary a funeral stays a funeral, a tournament is a visit",

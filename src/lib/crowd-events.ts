@@ -523,10 +523,46 @@ export function upcoming(events: CrowdEvent[], today: string, days = AHEAD_DAYS)
     );
 }
 
+/** A campaign's area is searched once in this many hours. */
+export const CROWD_EVERY_HOURS = 20;
+/** Campaigns are started only within this long of the step's start; the rest wait for the next hour. */
+export const CROWD_BUDGET_MS = 150_000;
+/** How long the AI may take over one campaign's results: the main AI, then the backup, each. */
+export const CROWD_AI_MS = 30_000;
+
+/** The job row that keeps when a campaign's area was last searched. It holds the id, no name. */
+export const crowdTurnKey = (campaignId: string): string => `crowd_events:${campaignId}`;
+
 /**
- * When the search last ran, as the job records it: now after a run that searched, the time before
- * when the run was stopped (no key, or the search refused, as when its credits run out), so the
- * next hour tries again instead of waiting a day.
+ * The campaigns whose turn it is, in order: never searched first, then the longest since their last
+ * search. One searched within the last `everyHours` waits.
  */
-export const nextLastRun = (stopped: boolean, previous: string | null, now: Date): string | null =>
-  stopped ? previous : now.toISOString();
+export function crowdTurns(
+  ids: string[],
+  lastRun: Map<string, string | null>,
+  now: Date,
+  everyHours = CROWD_EVERY_HOURS,
+): string[] {
+  const when = (id: string) => {
+    const t = lastRun.get(id);
+    return t ? Date.parse(t) : Number.NEGATIVE_INFINITY;
+  };
+  return ids
+    .filter((id) => now.getTime() - when(id) >= everyHours * 3600_000)
+    .sort((a, b) => when(a) - when(b) || a.localeCompare(b));
+}
+
+const tally = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** The job note's first line: what this run did, and how many campaigns wait for the next hour. */
+export function runLine(
+  kept: number,
+  searches: number,
+  campaigns: number,
+  waiting: number,
+): string {
+  const done = `${tally(kept, "event", "events")} kept from ${tally(searches, "search", "searches")} for ${tally(campaigns, "campaign", "campaigns")}`;
+  return waiting
+    ? `${done}; ${tally(waiting, "campaign waits", "campaigns wait")} for the next hour.`
+    : `${done}.`;
+}
