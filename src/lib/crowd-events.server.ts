@@ -8,15 +8,18 @@
 import { askAiJson } from "@/lib/listening.server";
 import {
   areaOf,
+  checkCrowdEvents,
+  checkSummary,
   CROWD_SCHEMA,
-  cleanCrowdEvents,
   crowdHits,
   crowdPrompt,
   crowdQueries,
   nextLastRun,
+  refusalCounts,
   type CrowdCampaign,
   type CrowdHit,
   type CrowdWard,
+  type Refusal,
 } from "@/lib/crowd-events";
 import { addDays, nairobiToday } from "@/lib/nairobi-date";
 import { newsSearch, newsSearchConfigured, NewsSearchRefused } from "@/lib/news-sources.server";
@@ -36,6 +39,13 @@ export type CrowdSweep = {
   campaigns: number;
   searches: number;
   kept: number;
+  /** Events the AI named, and those that passed but were saved before (found again). */
+  named: number;
+  already: number;
+  /** How many were left out for each reason. */
+  refused: Partial<Record<Refusal, number>>;
+  /** Up to three left out per campaign, to tune the checks: for the scheduler only. */
+  examples: { campaign: string; reason: Refusal; title: string | null; url: string | null }[];
   /** What went wrong, naming the campaign: for the scheduler only. */
   notes: string[];
 };
@@ -47,7 +57,17 @@ export async function runCrowdEvents(
   opts: { now?: Date; force?: boolean } = {},
 ): Promise<CrowdSweep> {
   const now = opts.now ?? new Date();
-  const out: CrowdSweep = { ran: false, campaigns: 0, searches: 0, kept: 0, notes: [] };
+  const out: CrowdSweep = {
+    ran: false,
+    campaigns: 0,
+    searches: 0,
+    kept: 0,
+    named: 0,
+    already: 0,
+    refused: {},
+    examples: [],
+    notes: [],
+  };
   const { data: job } = await sb
     .from("listening_jobs")
     .select("*")
@@ -70,6 +90,9 @@ export async function runCrowdEvents(
       [
         ...shared,
         `${count(out.kept, "event", "events")} kept from ${count(out.searches, "search", "searches")} for ${count(out.campaigns, "campaign", "campaigns")}.`,
+        ...(out.campaigns && !stopped
+          ? [checkSummary(out.named, out.kept, out.already, out.refused)]
+          : []),
       ]
         .join(" · ")
         .slice(0, 400) || null;
@@ -161,7 +184,12 @@ export async function runCrowdEvents(
       out.notes.push(`${c.slug}: the AI could not read the results (${(err as Error).message}).`);
       continue;
     }
-    const rows = cleanCrowdEvents(answer, hits, area, today);
+    const check = checkCrowdEvents(answer, hits, area, today);
+    out.named += check.named;
+    for (const [reason, n] of Object.entries(refusalCounts(check.refused)) as [Refusal, number][])
+      out.refused[reason] = (out.refused[reason] ?? 0) + n;
+    out.examples.push(...check.refused.slice(0, 3).map((r) => ({ campaign: c.slug, ...r })));
+    const rows = check.rows;
     if (!rows.length) continue;
     const { data: saved, error } = await sb
       .from("crowd_events")
@@ -175,6 +203,7 @@ export async function runCrowdEvents(
       continue;
     }
     out.kept += (saved ?? []).length;
+    out.already += rows.length - (saved ?? []).length;
   }
   if (out.notes.length) shared.push(`${count(out.notes.length, "problem", "problems")} noted.`);
   return finish(refused);

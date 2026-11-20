@@ -56,6 +56,13 @@ runs). For each campaign:
 
 Events are pruned 30 days after their day.
 
+**What each run records** (`checkCrowdEvents`, `checkSummary`): the job's note says how many events
+the AI named, how many were kept or already saved, and how many were left out for each reason (a
+kind not known, no title, a link not among the results, no real date, a date outside the window, no
+date in the result's own words, no place in the area named, the same event twice). It names no
+campaign. The sweep's own response (read by the scheduler only) also lists up to three left-out
+events per campaign, with title, link and reason, to tune the checks.
+
 **Cost**: four Serper credits and one AI answer per campaign per day. With seven campaigns that
 have an area, that is 28 credits a day.
 
